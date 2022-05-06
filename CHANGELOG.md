@@ -16,3 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.3] - 2022-05-06
 
 * First release on JPMC PyPi - Second Try
+
+## [0.0.4] - 2022-05-06
+
+* Rename to fusion-sdk
