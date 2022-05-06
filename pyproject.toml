@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "fusion-sdk"
-version = "0.0.3"
+version = "0.0.4"
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
 authors = ["FusionDevs <fusion_developers@jpmorgan.com>"]
