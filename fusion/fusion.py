@@ -744,7 +744,7 @@ class Fusion:
 
         Returns:
         """
-        download_res = self.download_distribution(
+        download_res = self.download(
             dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download
         )
 
