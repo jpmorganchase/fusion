@@ -1,5 +1,7 @@
 """Top-level package for fusion."""
 
-__author__ = """Naz Quadri"""
-__email__ = 'naz.quadri@gmail.com'
+__author__ = """Fusion Devs"""
+__email__ = 'fusion_developers@jpmorgan.com'
 __version__ = '0.0.5'
+
+from fusion import fusion
