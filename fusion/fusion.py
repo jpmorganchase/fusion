@@ -671,7 +671,7 @@ class Fusion:
 
         return tups
 
-    def download_distribution(
+    def download(
         self,
         dataset: str,
         dt_str: str = 'latest',
@@ -717,7 +717,7 @@ class Fusion:
 
         return res
 
-    def get_distribution(
+    def load(
         self,
         dataset: str,
         dt_str: str = 'latest',
