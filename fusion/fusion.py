@@ -9,6 +9,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import List, Union
 from urllib.parse import urlparse, urlunparse
+from urllib3.util.retry import Retry
 
 import pandas as pd
 import requests
@@ -276,7 +277,13 @@ class FusionCredentials:
 class FusionOAuthAdapter(requests.adapters.HTTPAdapter):
     """Fusion OAuth model specific requests adapter."""
 
-    def __init__(self, credentials, proxies={}, refresh_within_seconds=5, *args, **kwargs) -> None:
+    def __init__(self, 
+                 credentials, 
+                 proxies={}, 
+                 refresh_within_seconds=5, 
+                 auth_retries=None,
+                 *args, 
+                 **kwargs) -> None:
         """_summary_.
 
         Args:
