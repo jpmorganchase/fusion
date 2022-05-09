@@ -513,7 +513,8 @@ class Fusion:
                 contains = "|".join(f'{s}' for s in contains)
             df = df[df['identifier'].str.contains(contains)]
 
-        df = df[0:max_results]
+        if max_results > -1:
+            df = df[0:max_results]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql"))
@@ -542,7 +543,8 @@ class Fusion:
                 contains = "|".join(f'{s}' for s in contains)
             df = df[df['identifier'].str.contains(contains)]
 
-        df = df[0:max_results]
+        if max_results > -1:
+            df = df[0:max_results]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql"))
@@ -601,7 +603,8 @@ class Fusion:
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries'
         df = Fusion._call_for_dataframe(url, self.session)
 
-        df = df[0:max_results]
+        if max_results > -1:
+            df = df[0:max_results]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql"))
