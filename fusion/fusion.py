@@ -153,7 +153,7 @@ class FusionCredentials:
         client_secret: str = None,
         resource: str = None,
         auth_url: str = None,
-        proxies: dict = None,
+        proxies={},
     ) -> None:
         """Constuctor for Creds mgr.
 
@@ -162,7 +162,7 @@ class FusionCredentials:
             client_secret (str, optional): Client Secret as provided by Fusion. Defaults to None.
             resource (str, optional): Fusion resource ID as provided by Fusion. Defaults to None.
             auth_url (str, optional): Auth URL as provided by Fusion. Defaults to None.
-            proxies (dict, optional): Any proxy servers to hop through. Defaults to None. Keys are http and https
+            proxies (dict, optional): Any proxy servers to hop through. Defaults to {}. Keys are http and https
         """
         self.client_id = client_id
         self.client_secret = client_secret
@@ -209,7 +209,8 @@ class FusionCredentials:
         )
 
         if proxies:
-            data['proxies'] = proxies
+            proxies_dict = json.loads(proxies)
+            data['proxies'] = proxies_dict
         json_data = json.dumps(data)
 
         with open(credentials_file, 'w') as credentialsfile:
