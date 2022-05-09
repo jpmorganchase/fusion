@@ -9,13 +9,14 @@ from datetime import timedelta
 from pathlib import Path
 from typing import List, Union
 from urllib.parse import urlparse, urlunparse
-from urllib3.util.retry import Retry
 
 import pandas as pd
 import requests
 from joblib import Parallel, delayed
+from requests.adapters import HTTPAdapter
 from tabulate import tabulate
 from tqdm import tqdm
+from urllib3.util.retry import Retry
 
 DT_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
@@ -152,7 +153,7 @@ class FusionCredentials:
         client_secret: str = None,
         resource: str = None,
         auth_url: str = None,
-        proxies: str = None,
+        proxies: dict = None,
     ) -> None:
         """Constuctor for Creds mgr.
 
@@ -161,7 +162,7 @@ class FusionCredentials:
             client_secret (str, optional): Client Secret as provided by Fusion. Defaults to None.
             resource (str, optional): Fusion resource ID as provided by Fusion. Defaults to None.
             auth_url (str, optional): Auth URL as provided by Fusion. Defaults to None.
-            proxies (str, optional): Any proxy servers to hop through. Defaults to None.
+            proxies (dict, optional): Any proxy servers to hop through. Defaults to None. Keys are http and https
         """
         self.client_id = client_id
         self.client_secret = client_secret
@@ -274,22 +275,25 @@ class FusionCredentials:
         raise CredentialError(f'Could not resolve the credentials provided: {credentials_source}')
 
 
-class FusionOAuthAdapter(requests.adapters.HTTPAdapter):
+class FusionOAuthAdapter(HTTPAdapter):
     """Fusion OAuth model specific requests adapter."""
 
-    def __init__(self, 
-                 credentials, 
-                 proxies={}, 
-                 refresh_within_seconds=5, 
-                 auth_retries=None,
-                 *args, 
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        credentials: Union[FusionCredentials, Union[str, dict]],
+        proxies: dict = {},
+        refresh_within_seconds: int = 5,
+        auth_retries: Union[int, Retry] = None,
+        *args,
+        **kwargs,
+    ) -> None:
         """_summary_.
 
         Args:
-            credentials (_type_): _description_
+            credentials (Union[FusionCredentials, Union[str, dict]): _description_
             proxies (dict, optional): _description_. Defaults to {}.
             refresh_within_seconds (int, optional): _description_. Defaults to 5.
+            auth_retries (Union[int, Retry]): _description. Defaults to None.
         """
         super(FusionOAuthAdapter, self).__init__(*args, **kwargs)
 
@@ -307,6 +311,11 @@ class FusionOAuthAdapter(requests.adapters.HTTPAdapter):
         self.number_token_refreshes = 0
         self.refresh_within_seconds = refresh_within_seconds
 
+        if not auth_retries:
+            self.auth_retries = Retry(total=5, backoff_factor=0.2)
+        else:
+            self.auth_retries = Retry.from_int(auth_retries)
+
     def send(self, request, **kwargs):
         """_summary_.
 
@@ -323,7 +332,9 @@ class FusionOAuthAdapter(requests.adapters.HTTPAdapter):
             }
 
             try:
-                response = requests.Session().post(self.credentials.auth_url, data=payload)
+                s = requests.Session()
+                s.mount('http://', HTTPAdapter(max_retries=self.auth_retries))
+                response = s.post(self.credentials.auth_url, data=payload)
                 response_data = response.json()
                 access_token = response_data["access_token"]
                 expiry = response_data["expires_in"]
@@ -751,12 +762,11 @@ class Fusion:
 
         Returns:
         """
-        download_res = self.download(
-            dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download
-        )
+        download_res = self.download(dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download)
 
         if not all(res[0] for res in download_res):
-            raise Exception(f'Not all downloads were successfully completed: {download_res}')
+            failed_res = [res for res in download_res if not res[0]]
+            raise Exception(f'Not all downloads were successfully completed. The following failed:\n{failed_res}')
 
         files = [res[1] for res in download_res]
 
