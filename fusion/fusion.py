@@ -3,6 +3,7 @@
 import datetime
 import json
 import logging
+import os
 import re
 import sys
 from datetime import timedelta
@@ -402,9 +403,10 @@ def _stream_single_file_new_session(
 
     try:
         with _get_session(credentials, url).get(url, stream=True) as r:
-            with open(output_file, "wb") as outfile:
+            with open(output_file + ".tmp", "wb") as outfile:
                 for chunk in r.iter_content(block_size):
                     outfile.write(chunk)
+        os.rename(output_file + ".tmp", output_file)
         return (True, output_file, None)
     except Exception as ex:
         return (False, output_file, ex)
@@ -412,9 +414,10 @@ def _stream_single_file_new_session(
 
 def _stream_single_file(session, url: str, output_file: str, blocl_size=DEFAULT_CHUNK_SIZE):
     with session.get(url, stream=True) as r:
-        with open(output_file, "wb") as outfile:
+        with open(output_file + ".tmp", "wb") as outfile:
             for chunk in r.iter_content(blocl_size):
                 outfile.write(chunk)
+    os.rename(output_file + ".tmp", output_file)
 
 
 class Fusion:
@@ -663,7 +666,7 @@ class Fusion:
 
         return df
 
-    def __resolve_distro_tuples(
+    def _resolve_distro_tuples(
         self, dataset: str, dt_str: str = 'latest', format: str = 'parquet', catalog: str = 'common'
     ):
         """_summary_.
@@ -704,7 +707,7 @@ class Fusion:
         force_download: bool = False,
         download_folder: str = None,
     ):
-        """_summary_.
+        """Need to add description.
 
         Args:
             dt_str (str, optional): _description_. Defaults to 'latest'.
@@ -713,11 +716,11 @@ class Fusion:
             n_par (int, optional): _descrition_. Defaults to DEFAULT_PARALLELISM.
             show_progress (bool, optional): _description_. Defaults to True.
             force_download (bool, optional): _description_. Defaults to True.
-            download_folder (str, optional): _description_. Defaults to download_folder as set in __init__
+            download_folder (str, optional): _description_. Defaults to download_folder as set in __init__.
         Returns:
 
         """
-        required_series = self.__resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
+        required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
 
         if not download_folder:
             download_folder = self.download_folder
@@ -769,7 +772,9 @@ class Fusion:
 
         Returns:
         """
-        download_res = self.download(dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download, download_folder)
+        download_res = self.download(
+            dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download, download_folder
+        )
 
         if not all(res[0] for res in download_res):
             failed_res = [res for res in download_res if not res[0]]
