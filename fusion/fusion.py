@@ -701,8 +701,7 @@ class Fusion:
         catalog: str = 'common',
         n_par: int = DEFAULT_PARALLELISM,
         show_progress: bool = True,
-        dry_run: bool = True,
-        force_download: bool = True,
+        force_download: bool = False,
     ):
         """_summary_.
 
@@ -712,7 +711,6 @@ class Fusion:
             catalog (str, optional): _description_. Defaults to 'common'.
             n_par (int, optional): _descrition_. Defaults to DEFAULT_PARALLELISM.
             show_progress (bool, optional): _description_. Defaults to True.
-            dry_run (bool, optional): _description_. Defaults to True.
             force_download (bool, optional): _description_. Defaults to True
 
         Returns:
@@ -747,9 +745,8 @@ class Fusion:
         catalog: str = 'common',
         n_par: int = DEFAULT_PARALLELISM,
         show_progress: bool = True,
-        dry_run: bool = True,
         columns: List = None,
-        force_download: bool = True,
+        force_download: bool = False,
         **kwargs,
     ):
         """Get distribution.
