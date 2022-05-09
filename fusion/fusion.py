@@ -702,6 +702,7 @@ class Fusion:
         n_par: int = DEFAULT_PARALLELISM,
         show_progress: bool = True,
         force_download: bool = False,
+        download_folder: str = None,
     ):
         """_summary_.
 
@@ -711,18 +712,21 @@ class Fusion:
             catalog (str, optional): _description_. Defaults to 'common'.
             n_par (int, optional): _descrition_. Defaults to DEFAULT_PARALLELISM.
             show_progress (bool, optional): _description_. Defaults to True.
-            force_download (bool, optional): _description_. Defaults to True
-
+            force_download (bool, optional): _description_. Defaults to True.
+            download_folder (str, optional): _description_. Defaults to download_folder as set in __init__
         Returns:
 
         """
         required_series = self.__resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
 
+        if not download_folder:
+            download_folder = self.download_folder
+
         download_spec = [
             (
                 self.credentials,
                 _distribution_to_url(self.root_url, series[1], series[2], series[3], series[0]),
-                _distribution_to_filename(self.download_folder, series[1], series[2], series[3], series[0]),
+                _distribution_to_filename(download_folder, series[1], series[2], series[3], series[0]),
                 force_download,
             )
             for series in required_series
@@ -747,6 +751,7 @@ class Fusion:
         show_progress: bool = True,
         columns: List = None,
         force_download: bool = False,
+        download_folder: str = None,
         **kwargs,
     ):
         """Get distribution.
@@ -760,10 +765,11 @@ class Fusion:
             dry_run (bool, optional): _description_. Defaults to True
             columns (List, optional): _description_. Defaults to None
             force_download (bool, optional): _description_. Defaults to True
+            download_folder (str, optional): _description_. Defaults to download_folder as set in __init__
 
         Returns:
         """
-        download_res = self.download(dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download)
+        download_res = self.download(dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download, download_folder)
 
         if not all(res[0] for res in download_res):
             failed_res = [res for res in download_res if not res[0]]
