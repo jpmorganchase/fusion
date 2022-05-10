@@ -724,7 +724,7 @@ class Fusion:
 
         if not download_folder:
             download_folder = self.download_folder
-            Path(download_folder).mkdir(parents=True, exist_ok=True)
+        Path(download_folder).mkdir(parents=True, exist_ok=True)
 
         download_spec = [
             (
@@ -773,6 +773,8 @@ class Fusion:
 
         Returns:
         """
+        if not download_folder:
+            download_folder = self.download_folder
         download_res = self.download(
             dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download, download_folder
         )
