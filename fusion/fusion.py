@@ -538,75 +538,6 @@ def _stream_single_file_new_session(
         )
         return (False, output_file, ex)
 
-def _stream_single_file_shared_session_dry_run(session, url: str, output_file: str):
-    """Function to test that a distribution is available without downloading
-
-        Args:
-            session (requests.Session): Valid requests Session object 
-            root_url (str): The URL to call.
-            output_file: The filename that the data will be saved into.
-
-        Returns:
-            3-tuple: (Success: bool, output_file: str, exception: Exception)
-        
-    """
-    try:
-        session.head(url)
-        return (True, output_file, None)
-    except Exception as ex:
-        return (False, output_file, ex)
-
-def _stream_single_file_shared_session(
-    session: requests.Session,
-    url: str,
-    output_file: str,
-    overwrite: bool = True,
-    block_size=DEFAULT_CHUNK_SIZE,
-    dry_run: bool = False,
-) -> tuple:
-    """Function to stream a single file from the API to a file on disk.
-
-        Args:
-            session (requests.Session): Valid requests Session object 
-            root_url (str): The URL to call.
-            output_file (str): The filename that the data will be saved into.
-            overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
-            block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
-            dry_run (bool, optional): Test that a file can be downloaded and return the filename without downloading the data. Defaults to False.
-
-        Returns:
-            tuple: A tuple
-        
-    """
-    if dry_run:
-        return _stream_single_file_shared_session_dry_run(session, url, output_file)
-
-    output_file_path = Path(output_file)
-    if not overwrite and output_file_path.exists():
-        return (True, output_file, None)
-
-    tmp_name = output_file_path.with_name(output_file_path.name + ".tmp")
-    try:
-        with session.get(url, stream=True) as r:
-            byte_cnt = 0
-            with open(tmp_name, "wb") as outfile:
-                for chunk in r.iter_content(block_size):
-                    byte_cnt += len(chunk)
-                    outfile.write(chunk)
-        tmp_name.rename(output_file_path)
-        tmp_name.unlink(missing_ok=True)
-        logger.log(
-            VERBOSE_LVL,
-            f'Wrote {byte_cnt:,} bytes to {output_file_path}, via {tmp_name}',
-        )
-        return (True, output_file, None)
-    except Exception as ex:
-        logger.log(
-            VERBOSE_LVL,
-            f'Failed to write to {output_file_path}, via {tmp_name}. ex - {ex}',
-        )
-        return (False, output_file, ex)
-
 
 
 def _stream_single_file(session, url: str, output_file: str, block_size=DEFAULT_CHUNK_SIZE):
@@ -972,7 +903,7 @@ class Fusion:
             VERBOSE_LVL,
             f'Beginning {len(loop)} downloads in batches of {n_par}',
         )
-        res = Parallel(n_jobs=n_par)(delayed(_stream_single_file_shared_session)(*spec) for spec in loop)
+        res = Parallel(n_jobs=n_par)(delayed(_stream_single_file_new_session)(*spec) for spec in loop)
 
         return res
 
