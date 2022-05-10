@@ -745,7 +745,10 @@ class Fusion:
             loop = tqdm(download_spec)
         else:
             loop = download_spec
-
+        logger.log(
+            VERBOSE_LVL,
+            f'Beginning {len(loop)} downloads in batches of {n_par}',
+        )
         res = Parallel(n_jobs=n_par)(delayed(_stream_single_file_new_session)(*spec) for spec in loop)
 
         return res
