@@ -408,6 +408,7 @@ def _stream_single_file_new_session(
                 for chunk in r.iter_content(block_size):
                     outfile.write(chunk)
         tmp_name.rename(output_file_path)
+        tmp_name.unlink(missing_ok=True)
         return (True, output_file, None)
     except Exception as ex:
         return (False, output_file, ex)
@@ -421,6 +422,7 @@ def _stream_single_file(session, url: str, output_file: str, blocl_size=DEFAULT_
             for chunk in r.iter_content(blocl_size):
                 outfile.write(chunk)
     tmp_name.rename(output_file_path)
+    tmp_name.unlink(missing_ok=True)
 
 
 class Fusion:
