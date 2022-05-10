@@ -724,6 +724,7 @@ class Fusion:
 
         if not download_folder:
             download_folder = self.download_folder
+            Path(download_folder).mkdir(parents=True, exist_ok=True)
 
         download_spec = [
             (
