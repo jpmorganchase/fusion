@@ -3,7 +3,6 @@
 import datetime
 import json
 import logging
-import os
 import re
 import sys
 from datetime import timedelta
@@ -398,26 +397,30 @@ def _stream_single_file_new_session(
     if dry_run:
         return _stream_single_file_new_session_dry_run(credentials, url, output_file)
 
-    if not overwrite and Path(output_file).exists():
+    output_file_path = Path(output_file)
+    if not overwrite and output_file_path.exists():
         return (True, output_file, None)
 
+    tmp_name = output_file_path.with_name(output_file_path.name + ".tmp")
     try:
         with _get_session(credentials, url).get(url, stream=True) as r:
-            with open(Path(output_file, ".tmp"), "wb") as outfile:
+            with open(tmp_name, "wb") as outfile:
                 for chunk in r.iter_content(block_size):
                     outfile.write(chunk)
-        os.rename(Path(output_file, ".tmp"), output_file)
+        tmp_name.rename(output_file_path)
         return (True, output_file, None)
     except Exception as ex:
         return (False, output_file, ex)
 
 
 def _stream_single_file(session, url: str, output_file: str, blocl_size=DEFAULT_CHUNK_SIZE):
+    output_file_path = Path(output_file)
+    tmp_name = output_file_path.with_name(output_file_path.name + ".tmp")
     with session.get(url, stream=True) as r:
-        with open(Path(output_file, ".tmp"), "wb") as outfile:
+        with open(tmp_name, "wb") as outfile:
             for chunk in r.iter_content(blocl_size):
                 outfile.write(chunk)
-    os.rename(Path(output_file, ".tmp"), output_file)
+    tmp_name.rename(output_file_path)
 
 
 class Fusion:
