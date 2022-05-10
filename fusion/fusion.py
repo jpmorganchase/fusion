@@ -403,10 +403,10 @@ def _stream_single_file_new_session(
 
     try:
         with _get_session(credentials, url).get(url, stream=True) as r:
-            with open(output_file + ".tmp", "wb") as outfile:
+            with open(Path(output_file, ".tmp"), "wb") as outfile:
                 for chunk in r.iter_content(block_size):
                     outfile.write(chunk)
-        os.rename(output_file + ".tmp", output_file)
+        os.rename(Path(output_file, ".tmp"), output_file)
         return (True, output_file, None)
     except Exception as ex:
         return (False, output_file, ex)
@@ -414,10 +414,10 @@ def _stream_single_file_new_session(
 
 def _stream_single_file(session, url: str, output_file: str, blocl_size=DEFAULT_CHUNK_SIZE):
     with session.get(url, stream=True) as r:
-        with open(output_file + ".tmp", "wb") as outfile:
+        with open(Path(output_file, ".tmp"), "wb") as outfile:
             for chunk in r.iter_content(blocl_size):
                 outfile.write(chunk)
-    os.rename(output_file + ".tmp", output_file)
+    os.rename(Path(output_file, ".tmp"), output_file)
 
 
 class Fusion:
