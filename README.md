@@ -1,6 +1,16 @@
-# Fusion Developer Tools
+# PyFusion #
 
-Code to handle calling the Fusion API and return data in ready to use formats. Sample code providing examples of how the API can be used for research and operational analytics.
+PyFusion is the Python SDK for the Fusion platform API. 
+
+## Installation
+
+```bash
+pip install pyfusion
+```
+
+Fusion by J.P. Morgan delivers data management solutions built around post-trade services, enabling instituional investors to leverage the power of clean, interoperable data to maximise operational efficiencies.
+
+For more information, please visit [fusion.jpmorgan.com](https://fusion.jpmorgan.com)
 
 
 
