@@ -519,13 +519,23 @@ def _stream_single_file_new_session(
     tmp_name = output_file_path.with_name(output_file_path.name + ".tmp")
     try:
         with _get_session(credentials, url).get(url, stream=True) as r:
+            byte_cnt = 0
             with open(tmp_name, "wb") as outfile:
                 for chunk in r.iter_content(block_size):
+                    byte_cnt += len(chunk)
                     outfile.write(chunk)
         tmp_name.rename(output_file_path)
         tmp_name.unlink(missing_ok=True)
+        logger.log(
+            VERBOSE_LVL,
+            f'Wrote {byte_cnt:,} bytes to {output_file_path}, via {tmp_name}',
+        )
         return (True, output_file, None)
     except Exception as ex:
+        logger.log(
+            VERBOSE_LVL,
+            f'Failed to write to {output_file_path}, via {tmp_name}. ex - {ex}',
+        )
         return (False, output_file, ex)
 
 
