@@ -82,26 +82,26 @@ class CredentialError(Exception):
 
 
 def _res_plural(ref_int: int, pluraliser: str = 's') -> str:
-    """Private function to return the plural form when the number is more than one
-    
+    """Private function to return the plural form when the number is more than one.
+
     Args:
-            ref_int (int): The reference integer that determines whether to return a plural suffix.
-            pluraliser (str, optional): The plural suffix. Defaults to "s".
+        ref_int (int): The reference integer that determines whether to return a plural suffix.
+        pluraliser (str, optional): The plural suffix. Defaults to "s".
 
      Returns:
-            str: The plural suffix to append to a string.
+        str: The plural suffix to append to a string.
     """
     return '' if abs(ref_int) == 1 else pluraliser
 
 
 def _is_json(data) -> bool:
     """Test whether the content of a string is a JSON object.
-    
+
     Args:
-            data (str): The content to evaluate.
+        data (str): The content to evaluate.
 
      Returns:
-            bool: True if the content of data is JSON, False otherwise.
+        bool: True if the content of data is JSON, False otherwise.
     """
     try:
         json.loads(data)
@@ -112,14 +112,13 @@ def _is_json(data) -> bool:
 
 def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -> str:
     """Convert dates into a normalised string representation.
-    
+
     Args:
-            dt (Union[str, int, datetime.datetime, datetime.date]): A date represented in various types.
+        dt (Union[str, int, datetime.datetime, datetime.date]): A date represented in various types.
 
      Returns:
-            str: A normalized date string.
+        str: A normalized date string.
     """
-
     if isinstance(dt, (datetime.date, datetime.datetime)):
         return dt.strftime("%Y-%m-%d")
 
@@ -136,14 +135,13 @@ def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -
 
 def _normalise_dt_param_str(dt: str) -> tuple:
     """Convert a date parameter which may be a single date or a date range into a tuple.
-    
+
     Args:
-            dt (str): Either a single date or a date range separated by a ":".
+        dt (str): Either a single date or a date range separated by a ":".
 
      Returns:
-            tuple: A tuple of dates.
+        tuple: A tuple of dates.
     """
-
     date_parts = dt.split(":")
 
     if not date_parts or len(date_parts) > 2:
@@ -155,17 +153,17 @@ def _normalise_dt_param_str(dt: str) -> tuple:
 def _distribution_to_filename(
     root_folder: str, dataset: str, datasetseries: str, file_format: str, catalog: str = 'common'
 ) -> Path:
-    """Returns a filename representing a dataset distribution
-    
+    """Returns a filename representing a dataset distribution.
+
     Args:
-            root_folder (str): The root folder path.
-            dataset (str): The dataset identifier.
-            datasetseries (str): The datasetseries instance identifier.
-            file_format (str): The file type, e.g. CSV or Parquet
-            catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
+        root_folder (str): The root folder path.
+        dataset (str): The dataset identifier.
+        datasetseries (str): The datasetseries instance identifier.
+        file_format (str): The file type, e.g. CSV or Parquet
+        catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
 
      Returns:
-            tuple: A tuple of dates.
+        tuple: A tuple of dates.
     """
     if datasetseries[-1] == '/' or datasetseries[-1] == '\\':
         datasetseries = datasetseries[0:-1]
@@ -174,13 +172,13 @@ def _distribution_to_filename(
 
 
 def _filename_to_distribution(file_name: str) -> tuple:
-    """Breaks a filename down into the components that represent a dataset distribution in the catalog
-    
+    """Breaks a filename down into the components that represent a dataset distribution in the catalog.
+
     Args:
-            file_name (str): The filename to decompose.
+        file_name (str): The filename to decompose.
 
      Returns:
-            tuple: A tuple consisting of catalog id, dataset id, datasetseries instane id, and file format (e.g. CSV).
+        tuple: A tuple consisting of catalog id, dataset id, datasetseries instane id, and file format (e.g. CSV).
     """
     dataset, catalog, series_format = Path(file_name).name.split('__')
     datasetseries, file_format = series_format.split('.')
@@ -191,18 +189,17 @@ def _distribution_to_url(
     root_url: str, dataset: str, datasetseries: str, file_format: str, catalog: str = 'common'
 ) -> str:
     """Returns the API URL to download a dataset distribution.
-    
+
     Args:
-            root_url (str): The base url for the API.
-            dataset (str): The dataset identifier.
-            datasetseries (str): The datasetseries instance identifier.
-            file_format (str): The file type, e.g. CSV or Parquet
-            catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
+        root_url (str): The base url for the API.
+        dataset (str): The dataset identifier.
+        datasetseries (str): The datasetseries instance identifier.
+        file_format (str): The file type, e.g. CSV or Parquet
+        catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
 
      Returns:
-            str: A URL for the API distribution endpoint.
+        str: A URL for the API distribution endpoint.
     """
-
     if datasetseries[-1] == '/' or datasetseries[-1] == '\\':
         datasetseries = datasetseries[0:-1]
 
@@ -210,7 +207,7 @@ def _distribution_to_url(
 
 
 class FusionCredentials:
-    """Utility functions to manage credentials"""
+    """Utility functions to manage credentials."""
 
     def __init__(
         self,
@@ -227,8 +224,7 @@ class FusionCredentials:
             client_secret (str, optional): A valid OAuth client secret. Defaults to None.
             resource (str, optional): The OAuth audience. Defaults to None.
             auth_url (str, optional): URL for the OAuth authentication server. Defaults to None.
-            proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet. Defaults to {}. Keys are http and https
-        
+            proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet.
         """
         self.client_id = client_id
         self.client_secret = client_secret
@@ -433,28 +429,30 @@ class FusionOAuthAdapter(HTTPAdapter):
 def _get_canonical_root_url(any_url: str) -> str:
     """Function to send a request to the authentication server.
 
-        Args:
-            any_url (str): A valid URL or URL part
+    Args:
+        any_url (str): A valid URL or URL part
 
-        Returns:
-            str: A complete root URL 
-        
+    Returns:
+        str: A complete root URL
+
     """
     url_parts = urlparse(any_url)
     root_url = urlunparse((url_parts[0], url_parts[1], '', '', '', ''))
     return root_url
 
 
-def _get_session(credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None) -> requests.Session:
+def _get_session(
+    credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None
+) -> requests.Session:
     """Function to send a request to the authentication server.
 
-        Args:
-            credentials (FusionCredentials): Valid user credentials to provide an acces token
-            root_url (str): The URL to call.
+    Args:
+        credentials (FusionCredentials): Valid user credentials to provide an acces token
+        root_url (str): The URL to call.
 
-        Returns:
-            requests.Session(): A HTTP Session object
-        
+    Returns:
+        requests.Session(): A HTTP Session object
+
     """
     if not get_retries:
         get_retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504])
@@ -475,14 +473,14 @@ def _get_session(credentials: FusionCredentials, root_url: str, get_retries: Uni
 def _stream_single_file_new_session_dry_run(credentials, url: str, output_file: str):
     """Function to test that a distribution is available without downloading
 
-        Args:
-            credentials (FusionCredentials): Valid user credentials to provide an acces token
-            root_url (str): The URL to call.
-            output_file: The filename that the data will be saved into.
+    Args:
+        credentials (FusionCredentials): Valid user credentials to provide an acces token
+        root_url (str): The URL to call.
+        output_file: The filename that the data will be saved into.
 
-        Returns:
-            requests.Session(): A HTTP Session object
-        
+    Returns:
+        requests.Session(): A HTTP Session object
+
     """
     try:
         resp = _get_session(credentials, url).head(url)
@@ -502,17 +500,17 @@ def _stream_single_file_new_session(
 ) -> tuple:
     """Function to stream a single file from the API to a file on disk.
 
-        Args:
-            credentials (FusionCredentials): Valid user credentials to provide an acces token
-            root_url (str): The URL to call.
-            output_file (str): The filename that the data will be saved into.
-            overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
-            block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
-            dry_run (bool, optional): Test that a file can be downloaded and return the filename without downloading the data. Defaults to False.
+    Args:
+        credentials (FusionCredentials): Valid user credentials to provide an acces token
+        root_url (str): The URL to call.
+        output_file (str): The filename that the data will be saved into.
+        overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
+        block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
+        dry_run (bool, optional): Test that a file can be downloaded and return the filename without downloading the data. Defaults to False.
 
-        Returns:
-            tuple: A tuple
-        
+    Returns:
+        tuple: A tuple
+
     """
     if dry_run:
         return _stream_single_file_new_session_dry_run(credentials, url, output_file)
@@ -545,16 +543,15 @@ def _stream_single_file_new_session(
         return (False, output_file, ex)
 
 
-
 def _stream_single_file(session: requests.Session, url: str, output_file: str, block_size=DEFAULT_CHUNK_SIZE):
     """Streams a file downloaded from a URL to a file.
 
-        Args:
-            session (FusionCredentials): A HTTP Session
-            url (str): The URL to call for the file download.
-            output_file (str): The filename that the data will be saved into.
-            block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
-    
+    Args:
+        session (FusionCredentials): A HTTP Session
+        url (str): The URL to call for the file download.
+        output_file (str): The filename that the data will be saved into.
+        block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
+
     """
     output_file_path = Path(output_file)
     tmp_name = output_file_path.with_name(output_file_path.name + ".tmp")
@@ -577,7 +574,7 @@ class Fusion:
         Args:
             url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
             session (requests.Session): Specify a proxy if required to access the authentication server. Defaults to {}.
-            
+
         Returns:
             pandas.DataFrame: a dataframe containing the requested data.
         """
@@ -882,7 +879,7 @@ class Fusion:
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             force_download (bool, optional): If True then will always download a file even if it is already on disk. Defaults to True.
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved. Defaults to download_folder as set in __init__
-        
+
         Returns:
 
         """
@@ -951,7 +948,8 @@ class Fusion:
 
         if not all(res[0] for res in download_res):
             failed_res = [res for res in download_res if not res[0]]
-            raise Exception(f'Not all downloads were successfully completed. The following failed:\n{failed_res}')
+            raise Exception(f"Not all downloads were successfully completed. "
+                            f"Re-run to collect missing files. The following failed:\n{failed_res}")
 
         files = [res[1] for res in download_res]
 
