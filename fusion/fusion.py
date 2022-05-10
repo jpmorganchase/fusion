@@ -481,7 +481,8 @@ def _stream_single_file_new_session_dry_run(credentials, url: str, output_file: 
         
     """
     try:
-        _get_session(credentials, url).head(url)
+        resp = _get_session(credentials, url).head(url)
+        resp.raise_for_status()
         return (True, output_file, None)
     except Exception as ex:
         return (False, output_file, ex)
@@ -519,6 +520,7 @@ def _stream_single_file_new_session(
     tmp_name = output_file_path.with_name(output_file_path.name + ".tmp")
     try:
         with _get_session(credentials, url).get(url, stream=True) as r:
+            r.raise_for_status()
             byte_cnt = 0
             with open(tmp_name, "wb") as outfile:
                 for chunk in r.iter_content(block_size):
@@ -540,7 +542,7 @@ def _stream_single_file_new_session(
 
 
 
-def _stream_single_file(session, url: str, output_file: str, block_size=DEFAULT_CHUNK_SIZE):
+def _stream_single_file(session: requests.Session, url: str, output_file: str, block_size=DEFAULT_CHUNK_SIZE):
     """Streams a file downloaded from a URL to a file.
 
         Args:
@@ -553,6 +555,7 @@ def _stream_single_file(session, url: str, output_file: str, block_size=DEFAULT_
     output_file_path = Path(output_file)
     tmp_name = output_file_path.with_name(output_file_path.name + ".tmp")
     with session.get(url, stream=True) as r:
+        r.raise_for_status()
         with open(tmp_name, "wb") as outfile:
             for chunk in r.iter_content(block_size):
                 outfile.write(chunk)
