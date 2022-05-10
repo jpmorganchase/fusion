@@ -890,7 +890,7 @@ class Fusion:
 
         download_spec = [
             (
-                _get_session(self.credentials, self.root_url),
+                self.credentials,
                 _distribution_to_url(self.root_url, series[1], series[2], series[3], series[0]),
                 _distribution_to_filename(download_folder, series[1], series[2], series[3], series[0]),
                 force_download,
