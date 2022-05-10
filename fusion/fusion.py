@@ -445,7 +445,7 @@ def _get_canonical_root_url(any_url: str) -> str:
     return root_url
 
 
-def _get_session(credentials, root_url) -> requests.Session:
+def _get_session(credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None) -> requests.Session:
     """Function to send a request to the authentication server.
 
         Args:
@@ -456,8 +456,12 @@ def _get_session(credentials, root_url) -> requests.Session:
             requests.Session(): A HTTP Session object
         
     """
+    if not get_retries:
+        get_retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504])
+    else:
+        get_retries = Retry.from_int(get_retries)
     session = requests.Session()
-    auth_handler = FusionOAuthAdapter(credentials)
+    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries)
     if credentials.proxies:
         session.proxies.update(credentials.proxies)
     try:
