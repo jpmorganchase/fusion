@@ -244,12 +244,15 @@ class FusionCredentials:
         """Utility function to generate credentials file that can be used for authentication.
 
         Args:
-            credentials_file (str, optional): The path and filename to store the credentials under. Path may be absolute or relative to current working directory. Defaults to 'config/client_credentials.json'.
+            credentials_file (str, optional): The path and filename to store the credentials under.
+                Path may be absolute or relative to current working directory.
+                Defaults to 'config/client_credentials.json'.
             client_id (str, optional): A valid OAuth client identifier. Defaults to None.
             client_secret (str, optional): A valid OAuth client secret. Defaults to None.
             resource (str, optional): The OAuth audience. Defaults to None.
             auth_url (str, optional): URL for the OAuth authentication server. Defaults to None.
-            proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet. Defaults to {}. Keys are http and https
+            proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet.
+                Defaults to {}. Keys are http and https
 
         Raises:
             CredentialError: Exception to handle missing values required for authentication.
@@ -283,11 +286,11 @@ class FusionCredentials:
 
     @staticmethod
     def from_dict(credentials: dict):
-
-        """Create a credentials object from a dictionary
+        """Create a credentials object from a dictionary.
 
         Args:
-            credentials (dict): A dictionary containing the requried keys: client_id, client_secret, resource, auth_url, and optionally proxies
+            credentials (dict): A dictionary containing the requried keys: client_id, client_secret,
+                resource, auth_url, and optionally proxies
 
         Returns:
             FusionCredentials: a credentials object that can be used for authentication.
@@ -305,7 +308,8 @@ class FusionCredentials:
         """Create a credentils object from a file.
 
         Args:
-            credentials_file (str, optional): Path (absolute or relative) and filename to load credentials from. Defaults to 'config/client.credentials.json'.
+            credentials_file (str, optional): Path (absolute or relative) and filename
+                to load credentials from. Defaults to 'config/client.credentials.json'.
 
         Returns:
             FusionCredentials: a credentials object that can be used for authentication.
@@ -355,9 +359,13 @@ class FusionOAuthAdapter(HTTPAdapter):
 
         Args:
             credentials (Union[FusionCredentials, Union[str, dict]): Valid user credentials to authenticate.
-            proxies (dict, optional): Specify a proxy if required to access the authentication server. Defaults to {}.
-            refresh_within_seconds (int, optional): When an API call is made with less than the specified number of seconds until the access token expires, or after expiry, it will refresh the token. Defaults to 5.
-            auth_retries (Union[int, Retry]): Number of times to attempt to authenticate to handle connection problems. Defaults to None.
+            proxies (dict, optional): Specify a proxy if required to access the authentication server.
+                Defaults to {}.
+            refresh_within_seconds (int, optional): When an API call is made with less than the specified
+                number of seconds until the access token expires, or after expiry, it will refresh the token.
+                Defaults to 5.
+            auth_retries (Union[int, Retry]): Number of times to attempt to authenticate to handle connection problems.
+                Defaults to None.
 
         """
         super(FusionOAuthAdapter, self).__init__(*args, **kwargs)
@@ -471,7 +479,7 @@ def _get_session(
 
 
 def _stream_single_file_new_session_dry_run(credentials, url: str, output_file: str):
-    """Function to test that a distribution is available without downloading
+    """Function to test that a distribution is available without downloading.
 
     Args:
         credentials (FusionCredentials): Valid user credentials to provide an acces token
@@ -506,7 +514,8 @@ def _stream_single_file_new_session(
         output_file (str): The filename that the data will be saved into.
         overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
         block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
-        dry_run (bool, optional): Test that a file can be downloaded and return the filename without downloading the data. Defaults to False.
+        dry_run (bool, optional): Test that a file can be downloaded and return the filename without
+            downloading the data. Defaults to False.
 
     Returns:
         tuple: A tuple
@@ -578,7 +587,6 @@ class Fusion:
         Returns:
             pandas.DataFrame: a dataframe containing the requested data.
         """
-
         response = session.get(url)
         response.raise_for_status()
         table = response.json()['resources']
@@ -595,9 +603,13 @@ class Fusion:
         """Constructor to instantiate a new Fusion object.
 
         Args:
-            credentials (Union[str, dict], optional): A path to a credentials file or a dictionary containing the required keys. Defaults to 'config/client_credentials.json'.
-            root_url (_type_, optional): The API root URL. Defaults to "https://fusion-api.jpmorgan.com/fusion/v1/".
-            download_folder (str, optional): The folder path where downloaded data files are saved. Defaults to "downloads".
+            credentials (Union[str, dict], optional): A path to a credentials file or
+                a dictionary containing the required keys.
+                Defaults to 'config/client_credentials.json'.
+            root_url (_type_, optional): The API root URL.
+                Defaults to "https://fusion-api.jpmorgan.com/fusion/v1/".
+            download_folder (str, optional): The folder path where downloaded data files
+                are saved. Defaults to "downloads".
             log_level (int, optional): Set the logging level. Defaults to logging.ERROR.
         """
         self.root_url = root_url
@@ -665,10 +677,13 @@ class Fusion:
         """Get the products contained in a catalog. A product is a grouping of datasets.
 
         Args:
-            contains (Union[str, list], optional): A string or a list of strings that are product identifiers to filter the products list. If a list is provided then it will return products whose identifier matches any of the strings. Defaults to None.
+            contains (Union[str, list], optional): A string or a list of strings that are product
+                identifiers to filter the products list. If a list is provided then it will return
+                products whose identifier matches any of the strings. Defaults to None.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             output (bool, optional): If True then print the dataframe. Defaults to False.
-            max_results (int, optional): Limit the number of rows returned in the dataframe. Defaults to -1 which returns all results.
+            max_results (int, optional): Limit the number of rows returned in the dataframe.
+                Defaults to -1 which returns all results.
 
         Returns:
             pandas.DataFrame: a dataframe with a row for each product
@@ -695,10 +710,13 @@ class Fusion:
         """_summary_.
 
         Args:
-            contains (Union[str, list], optional): A string or a list of strings that are dataset identifiers to filter the datasets list. If a list is provided then it will return datasets whose identifier matches any of the strings. Defaults to None.
+            contains (Union[str, list], optional): A string or a list of strings that are dataset
+                identifiers to filter the datasets list. If a list is provided then it will return
+                datasets whose identifier matches any of the strings. Defaults to None.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             output (bool, optional): If True then print the dataframe. Defaults to False.
-            max_results (int, optional): Limit the number of rows returned in the dataframe. Defaults to -1 which returns all results.
+            max_results (int, optional): Limit the number of rows returned in the dataframe.
+                Defaults to -1 which returns all results.
 
         Returns:
             pandas.DataFrame: a dataframe with a row for each dataset.
@@ -766,7 +784,8 @@ class Fusion:
             dataset (str): A dataset identifier
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             output (bool, optional): If True then print the dataframe. Defaults to False.
-            max_results (int, optional): Limit the number of rows returned in the dataframe. Defaults to -1 which returns all results.
+            max_results (int, optional): Limit the number of rows returned in the dataframe.
+                Defaults to -1 which returns all results.
 
         Returns:
             pandas.DataFrame: a dataframe with a row for each dataset member.
@@ -794,7 +813,8 @@ class Fusion:
             output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-            pandas.DataFrame: A dataframe with a row for each datasetseries member resource. Currently this will always be distributions.
+            pandas.DataFrame: A dataframe with a row for each datasetseries member resource.
+                Currently this will always be distributions.
         """
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -829,11 +849,17 @@ class Fusion:
     def _resolve_distro_tuples(
         self, dataset: str, dt_str: str = 'latest', dataset_format: str = 'parquet', catalog: str = 'common'
     ):
-        """A private utility function to generate a list of distribution tuples. Each tuple is a distribution, identified by catalog, dataset id, datasetseries member id, and the file format.
+        """Resolve distribution tuples given specification params.
+
+        A private utility function to generate a list of distribution tuples.
+        Each tuple is a distribution, identified by catalog, dataset id,
+        datasetseries member id, and the file format.
 
         Args:
             dataset (str): A dataset identifier
-            dt_str (str, optional): Either a single date or a range identified by a start or end date, or both separated with a ":". Defaults to 'latest' which will return the most recent instance of the dataset.
+            dt_str (str, optional): Either a single date or a range identified by a start or end date,
+                or both separated with a ":". Defaults to 'latest' which will return the most recent
+                instance of the dataset.
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
 
@@ -872,13 +898,18 @@ class Fusion:
 
         Args:
             dataset (str): A dataset identifier
-            dt_str (str, optional): Either a single date or a range identified by a start or end date, or both separated with a ":". Defaults to 'latest' which will return the most recent instance of the dataset.
+            dt_str (str, optional): Either a single date or a range identified by a start or end date,
+                or both separated with a ":". Defaults to 'latest' which will return the most recent
+                instance of the dataset.
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
-            n_par (int, optional): Specify how many distributions to download in parallel. Defaults to DEFAULT_PARALLELISM.
+            n_par (int, optional): Specify how many distributions to download in parallel.
+                Defaults to DEFAULT_PARALLELISM.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
-            force_download (bool, optional): If True then will always download a file even if it is already on disk. Defaults to True.
-            download_folder (str, optional): The path, absolute or relative, where downloaded files are saved. Defaults to download_folder as set in __init__
+            force_download (bool, optional): If True then will always download a file even
+                if it is already on disk. Defaults to True.
+            download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
+                Defaults to download_folder as set in __init__
 
         Returns:
 
@@ -928,17 +959,23 @@ class Fusion:
 
         Args:
             dataset (str): A dataset identifier
-            dt_str (str, optional): Either a single date or a range identified by a start or end date, or both separated with a ":". Defaults to 'latest' which will return the most recent instance of the dataset.
+            dt_str (str, optional): Either a single date or a range identified by a start or end date,
+                or both separated with a ":". Defaults to 'latest' which will return the most recent
+                instance of the dataset.
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
-            n_par (int, optional): Specify how many distributions to download in parallel. Defaults to DEFAULT_PARALLELISM.
+            n_par (int, optional): Specify how many distributions to download in parallel.
+                Defaults to DEFAULT_PARALLELISM.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             dry_run (bool, optional): _description_. Defaults to True
             columns (List, optional): _description_. Defaults to None
-            force_download (bool, optional): If True then will always download a file even if it is already on disk. Defaults to True.
-            download_folder (str, optional): The path, absolute or relative, where downloaded files are saved. Defaults to download_folder as set in __init__
+            force_download (bool, optional): If True then will always download a file even
+                if it is already on disk. Defaults to True.
+            download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
+                Defaults to download_folder as set in __init__
         Returns:
-            pandas.DataFrame: a dataframe containing the requested data. If multiple dataset instances are retrieved then these are concatenated first.
+            pandas.DataFrame: a dataframe containing the requested data.
+                If multiple dataset instances are retrieved then these are concatenated first.
         """
         if not download_folder:
             download_folder = self.download_folder
