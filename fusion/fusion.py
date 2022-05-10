@@ -32,7 +32,7 @@ VERBOSE_LVL = 25
 
 
 class APIRequestError(Exception):
-    """APIRequestError exception wrapper.
+    """APIRequestError exception wrapper to handle API request erorrs.
 
     Args:
         Exception : Exception to wrap.
@@ -42,7 +42,7 @@ class APIRequestError(Exception):
 
 
 class APIResponseError(Exception):
-    """APIResponseError exception wrapper.
+    """APIResponseError exception wrapper to handle API response errors.
 
     Args:
         Exception : Exception to wrap.
@@ -52,7 +52,7 @@ class APIResponseError(Exception):
 
 
 class APIConnectError(Exception):
-    """APIConnectError exception wrapper.
+    """APIConnectError exception wrapper to handle API connection errors.
 
     Args:
         Exception : Exception to wrap.
@@ -62,7 +62,7 @@ class APIConnectError(Exception):
 
 
 class UnrecognizedFormatError(Exception):
-    """UnrecognizedFormatError exception wrapper.
+    """UnrecognizedFormatError exception wrapper to handle format errors.
 
     Args:
         Exception : Exception to wrap.
@@ -72,7 +72,7 @@ class UnrecognizedFormatError(Exception):
 
 
 class CredentialError(Exception):
-    """CredentialError exception wrapper.
+    """CredentialError exception wrapper to handle errors in credentials provided for authentication.
 
     Args:
         Exception : Exception to wrap.
@@ -82,10 +82,27 @@ class CredentialError(Exception):
 
 
 def _res_plural(ref_int: int, pluraliser: str = 's') -> str:
+    """Private function to return the plural form when the number is more than one
+    
+    Args:
+            ref_int (int): The reference integer that determines whether to return a plural suffix.
+            pluraliser (str, optional): The plural suffix. Defaults to "s".
+
+     Returns:
+            str: The plural suffix to append to a string.
+    """
     return '' if abs(ref_int) == 1 else pluraliser
 
 
 def _is_json(data) -> bool:
+    """Test whether the content of a string is a JSON object.
+    
+    Args:
+            data (str): The content to evaluate.
+
+     Returns:
+            bool: True if the content of data is JSON, False otherwise.
+    """
     try:
         json.loads(data)
     except ValueError:
@@ -94,6 +111,14 @@ def _is_json(data) -> bool:
 
 
 def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -> str:
+    """Convert dates into a normalised string representation.
+    
+    Args:
+            dt (Union[str, int, datetime.datetime, datetime.date]): A date represented in various types.
+
+     Returns:
+            str: A normalized date string.
+    """
 
     if isinstance(dt, (datetime.date, datetime.datetime)):
         return dt.strftime("%Y-%m-%d")
@@ -110,6 +135,14 @@ def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -
 
 
 def _normalise_dt_param_str(dt: str) -> tuple:
+    """Convert a date parameter which may be a single date or a date range into a tuple.
+    
+    Args:
+            dt (str): Either a single date or a date range separated by a ":".
+
+     Returns:
+            tuple: A tuple of dates.
+    """
 
     date_parts = dt.split(":")
 
@@ -122,6 +155,18 @@ def _normalise_dt_param_str(dt: str) -> tuple:
 def _distribution_to_filename(
     root_folder: str, dataset: str, datasetseries: str, file_format: str, catalog: str = 'common'
 ) -> Path:
+    """Returns a filename representing a dataset distribution
+    
+    Args:
+            root_folder (str): The root folder path.
+            dataset (str): The dataset identifier.
+            datasetseries (str): The datasetseries instance identifier.
+            file_format (str): The file type, e.g. CSV or Parquet
+            catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
+
+     Returns:
+            tuple: A tuple of dates.
+    """
     if datasetseries[-1] == '/' or datasetseries[-1] == '\\':
         datasetseries = datasetseries[0:-1]
     file_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
@@ -129,6 +174,14 @@ def _distribution_to_filename(
 
 
 def _filename_to_distribution(file_name: str) -> tuple:
+    """Breaks a filename down into the components that represent a dataset distribution in the catalog
+    
+    Args:
+            file_name (str): The filename to decompose.
+
+     Returns:
+            tuple: A tuple consisting of catalog id, dataset id, datasetseries instane id, and file format (e.g. CSV).
+    """
     dataset, catalog, series_format = Path(file_name).name.split('__')
     datasetseries, file_format = series_format.split('.')
     return (catalog, dataset, datasetseries, file_format)
@@ -137,6 +190,18 @@ def _filename_to_distribution(file_name: str) -> tuple:
 def _distribution_to_url(
     root_url: str, dataset: str, datasetseries: str, file_format: str, catalog: str = 'common'
 ) -> str:
+    """Returns the API URL to download a dataset distribution.
+    
+    Args:
+            root_url (str): The base url for the API.
+            dataset (str): The dataset identifier.
+            datasetseries (str): The datasetseries instance identifier.
+            file_format (str): The file type, e.g. CSV or Parquet
+            catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
+
+     Returns:
+            str: A URL for the API distribution endpoint.
+    """
 
     if datasetseries[-1] == '/' or datasetseries[-1] == '\\':
         datasetseries = datasetseries[0:-1]
@@ -145,7 +210,7 @@ def _distribution_to_url(
 
 
 class FusionCredentials:
-    """Class to manage Fusion Creds and OAuth."""
+    """Utility functions to manage credentials"""
 
     def __init__(
         self,
@@ -155,14 +220,15 @@ class FusionCredentials:
         auth_url: str = None,
         proxies={},
     ) -> None:
-        """Constuctor for Creds mgr.
+        """Constuctor for the FusionCredentials authentication management class.
 
         Args:
-            client_id (str, optional): Client ID as provided by Fusion. Defaults to None.
-            client_secret (str, optional): Client Secret as provided by Fusion. Defaults to None.
-            resource (str, optional): Fusion resource ID as provided by Fusion. Defaults to None.
-            auth_url (str, optional): Auth URL as provided by Fusion. Defaults to None.
-            proxies (dict, optional): Any proxy servers to hop through. Defaults to {}. Keys are http and https
+            client_id (str, optional): A valid OAuth client identifier. Defaults to None.
+            client_secret (str, optional): A valid OAuth client secret. Defaults to None.
+            resource (str, optional): The OAuth audience. Defaults to None.
+            auth_url (str, optional): URL for the OAuth authentication server. Defaults to None.
+            proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet. Defaults to {}. Keys are http and https
+        
         """
         self.client_id = client_id
         self.client_secret = client_secret
@@ -179,21 +245,21 @@ class FusionCredentials:
         auth_url: str = None,
         proxies: str = None,
     ):
-        """_summary_.
+        """Utility function to generate credentials file that can be used for authentication.
 
         Args:
-            credentials_file (str, optional): _description_. Defaults to 'config/client_credentials.json'.
-            client_id (str, optional): _description_. Defaults to None.
-            client_secret (str, optional): _description_. Defaults to None.
-            resource (str, optional): _description_. Defaults to None.
-            auth_url (str, optional): _description_. Defaults to None.
-            proxies (str, optional): _description_. Defaults to None.
+            credentials_file (str, optional): The path and filename to store the credentials under. Path may be absolute or relative to current working directory. Defaults to 'config/client_credentials.json'.
+            client_id (str, optional): A valid OAuth client identifier. Defaults to None.
+            client_secret (str, optional): A valid OAuth client secret. Defaults to None.
+            resource (str, optional): The OAuth audience. Defaults to None.
+            auth_url (str, optional): URL for the OAuth authentication server. Defaults to None.
+            proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet. Defaults to {}. Keys are http and https
 
         Raises:
-            CredentialError: Exception describing creds issue
+            CredentialError: Exception to handle missing values required for authentication.
 
         Returns:
-            _type_: _description_
+           FusionCredentials: a credentials object that can be used for authentication.
         """
         if not client_id:
             raise CredentialError('A valid client_id is required')
@@ -221,13 +287,14 @@ class FusionCredentials:
 
     @staticmethod
     def from_dict(credentials: dict):
-        """Create Creds object from dict.
+
+        """Create a credentials object from a dictionary
 
         Args:
-            credentials (dict): conforming dictionary with creds attributes
+            credentials (dict): A dictionary containing the requried keys: client_id, client_secret, resource, auth_url, and optionally proxies
 
         Returns:
-            FusionCredentials: creds object
+            FusionCredentials: a credentials object that can be used for authentication.
         """
         client_id = credentials['client_id']
         client_secret = credentials['client_secret']
@@ -239,13 +306,13 @@ class FusionCredentials:
 
     @staticmethod
     def from_file(credentials_file: str = 'config/client.credentials.json'):
-        """_summary_.
+        """Create a credentils object from a file.
 
         Args:
-            credentials_file (str, optional): _description_. Defaults to 'config/client.credentials.json'.
+            credentials_file (str, optional): Path (absolute or relative) and filename to load credentials from. Defaults to 'config/client.credentials.json'.
 
         Returns:
-            _type_: _description_
+            FusionCredentials: a credentials object that can be used for authentication.
         """
         with open(credentials_file, 'r') as credentials:
             data = json.load(credentials)
@@ -254,16 +321,16 @@ class FusionCredentials:
 
     @staticmethod
     def from_object(credentials_source: Union[str, dict]):
-        """_summary_.
+        """Utility function that will determine how to create a credentials object based on data passed.
 
         Args:
-            credentials_source (Union[str, dict]): _description_
+            credentials_source (Union[str, dict]): A string which could be a filename or a JSON object, or a dictionary.
 
         Raises:
-            CredentialError: _description_
+            CredentialError: Exception raised when the provided credentials is not one of the supported types
 
         Returns:
-            _type_: _description_
+            FusionCredentials: a credentials object that can be used for authentication.
         """
         if isinstance(credentials_source, dict):
             return FusionCredentials.from_dict(credentials_source)
@@ -277,7 +344,7 @@ class FusionCredentials:
 
 
 class FusionOAuthAdapter(HTTPAdapter):
-    """Fusion OAuth model specific requests adapter."""
+    """An OAuth adapter to manage authentication and session tokens."""
 
     def __init__(
         self,
@@ -288,13 +355,14 @@ class FusionOAuthAdapter(HTTPAdapter):
         *args,
         **kwargs,
     ) -> None:
-        """_summary_.
+        """Class constructor to create a FusionOAuthAdapter object.
 
         Args:
-            credentials (Union[FusionCredentials, Union[str, dict]): _description_
-            proxies (dict, optional): _description_. Defaults to {}.
-            refresh_within_seconds (int, optional): _description_. Defaults to 5.
-            auth_retries (Union[int, Retry]): _description. Defaults to None.
+            credentials (Union[FusionCredentials, Union[str, dict]): Valid user credentials to authenticate.
+            proxies (dict, optional): Specify a proxy if required to access the authentication server. Defaults to {}.
+            refresh_within_seconds (int, optional): When an API call is made with less than the specified number of seconds until the access token expires, or after expiry, it will refresh the token. Defaults to 5.
+            auth_retries (Union[int, Retry]): Number of times to attempt to authenticate to handle connection problems. Defaults to None.
+
         """
         super(FusionOAuthAdapter, self).__init__(*args, **kwargs)
 
@@ -317,11 +385,14 @@ class FusionOAuthAdapter(HTTPAdapter):
         else:
             self.auth_retries = Retry.from_int(auth_retries)
 
-    def send(self, request, **kwargs):
-        """_summary_.
+    def send(self, request: requests.Session, **kwargs):
+        """Function to send a request to the authentication server.
 
         Args:
-            request (_type_): _description_
+            request (requests.Session): A HTTP Session.
+
+        Returns:
+
         """
 
         def _refresh_token_data():
@@ -360,12 +431,31 @@ class FusionOAuthAdapter(HTTPAdapter):
 
 
 def _get_canonical_root_url(any_url: str) -> str:
+    """Function to send a request to the authentication server.
+
+        Args:
+            any_url (str): A valid URL or URL part
+
+        Returns:
+            str: A complete root URL 
+        
+    """
     url_parts = urlparse(any_url)
     root_url = urlunparse((url_parts[0], url_parts[1], '', '', '', ''))
     return root_url
 
 
-def _get_session(credentials, root_url):
+def _get_session(credentials, root_url) -> requests.Session:
+    """Function to send a request to the authentication server.
+
+        Args:
+            credentials (FusionCredentials): Valid user credentials to provide an acces token
+            root_url (str): The URL to call.
+
+        Returns:
+            requests.Session(): A HTTP Session object
+        
+    """
     session = requests.Session()
     auth_handler = FusionOAuthAdapter(credentials)
     if credentials.proxies:
@@ -379,6 +469,17 @@ def _get_session(credentials, root_url):
 
 
 def _stream_single_file_new_session_dry_run(credentials, url: str, output_file: str):
+    """Function to test that a distribution is available without downloading
+
+        Args:
+            credentials (FusionCredentials): Valid user credentials to provide an acces token
+            root_url (str): The URL to call.
+            output_file: The filename that the data will be saved into.
+
+        Returns:
+            requests.Session(): A HTTP Session object
+        
+    """
     try:
         _get_session(credentials, url).head(url)
         return (True, output_file, None)
@@ -393,7 +494,21 @@ def _stream_single_file_new_session(
     overwrite: bool = True,
     block_size=DEFAULT_CHUNK_SIZE,
     dry_run: bool = False,
-):
+) -> tuple:
+    """Function to stream a single file from the API to a file on disk.
+
+        Args:
+            credentials (FusionCredentials): Valid user credentials to provide an acces token
+            root_url (str): The URL to call.
+            output_file (str): The filename that the data will be saved into.
+            overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
+            block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
+            dry_run (bool, optional): Test that a file can be downloaded and return the filename without downloading the data. Defaults to False.
+
+        Returns:
+            tuple: A tuple
+        
+    """
     if dry_run:
         return _stream_single_file_new_session_dry_run(credentials, url, output_file)
 
@@ -410,10 +525,19 @@ def _stream_single_file_new_session(
         return (False, output_file, ex)
 
 
-def _stream_single_file(session, url: str, output_file: str, blocl_size=DEFAULT_CHUNK_SIZE):
+def _stream_single_file(session, url: str, output_file: str, block_size=DEFAULT_CHUNK_SIZE):
+    """Streams a file downloaded from a URL to a file.
+
+        Args:
+            session (FusionCredentials): A HTTP Session
+            url (str): The URL to call for the file download.
+            output_file (str): The filename that the data will be saved into.
+            block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
+        
+    """
     with session.get(url, stream=True) as r:
         with open(output_file, "wb") as outfile:
-            for chunk in r.iter_content(blocl_size):
+            for chunk in r.iter_content(block_size):
                 outfile.write(chunk)
 
 
@@ -422,6 +546,15 @@ class Fusion:
 
     @staticmethod
     def _call_for_dataframe(url: str, session: requests.Session) -> pd.DataFrame:
+        """Private function that calls an API endpoint and returns the data as a pandas dataframe.
+
+        Args:
+            url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
+            session (requests.Session): Specify a proxy if required to access the authentication server. Defaults to {}.
+            
+        Returns:
+            pandas.DataFrame: a dataframe containing the requested data.
+        """
 
         response = session.get(url)
         response.raise_for_status()
@@ -436,13 +569,13 @@ class Fusion:
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
     ) -> None:
-        """_summary_.
+        """Constructor to instantiate a new Fusion object.
 
         Args:
-            credentials (Union[str, dict], optional): _description_. Defaults to 'config/client_credentials.json'.
-            root_url (_type_, optional): _description_. Defaults to "https://fusion-api.jpmorgan.com/fusion/v1/".
-            download_folder (str, optional): _description_. Defaults to "downloads".
-            log_level (int, optional): _description_. Defaults to logging.ERROR.
+            credentials (Union[str, dict], optional): A path to a credentials file or a dictionary containing the required keys. Defaults to 'config/client_credentials.json'.
+            root_url (_type_, optional): The API root URL. Defaults to "https://fusion-api.jpmorgan.com/fusion/v1/".
+            download_folder (str, optional): The folder path where downloaded data files are saved. Defaults to "downloads".
+            log_level (int, optional): Set the logging level. Defaults to logging.ERROR.
         """
         self.root_url = root_url
         self.download_folder = download_folder
@@ -469,13 +602,13 @@ class Fusion:
         self.session = _get_session(self.credentials, self.root_url)
 
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
-        """_summary_.
+        """Lists the catalogs available to the API account.
 
         Args:
-            output (bool, optional): _description_. Defaults to False.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-            pd.DataFrame: _description_
+            pandas.DataFrame: A dataframe with a row for each catalog
         """
         url = f'{self.root_url}catalogs/'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -486,14 +619,14 @@ class Fusion:
         return df
 
     def catalog_resources(self, catalog: str = 'common', output: bool = False) -> pd.DataFrame:
-        """_summary_.
+        """List the resources contained within the catalog, for example products and datasets.
 
         Args:
-            catalog (str, optional): _description_. Defaults to 'common'.
-            output (bool, optional): _description_. Defaults to False.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-           pd.DataFrame: _description_
+           pandas.DataFrame: A dataframe with a row for each resource within the catalog
         """
         url = f'{self.root_url}catalogs/{catalog}'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -506,16 +639,16 @@ class Fusion:
     def list_products(
         self, contains: Union[str, list] = None, catalog: str = 'common', output: bool = False, max_results: int = -1
     ) -> pd.DataFrame:
-        """_summary_.
+        """Get the products contained in a catalog. A product is a grouping of datasets.
 
         Args:
-            contains (Union[str, list], optional): _description_. Defaults to None.
-            catalog (str, optional): _description_. Defaults to 'common'.
-            output (bool, optional): _description_. Defaults to False.
-            max_results (int, optional): _description_. Defaults to -1.
+            contains (Union[str, list], optional): A string or a list of strings that are product identifiers to filter the products list. If a list is provided then it will return products whose identifier matches any of the strings. Defaults to None.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+            max_results (int, optional): Limit the number of rows returned in the dataframe. Defaults to -1 which returns all results.
 
         Returns:
-            pd.DataFrame: _description_
+            pandas.DataFrame: a dataframe with a row for each product
         """
         url = f'{self.root_url}catalogs/{catalog}/products'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -539,13 +672,13 @@ class Fusion:
         """_summary_.
 
         Args:
-            contains (Union[str, list], optional): _description_. Defaults to None.
-            catalog (str, optional): _description_. Defaults to 'common'.
-            output (bool, optional): _description_. Defaults to False.
-            max_results (int, optional): _description_. Defaults to -1.
+            contains (Union[str, list], optional): A string or a list of strings that are dataset identifiers to filter the datasets list. If a list is provided then it will return datasets whose identifier matches any of the strings. Defaults to None.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+            max_results (int, optional): Limit the number of rows returned in the dataframe. Defaults to -1 which returns all results.
 
         Returns:
-            pd.DataFrame: _description_
+            pandas.DataFrame: a dataframe with a row for each dataset.
         """
         url = f'{self.root_url}catalogs/{catalog}/datasets'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -564,14 +697,15 @@ class Fusion:
         return df
 
     def dataset_resources(self, dataset: str, catalog: str = 'common', output: bool = False) -> pd.DataFrame:
-        """_summary_.
+        """List the resources available for a dataset, currently this will always be a datasetseries.
 
         Args:
-            catalog (str, optional): _description_. Defaults to 'common'.
-            output (bool, optional): _description_. Defaults to False.
+            dataset (str): A dataset identifier
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-            pd.DataFrame: _description_
+            pandas.DataFrame: A dataframe with a row for each resource
         """
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -582,14 +716,15 @@ class Fusion:
         return df
 
     def list_dataset_attributes(self, dataset: str, catalog: str = 'common', output: bool = False) -> pd.DataFrame:
-        """_summary_.
+        """Returns the list of attributes that are in the dataset.
 
         Args:
-            catalog (str, optional): _description_. Defaults to 'common'.
-            output (bool, optional): _description_. Defaults to False.
+            dataset (str): A dataset identifier
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-            pd.DataFrame: _description_
+            pandas.DataFrame: A dataframe with a row for each attribute
         """
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -602,15 +737,16 @@ class Fusion:
     def list_datasetmembers(
         self, dataset: str, catalog: str = 'common', output: bool = False, max_results: int = -1
     ) -> pd.DataFrame:
-        """_summary_.
+        """List the available members in the dataset series.
 
         Args:
-            catalog (str, optional): _description_. Defaults to 'common'.
-            output (bool, optional): _description_. Defaults to False.
-            max_results (int, optional): _description_. Defaults to -1.
+            dataset (str): A dataset identifier
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+            max_results (int, optional): Limit the number of rows returned in the dataframe. Defaults to -1 which returns all results.
 
         Returns:
-            pd.DataFrame: _description_
+            pandas.DataFrame: a dataframe with a row for each dataset member.
         """
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -626,14 +762,16 @@ class Fusion:
     def datasetmember_resources(
         self, dataset: str, series: str, catalog: str = 'common', output: bool = False
     ) -> pd.DataFrame:
-        """_summary_.
+        """List the available resources for a datasetseries member.
 
         Args:
-            catalog (str, optional): _description_. Defaults to 'common'.
-            output (bool, optional): _description_. Defaults to False.
+            dataset (str): A dataset identifier
+            series (str): The datasetseries identifier
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-            pd.DataFrame: _description_
+            pandas.DataFrame: A dataframe with a row for each datasetseries member resource. Currently this will always be distributions.
         """
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -646,14 +784,16 @@ class Fusion:
     def list_distributions(
         self, dataset: str, series: str, catalog: str = 'common', output: bool = False
     ) -> pd.DataFrame:
-        """_summary_.
+        """List the available distributions (downloadable instances of the dataset with a format type).
 
         Args:
-            catalog (str, optional): _description_. Defaults to 'common'.
-            output (bool, optional): _description_. Defaults to False.
+            dataset (str): A dataset identifier
+            series (str): The datasetseries identifier
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-            pd.DataFrame: _description_
+            pandas.DataFrame: A dataframe with a row for each distribution.
         """
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}/distributions'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -664,17 +804,18 @@ class Fusion:
         return df
 
     def __resolve_distro_tuples(
-        self, dataset: str, dt_str: str = 'latest', format: str = 'parquet', catalog: str = 'common'
-    ):
-        """_summary_.
+        self, dataset: str, dt_str: str = 'latest', dataset_format: str = 'parquet', catalog: str = 'common'
+    ) -> list:
+        """A private utility function to generate a list of distribution tuples. Each tuple is a distribution, identified by catalog, dataset id, datasetseries member id, and the file format.
 
         Args:
-            dt_str (str, optional): _description_. Defaults to 'latest'.
-            format (str, optional): _description_. Defaults to 'parquet'.
-            catalog (str, optional): _description_. Defaults to 'common'.
+            dataset (str): A dataset identifier
+            dt_str (str, optional): Either a single date or a range identified by a start or end date, or both separated with a ":". Defaults to 'latest' which will return the most recent instance of the dataset.
+            dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
 
         Returns:
-            pd.DataFrame: _description_
+            list: a list of tuples, one for each distribution
         """
         parsed_dates = _normalise_dt_param_str(dt_str)
         if len(parsed_dates) == 1:
@@ -689,7 +830,7 @@ class Fusion:
             datasetseries_list = datasetseries_list[datasetseries_list['toDate'] <= parsed_dates[1]]
 
         required_series = list(datasetseries_list['@id'])
-        tups = [(catalog, dataset, series, format) for series in required_series]
+        tups = [(catalog, dataset, series, dataset_format) for series in required_series]
 
         return tups
 
@@ -704,16 +845,17 @@ class Fusion:
         force_download: bool = False,
         download_folder: str = None,
     ):
-        """_summary_.
+        """Downloads the requested distributions of a dataset to disk.
 
         Args:
-            dt_str (str, optional): _description_. Defaults to 'latest'.
-            dataset_format (str, optional): _description_. Defaults to 'parquet'.
-            catalog (str, optional): _description_. Defaults to 'common'.
-            n_par (int, optional): _descrition_. Defaults to DEFAULT_PARALLELISM.
-            show_progress (bool, optional): _description_. Defaults to True.
-            force_download (bool, optional): _description_. Defaults to True.
-            download_folder (str, optional): _description_. Defaults to download_folder as set in __init__
+            dataset (str): A dataset identifier
+            dt_str (str, optional): Either a single date or a range identified by a start or end date, or both separated with a ":". Defaults to 'latest' which will return the most recent instance of the dataset.
+            dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            n_par (int, optional): Specify how many distributions to download in parallel. Defaults to DEFAULT_PARALLELISM.
+            show_progress (bool, optional): Display a progress bar during data download Defaults to True.
+            force_download (bool, optional): If True then will always download a file even if it is already on disk. Defaults to True.
+            download_folder (str, optional): The path, absolute or relative, where downloaded files are saved. Defaults to download_folder as set in __init__
         Returns:
 
         """
@@ -754,20 +896,21 @@ class Fusion:
         download_folder: str = None,
         **kwargs,
     ):
-        """Get distribution.
+        """Gets distributions for a specified date or date range and returns the data as a dataframe.
 
         Args:
-            dt_str (str, optional): _description_. Defaults to 'latest'
-            dataset_format (str, optional): _description_. Defaults to 'parquet'
-            catalog (str, optional): _description_. Defaults to 'common'
-            n_par (int, optional): _descrition_. Defaults to DEFAULT_PARALLELISM
-            show_progress (bool, optional): _description_. Defaults to True
+            dataset (str): A dataset identifier
+            dt_str (str, optional): Either a single date or a range identified by a start or end date, or both separated with a ":". Defaults to 'latest' which will return the most recent instance of the dataset.
+            dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            n_par (int, optional): Specify how many distributions to download in parallel. Defaults to DEFAULT_PARALLELISM.
+            show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             dry_run (bool, optional): _description_. Defaults to True
             columns (List, optional): _description_. Defaults to None
-            force_download (bool, optional): _description_. Defaults to True
-            download_folder (str, optional): _description_. Defaults to download_folder as set in __init__
-
+            force_download (bool, optional): If True then will always download a file even if it is already on disk. Defaults to True.
+            download_folder (str, optional): The path, absolute or relative, where downloaded files are saved. Defaults to download_folder as set in __init__
         Returns:
+            pandas.DataFrame: a dataframe containing the requested data. If multiple dataset instances are retrieved then these are concatenated first.
         """
         download_res = self.download(dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download, download_folder)
 
