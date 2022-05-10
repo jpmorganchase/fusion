@@ -88,7 +88,7 @@ def _res_plural(ref_int: int, pluraliser: str = 's') -> str:
         ref_int (int): The reference integer that determines whether to return a plural suffix.
         pluraliser (str, optional): The plural suffix. Defaults to "s".
 
-     Returns:
+    Returns:
         str: The plural suffix to append to a string.
     """
     return '' if abs(ref_int) == 1 else pluraliser
@@ -100,7 +100,7 @@ def _is_json(data) -> bool:
     Args:
         data (str): The content to evaluate.
 
-     Returns:
+    Returns:
         bool: True if the content of data is JSON, False otherwise.
     """
     try:
@@ -116,7 +116,7 @@ def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -
     Args:
         dt (Union[str, int, datetime.datetime, datetime.date]): A date represented in various types.
 
-     Returns:
+    Returns:
         str: A normalized date string.
     """
     if isinstance(dt, (datetime.date, datetime.datetime)):
@@ -139,7 +139,7 @@ def _normalise_dt_param_str(dt: str) -> tuple:
     Args:
         dt (str): Either a single date or a date range separated by a ":".
 
-     Returns:
+    Returns:
         tuple: A tuple of dates.
     """
     date_parts = dt.split(":")
@@ -162,7 +162,7 @@ def _distribution_to_filename(
         file_format (str): The file type, e.g. CSV or Parquet
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
 
-     Returns:
+    Returns:
         tuple: A tuple of dates.
     """
     if datasetseries[-1] == '/' or datasetseries[-1] == '\\':
@@ -177,7 +177,7 @@ def _filename_to_distribution(file_name: str) -> tuple:
     Args:
         file_name (str): The filename to decompose.
 
-     Returns:
+    Returns:
         tuple: A tuple consisting of catalog id, dataset id, datasetseries instane id, and file format (e.g. CSV).
     """
     dataset, catalog, series_format = Path(file_name).name.split('__')
@@ -197,7 +197,7 @@ def _distribution_to_url(
         file_format (str): The file type, e.g. CSV or Parquet
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
 
-     Returns:
+    Returns:
         str: A URL for the API distribution endpoint.
     """
     if datasetseries[-1] == '/' or datasetseries[-1] == '\\':
@@ -985,8 +985,10 @@ class Fusion:
 
         if not all(res[0] for res in download_res):
             failed_res = [res for res in download_res if not res[0]]
-            raise Exception(f"Not all downloads were successfully completed. "
-                            f"Re-run to collect missing files. The following failed:\n{failed_res}")
+            raise Exception(
+                f"Not all downloads were successfully completed. "
+                f"Re-run to collect missing files. The following failed:\n{failed_res}"
+            )
 
         files = [res[1] for res in download_res]
 
