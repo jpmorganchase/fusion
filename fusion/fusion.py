@@ -469,7 +469,7 @@ def _get_session(
     session = requests.Session()
     auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries)
     if credentials.proxies:
-        session.proxies.update(credentials.proxies)
+        session.proxies.update(credentials.proxies) # type:ignore
     try:
         mount_url = _get_canonical_root_url(root_url)
     except Exception:
