@@ -101,8 +101,9 @@ jobs:
         run: |
           git fetch origin gh-pages --depth=1
           poetry install -E doc
-          poetry run mike deploy --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
-          poetry run mike set-default latest
+          poetry run mike deploy --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
+          poetry run mike set-default --push latest
+          git fetch origin gh-pages --depth=1
         working-directory: main_repo
 
       - name: Push docs to doc repo
