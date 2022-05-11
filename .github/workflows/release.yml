@@ -105,6 +105,7 @@ jobs:
           
       - name: Build wheels and source tarball
         run: >-
+          git checkout master
           poetry build
         working-directory: main_repo
 
