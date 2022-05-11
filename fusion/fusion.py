@@ -7,7 +7,7 @@ import re
 import sys
 from datetime import timedelta
 from pathlib import Path
-from typing import List, Union
+from typing import Dict, List, Union
 from urllib.parse import urlparse, urlunparse
 
 import pandas as pd
@@ -1000,7 +1000,7 @@ class Fusion:
             'json': pd.read_json,
         }
 
-        pd_read_default_kwargs: dict[str, dict[str, object]] = {
+        pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
             'csv': {'sep': ',', 'header': 0, 'low_memory': True},
             'parquet': {'columns': columns},
         }
