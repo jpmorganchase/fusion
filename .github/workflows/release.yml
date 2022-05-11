@@ -70,21 +70,36 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+        working-directory: main_repo
+
+      - name: Setup doc deploy git user
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+        working-directory: docs_repo
+
 
       - name: build documentation
         run: |
           poetry install -E doc
           poetry run mike deploy --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default latest
+        working-directory: main_repo
           
       - name: Build wheels and source tarball
         run: >-
           poetry build
         working-directory: main_repo
 
-      - name: show temporary files
+      - name: show main repo files
         run: >-
           ls -l
+        working-directory: main_repo
+
+      - name: show main repo files
+        run: >-
+          ls -l
+        working-directory: docs_repo
 
       - name: create github release
         id: create_release
@@ -93,7 +108,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
         with:
           body: ${{ steps.changelog_reader.outputs.changes }}
-          files: dist/*.whl
+          files: main_repo/dist/*.whl
           draft: false
           prerelease: false
 
@@ -103,3 +118,4 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip_existing: true
+          packages_dir: main_repo/dist/
