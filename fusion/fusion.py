@@ -435,7 +435,7 @@ class FusionOAuthAdapter(HTTPAdapter):
 
 
 def _get_canonical_root_url(any_url: str) -> str:
-    """Function to send a request to the authentication server.
+    """Get the full URL for the API endpoint.
 
     Args:
         any_url (str): A valid URL or URL part
@@ -452,7 +452,7 @@ def _get_canonical_root_url(any_url: str) -> str:
 def _get_session(
     credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None
 ) -> requests.Session:
-    """Function to send a request to the authentication server.
+    """Create a new http session and set paramaters.
 
     Args:
         credentials (FusionCredentials): Valid user credentials to provide an acces token
