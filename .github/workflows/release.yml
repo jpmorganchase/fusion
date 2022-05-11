@@ -36,6 +36,13 @@ jobs:
         uses: actions/checkout@v2
         with:
           path: main_repo
+          ref: v${{ steps.tag_name.outputs.current_version }}
+
+      - name: Checkout main docs branch
+        uses: actions/checkout@v2
+        with:
+          path: main_docs_repo
+          ref: gh-pages
 
       - name: Checkout docs repo
         uses: actions/checkout@v2
@@ -43,13 +50,19 @@ jobs:
           repository: jpmorganchase/jpmorganchase.github.io
           path: docs_repo
 
-      - name: show docs files
+      - name: show main repo files
         run: >-
-          ls -l docs_repo
+          ls -la
+        working-directory: main_repo
 
-      - name: show env
+      - name: show main docs files
         run: >-
-          env
+          ls -l main_docs_repo
+
+      - name: show docs repo files
+        run: >-
+          ls -la
+        working-directory: docs_repo
 
       - name: Get Changelog Entry
         id: changelog_reader
@@ -66,26 +79,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry
 
-      - name: Setup doc deploy git user
+      - name: Setup main repo deploy git user
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
         working-directory: main_repo
 
+      - name: Setup main docs deploy git user
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+        working-directory: main_docs_repo
+
       - name: Setup doc deploy git user
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-        working-directory: docs_repo
-
-      - name: show main repo files
-        run: >-
-          ls -la
-        working-directory: main_repo
-
-      - name: show docs repo files
-        run: >-
-          ls -la
         working-directory: docs_repo
 
       - name: build documentation
@@ -93,21 +102,20 @@ jobs:
           poetry install -E doc
           poetry run mike deploy --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default latest
-        working-directory: main_repo
+        working-directory: main_docs_repo
 
       - name: Push docs to doc repo
         run: | 
-          git checkout gh-pages
+          git status 
           cp -r * ../docs_repo/fusion/
           ls -la ../docs_repo/
           ls -la ../docs_repo/fusion/
-        working-directory: main_repo
+        working-directory: main_docs_repo
           
       - name: Build wheels and source tarball
         run: |
           git status
           git branch
-          git checkout master
           poetry build
         working-directory: main_repo
 
