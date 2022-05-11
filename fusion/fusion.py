@@ -7,7 +7,7 @@ import re
 import sys
 from datetime import timedelta
 from pathlib import Path
-from typing import List, Union
+from typing import Dict, List, Union
 from urllib.parse import urlparse, urlunparse
 
 import pandas as pd
@@ -435,7 +435,7 @@ class FusionOAuthAdapter(HTTPAdapter):
 
 
 def _get_canonical_root_url(any_url: str) -> str:
-    """Function to send a request to the authentication server.
+    """Get the full URL for the API endpoint.
 
     Args:
         any_url (str): A valid URL or URL part
@@ -452,7 +452,7 @@ def _get_canonical_root_url(any_url: str) -> str:
 def _get_session(
     credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None
 ) -> requests.Session:
-    """Function to send a request to the authentication server.
+    """Create a new http session and set paramaters.
 
     Args:
         credentials (FusionCredentials): Valid user credentials to provide an acces token
@@ -1000,7 +1000,7 @@ class Fusion:
             'json': pd.read_json,
         }
 
-        pd_read_default_kwargs: dict[str, dict[str, object]] = {
+        pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
             'csv': {'sep': ',', 'header': 0, 'low_memory': True},
             'parquet': {'columns': columns},
         }
