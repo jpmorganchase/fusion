@@ -80,12 +80,12 @@ jobs:
 
       - name: show main repo files
         run: >-
-          ls -l
+          ls -la
         working-directory: main_repo
 
       - name: show docs repo files
         run: >-
-          ls -l
+          ls -la
         working-directory: docs_repo
 
       - name: build documentation
@@ -99,12 +99,14 @@ jobs:
         run: | 
           git checkout gh-pages
           cp -r * ../docs_repo/fusion/
-          ls -l ../docs_repo/
-          ls -l ../docs_repo/fusion/
+          ls -la ../docs_repo/
+          ls -la ../docs_repo/fusion/
         working-directory: main_repo
           
       - name: Build wheels and source tarball
         run: |
+          git status
+          git branch
           git checkout master
           poetry build
         working-directory: main_repo
