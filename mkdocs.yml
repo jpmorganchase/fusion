@@ -1,6 +1,7 @@
 site_name: fusion
-site_url: https://github.com/jpmorganchase/fusion
-repo_url: https://github.com/jpmorganchase/fusion
+site_url: https://jpmorganchase.github.io/fusion/
+repo_url: https://github.com/jpmorganchase/jpmorganchase.github.io
+edit_uri: fusion/
 repo_name: jpmorganchase/fusion
 
 nav:
