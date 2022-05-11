@@ -389,7 +389,7 @@ class FusionOAuthAdapter(HTTPAdapter):
         else:
             self.auth_retries = Retry.from_int(auth_retries)
 
-    def send(self, request: requests.Session, **kwargs):
+    def send(self, request, **kwargs):
         """Function to send a request to the authentication server.
 
         Args:
