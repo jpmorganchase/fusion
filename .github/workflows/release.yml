@@ -37,6 +37,7 @@ jobs:
         with:
           path: main_repo
           ref: v${{ steps.tag_name.outputs.current_version }}
+          fetch-depth: 0
 
       - name: Checkout main docs branch
         uses: actions/checkout@v2
@@ -99,7 +100,6 @@ jobs:
 
       - name: build documentation
         run: |
-          git fetch origin gh-pages --depth=1
           poetry install -E doc
           poetry run mike deploy --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default --push latest
