@@ -99,10 +99,11 @@ jobs:
 
       - name: build documentation
         run: |
+          git fetch origin gh-pages --depth=1
           poetry install -E doc
           poetry run mike deploy --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default latest
-        working-directory: main_docs_repo
+        working-directory: main_repo
 
       - name: Push docs to doc repo
         run: | 
