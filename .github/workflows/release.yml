@@ -34,6 +34,8 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout main repo
         uses: actions/checkout@v2
+        with:
+          path: main_repo
 
       - name: Checkout docs repo
         uses: actions/checkout@v2
@@ -44,6 +46,10 @@ jobs:
       - name: show docs files
         run: >-
           ls -l docs_repo
+
+      - name: show env
+        run: >-
+          env
 
       - name: Get Changelog Entry
         id: changelog_reader
@@ -73,6 +79,7 @@ jobs:
       - name: Build wheels and source tarball
         run: >-
           poetry build
+        working-directory: main_repo
 
       - name: show temporary files
         run: >-
