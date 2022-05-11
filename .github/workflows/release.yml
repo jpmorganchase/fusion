@@ -55,7 +55,7 @@ jobs:
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
         with:
-          path: main_repo
+          path: main_repo/CHANGELOG.md
 
       - uses: actions/setup-python@v2
         with:
