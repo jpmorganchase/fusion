@@ -105,6 +105,8 @@ jobs:
           poetry run mike set-default --push latest
           git fetch origin gh-pages --depth=1
         working-directory: main_repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push docs to doc repo
         run: | 
