@@ -54,7 +54,8 @@ jobs:
       - name: Get Changelog Entry
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
-        path: main_repo
+        with:
+          path: main_repo
 
       - uses: actions/setup-python@v2
         with:
