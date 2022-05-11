@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "PyFusion"
-version = "0.0.41"
+version = "0.0.42"
 
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
