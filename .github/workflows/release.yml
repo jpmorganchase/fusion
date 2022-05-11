@@ -101,6 +101,7 @@ jobs:
           cp -r * ../docs_repo/fusion/
           ls -l ../docs_repo/
           ls -l ../docs_repo/fusion/
+        working-directory: main_repo
           
       - name: Build wheels and source tarball
         run: >-
