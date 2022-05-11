@@ -78,6 +78,15 @@ jobs:
           git config --local user.name "github-actions[bot]"
         working-directory: docs_repo
 
+      - name: show main repo files
+        run: >-
+          ls -l
+        working-directory: main_repo
+
+      - name: show docs repo files
+        run: >-
+          ls -l
+        working-directory: docs_repo
 
       - name: build documentation
         run: |
@@ -85,21 +94,18 @@ jobs:
           poetry run mike deploy --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default latest
         working-directory: main_repo
+
+      - name: Push docs to doc repo
+        run: | 
+          git checkout gh-pages
+          cp -r * ../docs_repo/fusion/
+          ls -l ../docs_repo/
+          ls -l ../docs_repo/fusion/
           
       - name: Build wheels and source tarball
         run: >-
           poetry build
         working-directory: main_repo
-
-      - name: show main repo files
-        run: >-
-          ls -l
-        working-directory: main_repo
-
-      - name: show main repo files
-        run: >-
-          ls -l
-        working-directory: docs_repo
 
       - name: create github release
         id: create_release
