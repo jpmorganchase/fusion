@@ -32,7 +32,18 @@ jobs:
         shell: bash
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - name: Checkout main repo
+        uses: actions/checkout@v2
+
+      - name: Checkout docs repo
+        uses: actions/checkout@v2
+        with:
+          repository: jpmorganchase/jpmorganchase.github.io
+          path: docs_repo
+
+      - name: show docs files
+        run: >-
+          ls -l docs_repo
 
       - name: Get Changelog Entry
         id: changelog_reader
@@ -56,9 +67,9 @@ jobs:
       - name: build documentation
         run: |
           poetry install -E doc
-          poetry run mike deploy --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
-          poetry run mike set-default --push latest
-
+          poetry run mike deploy --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
+          poetry run mike set-default latest
+          
       - name: Build wheels and source tarball
         run: >-
           poetry build
