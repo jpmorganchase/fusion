@@ -78,7 +78,6 @@ jobs:
         run: |
           cp ../main_repo/pyproject_docs_build.toml pyproject.toml
           cp ../main_repo/poetry.toml .
-          touch fusion/__init__.py
           ls -al
           ls -al fusion
           poetry install -E doc -E dev -E test
