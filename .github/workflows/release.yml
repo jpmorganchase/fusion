@@ -100,10 +100,11 @@ jobs:
 
       - name: build documentation
         run: |
+          git status -v
+          git branch
           poetry install -E doc
           poetry run mike deploy --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default --push latest
-          git fetch origin gh-pages --depth=1
         working-directory: main_repo
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
