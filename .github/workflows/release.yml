@@ -82,6 +82,10 @@ jobs:
           poetry install -E doc
           poetry run mike deploy --branch fusion_release --prefix fusion --config-file ../main_repo/mkdocs.yml --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default --branch fusion_release --prefix fusion --config-file ../main_repo/mkdocs.yml --push latest
+          git pull
+          git checkout fusion_release
+          git merge main --allow-unrelated-histories -m "merge main into fusion_release"
+          git push
         working-directory: docs_repo
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
