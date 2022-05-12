@@ -76,7 +76,9 @@ jobs:
         run: |
           cp ../main_repo/pyproject_docs_build.toml pyproject.toml
           cp ../main_repo/poetry.toml .
+          touch fusion/__init__.py
           ls -al
+          ls -al fusion
           poetry install -E doc -E dev -E test
           poetry run mike deploy --branch fusion_test --prefix fusion --config-file ../main_repo/mkdocs.yml --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default --branch fusion_test --prefix fusion --config-file ../main_repo/mkdocs.yml --push latest
