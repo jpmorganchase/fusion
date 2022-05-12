@@ -84,7 +84,7 @@ jobs:
           poetry run mike set-default --branch fusion_test --prefix fusion --config-file ../main_repo/mkdocs.yml --push latest
         working-directory: docs_repo
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
           
       - name: Build wheels and source tarball
         run: |
