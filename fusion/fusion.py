@@ -673,7 +673,12 @@ class Fusion:
         return df
 
     def list_products(
-        self, contains: Union[str, list] = None, catalog: str = 'common', output: bool = False, max_results: int = -1
+        self,
+        contains: Union[str, list] = None,
+        id_contains: bool = False,
+        catalog: str = 'common',
+        output: bool = False,
+        max_results: int = -1,
     ) -> pd.DataFrame:
         """Get the products contained in a catalog. A product is a grouping of datasets.
 
@@ -681,6 +686,7 @@ class Fusion:
             contains (Union[str, list], optional): A string or a list of strings that are product
                 identifiers to filter the products list. If a list is provided then it will return
                 products whose identifier matches any of the strings. Defaults to None.
+            id_contains (bool): Filter datasets only where the string(s) are contained in the identifier, ignoring description.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             output (bool, optional): If True then print the dataframe. Defaults to False.
             max_results (int, optional): Limit the number of rows returned in the dataframe.
@@ -695,7 +701,13 @@ class Fusion:
         if contains:
             if isinstance(contains, list):
                 contains = "|".join(f'{s}' for s in contains)
-            df = df[df['identifier'].str.contains(contains)]
+            if id_contains:
+                df = df[df['identifier'].str.contains(contains, case=False)]
+            else:
+                df = df[
+                    df['identifier'].str.contains(contains, case=False)
+                    | df['description'].str.contains(contains, case=False)
+                ]
 
         if max_results > -1:
             df = df[0:max_results]
@@ -706,7 +718,12 @@ class Fusion:
         return df
 
     def list_datasets(
-        self, contains: Union[str, list] = None, catalog: str = 'common', output: bool = False, max_results: int = -1
+        self,
+        contains: Union[str, list] = None,
+        id_contains: bool = False,
+        catalog: str = 'common',
+        output: bool = False,
+        max_results: int = -1,
     ) -> pd.DataFrame:
         """_summary_.
 
@@ -714,6 +731,7 @@ class Fusion:
             contains (Union[str, list], optional): A string or a list of strings that are dataset
                 identifiers to filter the datasets list. If a list is provided then it will return
                 datasets whose identifier matches any of the strings. Defaults to None.
+            id_contains (bool): Filter datasets only where the string(s) are contained in the identifier, ignoring description.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             output (bool, optional): If True then print the dataframe. Defaults to False.
             max_results (int, optional): Limit the number of rows returned in the dataframe.
@@ -728,7 +746,13 @@ class Fusion:
         if contains:
             if isinstance(contains, list):
                 contains = "|".join(f'{s}' for s in contains)
-            df = df[df['identifier'].str.contains(contains)]
+            if id_contains:
+                df = df[df['identifier'].str.contains(contains, case=False)]
+            else:
+                df = df[
+                    df['identifier'].str.contains(contains, case=False)
+                    | df['description'].str.contains(contains, case=False)
+                ]
 
         if max_results > -1:
             df = df[0:max_results]
