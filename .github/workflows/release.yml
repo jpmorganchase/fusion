@@ -101,7 +101,9 @@ jobs:
       - name: build documentation
         run: |
           git status -v
-          git branch
+          echo "run git branch"
+          git branch -vv
+          echo "end run git branch"
           poetry install -E doc
           poetry run mike deploy --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default --push latest
