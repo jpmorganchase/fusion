@@ -1,0 +1,110 @@
+# Publish package on main branch if it's tagged with 'v*'
+
+name: release & publish workflow
+
+# Controls when the action will run.
+on:
+  # Triggers the workflow on push events but only for the master branch
+  push:
+    tags:
+      - 'v*'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "release"
+  release:
+    name: Create Release
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        python-versions: [3.8]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Get version from tag
+        id: tag_name
+        run: |
+          echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
+        shell: bash
+
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout main repo
+        uses: actions/checkout@v2
+        with:
+          path: main_repo
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_TOKEN }}
+
+      - name: Checkout docs repo
+        uses: actions/checkout@v2
+        with:
+          repository: jpmorganchase/jpmorganchase.github.io
+          path: docs_repo
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_TOKEN }}
+
+      - name: Get Changelog Entry
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          path: main_repo/CHANGELOG.md
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-versions }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+
+      - name: Setup main repo deploy git user
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+        working-directory: main_repo
+
+      - name: Setup doc deploy git user
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+        working-directory: docs_repo
+
+      - name: build documentation
+        run: |
+          cp ../main_repo/pyproject_docs_build.toml pyproject.toml
+          cp ../main_repo/poetry.toml .
+          touch fusion/__init__.py
+          poetry install -E doc
+          poetry run mike deploy --branch fusion_release --prefix fusion --config-file ../main_repo/mkdocs.yml --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
+          poetry run mike set-default --branch fusion_release --prefix fusion --config-file ../main_repo/mkdocs.yml --push latest
+        working-directory: docs_repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+          
+      - name: Build wheels and source tarball
+        run: |
+          poetry build
+        working-directory: main_repo
+
+      - name: create github release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: ${{ steps.changelog_reader.outputs.changes }}
+          files: main_repo/dist/*.whl
+          draft: false
+          prerelease: false
+          token: ${{ secrets.PERSONAL_TOKEN }}
+
+      - name: publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip_existing: true
+          packages_dir: main_repo/dist/
