@@ -83,8 +83,8 @@ jobs:
           poetry run mike deploy --branch fusion_test --prefix fusion --config-file ../main_repo/mkdocs.yml --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default --branch fusion_test --prefix fusion --config-file ../main_repo/mkdocs.yml --push latest
         working-directory: docs_repo
-        env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          token: ${{ secrets.PERSONAL_TOKEN }}
           
       - name: Build wheels and source tarball
         run: |
@@ -94,13 +94,12 @@ jobs:
       - name: create github release
         id: create_release
         uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
         with:
           body: ${{ steps.changelog_reader.outputs.changes }}
           files: main_repo/dist/*.whl
           draft: false
           prerelease: false
+          token: ${{ secrets.PERSONAL_TOKEN }}
 
       - name: publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
