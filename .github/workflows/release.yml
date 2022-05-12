@@ -83,8 +83,8 @@ jobs:
           poetry run mike deploy --branch fusion_test --prefix fusion --config-file ../main_repo/mkdocs.yml --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default --branch fusion_test --prefix fusion --config-file ../main_repo/mkdocs.yml --push latest
         working-directory: docs_repo
-        with:
-          token: ${{ secrets.PERSONAL_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
           
       - name: Build wheels and source tarball
         run: |
