@@ -2,6 +2,6 @@
 
 __author__ = """Fusion Devs"""
 __email__ = 'fusion_developers@jpmorgan.com'
-__version__ = '0.0.56'
+__version__ = '0.0.57'
 
 from fusion.fusion import Fusion
