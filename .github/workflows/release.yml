@@ -37,6 +37,7 @@ jobs:
         with:
           path: main_repo
           fetch-depth: 0
+          token: ${{ secrets.PERSONAL_TOKEN }}
 
       - name: Checkout docs repo
         uses: actions/checkout@v2
@@ -44,6 +45,7 @@ jobs:
           repository: jpmorganchase/jpmorganchase.github.io
           path: docs_repo
           fetch-depth: 0
+          token: ${{ secrets.PERSONAL_TOKEN }}
 
       - name: Get Changelog Entry
         id: changelog_reader
