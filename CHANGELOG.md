@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.1] - 2022-05-12
 
-* Update build 
+* First live release on JPMC gitub
 
 ## [1.0.2] - 2022-05-12
 
@@ -19,4 +19,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.3] - 2022-05-12
 
-* Force rebuild
+* Add support for 'latest' datasets
