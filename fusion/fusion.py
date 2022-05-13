@@ -893,11 +893,14 @@ class Fusion:
         Returns:
             list: a list of tuples, one for each distribution
         """
+        datasetseries_list = self.list_datasetmembers(dataset, catalog)
+
+        if dt_str == 'latest':
+            dt_str = datasetseries_list.iloc[datasetseries_list['createdDate'].values.argmax()]['identifier']
+
         parsed_dates = _normalise_dt_param_str(dt_str)
         if len(parsed_dates) == 1:
             parsed_dates = (parsed_dates[0], parsed_dates[0])
-
-        datasetseries_list = self.list_datasetmembers(dataset, catalog)
 
         if parsed_dates[0]:
             datasetseries_list = datasetseries_list[datasetseries_list['fromDate'] >= parsed_dates[0]]
