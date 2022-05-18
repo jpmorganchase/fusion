@@ -27,6 +27,76 @@ def test_FusionCredentials_empty_pxy(example_creds_dict_empty_pxy):
     FusionCredentials.from_dict(example_creds_dict_empty_pxy)
 
 
+def test_FusionCredentials_from_empty(example_client_id, example_client_secret, example_http_proxy):
+    from fusion.fusion import FusionCredentials
+
+    creds = FusionCredentials.generate_credentials_file(
+        client_id=example_client_id, client_secret=example_client_secret, proxies={}
+    )
+
+    assert creds.proxies == {}
+
+
+def test_FusionCredentials_from_str(example_client_id, example_client_secret, example_http_proxy):
+    from fusion.fusion import FusionCredentials
+
+    creds = FusionCredentials.generate_credentials_file(
+        client_id=example_client_id, client_secret=example_client_secret, proxies=example_http_proxy
+    )
+
+    assert creds.proxies['http'] == example_http_proxy
+
+
+def test_FusionCredentials_from_http_dict(
+    example_client_id, example_client_secret, example_proxy_http_dict, example_http_proxy
+):
+    from fusion.fusion import FusionCredentials
+
+    creds = FusionCredentials.generate_credentials_file(
+        client_id=example_client_id, client_secret=example_client_secret, proxies=example_proxy_http_dict
+    )
+
+    assert creds.proxies['http'] == example_http_proxy
+
+
+def test_FusionCredentials_from_https_dict(
+    example_client_id, example_client_secret, example_proxy_https_dict, example_https_proxy
+):
+    from fusion.fusion import FusionCredentials
+
+    creds = FusionCredentials.generate_credentials_file(
+        client_id=example_client_id, client_secret=example_client_secret, proxies=example_proxy_https_dict
+    )
+
+    assert creds.proxies['https'] == example_https_proxy
+
+
+def test_FusionCredentials_from_both_dict(
+    example_client_id, example_client_secret, example_proxy_both_dict, example_https_proxy, example_http_proxy
+):
+    from fusion.fusion import FusionCredentials
+
+    creds = FusionCredentials.generate_credentials_file(
+        client_id=example_client_id, client_secret=example_client_secret, proxies=example_proxy_both_dict
+    )
+
+    assert creds.proxies['https'] == example_https_proxy
+    assert creds.proxies['http'] == example_http_proxy
+
+
+def test_FusionCredentials_from_both_alt_dict(
+    example_client_id, example_client_secret, example_proxy_both_alt_dict, example_https_proxy, example_http_proxy
+):
+    from fusion.fusion import FusionCredentials
+
+    creds = FusionCredentials.generate_credentials_file(
+        client_id=example_client_id, client_secret=example_client_secret, proxies=example_proxy_both_alt_dict
+    )
+
+    assert creds.proxies['https'] == example_https_proxy
+    assert creds.proxies['http'] == example_http_proxy
+
+
 @pytest.mark.parametrize('ref_int', [-1, 0, 1, 2])
 @pytest.mark.parametrize('pluraliser', [None, 's', 'es'])
 def test_res_plural(ref_int, pluraliser):

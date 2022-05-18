@@ -317,10 +317,11 @@ class FusionCredentials:
 
         data['proxies'] = proxies_resolved
         json_data = json.dumps(data, indent=4)
+        Path(credentials_file).parent.mkdir(parents=True, exist_ok=True)
         with open(credentials_file, 'w') as credentialsfile:
             credentialsfile.write(json_data)
 
-        credentials = FusionCredentials(client_id, client_secret, resource, auth_url)
+        credentials = FusionCredentials.from_file(credentials_file=credentials_file)
         return credentials
 
     @staticmethod
