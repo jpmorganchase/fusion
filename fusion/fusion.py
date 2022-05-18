@@ -972,7 +972,7 @@ class Fusion:
 
         return res
 
-    def load(
+    def to_df(
         self,
         dataset: str,
         dt_str: str = 'latest',
@@ -1042,6 +1042,12 @@ class Fusion:
             raise Exception(f'No pandas function to read file in format {dataset_format}')
 
         pd_read_kwargs.update(kwargs)
+
+        if len(files) == 0:
+            raise APIResponseError(
+                f"No series members for dataset: {dataset} "
+                f"in date or date range: {dt_str} and format: {dataset_format}"
+            )
         dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)
         df = pd.concat(dataframes, ignore_index=True)
 
