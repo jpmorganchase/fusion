@@ -96,6 +96,15 @@ def test_FusionCredentials_from_both_alt_dict(
     assert creds.proxies['https'] == example_https_proxy
     assert creds.proxies['http'] == example_http_proxy
 
+def test_date_parsing():
+    import datetime
+    from fusion.fusion import _normalise_dt_param
+    assert '2020-12-12' == _normalise_dt_param(20201212)
+    assert '2020-12-12' == _normalise_dt_param('20201212')
+    assert '2020-12-12' == _normalise_dt_param('2020-12-12')
+    assert '2020-12-12' == _normalise_dt_param(datetime.date(2020, 12, 12))
+    assert '2020-12-12' == _normalise_dt_param(datetime.datetime(2020, 12, 12, 23, 55, 59, 342380))
+
 
 @pytest.mark.parametrize('ref_int', [-1, 0, 1, 2])
 @pytest.mark.parametrize('pluraliser', [None, 's', 'es'])

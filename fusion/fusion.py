@@ -141,6 +141,16 @@ def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -
     if isinstance(dt, int):
         dt = str(dt)
 
+    if not isinstance(dt, str):
+        raise ValueError(f"{dt} is not in a recognised data format")
+
+    matches = DT_YYYY_MM_DD_RE.match(dt)
+    if matches:
+        yr = matches.group(1)
+        mth = matches.group(2).zfill(2)
+        day = matches.group(3).zfill(2)
+        return f"{yr}-{mth}-{day}"
+
     matches = DT_YYYYMMDD_RE.match(dt)
 
     if matches:
