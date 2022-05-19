@@ -16,3 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.3] - 2022-05-12
 
 * Add support for 'latest' datasets
+
+## [1.0.4] - 2022-05-19
+
+* Support proxy servers in auth post requests
+* Add back support for '2020-01-01' and '20200101' date formats
+* Various bug fixes
+* Streamline credentials creation
