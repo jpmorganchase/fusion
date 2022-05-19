@@ -409,6 +409,9 @@ class FusionOAuthAdapter(HTTPAdapter):
 
             try:
                 s = requests.Session()
+                if self.proxies:
+                    # mypy does note recognise session.proxies as a dict so fails this line, we'll ignore this chk
+                    s.proxies.update(self.proxies)  # type:ignore                
                 s.mount('http://', HTTPAdapter(max_retries=self.auth_retries))
                 response = s.post(self.credentials.auth_url, data=payload)
                 response_data = response.json()
