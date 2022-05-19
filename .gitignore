@@ -116,3 +116,6 @@ site/
 # Poetry
 poetry.lock
 *.old
+
+# Fusion specific
+config/

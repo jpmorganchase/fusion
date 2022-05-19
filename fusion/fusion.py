@@ -94,7 +94,7 @@ def _res_plural(ref_int: int, pluraliser: str = 's') -> str:
     return '' if abs(ref_int) == 1 else pluraliser
 
 
-def _is_json(data) -> bool:
+def _is_json(data: str) -> bool:
     """Test whether the content of a string is a JSON object.
 
     Args:
@@ -108,6 +108,22 @@ def _is_json(data) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _is_url(url: str) -> bool:
+    """Test whether the content of a string is a valid URL.
+
+    Args:
+        data (str): The content to evaluate.
+
+    Returns:
+        bool: True if the content of data is a URL, False otherwise.
+    """
+    try:
+        urlparse(url)
+        return True
+    except ValueError:
+        return False
 
 
 def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -> str:
@@ -124,6 +140,16 @@ def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -
 
     if isinstance(dt, int):
         dt = str(dt)
+
+    if not isinstance(dt, str):
+        raise ValueError(f"{dt} is not in a recognised data format")
+
+    matches = DT_YYYY_MM_DD_RE.match(dt)
+    if matches:
+        yr = matches.group(1)
+        mth = matches.group(2).zfill(2)
+        day = matches.group(3).zfill(2)
+        return f"{yr}-{mth}-{day}"
 
     matches = DT_YYYYMMDD_RE.match(dt)
 
@@ -237,9 +263,9 @@ class FusionCredentials:
         credentials_file: str = 'config/client_credentials.json',
         client_id: str = None,
         client_secret: str = None,
-        resource: str = None,
-        auth_url: str = None,
-        proxies: str = None,
+        resource: str = "JPMC:URI:RS-93742-Fusion-PROD",
+        auth_url: str = "https://authe.jpmorgan.com/as/token.oauth2",
+        proxies: Union[str, dict] = None,
     ):
         """Utility function to generate credentials file that can be used for authentication.
 
@@ -251,8 +277,9 @@ class FusionCredentials:
             client_secret (str, optional): A valid OAuth client secret. Defaults to None.
             resource (str, optional): The OAuth audience. Defaults to None.
             auth_url (str, optional): URL for the OAuth authentication server. Defaults to None.
-            proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet.
-                Defaults to {}. Keys are http and https
+            proxies (Union[str, dict], optional): Any proxy servers required to route HTTP and HTTPS
+                requests to the internet. Defaults to {}. Keys are http and https. Or specify a single
+                URL to set both http and https
 
         Raises:
             CredentialError: Exception to handle missing values required for authentication.
@@ -264,24 +291,47 @@ class FusionCredentials:
             raise CredentialError('A valid client_id is required')
         if not client_secret:
             raise CredentialError('A valid client secret is required')
-        if not resource:
-            raise CredentialError('A valid resource is required')
-        if not auth_url:
-            raise CredentialError('A valid authentication server URL is required')
 
-        data = dict(
+        data: Dict[str, Union[str, dict]] = dict(
             {'client_id': client_id, 'client_secret': client_secret, 'resource': resource, 'auth_url': auth_url}
         )
 
+        proxies_resolved = {}
         if proxies:
-            proxies_dict = json.loads(proxies)
-            data['proxies'] = proxies_dict
-        json_data = json.dumps(data)
+            if isinstance(proxies, dict):
+                raw_proxies_dict = proxies
+            elif isinstance(proxies, str):
+                if _is_url(proxies):
+                    raw_proxies_dict = {'http': proxies, 'https': proxies}
+                elif _is_json(proxies):
+                    raw_proxies_dict = json.loads(proxies)
+            else:
+                raise CredentialError(f'A valid proxies param is required, [{proxies}] is not supported.')
 
+            # Now validate and conform proxies dict
+            valid_pxy_keys = ['http', 'https', 'http_proxy', 'https_proxy']
+            pxy_key_map = {
+                'http': 'http',
+                'https': 'https',
+                'http_proxy': 'http',
+                'https_proxy': 'https',
+            }
+            lcase_dict = {k.lower(): v for k, v in raw_proxies_dict.items()}
+
+            if set(lcase_dict.keys()).intersection(set(valid_pxy_keys)) != set(lcase_dict.keys()):
+                raise CredentialError(
+                    f'Invalid proxies keys in dict {raw_proxies_dict.keys()}.'
+                    f'Only {pxy_key_map.keys()} are accepted and will be mapped as necessary.'
+                )
+            proxies_resolved = {pxy_key_map[k]: v for k, v in lcase_dict.items()}
+
+        data['proxies'] = proxies_resolved
+        json_data = json.dumps(data, indent=4)
+        Path(credentials_file).parent.mkdir(parents=True, exist_ok=True)
         with open(credentials_file, 'w') as credentialsfile:
             credentialsfile.write(json_data)
 
-        credentials = FusionCredentials(client_id, client_secret, resource, auth_url)
+        credentials = FusionCredentials.from_file(credentials_file=credentials_file)
         return credentials
 
     @staticmethod
@@ -411,7 +461,7 @@ class FusionOAuthAdapter(HTTPAdapter):
                 s = requests.Session()
                 if self.proxies:
                     # mypy does note recognise session.proxies as a dict so fails this line, we'll ignore this chk
-                    s.proxies.update(self.proxies)  # type:ignore                
+                    s.proxies.update(self.proxies)  # type:ignore
                 s.mount('http://', HTTPAdapter(max_retries=self.auth_retries))
                 response = s.post(self.credentials.auth_url, data=payload)
                 response_data = response.json()
