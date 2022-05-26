@@ -948,6 +948,11 @@ class Fusion:
         """
         datasetseries_list = self.list_datasetmembers(dataset, catalog)
 
+        if datasetseries_list.empty:
+            raise APIResponseError(
+                f'No data available for dataset {dataset}. '
+                f'Check that a valid dataset identifier and date/date range has been set.')
+
         if dt_str == 'latest':
             dt_str = datasetseries_list.iloc[datasetseries_list['createdDate'].values.argmax()]['identifier']
 
@@ -1050,8 +1055,7 @@ class Fusion:
             n_par (int, optional): Specify how many distributions to download in parallel.
                 Defaults to DEFAULT_PARALLELISM.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
-            dry_run (bool, optional): _description_. Defaults to True
-            columns (List, optional): _description_. Defaults to None
+            columns (List, optional): A list of columns to return from a parquet file. Defaults to None
             force_download (bool, optional): If True then will always download a file even
                 if it is already on disk. Defaults to True.
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
