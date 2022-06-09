@@ -346,11 +346,13 @@ class FusionCredentials:
 
     @staticmethod
     def from_dict(credentials: dict):
-        """Create a credentials object from a dictionary.
+        """Create a credentials object from a dictionary. This is the only FusionCredentials creation 
+            method that supports the password grant type since the username and password should be 
+            provided by the user.
 
         Args:
             credentials (dict): A dictionary containing the requried keys: client_id, client_secret,
-                resource, auth_url, and optionally proxies
+                resource, auth_url, and optionally proxies and an OAuth grant type. 
 
         Returns:
             FusionCredentials: a credentials object that can be used for authentication.
@@ -371,6 +373,7 @@ class FusionCredentials:
             password = credentials['password']
         else:
             raise CredentialError(f'Unrecognised grant type {grant_type}')
+
         resource = credentials['resource']
         auth_url = credentials['auth_url']
         proxies = credentials.get('proxies')
