@@ -346,13 +346,14 @@ class FusionCredentials:
 
     @staticmethod
     def from_dict(credentials: dict):
-        """Create a credentials object from a dictionary. This is the only FusionCredentials creation 
-            method that supports the password grant type since the username and password should be 
-            provided by the user.
+        """Create a credentials object from a dictionary.
+
+            This is the only FusionCredentials creation method that supports the password grant type 
+            since the username and password should be provided by the user.
 
         Args:
             credentials (dict): A dictionary containing the requried keys: client_id, client_secret,
-                resource, auth_url, and optionally proxies and an OAuth grant type. 
+                resource, auth_url, and optionally proxies and an OAuth grant type.
 
         Returns:
             FusionCredentials: a credentials object that can be used for authentication.
@@ -492,7 +493,7 @@ class FusionOAuthAdapter(HTTPAdapter):
                     "client_id": self.credentials.client_id,
                     "username": self.credentials.username,
                     "password": self.credentials.password,
-                    "aud": self.credentials.resource,
+                    "resource": self.credentials.resource,
                 }
             )
 
