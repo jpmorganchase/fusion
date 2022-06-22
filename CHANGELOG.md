@@ -23,3 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Add back support for '2020-01-01' and '20200101' date formats
 * Various bug fixes
 * Streamline credentials creation
+
+## [1.0.5] - 2022-06-22
+
+* Add support for internal auth methods
