@@ -39,14 +39,6 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PERSONAL_TOKEN }}
 
-      - name: Checkout docs repo
-        uses: actions/checkout@v2
-        with:
-          repository: jpmorganchase/jpmorganchase.github.io
-          path: docs_repo
-          fetch-depth: 0
-          token: ${{ secrets.PERSONAL_TOKEN }}
-
       - name: Get Changelog Entry
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
@@ -69,25 +61,13 @@ jobs:
           git config --local user.name "github-actions[bot]"
         working-directory: main_repo
 
-      - name: Setup doc deploy git user
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-        working-directory: docs_repo
-
       - name: build documentation
         run: |
-          cp ../main_repo/pyproject_docs_build.toml pyproject.toml
-          cp ../main_repo/poetry.toml .
-          touch fusion/__init__.py
           poetry install -E doc
           git checkout fusion_release
-          poetry run mike deploy --branch fusion_release --prefix fusion --config-file ../main_repo/mkdocs.yml --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
-          poetry run mike set-default --branch fusion_release --prefix fusion --config-file ../main_repo/mkdocs.yml --push latest
-          git pull --set-upstream origin fusion_release
-          git merge main --allow-unrelated-histories -m "merge main into fusion_release"
-          git push --set-upstream origin fusion_release
-        working-directory: docs_repo
+          poetry run mike deploy --branch fusion_release --prefix fusion --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
+          poetry run mike set-default --branch fusion_release --prefix fusion --push latest
+        working-directory: main_repo
         env:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
           

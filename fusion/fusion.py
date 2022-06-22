@@ -239,24 +239,34 @@ class FusionCredentials:
         self,
         client_id: str = None,
         client_secret: str = None,
+        username: str = None,
+        password: str = None,
         resource: str = None,
         auth_url: str = None,
         proxies={},
+        grant_type: str = 'client_credentials',
     ) -> None:
         """Constuctor for the FusionCredentials authentication management class.
 
         Args:
             client_id (str, optional): A valid OAuth client identifier. Defaults to None.
             client_secret (str, optional): A valid OAuth client secret. Defaults to None.
+            username (str, optional): A valid username. Defaults to None.
+            password (str, optional): A valid password for the username. Defaults to None.
             resource (str, optional): The OAuth audience. Defaults to None.
             auth_url (str, optional): URL for the OAuth authentication server. Defaults to None.
             proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet.
+            grant_type (str, optional): Allows the grant type to be changed to support different credential types.
+                Defaults to client_credentials.
         """
         self.client_id = client_id
         self.client_secret = client_secret
+        self.username = username
+        self.password = password
         self.resource = resource
         self.auth_url = auth_url
         self.proxies = proxies
+        self.grant_type = grant_type
 
     @staticmethod
     def generate_credentials_file(
@@ -338,19 +348,39 @@ class FusionCredentials:
     def from_dict(credentials: dict):
         """Create a credentials object from a dictionary.
 
+            This is the only FusionCredentials creation method that supports the password grant type 
+            since the username and password should be provided by the user.
+
         Args:
             credentials (dict): A dictionary containing the requried keys: client_id, client_secret,
-                resource, auth_url, and optionally proxies
+                resource, auth_url, and optionally proxies and an OAuth grant type.
 
         Returns:
             FusionCredentials: a credentials object that can be used for authentication.
         """
+        if 'grant_type' in credentials:
+            grant_type = credentials['grant_type']
+        else:
+            grant_type = 'client_credentials'
+
         client_id = credentials['client_id']
-        client_secret = credentials['client_secret']
+        if grant_type == 'client_credentials':
+            client_secret = credentials['client_secret']
+            username = None
+            password = None
+        elif grant_type == 'password':
+            client_secret = None
+            username = credentials['username']
+            password = credentials['password']
+        else:
+            raise CredentialError(f'Unrecognised grant type {grant_type}')
+
         resource = credentials['resource']
         auth_url = credentials['auth_url']
         proxies = credentials.get('proxies')
-        creds = FusionCredentials(client_id, client_secret, resource, auth_url, proxies)
+        creds = FusionCredentials(
+            client_id, client_secret, username, password, resource, auth_url, proxies, grant_type=grant_type
+        )
         return creds
 
     @staticmethod
@@ -450,12 +480,22 @@ class FusionOAuthAdapter(HTTPAdapter):
         """
 
         def _refresh_token_data():
-            payload = {
-                "grant_type": "client_credentials",
-                "client_id": self.credentials.client_id,
-                "client_secret": self.credentials.client_secret,
-                "aud": self.credentials.resource,
-            }
+            payload = (
+                {
+                    "grant_type": "client_credentials",
+                    "client_id": self.credentials.client_id,
+                    "client_secret": self.credentials.client_secret,
+                    "aud": self.credentials.resource,
+                }
+                if self.credentials.grant_type == 'client_credentials'
+                else {
+                    "grant_type": "password",
+                    "client_id": self.credentials.client_id,
+                    "username": self.credentials.username,
+                    "password": self.credentials.password,
+                    "resource": self.credentials.resource,
+                }
+            )
 
             try:
                 s = requests.Session()
@@ -482,7 +522,7 @@ class FusionOAuthAdapter(HTTPAdapter):
                 f'Refreshed token {self.number_token_refreshes} time{_res_plural(self.number_token_refreshes)}',
             )
 
-        request.headers.update({'Authorization': f'Bearer {self.token}', 'jpmc-token-provider': 'authe'})
+        request.headers.update({'Authorization': f'Bearer {self.token}'})
         response = super(FusionOAuthAdapter, self).send(request, **kwargs)
         return response
 
@@ -951,7 +991,8 @@ class Fusion:
         if datasetseries_list.empty:
             raise APIResponseError(
                 f'No data available for dataset {dataset}. '
-                f'Check that a valid dataset identifier and date/date range has been set.')
+                f'Check that a valid dataset identifier and date/date range has been set.'
+            )
 
         if dt_str == 'latest':
             dt_str = datasetseries_list.iloc[datasetseries_list['createdDate'].values.argmax()]['identifier']
