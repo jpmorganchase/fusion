@@ -64,7 +64,7 @@ jobs:
       - name: build documentation
         run: |
           poetry install -E doc
-          git checkout fusion_release
+          git fetch origin fusion_release --depth=1
           poetry run mike deploy --branch fusion_release --prefix fusion --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default --branch fusion_release --prefix fusion --push latest
         working-directory: main_repo
