@@ -779,7 +779,7 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
 
         return df
 
@@ -790,6 +790,7 @@ class Fusion:
         catalog: str = 'common',
         output: bool = False,
         max_results: int = -1,
+        display_all_columns: bool = False
     ) -> pd.DataFrame:
         """Get the products contained in a catalog. A product is a grouping of datasets.
 
@@ -803,6 +804,8 @@ class Fusion:
             output (bool, optional): If True then print the dataframe. Defaults to False.
             max_results (int, optional): Limit the number of rows returned in the dataframe.
                 Defaults to -1 which returns all results.
+            display_all_columns (bool, optional): If True displays all columns returned by the API,
+                otherwise only the key columns are displayed
 
         Returns:
             pandas.DataFrame: a dataframe with a row for each product
@@ -821,11 +824,16 @@ class Fusion:
                     | df['description'].str.contains(contains, case=False)
                 ]
 
+        df["category"] = df.category.str.join(", ")
+        df["region"] = df.region.str.join(", ")
+        if not display_all_columns:
+            df = df[["identifier", "title", "region", "category", "status", "description"]]
+
         if max_results > -1:
             df = df[0:max_results]
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
 
         return df
 
@@ -836,6 +844,7 @@ class Fusion:
         catalog: str = 'common',
         output: bool = False,
         max_results: int = -1,
+        display_all_columns: bool = False
     ) -> pd.DataFrame:
         """_summary_.
 
@@ -849,6 +858,8 @@ class Fusion:
             output (bool, optional): If True then print the dataframe. Defaults to False.
             max_results (int, optional): Limit the number of rows returned in the dataframe.
                 Defaults to -1 which returns all results.
+            display_all_columns (bool, optional): If True displays all columns returned by the API,
+                otherwise only the key columns are displayed
 
         Returns:
             pandas.DataFrame: a dataframe with a row for each dataset.
@@ -870,8 +881,11 @@ class Fusion:
         if max_results > -1:
             df = df[0:max_results]
 
+        if not display_all_columns:
+            df = df[["identifier", "title", "region", "category", "coverageStartDate", "coverageEndDate", "description"]]
+
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
 
         return df
 
