@@ -730,6 +730,22 @@ class Fusion:
 
         self.session = _get_session(self.credentials, self.root_url)
 
+    def __repr__(self):
+        return "Fusion object \nAvailable methods:\n" + tabulate(
+            pd.DataFrame(
+                [
+                    [
+                        method_name
+                        for method_name in dir(Fusion)
+                        if callable(getattr(Fusion, method_name))
+                        and not method_name.startswith("_")
+                    ]
+                    + [p for p in dir(Fusion) if isinstance(getattr(Fusion, p), property)]
+                ]
+            ).T.set_index(0),
+            tablefmt="psql",
+        )
+
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
 
