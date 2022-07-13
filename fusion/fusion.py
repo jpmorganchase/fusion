@@ -9,8 +9,13 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Dict, List, Union
 from urllib.parse import urlparse, urlunparse
+from contextlib import nullcontext
 
 import pandas as pd
+import pyarrow.parquet as pq
+from pyarrow import csv
+from pyarrow import json as json_pa
+from io import BytesIO
 import requests
 from joblib import Parallel, delayed
 from requests.adapters import HTTPAdapter
@@ -79,6 +84,94 @@ class CredentialError(Exception):
     """
 
     pass
+
+
+def _csv_to_table(path: str, fs=None, delimiter: str=None):
+    """Reads csv data to pyarrow table
+
+    Args:
+        path (str): path to the file
+        fs: filesystem object
+        delimiter (str): delimiter
+
+    Returns:
+        pyarrow.table pyarrow table with the data
+    """
+    parse_options = csv.ParseOptions(delimiter=delimiter)
+    with (fs.open(path) if fs else nullcontext()) as f:
+        return csv.read_csv(path, parse_options=parse_options)
+
+
+def _json_to_table(path: str, fs=None):
+    """Reads json data to pyarrow table
+
+    Args:
+        path:
+        fs:
+
+    Returns:
+
+    """
+    with (fs.open(path) if fs else nullcontext()) as f:
+        return json_pa.read_json(path)
+
+
+def read_csv(path: str, columns: list=None, filters: list=None, fs=None):
+    """Reads csv with possibility of selecting columns and filtering the data
+
+    Args:
+        path (str): path to the csv file
+        columns: list of selected fields
+        filters: filters
+        fs: filesystem object
+
+    Returns:
+        pandas.DataFrame: a dataframe containing the data.
+
+    """
+    try:
+        try:
+            tbl = _csv_to_table(path, fs)
+        except Exception as err:
+            logger.log(
+                VERBOSE_LVL,
+                f'Failed to read {path}, with comma delimiter. {err}',
+            )
+            raise Exception
+
+        out = BytesIO()
+        pq.write_table(tbl, out)
+        del tbl
+        res = pq.read_table(out, filters=filters, columns=columns).to_pandas()
+    except Exception as err:
+        logger.log(
+            VERBOSE_LVL,
+            f"Could not parse {path} properly. " f"Trying with pandas csv reader.",
+        )
+        try:
+            with (fs.open(path) if fs else nullcontext()) as f:
+                res = pd.read_csv(f, usecols=columns, index_col=False)
+        except Exception as err:
+            with (fs.open(path) if fs else nullcontext()) as f:
+                res = pd.read_table(f, usecols=columns, index_col=False, engine="python", delimiter=None)
+    return res
+
+
+def read_parquet(path: Union[list, str], columns: list=None, filters:list =None, fs=None):
+    """Read parquet files(s) to pandas
+
+    Args:
+        path (Union[list, str]): path or a list of paths to parquet files
+        columns (list): list of selected fields
+        filters (list): filters
+        fs: filesystem object
+
+    Returns:
+        pandas.DataFrame: a dataframe containing the data.
+
+    """
+    return pq.ParquetDataset(path, use_legacy_dataset=False, filters=filters, filesystem=fs,
+                             memory_map=True).read_pandas(columns=columns).to_pandas()
 
 
 def _res_plural(ref_int: int, pluraliser: str = 's') -> str:
@@ -1112,6 +1205,7 @@ class Fusion:
         n_par: int = DEFAULT_PARALLELISM,
         show_progress: bool = True,
         columns: List = None,
+        filters: List = None,
         force_download: bool = False,
         download_folder: str = None,
         **kwargs,
@@ -1129,8 +1223,16 @@ class Fusion:
                 Defaults to DEFAULT_PARALLELISM.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             columns (List, optional): A list of columns to return from a parquet file. Defaults to None
+            filters (List, optional): List[Tuple] or List[List[Tuple]] or None (default)
+                Rows which do not match the filter predicate will be removed from scanned data.
+                Partition keys embedded in a nested directory structure will be exploited to avoid
+                loading files at all if they contain no matching rows. If use_legacy_dataset is True,
+                filters can only reference partition keys and only a hive-style directory structure
+                is supported. When setting use_legacy_dataset to False, also within-file level filtering
+                and different partitioning schemes are supported.
+                More on https://arrow.apache.org/docs/python/generated/pyarrow.parquet.ParquetDataset.html
             force_download (bool, optional): If True then will always download a file even
-                if it is already on disk. Defaults to True.
+                if it is already on disk. Defaults to False.
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
         Returns:
@@ -1153,15 +1255,16 @@ class Fusion:
         files = [res[1] for res in download_res]
 
         pd_read_fn_map = {
-            'csv': pd.read_csv,
-            'parquet': pd.read_parquet,
-            'parq': pd.read_parquet,
+            'csv': read_csv,
+            'parquet': read_parquet,
+            'parq': read_parquet,
             'json': pd.read_json,
         }
 
         pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
-            'csv': {'sep': ',', 'header': 0, 'low_memory': True},
-            'parquet': {'columns': columns},
+            'csv': {'columns': columns, 'filters': filters},
+            'parquet': {'columns': columns, 'filters': filters},
+            'json': {'columns': columns, 'filters': filters}
         }
 
         pd_read_default_kwargs['parq'] = pd_read_default_kwargs['parquet']
@@ -1178,7 +1281,10 @@ class Fusion:
                 f"No series members for dataset: {dataset} "
                 f"in date or date range: {dt_str} and format: {dataset_format}"
             )
-        dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)
-        df = pd.concat(dataframes, ignore_index=True)
+        if dataset_format in ["parquet", "parq"]:
+            df = pd_reader(files, **pd_read_kwargs)
+        else:
+            dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)
+            df = pd.concat(dataframes, ignore_index=True)
 
         return df
