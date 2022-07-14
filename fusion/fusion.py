@@ -12,9 +12,7 @@ from tqdm import tqdm
 from .authentication import FusionCredentials
 from .exceptions import APIResponseError
 from .utils import get_session, read_csv, read_parquet, distribution_to_url, distribution_to_filename, \
-    stream_single_file_new_session, normalise_dt_param_str
-
-DEFAULT_PARALLELISM = 5
+    stream_single_file_new_session, normalise_dt_param_str, cpu_count
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -403,7 +401,7 @@ class Fusion:
         dt_str: str = 'latest',
         dataset_format: str = 'parquet',
         catalog: str = 'common',
-        n_par: int = DEFAULT_PARALLELISM,
+        n_par: int = None,
         show_progress: bool = True,
         force_download: bool = False,
         download_folder: str = None,
@@ -418,7 +416,7 @@ class Fusion:
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             n_par (int, optional): Specify how many distributions to download in parallel.
-                Defaults to DEFAULT_PARALLELISM.
+                Defaults to all cpus available.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             force_download (bool, optional): If True then will always download a file even
                 if it is already on disk. Defaults to True.
@@ -428,6 +426,7 @@ class Fusion:
         Returns:
 
         """
+        n_par = cpu_count(n_par)
         required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
 
         if not download_folder:
@@ -462,7 +461,7 @@ class Fusion:
         dt_str: str = 'latest',
         dataset_format: str = 'parquet',
         catalog: str = 'common',
-        n_par: int = DEFAULT_PARALLELISM,
+        n_par: int = None,
         show_progress: bool = True,
         columns: List = None,
         filters: List = None,
@@ -480,7 +479,7 @@ class Fusion:
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             n_par (int, optional): Specify how many distributions to download in parallel.
-                Defaults to DEFAULT_PARALLELISM.
+                Defaults to all cpus available.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             columns (List, optional): A list of columns to return from a parquet file. Defaults to None
             filters (List, optional): List[Tuple] or List[List[Tuple]] or None (default)
@@ -499,6 +498,7 @@ class Fusion:
             pandas.DataFrame: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
         """
+        n_par = cpu_count(n_par)
         if not download_folder:
             download_folder = self.download_folder
         download_res = self.download(
