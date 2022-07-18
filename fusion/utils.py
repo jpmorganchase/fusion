@@ -20,6 +20,7 @@ VERBOSE_LVL = 25
 DT_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
 DEFAULT_CHUNK_SIZE = 2**16
+DEFAULT_THREAD_POOL_SIZE = 5
 
 
 def cpu_count(thread_pool_size=None):
@@ -31,7 +32,7 @@ def cpu_count(thread_pool_size=None):
         if mp.cpu_count():
             thread_pool_size = mp.cpu_count()
         else:
-            thread_pool_size = 5
+            thread_pool_size = DEFAULT_THREAD_POOL_SIZE
     return thread_pool_size
 
 
