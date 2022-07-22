@@ -1,3 +1,5 @@
+"""Fusion authentication module."""
+
 import datetime
 import logging
 import json
