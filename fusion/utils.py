@@ -35,7 +35,7 @@ def cpu_count(thread_pool_size: int = None):
 
     """
     if os.environ.get("NUM_THREADS") is not None:
-        return int(os.environ.get("NUM_THREADS"))
+        return int(os.environ["NUM_THREADS"])
     if thread_pool_size:
         return thread_pool_size
     else:
