@@ -82,7 +82,7 @@ class Fusion:
         self.session = get_session(self.credentials, self.root_url)
 
     def __repr__(self):
-        """Object representation to list all available methods
+        """Object representation to list all available methods.
         """
         return "Fusion object \nAvailable methods:\n" + tabulate(
             pd.DataFrame(

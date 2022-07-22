@@ -1,3 +1,5 @@
+"""Fusion utilities."""
+
 import datetime
 import logging
 import pyarrow.parquet as pq
@@ -23,7 +25,15 @@ DEFAULT_CHUNK_SIZE = 2**16
 DEFAULT_THREAD_POOL_SIZE = 5
 
 
-def cpu_count(thread_pool_size=None):
+def cpu_count(thread_pool_size: int = None):
+    """Determine the number of cpus/threads for parallelization.
+
+    Args:
+        thread_pool_size: override argument for number of cpus/threads.
+
+    Returns: number of cpus/threads to use.
+
+    """
     if os.environ.get("NUM_THREADS") is not None:
         return int(os.environ.get("NUM_THREADS"))
     if thread_pool_size:
@@ -36,44 +46,44 @@ def cpu_count(thread_pool_size=None):
     return thread_pool_size
 
 
-def _csv_to_table(path: str, fs=None, delimiter: str=None):
-    """Reads csv data to pyarrow table
+def _csv_to_table(path: str, fs=None, delimiter: str = None):
+    """Reads csv data to pyarrow table.
 
     Args:
-        path (str): path to the file
-        fs: filesystem object
-        delimiter (str): delimiter
+        path (str): path to the file.
+        fs: filesystem object.
+        delimiter (str): delimiter.
 
     Returns:
-        pyarrow.table pyarrow table with the data
+        pyarrow.table pyarrow table with the data.
     """
     parse_options = csv.ParseOptions(delimiter=delimiter)
-    with (fs.open(path) if fs else nullcontext()) as f:
-        return csv.read_csv(path, parse_options=parse_options)
+    with (fs.open(path) if fs else nullcontext(path)) as f:
+        return csv.read_csv(f, parse_options=parse_options)
 
 
-def _json_to_table(path: str, fs=None):
-    """Reads json data to pyarrow table
+def _json_to_table(path: str, fs = None):
+    """Reads json data to pyarrow table.
 
     Args:
-        path:
-        fs:
+        path: path to json file.
+        fs: filesystem.
 
     Returns:
 
     """
-    with (fs.open(path) if fs else nullcontext()) as f:
-        return json.read_json(path)
+    with (fs.open(path) if fs else nullcontext(path)) as f:
+        return json.read_json(f)
 
 
-def read_csv(path: str, columns: list=None, filters: list=None, fs=None):
-    """Reads csv with possibility of selecting columns and filtering the data
+def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
+    """Reads csv with possibility of selecting columns and filtering the data.
 
     Args:
-        path (str): path to the csv file
-        columns: list of selected fields
-        filters: filters
-        fs: filesystem object
+        path (str): path to the csv file.
+        columns: list of selected fields.
+        filters: filters.
+        fs: filesystem object.
 
     Returns:
         pandas.DataFrame: a dataframe containing the data.
@@ -96,25 +106,29 @@ def read_csv(path: str, columns: list=None, filters: list=None, fs=None):
     except Exception as err:
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. " f"Trying with pandas csv reader.",
+            f"Could not parse {path} properly. " f"Trying with pandas csv reader. {err}",
         )
         try:
-            with (fs.open(path) if fs else nullcontext()) as f:
+            with (fs.open(path) if fs else nullcontext(path)) as f:
                 res = pd.read_csv(f, usecols=columns, index_col=False)
         except Exception as err:
-            with (fs.open(path) if fs else nullcontext()) as f:
+            logger.log(
+                VERBOSE_LVL,
+                f"Could not parse {path} properly. " f"Trying with pandas csv reader pandas engine. {err}",
+            )
+            with (fs.open(path) if fs else nullcontext(path)) as f:
                 res = pd.read_table(f, usecols=columns, index_col=False, engine="python", delimiter=None)
     return res
 
 
-def read_parquet(path: Union[list, str], columns: list=None, filters:list =None, fs=None):
-    """Read parquet files(s) to pandas
+def read_parquet(path: Union[list, str], columns: list = None, filters: list = None, fs=None):
+    """Read parquet files(s) to pandas.
 
     Args:
-        path (Union[list, str]): path or a list of paths to parquet files
-        columns (list): list of selected fields
-        filters (list): filters
-        fs: filesystem object
+        path (Union[list, str]): path or a list of paths to parquet files.
+        columns (list): list of selected fields.
+        filters (list): filters.
+        fs: filesystem object.
 
     Returns:
         pandas.DataFrame: a dataframe containing the data.

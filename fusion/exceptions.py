@@ -1,4 +1,4 @@
-"""Bespoke exceptions and errors"""
+"""Bespoke exceptions and errors."""
 
 
 class APIResponseError(Exception):
