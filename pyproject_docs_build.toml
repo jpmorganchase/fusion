@@ -26,12 +26,12 @@ python = ">=3.7.1,<4.0"
 requests = ">2.27.0"
 types-requests = ">2.27.0"
 pandas = ">1.1.1"
-joblib = "^1.1.0"
-tabulate = "^0.8.10"
-types-tabulate = "^0.8.8"
-tqdm = "^4.64.0"
-fastparquet = "^0.8.0"
-pyarrow = "^4.0"
+joblib = ">=1.1.0"
+tabulate = ">=0.8.10"
+types-tabulate = ">=0.8.8"
+tqdm = ">=4.64.0"
+fastparquet = ">=0.8.0"
+pyarrow = ">=4.0"
 
 markupsafe = { version = "2.0.1", optional = true}
 jinja2 = { version = "^2.11.3", optional = true}
