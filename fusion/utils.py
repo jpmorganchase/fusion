@@ -12,7 +12,20 @@ from pathlib import Path
 from pyarrow import csv, json
 from io import BytesIO
 from urllib.parse import urlparse, urlunparse
-from contextlib import nullcontext
+import sys
+if sys.version_info >= (3, 7):
+    from contextlib import nullcontext
+else:
+    class nullcontext(object):
+        def __init__(self, dummy_resource=None):
+            self.dummy_resource = dummy_resource
+
+        def __enter__(self):
+            return self.dummy_resource
+
+        def __exit__(self, *args):
+            pass
+
 from urllib3.util.retry import Retry
 import multiprocessing as mp
 from .authentication import FusionCredentials, FusionOAuthAdapter
