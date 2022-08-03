@@ -17,13 +17,20 @@ if sys.version_info >= (3, 7):
     from contextlib import nullcontext
 else:
     class nullcontext(object):
+        """Class for Python 3.6 compatibility."""
         def __init__(self, dummy_resource=None):
+            """Constructor.
+            """
             self.dummy_resource = dummy_resource
 
         def __enter__(self):
+            """Enter.
+            """
             return self.dummy_resource
 
         def __exit__(self, *args):
+            """Exit.
+            """
             pass
 
 from urllib3.util.retry import Retry
