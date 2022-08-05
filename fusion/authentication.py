@@ -10,8 +10,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from datetime import timedelta
 import requests
-import os
 import fsspec
+import os
 from .exceptions import CredentialError
 
 logger = logging.getLogger(__name__)

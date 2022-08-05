@@ -35,7 +35,7 @@ else:
 
 from urllib3.util.retry import Retry
 import multiprocessing as mp
-from .authentication import FusionCredentials, FusionOAuthAdapter
+from .authentication import FusionCredentials, FusionOAuthAdapter, get_default_fs
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -369,7 +369,10 @@ def stream_single_file_new_session(
                     byte_cnt += len(chunk)
                     outfile.write(chunk)
         tmp_name.rename(output_file_path)
-        tmp_name.unlink(missing_ok=True)
+        try:
+            tmp_name.unlink()
+        except FileNotFoundError:
+            pass
         logger.log(
             VERBOSE_LVL,
             f'Wrote {byte_cnt:,} bytes to {output_file_path}, via {tmp_name}',
