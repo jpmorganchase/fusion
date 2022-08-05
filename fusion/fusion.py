@@ -232,6 +232,8 @@ class Fusion:
         if max_results > -1:
             df = df[0:max_results]
 
+        df["category"] = df.category.str.join(", ")
+        df["region"] = df.region.str.join(", ")
         if not display_all_columns:
             df = df[["identifier", "title", "region", "category", "coverageStartDate", "coverageEndDate", "description"]]
 
@@ -274,7 +276,7 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
 
         return df
 
