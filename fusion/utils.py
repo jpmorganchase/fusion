@@ -341,7 +341,7 @@ def stream_single_file_new_session(
 
     Args:
         credentials (FusionCredentials): Valid user credentials to provide an acces token
-        root_url (str): The URL to call.
+        url (str): The URL to call.
         output_file (str): The filename that the data will be saved into.
         overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
         block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE

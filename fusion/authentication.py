@@ -10,6 +10,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from datetime import timedelta
 import requests
+import os
+import fsspec
 from .exceptions import CredentialError
 
 logger = logging.getLogger(__name__)
@@ -49,7 +51,7 @@ def _is_url(url: str) -> bool:
     """Test whether the content of a string is a valid URL.
 
     Args:
-        data (str): The content to evaluate.
+        url (str): The content to evaluate.
 
     Returns:
         bool: True if the content of data is a URL, False otherwise.
@@ -59,6 +61,30 @@ def _is_url(url: str) -> bool:
         return True
     except ValueError:
         return False
+
+
+def get_default_fs():
+    """Retrieve default filesystem.
+
+    Returns: filesystem
+
+    """
+    protocol = "file" if "FS_PROTOCOL" not in os.environ.keys() else os.environ["FS_PROTOCOL"]
+    if (
+            "S3_ENDPOINT" in os.environ.keys()
+            and "AWS_ACCESS_KEY_ID" in os.environ.keys()
+            and "AWS_SECRET_ACCESS_KEY" in os.environ.keys()
+    ):
+        endpoint = os.environ["S3_ENDPOINT"]
+        fs = fsspec.filesystem(
+            "s3",
+            client_kwargs={"endpoint_url": f"https://{endpoint}"},
+            key=os.environ["AWS_ACCESS_KEY_ID"],
+            secret=os.environ["AWS_SECRET_ACCESS_KEY"],
+        )
+    else:
+        fs = fsspec.filesystem(protocol)
+    return fs
 
 
 class FusionCredentials:
@@ -75,7 +101,7 @@ class FusionCredentials:
         proxies={},
         grant_type: str = 'client_credentials',
     ) -> None:
-        """Constuctor for the FusionCredentials authentication management class.
+        """Constructor for the FusionCredentials authentication management class.
 
         Args:
             client_id (str, optional): A valid OAuth client identifier. Defaults to None.
@@ -170,7 +196,7 @@ class FusionCredentials:
         with open(credentials_file, 'w') as credentialsfile:
             credentialsfile.write(json_data)
 
-        credentials = FusionCredentials.from_file(credentials_file=credentials_file)
+        credentials = FusionCredentials.from_file(file_path=credentials_file)
         return credentials
 
     @staticmethod
@@ -213,20 +239,48 @@ class FusionCredentials:
         return creds
 
     @staticmethod
-    def from_file(credentials_file: str = 'config/client.credentials.json'):
-        """Create a credentils object from a file.
+    def from_file(file_path: str = 'config/client.credentials.json', fs=None, walk_up_dirs=True):
+        """Create a credentials object from a file.
 
         Args:
-            credentials_file (str, optional): Path (absolute or relative) and filename
+            file_path (str, optional): Path (absolute or relative) and filename
                 to load credentials from. Defaults to 'config/client.credentials.json'.
-
+            fs (fsspec.filesystem): Filesystem to use.
+            walk_up_dirs (bool): if true it walks up the directories in search of a config folder
         Returns:
             FusionCredentials: a credentials object that can be used for authentication.
         """
-        with open(credentials_file, 'r') as credentials:
-            data = json.load(credentials)
-            credentials = FusionCredentials.from_dict(data)
-            return credentials
+        fs = fs if fs else get_default_fs()
+        to_use_file_path = None
+
+        if fs.exists(file_path):  # absolute path case
+            logger.log(VERBOSE_LVL, f"Found credentials file at {file_path}")
+            to_use_file_path = file_path
+        elif fs.exists(os.path.join(fs.info("")["name"], file_path)): # relative path case
+            to_use_file_path = os.path.join(fs.info("")["name"], file_path)
+            logger.log(VERBOSE_LVL, f"Found credentials file at {to_use_file_path}")
+        else:
+            for p in [s.__str__() for s in Path(fs.info("")["name"]).parents]:
+                if fs.exists(os.path.join(p, file_path)):
+                    to_use_file_path = os.path.join(p, file_path)
+                    logger.log(VERBOSE_LVL, f"Found credentials file at {to_use_file_path}")
+                    break
+        if fs.size(to_use_file_path) > 0:
+            try:
+                with fs.open(to_use_file_path, 'r') as credentials:
+                    data = json.load(credentials)
+                    credentials = FusionCredentials.from_dict(data)
+                    return credentials
+            except Exception as e:
+                print(e)
+                logger.error(e)
+                raise Exception(e)
+        else:
+            msg = f"{to_use_file_path} is an empty file, make sure to add your credentials to it."
+            print(msg)
+            logger.error(msg)
+            raise IOError(msg)
+
 
     @staticmethod
     def from_object(credentials_source: Union[str, dict]):
