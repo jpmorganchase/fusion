@@ -256,7 +256,7 @@ class FusionCredentials:
         if fs.exists(file_path):  # absolute path case
             logger.log(VERBOSE_LVL, f"Found credentials file at {file_path}")
             to_use_file_path = file_path
-        elif fs.exists(os.path.join(fs.info("")["name"], file_path)): # relative path case
+        elif fs.exists(os.path.join(fs.info("")["name"], file_path)):  # relative path case
             to_use_file_path = os.path.join(fs.info("")["name"], file_path)
             logger.log(VERBOSE_LVL, f"Found credentials file at {to_use_file_path}")
         else:
@@ -280,7 +280,6 @@ class FusionCredentials:
             print(msg)
             logger.error(msg)
             raise IOError(msg)
-
 
     @staticmethod
     def from_object(credentials_source: Union[str, dict]):

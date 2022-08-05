@@ -9,7 +9,7 @@ import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
-from .authentication import FusionCredentials
+from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
 from .utils import get_session, read_csv, read_parquet, distribution_to_url, distribution_to_filename, \
     stream_single_file_new_session, normalise_dt_param_str, cpu_count
@@ -44,6 +44,7 @@ class Fusion:
         root_url: str = "https://fusion-api.jpmorgan.com/fusion/v1/",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
+        fs=None,
     ) -> None:
         """Constructor to instantiate a new Fusion object.
 
@@ -56,6 +57,7 @@ class Fusion:
             download_folder (str, optional): The folder path where downloaded data files
                 are saved. Defaults to "downloads".
             log_level (int, optional): Set the logging level. Defaults to logging.ERROR.
+            fs (fsspec.filesystem): filesystem.
         """
         self.root_url = root_url
         self.download_folder = download_folder
@@ -80,6 +82,7 @@ class Fusion:
             self.credentials = FusionCredentials.from_object(credentials)
 
         self.session = get_session(self.credentials, self.root_url)
+        self.fs = fs if fs else get_default_fs()
 
     def __repr__(self):
         """Object representation to list all available methods.
@@ -433,15 +436,17 @@ class Fusion:
 
         if not download_folder:
             download_folder = self.download_folder
-        Path(download_folder).mkdir(parents=True, exist_ok=True)
 
+        if not self.fs.exists(download_folder):
+            self.fs.mkdir(download_folder, create_parents=True)
         download_spec = [
-            (
-                self.credentials,
-                distribution_to_url(self.root_url, series[1], series[2], series[3], series[0]),
-                distribution_to_filename(download_folder, series[1], series[2], series[3], series[0]),
-                force_download,
-            )
+            {
+                "credentials": self.credentials,
+                "url": distribution_to_url(self.root_url, series[1], series[2], series[3], series[0]),
+                "output_file": distribution_to_filename(download_folder, series[1], series[2], series[3], series[0]),
+                "overwrite": force_download,
+                "fs": self.fs
+            }
             for series in required_series
         ]
 
@@ -453,7 +458,7 @@ class Fusion:
             VERBOSE_LVL,
             f'Beginning {len(loop)} downloads in batches of {n_par}',
         )
-        res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(*spec) for spec in loop)
+        res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(**spec) for spec in loop)
 
         return res
 

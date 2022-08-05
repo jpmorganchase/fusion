@@ -336,6 +336,7 @@ def stream_single_file_new_session(
     overwrite: bool = True,
     block_size=DEFAULT_CHUNK_SIZE,
     dry_run: bool = False,
+    fs=None
 ) -> tuple:
     """Function to stream a single file from the API to a file on disk.
 
@@ -347,6 +348,7 @@ def stream_single_file_new_session(
         block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
         dry_run (bool, optional): Test that a file can be downloaded and return the filename without
             downloading the data. Defaults to False.
+        fs (fsspec.filesystem): Filesystem.
 
     Returns:
         tuple: A tuple
@@ -364,7 +366,7 @@ def stream_single_file_new_session(
         with get_session(credentials, url).get(url, stream=True) as r:
             r.raise_for_status()
             byte_cnt = 0
-            with open(tmp_name, "wb") as outfile:
+            with fs.open(tmp_name, "wb") as outfile:
                 for chunk in r.iter_content(block_size):
                     byte_cnt += len(chunk)
                     outfile.write(chunk)
