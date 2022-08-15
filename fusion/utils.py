@@ -7,6 +7,7 @@ import pandas as pd
 import re
 import requests
 import os
+import aiohttp
 from typing import Union
 from pathlib import Path
 from pyarrow import csv, json
@@ -279,6 +280,36 @@ def _get_canonical_root_url(any_url: str) -> str:
     return root_url
 
 
+async def get_client(credentials, **kwargs):
+    async def on_request_start(session, trace_config_ctx, params):
+        payload = (
+            {
+                "grant_type": "client_credentials",
+                "client_id": credentials.client_id,
+                "client_secret": credentials.client_secret,
+                "aud": credentials.resource,
+            }
+            if credentials.grant_type == 'client_credentials'
+            else {
+                "grant_type": "password",
+                "client_id": credentials.client_id,
+                "username": credentials.username,
+                "password": credentials.password,
+                "resource": credentials.resource,
+            }
+        )
+        async with aiohttp.ClientSession() as session:
+            response = await session.post(credentials.auth_url, data=payload)
+            response_data = await response.json()
+
+        access_token = response_data["access_token"]
+        params.headers.update({'Authorization': f'Bearer {access_token}'})
+
+    trace_config = aiohttp.TraceConfig()
+    trace_config.on_request_start.append(on_request_start)
+    return aiohttp.ClientSession(trace_configs=[trace_config], trust_env=True)
+
+
 def get_session(
     credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None
 ) -> requests.Session:
@@ -406,4 +437,7 @@ def _stream_single_file(session: requests.Session, url: str, output_file: str, b
             for chunk in r.iter_content(block_size):
                 outfile.write(chunk)
     tmp_name.rename(output_file_path)
-    tmp_name.unlink(missing_ok=True)
+    try:
+        tmp_name.unlink()
+    except FileNotFoundError:
+        pass
