@@ -1,6 +1,8 @@
 from fsspec.implementations.http import HTTPFileSystem
 from fsspec.callbacks import _DEFAULT_CALLBACK
 import logging
+from fusion.utils import get_client
+from .authentication import FusionCredentials
 
 
 logger = logging.getLogger(__name__)
@@ -26,13 +28,24 @@ async def _ls_real(self, url, detail=True, **kwargs):
 class FusionHTTPFileSystem(HTTPFileSystem):
     """Fusion HTTP filesystem.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, credentials='config/client_credentials.json', *args, **kwargs):
         """
         Same signature as the fsspec HTTPFileSystem
         Args:
             *args:
             **kwargs:
         """
+
+        self.credentials = credentials
+        if not "get_client" in kwargs:
+            kwargs["get_client"] = get_client
+        if not "client_kwargs" in kwargs:
+            if isinstance(credentials, FusionCredentials):
+                self.credentials = kwargs["credentials"]
+            else:
+                self.credentials = FusionCredentials.from_object(credentials)
+            kwargs["client_kwargs"] = client_kwargs={"credentials": self.credentials, "root_url": "https://fusion-api.jpmorgan.com/fusion/v1/"}
+
         super().__init__(*args, **kwargs)
 
     def _decorate_url(self, url):
