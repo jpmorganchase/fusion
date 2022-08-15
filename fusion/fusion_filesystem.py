@@ -1,6 +1,7 @@
 from fsspec.implementations.http import HTTPFileSystem
 from fsspec.callbacks import _DEFAULT_CALLBACK
 import logging
+from urllib.parse import urljoin
 from fusion.utils import get_client
 from .authentication import FusionCredentials
 
@@ -50,8 +51,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
     def _decorate_url(self, url):
         if "http" not in url:
-            url = f'{self.client_kwargs["root_url"]}catalogs/' + url
+            url = urljoin(f'{self.client_kwargs["root_url"]}catalogs/', url)
         return url
+
+    async def _isdir(self, path):
+        path = self._decorate_url(path)
+        try:
+            return await self._info(path)["type"] == "directory"
+        except:
+            return False
 
     async def _ls_real(self, url, detail=True, **kwargs):
         # ignoring URL-encoded arguments
@@ -66,10 +74,25 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             self._raise_not_found_for_status(r, url)
             out = await r.json()
 
-        out = [clean_url + f'/{x["identifier"]}' for x in out["resources"]]
-        return out
+        out = [urljoin(clean_url+"/", x["identifier"]) for x in out["resources"]]
+        if detail:
+            return [
+                {
+                    "name": u,
+                    "size": None,
+                    "type": "directory" if not (u.endswith("csv") or u.endswith("parquet")) else "file",
+                }
+                for u in out
+            ]
+        else:
+            return out
 
-    def ls(self, url, detail=True, **kwargs):
+    def info(self, path, **kwargs):
+        path = self._decorate_url(path)
+        kwargs["keep_protocol"] = True
+        return super().info(path, **kwargs)
+
+    def ls(self, url, detail=False, **kwargs):
         """
         List resources.
         Args:
@@ -81,8 +104,18 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         """
         url = self._decorate_url(url)
-        ret = super().ls(url, detail=True, **kwargs)
-        return [x.split(f'{self.client_kwargs["root_url"]}catalogs/')[-1] for x in ret]
+        ret = super().ls(url, detail=detail, **kwargs)
+        keep_protocol = kwargs.pop("keep_protocol", False)
+        if detail:
+            if not keep_protocol:
+                for k in ret:
+                    k["name"] = k["name"].split(f'{self.client_kwargs["root_url"]}catalogs/')[-1]
+
+        else:
+            if not keep_protocol:
+                return [x.split(f'{self.client_kwargs["root_url"]}catalogs/')[-1] for x in ret]
+
+        return ret
 
     def exists(self, url, detail=True, **kwargs):
         """
@@ -98,6 +131,18 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         url = self._decorate_url(url)
         return super().exists(url, **kwargs)
 
+    def isfile(self, path):
+        """
+        Is path a file.
+        Args:
+            path:
+
+        Returns:
+
+        """
+        path = self._decorate_url(path)
+        return super().isfile(path)
+
     def cat(self, url, start=None, end=None, **kwargs):
         """
         Fetch paths' contents.
@@ -111,7 +156,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         """
         url = self._decorate_url(url)
-        return super().cat(url, start=None, end=None, **kwargs)
+        return super().cat(url, start=start, end=end, **kwargs)
 
     def get(self, rpath, lpath, chunk_size=5 * 2 ** 20, callback=_DEFAULT_CALLBACK, **kwargs):
         """
@@ -126,8 +171,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         Returns:
 
         """
-        url = self._decorate_url(lpath)
-        raise NotImplementedError
+        rpath = self._decorate_url(rpath)
+        return super().get(rpath, lpath, chunk_size=5 * 2 ** 20, callback=_DEFAULT_CALLBACK, **kwargs)
 
     def put(self,
         lpath,
@@ -152,3 +197,32 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         rpath = self._decorate_url(rpath)
         raise NotImplementedError
+
+    def find(self, path, maxdepth=None, withdirs=False, **kwargs):
+        """
+
+        Args:
+            path:
+            maxdepth:
+            withdirs:
+            **kwargs:
+
+        Returns:
+
+        """
+        path = self._decorate_url(path)
+        return super().find(path, maxdepth=maxdepth, withdirs=withdirs, **kwargs)
+
+    def glob(self, path, **kwargs):
+        return super().glob(path, **kwargs)
+
+    def open(self,
+             path,
+             mode="rb",
+             block_size=None,
+             cache_options=None,
+             compression=None,
+             **kwargs,
+             ):
+        path = self._decorate_url(path)
+        return super().open(path, mode, block_size, cache_options, compression, **kwargs)
