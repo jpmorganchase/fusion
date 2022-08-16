@@ -410,6 +410,7 @@ class Fusion:
         show_progress: bool = True,
         force_download: bool = False,
         download_folder: str = None,
+        return_paths: bool = False,
     ):
         """Downloads the requested distributions of a dataset to disk.
 
@@ -427,6 +428,7 @@ class Fusion:
                 if it is already on disk. Defaults to True.
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
+            return_paths (bool, optional): Return paths and success statuses of the downloaded files.
 
         Returns:
 
@@ -460,7 +462,7 @@ class Fusion:
         )
         res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(**spec) for spec in loop)
 
-        return res
+        return res if return_paths else None
 
     def to_df(
         self,
@@ -475,7 +477,7 @@ class Fusion:
         force_download: bool = False,
         download_folder: str = None,
         **kwargs,
-    ):
+    ) -> pd.DataFrame:
         """Gets distributions for a specified date or date range and returns the data as a dataframe.
 
         Args:
@@ -509,7 +511,7 @@ class Fusion:
         if not download_folder:
             download_folder = self.download_folder
         download_res = self.download(
-            dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download, download_folder
+            dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download, download_folder, return_paths=True
         )
 
         if not all(res[0] for res in download_res):
