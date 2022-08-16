@@ -36,7 +36,7 @@ else:
 
 from urllib3.util.retry import Retry
 import multiprocessing as mp
-from .authentication import FusionCredentials, FusionOAuthAdapter, get_default_fs
+from .authentication import FusionCredentials, FusionOAuthAdapter
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -83,7 +83,7 @@ def _csv_to_table(path: str, fs=None, delimiter: str = None):
         return csv.read_csv(f, parse_options=parse_options)
 
 
-def _json_to_table(path: str, fs = None):
+def _json_to_table(path: str, fs=None):
     """Reads json data to pyarrow table.
 
     Args:

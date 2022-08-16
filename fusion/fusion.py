@@ -322,7 +322,7 @@ class Fusion:
 
         Returns:
             pandas.DataFrame: A dataframe with a row for each datasetseries member resource.
-                Currently this will always be distributions.
+                Currently, this will always be distributions.
         """
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}'
         df = Fusion._call_for_dataframe(url, self.session)
