@@ -48,6 +48,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 self.credentials = FusionCredentials.from_object(credentials)
             kwargs["client_kwargs"] = {"credentials": self.credentials,
                                        "root_url": "https://fusion-api.jpmorgan.com/fusion/v1/"}
+        if "headers" not in kwargs:
+            kwargs["headers"] = {"Accept-Encoding": "identity"}
 
         super().__init__(*args, **kwargs)
 
@@ -74,26 +76,47 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         kw.update(kwargs)
         # logger.debug(url)
         session = await self.set_session()
+        is_file = False
+        size = None
         async with session.get(url, **self.kwargs) as r:
             self._raise_not_found_for_status(r, url)
-            out = await r.json()
+            try:
+                out = await r.json()
+            except Exception as ex:
+                logger.log(VERBOSE_LVL, f"{url} cannot be parsed to json, {ex}")
+                # out = await r.content.read(10)
+                out = [r.headers["Content-Disposition"].split("=")[-1]]
+                size = int(r.headers["Content-Length"])
+                is_file = True
 
-        out = [urljoin(clean_url + "/", x["identifier"]) for x in out["resources"]]
+        if not is_file:
+            out = [urljoin(clean_url + "/", x["identifier"]) for x in out["resources"]]
+
         if detail:
-            return [
-                {
-                    "name": u,
-                    "size": None,
-                    "type": "directory" if not (u.endswith("csv") or u.endswith("parquet")) else "file",
-                }
-                for u in out
-            ]
+            if not is_file:
+                return [
+                    {
+                        "name": u,
+                        "size": None,
+                        "type": "directory" if not (u.endswith("csv") or u.endswith("parquet")) else "file",
+                    }
+                    for u in out
+                ]
+            else:
+                return [
+                    {
+                        "name": out[0],
+                        "size": size,
+                        "type": "file",
+                    }
+                ]
         else:
             return out
 
+
     def info(self, path, **kwargs):
         """
-        Return info. TODO: need to redo after size in headers.
+        Return info.
         Args:
             path:
             **kwargs:
@@ -103,7 +126,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         """
         path = self._decorate_url(path)
         kwargs["keep_protocol"] = True
-        return super().info(path, **kwargs)
+        res = super().ls(path, detail=True, **kwargs)[0]
+        if res["type"] == "file":
+            return res
+        else:
+            return super().info(path, **kwargs)
 
     def ls(self, url, detail=False, **kwargs):
         """
@@ -232,10 +259,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def open(self,
              path,
              mode="rb",
-             block_size=None,
-             cache_options=None,
-             compression=None,
              **kwargs,
              ):
         path = self._decorate_url(path)
-        return super().open(path, mode, block_size, cache_options, compression, **kwargs)
+        return super().open(path, mode, **kwargs)
