@@ -53,9 +53,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         super().__init__(*args, **kwargs)
 
+    async def _decorate_url_a(self, url):
+        url = urljoin(f'{self.client_kwargs["root_url"]}catalogs/', url) if "http" not in url else url
+        return url
+
     def _decorate_url(self, url):
-        if "http" not in url:
-            url = urljoin(f'{self.client_kwargs["root_url"]}catalogs/', url)
+        url = urljoin(f'{self.client_kwargs["root_url"]}catalogs/', url) if "http" not in url else url
         return url
 
     async def _isdir(self, path):
@@ -113,7 +116,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         else:
             return out
 
-
     def info(self, path, **kwargs):
         """
         Return info.
@@ -131,6 +133,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             return res
         else:
             return super().info(path, **kwargs)
+
+    async def _ls(self, url, detail=True, **kwargs):
+        url = await self._decorate_url_a(url)
+        return await super()._ls(url, detail, **kwargs)
 
     def ls(self, url, detail=False, **kwargs):
         """
