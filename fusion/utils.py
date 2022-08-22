@@ -299,15 +299,15 @@ async def get_client(credentials, **kwargs):
             }
         )
         async with aiohttp.ClientSession() as session:
-            response = await session.post(credentials.auth_url, data=payload)
+            response = await session.post(credentials.auth_url, data=payload, proxy=http_proxy)
             response_data = await response.json()
 
         access_token = response_data["access_token"]
         params.headers.update({'Authorization': f'Bearer {access_token}'})
 
     if credentials.proxies:
-        os.environ["HTTP_PROXY"] = credentials.proxies["http"]
-        os.environ["HTTPS_PROXY"] = credentials.proxies["https"]
+        http_proxy = credentials.proxies["http"]
+        # https_proxy = credentials.proxies["https"]
     trace_config = aiohttp.TraceConfig()
     trace_config.on_request_start.append(on_request_start)
     return aiohttp.ClientSession(trace_configs=[trace_config], trust_env=True)
