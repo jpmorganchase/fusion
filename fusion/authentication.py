@@ -1,15 +1,17 @@
 """Fusion authentication module."""
 
 import datetime
-import logging
 import json
+import logging
+from datetime import timedelta
+from pathlib import Path
 from typing import Dict, Union
 from urllib.parse import urlparse
-from pathlib import Path
+
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from datetime import timedelta
-import requests
+
 from .exceptions import CredentialError
 
 logger = logging.getLogger(__name__)
@@ -98,6 +100,48 @@ class FusionCredentials:
         self.grant_type = grant_type
 
     @staticmethod
+    def add_proxies(
+        http_proxy: str, https_proxy: str = None, credentials_file: str = 'config/client_credentials.json'
+    ) -> None:
+        """A function to add proxies to an existing credentials files. This function can be
+        called to add proxy addresses to a credential file downloaded from the Fusion website.
+
+        Args:
+            http_proxy (str): The HTTP proxy address
+            https_proxy (str): The HTTPS proxy address. If not specified then this will be the
+                copied form the HTTP proxy
+            credentials_file (str, optional): The path and filename to store the credentials under.
+                Path may be absolute or relative to current working directory.
+                Defaults to 'config/client_credentials.json'.
+
+        Returns:
+            None
+        """
+
+        credentials = FusionCredentials.from_file(credentials_file)
+        credentials.proxies['http'] = http_proxy
+        if https_proxy is None:
+            https_proxy = http_proxy
+
+        credentials.proxies['https'] = https_proxy
+
+        data: Dict[str, Union[str, dict]] = dict(
+            {
+                'client_id': credentials.client_id,
+                'client_secret': credentials.client_secret,
+                'resource': credentials.resource,
+                'auth_url': credentials.auth_url,
+                'proxies': credentials.proxies,
+            }
+        )
+        json_data = json.dumps(data, indent=4)
+        print(json_data)
+        with open(credentials_file, 'w') as credentialsfile:
+            credentialsfile.write(json_data)
+
+        return
+
+    @staticmethod
     def generate_credentials_file(
         credentials_file: str = 'config/client_credentials.json',
         client_id: str = None,
@@ -126,6 +170,7 @@ class FusionCredentials:
         Returns:
            FusionCredentials: a credentials object that can be used for authentication.
         """
+        print("generate credentials")
         if not client_id:
             raise CredentialError('A valid client_id is required')
         if not client_secret:
