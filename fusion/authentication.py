@@ -135,7 +135,6 @@ class FusionCredentials:
             }
         )
         json_data = json.dumps(data, indent=4)
-        print(json_data)
         with open(credentials_file, 'w') as credentialsfile:
             credentialsfile.write(json_data)
 
@@ -170,7 +169,6 @@ class FusionCredentials:
         Returns:
            FusionCredentials: a credentials object that can be used for authentication.
         """
-        print("generate credentials")
         if not client_id:
             raise CredentialError('A valid client_id is required')
         if not client_secret:
