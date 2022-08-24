@@ -31,8 +31,6 @@ VERBOSE_LVL = 25
 class Fusion:
     """Core Fusion class for API access."""
 
-    __default_catalog = "common"
-
     @staticmethod
     def _call_for_dataframe(url: str, session: requests.Session) -> pd.DataFrame:
         """Private function that calls an API endpoint and returns the data as a pandas dataframe.
@@ -69,6 +67,8 @@ class Fusion:
                 are saved. Defaults to "downloads".
             log_level (int, optional): Set the logging level. Defaults to logging.ERROR.
         """
+        self._default_catalog = "common"
+
         self.root_url = root_url
         self.download_folder = download_folder
         Path(download_folder).mkdir(parents=True, exist_ok=True)
@@ -109,7 +109,18 @@ class Fusion:
             tablefmt="psql",
         )
 
-    def set_default_catalog(self, catalog) -> None:
+    @property
+    def default_catalog(self) -> str:
+        """Returns the default catalog.
+
+        Returns:
+            None
+        """
+        return self._default_catalog
+
+
+    @default_catalog.setter
+    def default_catalog(self, catalog) -> None:
         """Allow the default catalog, which is "common" to be overridden.
 
         Args:
@@ -118,15 +129,7 @@ class Fusion:
         Returns:
             None
         """
-        self.__default_catalog = catalog
-
-    def get_default_catalog(self) -> str:
-        """Returns the default catalog.
-
-        Returns:
-            None
-        """
-        return self.__default_catalog
+        self._default_catalog = catalog
 
     def __use_catalog(self, catalog):
         """Determine which catalog to use in an API call.
@@ -138,7 +141,7 @@ class Fusion:
             str: The catalog to use
         """
         if catalog is None:
-            return self.__default_catalog
+            return self.default_catalog
         else:
             return catalog
 
