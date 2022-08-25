@@ -8,7 +8,7 @@ import pandas as pd
 import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
-from tqdm.auto import tqdm
+from tqdm import tqdm
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
 from .utils import get_session, read_csv, read_parquet, distribution_to_url, distribution_to_filename, \
