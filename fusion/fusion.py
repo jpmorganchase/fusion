@@ -4,6 +4,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import Dict, List, Union
+
 import pandas as pd
 import requests
 from joblib import Parallel, delayed
@@ -11,8 +12,16 @@ from tabulate import tabulate
 from tqdm import tqdm
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
-from .utils import get_session, read_csv, read_parquet, distribution_to_url, distribution_to_filename, \
-    stream_single_file_new_session, normalise_dt_param_str, cpu_count
+from .utils import (
+    cpu_count,
+    distribution_to_filename,
+    distribution_to_url,
+    get_session,
+    normalise_dt_param_str,
+    read_csv,
+    read_parquet,
+    stream_single_file_new_session,
+)
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -59,6 +68,8 @@ class Fusion:
             log_level (int, optional): Set the logging level. Defaults to logging.ERROR.
             fs (fsspec.filesystem): filesystem.
         """
+        self._default_catalog = "common"
+
         self.root_url = root_url
         self.download_folder = download_folder
         Path(download_folder).mkdir(parents=True, exist_ok=True)
@@ -85,22 +96,56 @@ class Fusion:
         self.fs = fs if fs else get_default_fs()
 
     def __repr__(self):
-        """Object representation to list all available methods.
-        """
+        """Object representation to list all available methods."""
         return "Fusion object \nAvailable methods:\n" + tabulate(
             pd.DataFrame(
                 [
                     [
                         method_name
                         for method_name in dir(Fusion)
-                        if callable(getattr(Fusion, method_name))
-                        and not method_name.startswith("_")
+                        if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
                     ]
                     + [p for p in dir(Fusion) if isinstance(getattr(Fusion, p), property)]
                 ]
             ).T.set_index(0),
             tablefmt="psql",
         )
+
+    @property
+    def default_catalog(self) -> str:
+        """Returns the default catalog.
+
+        Returns:
+            None
+        """
+        return self._default_catalog
+
+
+    @default_catalog.setter
+    def default_catalog(self, catalog) -> None:
+        """Allow the default catalog, which is "common" to be overridden.
+
+        Args:
+            catalog (str): The catalog to use as the default
+
+        Returns:
+            None
+        """
+        self._default_catalog = catalog
+
+    def __use_catalog(self, catalog):
+        """Determine which catalog to use in an API call.
+
+        Args:
+            catalog (str): The catalog value passed as an argument to an API function wrapper.
+
+        Returns:
+            str: The catalog to use
+        """
+        if catalog is None:
+            return self.default_catalog
+        else:
+            return catalog
 
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
@@ -119,7 +164,7 @@ class Fusion:
 
         return df
 
-    def catalog_resources(self, catalog: str = 'common', output: bool = False) -> pd.DataFrame:
+    def catalog_resources(self, catalog: str = None, output: bool = False) -> pd.DataFrame:
         """List the resources contained within the catalog, for example products and datasets.
 
         Args:
@@ -129,6 +174,8 @@ class Fusion:
         Returns:
            pandas.DataFrame: A dataframe with a row for each resource within the catalog
         """
+        catalog = self.__use_catalog(catalog)
+
         url = f'{self.root_url}catalogs/{catalog}'
         df = Fusion._call_for_dataframe(url, self.session)
 
@@ -141,10 +188,10 @@ class Fusion:
         self,
         contains: Union[str, list] = None,
         id_contains: bool = False,
-        catalog: str = 'common',
+        catalog: str = None,
         output: bool = False,
         max_results: int = -1,
-        display_all_columns: bool = False
+        display_all_columns: bool = False,
     ) -> pd.DataFrame:
         """Get the products contained in a catalog. A product is a grouping of datasets.
 
@@ -164,6 +211,8 @@ class Fusion:
         Returns:
             pandas.DataFrame: a dataframe with a row for each product
         """
+        catalog = self.__use_catalog(catalog)
+
         url = f'{self.root_url}catalogs/{catalog}/products'
         df = Fusion._call_for_dataframe(url, self.session)
 
@@ -195,10 +244,10 @@ class Fusion:
         self,
         contains: Union[str, list] = None,
         id_contains: bool = False,
-        catalog: str = 'common',
+        catalog: str = None,
         output: bool = False,
         max_results: int = -1,
-        display_all_columns: bool = False
+        display_all_columns: bool = False,
     ) -> pd.DataFrame:
         """_summary_.
 
@@ -218,6 +267,8 @@ class Fusion:
         Returns:
             pandas.DataFrame: a dataframe with a row for each dataset.
         """
+        catalog = self.__use_catalog(catalog)
+
         url = f'{self.root_url}catalogs/{catalog}/datasets'
         df = Fusion._call_for_dataframe(url, self.session)
 
@@ -238,14 +289,16 @@ class Fusion:
         df["category"] = df.category.str.join(", ")
         df["region"] = df.region.str.join(", ")
         if not display_all_columns:
-            df = df[["identifier", "title", "region", "category", "coverageStartDate", "coverageEndDate", "description"]]
+            df = df[
+                ["identifier", "title", "region", "category", "coverageStartDate", "coverageEndDate", "description"]
+            ]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
 
         return df
 
-    def dataset_resources(self, dataset: str, catalog: str = 'common', output: bool = False) -> pd.DataFrame:
+    def dataset_resources(self, dataset: str, catalog: str = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
 
         Args:
@@ -256,6 +309,8 @@ class Fusion:
         Returns:
             pandas.DataFrame: A dataframe with a row for each resource
         """
+        catalog = self.__use_catalog(catalog)
+
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}'
         df = Fusion._call_for_dataframe(url, self.session)
 
@@ -264,7 +319,7 @@ class Fusion:
 
         return df
 
-    def list_dataset_attributes(self, dataset: str, catalog: str = 'common', output: bool = False, display_all_columns: bool = False) -> pd.DataFrame:
+    def list_dataset_attributes(self, dataset: str, catalog: str = None, output: bool = False, display_all_columns: bool = False) -> pd.DataFrame:
         """Returns the list of attributes that are in the dataset.
 
         Args:
@@ -277,6 +332,8 @@ class Fusion:
         Returns:
             pandas.DataFrame: A dataframe with a row for each attribute
         """
+        catalog = self.__use_catalog(catalog)
+
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes'
         df = Fusion._call_for_dataframe(url, self.session)
 
@@ -289,7 +346,7 @@ class Fusion:
         return df
 
     def list_datasetmembers(
-        self, dataset: str, catalog: str = 'common', output: bool = False, max_results: int = -1
+        self, dataset: str, catalog: str = None, output: bool = False, max_results: int = -1
     ) -> pd.DataFrame:
         """List the available members in the dataset series.
 
@@ -303,6 +360,8 @@ class Fusion:
         Returns:
             pandas.DataFrame: a dataframe with a row for each dataset member.
         """
+        catalog = self.__use_catalog(catalog)
+
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries'
         df = Fusion._call_for_dataframe(url, self.session)
 
@@ -315,7 +374,7 @@ class Fusion:
         return df
 
     def datasetmember_resources(
-        self, dataset: str, series: str, catalog: str = 'common', output: bool = False
+        self, dataset: str, series: str, catalog: str = None, output: bool = False
     ) -> pd.DataFrame:
         """List the available resources for a datasetseries member.
 
@@ -329,6 +388,8 @@ class Fusion:
             pandas.DataFrame: A dataframe with a row for each datasetseries member resource.
                 Currently, this will always be distributions.
         """
+        catalog = self.__use_catalog(catalog)
+
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}'
         df = Fusion._call_for_dataframe(url, self.session)
 
@@ -337,9 +398,7 @@ class Fusion:
 
         return df
 
-    def list_distributions(
-        self, dataset: str, series: str, catalog: str = 'common', output: bool = False
-    ) -> pd.DataFrame:
+    def list_distributions(self, dataset: str, series: str, catalog: str = None, output: bool = False) -> pd.DataFrame:
         """List the available distributions (downloadable instances of the dataset with a format type).
 
         Args:
@@ -351,6 +410,8 @@ class Fusion:
         Returns:
             pandas.DataFrame: A dataframe with a row for each distribution.
         """
+        catalog = self.__use_catalog(catalog)
+
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}/distributions'
         df = Fusion._call_for_dataframe(url, self.session)
 
@@ -360,7 +421,7 @@ class Fusion:
         return df
 
     def _resolve_distro_tuples(
-        self, dataset: str, dt_str: str = 'latest', dataset_format: str = 'parquet', catalog: str = 'common'
+        self, dataset: str, dt_str: str = 'latest', dataset_format: str = 'parquet', catalog: str = None
     ):
         """Resolve distribution tuples given specification params.
 
@@ -379,6 +440,8 @@ class Fusion:
         Returns:
             list: a list of tuples, one for each distribution
         """
+        catalog = self.__use_catalog(catalog)
+
         datasetseries_list = self.list_datasetmembers(dataset, catalog)
 
         if datasetseries_list.empty:
@@ -410,7 +473,7 @@ class Fusion:
         dataset: str,
         dt_str: str = 'latest',
         dataset_format: str = 'parquet',
-        catalog: str = 'common',
+        catalog: str = None,
         n_par: int = None,
         show_progress: bool = True,
         force_download: bool = False,
@@ -438,6 +501,8 @@ class Fusion:
         Returns:
 
         """
+        catalog = self.__use_catalog(catalog)
+
         n_par = cpu_count(n_par)
         required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
 
@@ -474,7 +539,7 @@ class Fusion:
         dataset: str,
         dt_str: str = 'latest',
         dataset_format: str = 'parquet',
-        catalog: str = 'common',
+        catalog: str = None,
         n_par: int = None,
         show_progress: bool = True,
         columns: List = None,
@@ -512,6 +577,8 @@ class Fusion:
             pandas.DataFrame: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
         """
+        catalog = self.__use_catalog(catalog)
+
         n_par = cpu_count(n_par)
         if not download_folder:
             download_folder = self.download_folder
@@ -538,7 +605,7 @@ class Fusion:
         pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
             'csv': {'columns': columns, 'filters': filters},
             'parquet': {'columns': columns, 'filters': filters},
-            'json': {'columns': columns, 'filters': filters}
+            'json': {'columns': columns, 'filters': filters},
         }
 
         pd_read_default_kwargs['parq'] = pd_read_default_kwargs['parquet']
