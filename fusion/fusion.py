@@ -264,19 +264,24 @@ class Fusion:
 
         return df
 
-    def list_dataset_attributes(self, dataset: str, catalog: str = 'common', output: bool = False) -> pd.DataFrame:
+    def list_dataset_attributes(self, dataset: str, catalog: str = 'common', output: bool = False, display_all_columns: bool = False) -> pd.DataFrame:
         """Returns the list of attributes that are in the dataset.
 
         Args:
             dataset (str): A dataset identifier
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             output (bool, optional): If True then print the dataframe. Defaults to False.
+            display_all_columns (bool, optional): If True displays all columns returned by the API,
+                otherwise only the key columns are displayed
 
         Returns:
             pandas.DataFrame: A dataframe with a row for each attribute
         """
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes'
         df = Fusion._call_for_dataframe(url, self.session)
+
+        if not display_all_columns:
+            df = df[["identifier", "dataType", "isDatasetKey", "description"]]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
