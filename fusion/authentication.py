@@ -391,7 +391,7 @@ class FusionOAuthAdapter(HTTPAdapter):
         self.refresh_within_seconds = refresh_within_seconds
 
         if not auth_retries:
-            self.auth_retries = Retry(total=5, backoff_factor=0.2)
+            self.auth_retries = Retry(total=20, backoff_factor=0.2)
         else:
             self.auth_retries = Retry.from_int(auth_retries)
 
