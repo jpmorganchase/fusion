@@ -313,7 +313,7 @@ async def get_client(credentials, **kwargs):
             http_proxy = credentials.proxies["http"]
         elif "https" in credentials.proxies.keys():
             http_proxy = credentials.proxies["https"]
-        # https_proxy = credentials.proxies["https"]
+
     trace_config = aiohttp.TraceConfig()
     trace_config.on_request_start.append(on_request_start)
     return aiohttp.ClientSession(trace_configs=[trace_config], trust_env=True)
