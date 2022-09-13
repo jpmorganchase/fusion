@@ -43,7 +43,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             kwargs["get_client"] = get_client
         if "client_kwargs" not in kwargs:
             if isinstance(credentials, FusionCredentials):
-                self.credentials = kwargs["credentials"]
+                self.credentials = credentials
             else:
                 self.credentials = FusionCredentials.from_object(credentials)
             kwargs["client_kwargs"] = {"credentials": self.credentials,
