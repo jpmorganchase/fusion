@@ -503,7 +503,7 @@ def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1):
         p_url = row["url"]
         try:
             with fs_local.open(row["path"], "rb") as file_local:
-                fs_fusion.put(p_url, file_local, chunk_size=100 * 2 ** 20, method="put", **kw)
+                fs_fusion.put(file_local, p_url, chunk_size=100 * 2 ** 20, method="put", **kw)
             return True, row["path"], None
         except Exception as ex:
             logger.log(
