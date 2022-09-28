@@ -12,6 +12,7 @@ from tabulate import tabulate
 from tqdm import tqdm
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
+from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     cpu_count,
     distribution_to_filename,
@@ -21,6 +22,9 @@ from .utils import (
     read_csv,
     read_parquet,
     stream_single_file_new_session,
+    validate_file_names,
+    path_to_url,
+    upload_files
 )
 
 logger = logging.getLogger(__name__)
@@ -133,6 +137,7 @@ class Fusion:
         """
         self._default_catalog = catalog
 
+
     def __use_catalog(self, catalog):
         """Determine which catalog to use in an API call.
 
@@ -146,6 +151,14 @@ class Fusion:
             return self.default_catalog
         else:
             return catalog
+
+    def get_fusion_filesystem(self):
+        """Creates Fusion Filesystem
+
+        Returns: Fusion Filesystem
+
+        """
+        return FusionHTTPFileSystem(client_kwargs={"root_url": self.root_url, "credentials": self.credentials})
 
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
@@ -629,3 +642,42 @@ class Fusion:
             df = pd.concat(dataframes, ignore_index=True)
 
         return df
+
+    def upload(self,
+               path: str,
+               dataset: str = None,
+               dt_str: str = 'latest',
+               catalog: str = None,
+               n_par: int = None,
+               show_progress: bool = True,
+               return_paths: bool = False,
+               ):
+        if not self.fs.exists(path):
+            raise RuntimeError("The provided path does not exist")
+        if self.fs.info(path)["type"] == "directory":
+            file_path_lst = self.fs.find("path")
+            local_file_validation = validate_file_names(file_path_lst)
+            file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
+            local_url_eqiv = [path_to_url(i) for i in file_path_lst]
+        else:
+            file_path_lst = [path]
+            if not catalog or not dataset:
+                local_file_validation = validate_file_names(file_path_lst)
+                file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
+                local_url_eqiv = [path_to_url(i) for i in file_path_lst]
+            else:
+                file_format = path.split(".")[-1]
+                local_url_eqiv = [path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}")]
+
+        df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
+        df.columns = ["path", "url"]
+
+        if show_progress:
+            loop = tqdm(df.iterrows())
+        else:
+            loop = df.iterrows()
+        fs_fusion = self.get_fusion_filesystem()
+        n_par = cpu_count(n_par)
+        parallel = True if len(df) > 1 else False
+        res = upload_files(fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par)
+        return res if return_paths else None

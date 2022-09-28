@@ -1,4 +1,4 @@
-from fsspec.implementations.http import HTTPFileSystem
+from fsspec.implementations.http import HTTPFileSystem, sync
 from fsspec.callbacks import _DEFAULT_CALLBACK
 import logging
 from urllib.parse import urljoin
@@ -231,7 +231,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             rpath,
             chunk_size=5 * 2 ** 20,
             callback=_DEFAULT_CALLBACK,
-            method="post",
+            method="put",
             **kwargs):
         """
         Copy file(s) from local.
@@ -247,8 +247,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         """
 
-        rpath = self._decorate_url(rpath)
-        raise NotImplementedError
+        lpath = self._decorate_url(lpath)
+        args = [lpath, rpath, chunk_size, callback, method]
+        return sync(super().loop, super()._put_file, *args, **kwargs)
 
     def find(self, path, maxdepth=None, withdirs=False, **kwargs):
         """
