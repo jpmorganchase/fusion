@@ -478,7 +478,7 @@ def path_to_url(x):
 
 
 def _construct_headers(fs_local, row):
-    dt = Path(row["path"]).parent.name
+    dt = row["url"].split("/")[-3]
     dt_iso = pd.Timestamp(dt).strftime("%Y-%m-%d")
     headers = {
         "Content-Type": "application/octet-stream",
@@ -489,7 +489,7 @@ def _construct_headers(fs_local, row):
         "x-jpmc-distribution-key": "",
         "Content-MD5": ""
     }
-    with fs_local.open(row["path"], "wb") as file_local:
+    with fs_local.open(row["path"], "rb") as file_local:
         hash_md5 = hashlib.md5()
         for chunk in iter(lambda: file_local.read(4096), b""):
             hash_md5.update(chunk)
@@ -500,7 +500,7 @@ def _construct_headers(fs_local, row):
 def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1):
     def _upload(row):
         kw = {"headers": _construct_headers(fs_local, row)}
-        p_url = path_to_url(row["path"])
+        p_url = row["url"]
         try:
             with fs_local.open(row["path"], "wb") as file_local:
                 fs_fusion.put(p_url, file_local, chunk_size=100 * 2 ** 20, method="put", **kw)

@@ -4,7 +4,6 @@ import logging
 import sys
 from pathlib import Path
 from typing import Dict, List, Union
-
 import pandas as pd
 import requests
 from joblib import Parallel, delayed
@@ -667,6 +666,8 @@ class Fusion:
                 local_url_eqiv = [path_to_url(i) for i in file_path_lst]
             else:
                 file_format = path.split(".")[-1]
+                dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
+                dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
                 local_url_eqiv = [path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}")]
 
         df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
