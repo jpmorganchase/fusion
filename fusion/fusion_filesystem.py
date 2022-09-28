@@ -247,7 +247,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         """
 
-        lpath = self._decorate_url(lpath)
+        rpath = self._decorate_url(rpath)
         args = [lpath, rpath, chunk_size, callback, method]
         return sync(super().loop, super()._put_file, *args, **kwargs)
 
