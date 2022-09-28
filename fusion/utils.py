@@ -502,7 +502,7 @@ def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1):
         kw = {"headers": _construct_headers(fs_local, row)}
         p_url = row["url"]
         try:
-            with fs_local.open(row["path"], "wb") as file_local:
+            with fs_local.open(row["path"], "rb") as file_local:
                 fs_fusion.put(p_url, file_local, chunk_size=100 * 2 ** 20, method="put", **kw)
             return True, row["path"], None
         except Exception as ex:
