@@ -2,6 +2,7 @@
 
 import logging
 import sys
+import warnings
 from pathlib import Path
 from typing import Dict, List, Union
 import pandas as pd
@@ -703,9 +704,8 @@ class Fusion:
 
         if not all(r[0] for r in res):
             failed_res = [r for r in res if not r[0]]
-            logger.warning(
-                f"Not all downloads were successfully completed. "
-                f"Re-run to collect missing files. The following failed:\n{failed_res}"
-            )
+            msg = f"Not all uploads were successfully completed. The following failed:\n{failed_res}"
+            logger.warning(msg)
+            warnings.warn(msg)
 
         return res if return_paths else None
