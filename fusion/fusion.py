@@ -674,7 +674,7 @@ class Fusion:
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
         if self.fs.info(path)["type"] == "directory":
-            file_path_lst = self.fs.find("path")
+            file_path_lst = self.fs.find(path)
             local_file_validation = validate_file_names(file_path_lst)
             file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
             local_url_eqiv = [path_to_url(i) for i in file_path_lst]
