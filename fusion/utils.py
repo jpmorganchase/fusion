@@ -48,6 +48,7 @@ DT_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
 DEFAULT_CHUNK_SIZE = 2**16
 DEFAULT_THREAD_POOL_SIZE = 5
+ALLOWED_FORMATS = ["csv", "parquet", "json"]
 
 
 def cpu_count(thread_pool_size: int = None):
@@ -487,13 +488,13 @@ def _construct_headers(fs_local, row):
         "x-jpmc-distribution-to-date": dt_iso,
         "x-jpmc-distribution-provider-name": "internal-use-only",
         "x-jpmc-distribution-key": "",
-        "Content-MD5": ""
+        "Digest": ""
     }
     with fs_local.open(row["path"], "rb") as file_local:
         hash_md5 = hashlib.md5()
         for chunk in iter(lambda: file_local.read(4096), b""):
             hash_md5.update(chunk)
-        headers["Content-MD5"] = base64.b64encode(hash_md5.digest()).decode()
+        headers["Digest"] = "md5=" + base64.b64encode(hash_md5.digest()).decode()
     return headers
 
 

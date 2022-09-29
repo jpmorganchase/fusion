@@ -651,6 +651,25 @@ class Fusion:
                show_progress: bool = True,
                return_paths: bool = False,
                ):
+        """Uploads the requested files/files to Fusion.
+
+        Args:
+            path (str): path to a file or a folder with files
+            dataset (str, optional): Dataset name to which the file will be uplaoded (for single file only).
+                                    If not provided the dataset will be implied from file's name.
+            dt_str (str, optional): A single date. Defaults to 'latest' which will return the most recent.
+                                    Relevant for a single file upload only. If not provided the dataset will
+                                    be implied from file's name.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            n_par (int, optional): Specify how many distributions to download in parallel.
+                Defaults to all cpus available.
+            show_progress (bool, optional): Display a progress bar during data download Defaults to True.
+            return_paths (bool, optional): Return paths and success statuses of the downloaded files.
+
+        Returns:
+
+
+        """
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
         if self.fs.info(path)["type"] == "directory":
@@ -681,4 +700,12 @@ class Fusion:
         n_par = cpu_count(n_par)
         parallel = True if len(df) > 1 else False
         res = upload_files(fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par)
+
+        if not all(r[0] for r in res):
+            failed_res = [r for r in res if not r[0]]
+            logger.warning(
+                f"Not all downloads were successfully completed. "
+                f"Re-run to collect missing files. The following failed:\n{failed_res}"
+            )
+
         return res if return_paths else None
