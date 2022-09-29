@@ -487,7 +487,7 @@ def _construct_headers(fs_local, row):
         "x-jpmc-distribution-from-date": dt_iso,
         "x-jpmc-distribution-to-date": dt_iso,
         "x-jpmc-distribution-provider-name": "internal-use-only",
-        "x-jpmc-distribution-key": "",
+        "x-jpmc-distribution-key": Path(row["path"]).parts[-1],
         "Digest": ""
     }
     with fs_local.open(row["path"], "rb") as file_local:
