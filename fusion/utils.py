@@ -457,16 +457,28 @@ def _stream_single_file(session: requests.Session, url: str, output_file: str, b
         pass
 
 
-def validate_file_names(rel_paths):
-    file_names = [i.split("/")[-1].split(".")[0] for i in rel_paths]
+def validate_file_names(paths, fs_fusion):
+    file_names = [i.split("/")[-1].split(".")[0] for i in paths]
     validation = []
-    for p, f_n in zip(rel_paths, file_names):
-        tmp = p.split("/")
-        des_name = tmp[1] + "__" + tmp[0] + "__" + tmp[2]
-        validation.append(des_name == f_n)
+    all_catalogs = fs_fusion.ls('')
+    all_datasets = {}
+    for p, f_n in zip(paths, file_names):
+        tmp = p.split("/")[-1].split('.')[0].split('__')
+        if len(tmp) == 3:
+            val = tmp[1] in all_catalogs
+            if not val:
+                validation.append(False)
+            else:
+                if tmp[1] not in all_datasets.keys():
+                    all_datasets[tmp[1]] = fs_fusion.ls(f"{tmp[1]}/datasets")
+
+                val = tmp[0] in all_datasets[tmp[1]]
+                validation.append(val)
+        else:
+            validation.append(False)
 
     if not all(validation):
-        for i, p in enumerate(rel_paths):
+        for i, p in enumerate(paths):
             if not validation[i]:
                 logger.warning(f"The file in {p} has a non-compliant name and will not be processed. "
                                f"Please rename the file to dataset__catalog__yyyymmdd.format")

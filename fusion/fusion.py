@@ -673,15 +673,17 @@ class Fusion:
         """
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
+
+        fs_fusion = self.get_fusion_filesystem()
         if self.fs.info(path)["type"] == "directory":
             file_path_lst = self.fs.find(path)
-            local_file_validation = validate_file_names(file_path_lst)
+            local_file_validation = validate_file_names(file_path_lst, fs_fusion)
             file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
             local_url_eqiv = [path_to_url(i) for i in file_path_lst]
         else:
             file_path_lst = [path]
             if not catalog or not dataset:
-                local_file_validation = validate_file_names(file_path_lst)
+                local_file_validation = validate_file_names(file_path_lst, fs_fusion)
                 file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
                 local_url_eqiv = [path_to_url(i) for i in file_path_lst]
             else:
@@ -697,7 +699,7 @@ class Fusion:
             loop = tqdm(df.iterrows())
         else:
             loop = df.iterrows()
-        fs_fusion = self.get_fusion_filesystem()
+
         n_par = cpu_count(n_par)
         parallel = True if len(df) > 1 else False
         res = upload_files(fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par)
