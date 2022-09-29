@@ -462,15 +462,15 @@ def validate_file_names(paths, fs_fusion):
     validation = []
     all_catalogs = fs_fusion.ls('')
     all_datasets = {}
-    for p, f_n in zip(paths, file_names):
-        tmp = p.split("/")[-1].split('.')[0].split('__')
+    for f_n in file_names:
+        tmp = f_n.split('__')
         if len(tmp) == 3:
             val = tmp[1] in all_catalogs
             if not val:
                 validation.append(False)
             else:
                 if tmp[1] not in all_datasets.keys():
-                    all_datasets[tmp[1]] = fs_fusion.ls(f"{tmp[1]}/datasets")
+                    all_datasets[tmp[1]] = [ i.split('/')[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
 
                 val = tmp[0] in all_datasets[tmp[1]]
                 validation.append(val)
