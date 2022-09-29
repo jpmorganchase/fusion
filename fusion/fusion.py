@@ -696,7 +696,7 @@ class Fusion:
         df.columns = ["path", "url"]
 
         if show_progress:
-            loop = tqdm(df.iterrows())
+            loop = tqdm(df.iterrows(), total=len(df))
         else:
             loop = df.iterrows()
 
