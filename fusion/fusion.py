@@ -690,6 +690,10 @@ class Fusion:
                 file_format = path.split(".")[-1]
                 dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
                 dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
+                if catalog not in fs_fusion.ls('') or dataset not in [ i.split('/')[-1] for i in fs_fusion.ls(f"{catalog}/datasets")]:
+                    msg = f"File file has not been uploaded, one of the catalog: {catalog} or dataset: {dataset} does not exit."
+                    warnings.warn(msg)
+                    return [(False, path, Exception(msg))]
                 local_url_eqiv = [path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}")]
 
         df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
