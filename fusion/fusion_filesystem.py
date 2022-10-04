@@ -261,11 +261,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def glob(self, path, **kwargs):
 	"""Glob.
 	
-	Args:
-            path: Path.
-            **kwargs: Kwargs.
+		Args:
+			path: Path.
+			**kwargs: Kwargs.
 
-    Returns:
+		Returns:
 
 	"""
         return super().glob(path, **kwargs)
@@ -275,5 +275,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):
              mode="rb",
              **kwargs,
              ):
+	"""Open.
+
+		Args:
+			path: Path.
+			mode: Defaults to rb.
+			**kwargs: Kwargs.
+
+		Returns:
+
+	"""		 
         path = self._decorate_url(path)
         return super().open(path, mode, **kwargs)
