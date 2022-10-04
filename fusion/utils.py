@@ -7,6 +7,7 @@ import pandas as pd
 import re
 import requests
 import os
+import aiohttp
 from typing import Union
 from pathlib import Path
 from pyarrow import csv, json
@@ -82,7 +83,7 @@ def _csv_to_table(path: str, fs=None, delimiter: str = None):
         return csv.read_csv(f, parse_options=parse_options)
 
 
-def _json_to_table(path: str, fs = None):
+def _json_to_table(path: str, fs=None):
     """Reads json data to pyarrow table.
 
     Args:
@@ -279,6 +280,45 @@ def _get_canonical_root_url(any_url: str) -> str:
     return root_url
 
 
+async def get_client(credentials, **kwargs):
+    async def on_request_start(session, trace_config_ctx, params):
+        payload = (
+            {
+                "grant_type": "client_credentials",
+                "client_id": credentials.client_id,
+                "client_secret": credentials.client_secret,
+                "aud": credentials.resource,
+            }
+            if credentials.grant_type == 'client_credentials'
+            else {
+                "grant_type": "password",
+                "client_id": credentials.client_id,
+                "username": credentials.username,
+                "password": credentials.password,
+                "resource": credentials.resource,
+            }
+        )
+        async with aiohttp.ClientSession() as session:
+            if credentials.proxies:
+                response = await session.post(credentials.auth_url, data=payload, proxy=http_proxy)
+            else:
+                response = await session.post(credentials.auth_url, data=payload)
+            response_data = await response.json()
+
+        access_token = response_data["access_token"]
+        params.headers.update({'Authorization': f'Bearer {access_token}'})
+
+    if credentials.proxies:
+        if "http" in credentials.proxies.keys():
+            http_proxy = credentials.proxies["http"]
+        elif "https" in credentials.proxies.keys():
+            http_proxy = credentials.proxies["https"]
+
+    trace_config = aiohttp.TraceConfig()
+    trace_config.on_request_start.append(on_request_start)
+    return aiohttp.ClientSession(trace_configs=[trace_config], trust_env=True)
+
+
 def get_session(
     credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None
 ) -> requests.Session:
@@ -336,17 +376,19 @@ def stream_single_file_new_session(
     overwrite: bool = True,
     block_size=DEFAULT_CHUNK_SIZE,
     dry_run: bool = False,
+    fs=None
 ) -> tuple:
     """Function to stream a single file from the API to a file on disk.
 
     Args:
         credentials (FusionCredentials): Valid user credentials to provide an acces token
-        root_url (str): The URL to call.
+        url (str): The URL to call.
         output_file (str): The filename that the data will be saved into.
         overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
         block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
         dry_run (bool, optional): Test that a file can be downloaded and return the filename without
             downloading the data. Defaults to False.
+        fs (fsspec.filesystem): Filesystem.
 
     Returns:
         tuple: A tuple
@@ -364,12 +406,15 @@ def stream_single_file_new_session(
         with get_session(credentials, url).get(url, stream=True) as r:
             r.raise_for_status()
             byte_cnt = 0
-            with open(tmp_name, "wb") as outfile:
+            with fs.open(tmp_name, "wb") as outfile:
                 for chunk in r.iter_content(block_size):
                     byte_cnt += len(chunk)
                     outfile.write(chunk)
         tmp_name.rename(output_file_path)
-        tmp_name.unlink(missing_ok=True)
+        try:
+            tmp_name.unlink()
+        except FileNotFoundError:
+            pass
         logger.log(
             VERBOSE_LVL,
             f'Wrote {byte_cnt:,} bytes to {output_file_path}, via {tmp_name}',
@@ -401,4 +446,7 @@ def _stream_single_file(session: requests.Session, url: str, output_file: str, b
             for chunk in r.iter_content(block_size):
                 outfile.write(chunk)
     tmp_name.rename(output_file_path)
-    tmp_name.unlink(missing_ok=True)
+    try:
+        tmp_name.unlink()
+    except FileNotFoundError:
+        pass
