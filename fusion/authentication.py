@@ -134,9 +134,9 @@ class FusionCredentials:
         called to add proxy addresses to a credential file downloaded from the Fusion website.
 
         Args:
-            http_proxy (str): The HTTP proxy address
+            http_proxy (str): The HTTP proxy address.
             https_proxy (str): The HTTPS proxy address. If not specified then this will be the
-                copied form the HTTP proxy
+                copied form the HTTP proxy.
             credentials_file (str, optional): The path and filename to store the credentials under.
                 Path may be absolute or relative to current working directory.
                 Defaults to 'config/client_credentials.json'.

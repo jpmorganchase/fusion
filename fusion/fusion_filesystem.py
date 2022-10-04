@@ -1,3 +1,5 @@
+"""Fusion FileSystem."""
+
 from fsspec.implementations.http import HTTPFileSystem
 from fsspec.callbacks import _DEFAULT_CALLBACK
 import logging
@@ -16,9 +18,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def __init__(self, credentials='config/client_credentials.json', *args, **kwargs):
         """
         Same signature as the fsspec HTTPFileSystem.
+		
         Args:
-            *args:
-            **kwargs:
+            *args: Args.
+            **kwargs: Kwargs.
         """
 
         self.credentials = credentials
@@ -108,9 +111,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def info(self, path, **kwargs):
         """
         Return info.
+		
         Args:
-            path:
-            **kwargs:
+            path: Path.
+            **kwargs: Kwargs.
 
         Returns:
 
@@ -130,10 +134,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def ls(self, url, detail=False, **kwargs):
         """
         List resources.
+		
         Args:
-            url:
-            detail:
-            **kwargs:
+            url: Url.
+            detail: Detail.
+            **kwargs: Kwargs.
 
         Returns:
 
@@ -155,10 +160,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def exists(self, url, detail=True, **kwargs):
         """
         Check existence.
+		
         Args:
-            url:
-            detail:
-            **kwargs:
+            url: Url.
+            detail: Detail.
+            **kwargs: Kwargs.
 
         Returns:
 
@@ -169,8 +175,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def isfile(self, path):
         """
         Is path a file.
+		
         Args:
-            path:
+            path: Path.
 
         Returns:
 
@@ -181,11 +188,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def cat(self, url, start=None, end=None, **kwargs):
         """
         Fetch paths' contents.
+		
         Args:
-            url:
-            start:
-            end:
-            **kwargs:
+            url: Url.
+            start: Start.
+            end: End.
+            **kwargs: Kwargs.
 
         Returns:
 
@@ -196,12 +204,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def get(self, rpath, lpath, chunk_size=5 * 2 ** 20, callback=_DEFAULT_CALLBACK, **kwargs):
         """
         Copy file(s) to local.
+		
         Args:
-            rpath:
-            lpath:
-            chunk_size:
-            callback:
-            **kwargs:
+            rpath: Rpath.
+            lpath: Lpath.
+            chunk_size: Chunk size.
+            callback: Callback function.
+            **kwargs: Kwargs.
 
         Returns:
 
@@ -218,13 +227,14 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             **kwargs):
         """
         Copy file(s) from local.
+		
         Args:
-            lpath:
-            rpath:
-            chunk_size:
-            callback:
-            method:
-            **kwargs:
+            lpath: Lpath.
+            rpath: Rpath.
+            chunk_size: Chunk size.
+            callback: Callback function.
+            method: Method: put/post.
+            **kwargs: Kwargs.
 
         Returns:
 
@@ -234,13 +244,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         raise NotImplementedError
 
     def find(self, path, maxdepth=None, withdirs=False, **kwargs):
-        """
+        """Find all file in a folder.
 
         Args:
-            path:
-            maxdepth:
-            withdirs:
-            **kwargs:
+            path: Path.
+            maxdepth: Max depth.
+            withdirs: With dirs, default to False.
+            **kwargs: Kwargs.
 
         Returns:
 
@@ -249,6 +259,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         return super().find(path, maxdepth=maxdepth, withdirs=withdirs, **kwargs)
 
     def glob(self, path, **kwargs):
+	"""Glob.
+	
+	Args:
+            path: Path.
+            **kwargs: Kwargs.
+
+    Returns:
+
+	"""
         return super().glob(path, **kwargs)
 
     def open(self,
