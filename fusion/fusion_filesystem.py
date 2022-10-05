@@ -18,7 +18,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def __init__(self, credentials='config/client_credentials.json', *args, **kwargs):
         """
         Same signature as the fsspec HTTPFileSystem.
-		
+
         Args:
             *args: Args.
             **kwargs: Kwargs.
@@ -111,7 +111,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def info(self, path, **kwargs):
         """
         Return info.
-		
+
         Args:
             path: Path.
             **kwargs: Kwargs.
@@ -134,7 +134,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def ls(self, url, detail=False, **kwargs):
         """
         List resources.
-		
+
         Args:
             url: Url.
             detail: Detail.
@@ -160,7 +160,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def exists(self, url, detail=True, **kwargs):
         """
         Check existence.
-		
+
         Args:
             url: Url.
             detail: Detail.
@@ -175,7 +175,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def isfile(self, path):
         """
         Is path a file.
-		
+
         Args:
             path: Path.
 
@@ -188,7 +188,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def cat(self, url, start=None, end=None, **kwargs):
         """
         Fetch paths' contents.
-		
+
         Args:
             url: Url.
             start: Start.
@@ -204,7 +204,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     def get(self, rpath, lpath, chunk_size=5 * 2 ** 20, callback=_DEFAULT_CALLBACK, **kwargs):
         """
         Copy file(s) to local.
-		
+
         Args:
             rpath: Rpath.
             lpath: Lpath.
@@ -227,7 +227,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             **kwargs):
         """
         Copy file(s) from local.
-		
+
         Args:
             lpath: Lpath.
             rpath: Rpath.
@@ -244,7 +244,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         raise NotImplementedError
 
     def find(self, path, maxdepth=None, withdirs=False, **kwargs):
-        """Find all file in a folder.
+        """
+		Find all file in a folder.
 
         Args:
             path: Path.
@@ -259,15 +260,17 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         return super().find(path, maxdepth=maxdepth, withdirs=withdirs, **kwargs)
 
     def glob(self, path, **kwargs):
-	"""Glob.
-	
-		Args:
-			path: Path.
-			**kwargs: Kwargs.
+        """
+        Glob.
 
-		Returns:
+        Args:
+            path: Path.
+            **kwargs: Kwargs.
 
-	"""
+        Returns:
+
+        """
+
         return super().glob(path, **kwargs)
 
     def open(self,
@@ -275,15 +278,17 @@ class FusionHTTPFileSystem(HTTPFileSystem):
              mode="rb",
              **kwargs,
              ):
-	"""Open.
+        """
+        Open.
 
-		Args:
-			path: Path.
-			mode: Defaults to rb.
-			**kwargs: Kwargs.
+        Args:
+            path: Path.
+            mode: Defaults to rb.
+            **kwargs: Kwargs.
 
-		Returns:
+        Returns:
 
-	"""		 
+        """
+
         path = self._decorate_url(path)
         return super().open(path, mode, **kwargs)

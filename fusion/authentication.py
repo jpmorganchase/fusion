@@ -94,15 +94,15 @@ class FusionCredentials:
     """Utility functions to manage credentials."""
 
     def __init__(
-        self,
-        client_id: str = None,
-        client_secret: str = None,
-        username: str = None,
-        password: str = None,
-        resource: str = None,
-        auth_url: str = None,
-        proxies={},
-        grant_type: str = 'client_credentials',
+            self,
+            client_id: str = None,
+            client_secret: str = None,
+            username: str = None,
+            password: str = None,
+            resource: str = None,
+            auth_url: str = None,
+            proxies={},
+            grant_type: str = 'client_credentials',
     ) -> None:
         """Constructor for the FusionCredentials authentication management class.
 
@@ -128,7 +128,7 @@ class FusionCredentials:
 
     @staticmethod
     def add_proxies(
-        http_proxy: str, https_proxy: str = None, credentials_file: str = 'config/client_credentials.json'
+            http_proxy: str, https_proxy: str = None, credentials_file: str = 'config/client_credentials.json'
     ) -> None:
         """A function to add proxies to an existing credentials files. This function can be
         called to add proxy addresses to a credential file downloaded from the Fusion website.
@@ -169,12 +169,12 @@ class FusionCredentials:
 
     @staticmethod
     def generate_credentials_file(
-        credentials_file: str = 'config/client_credentials.json',
-        client_id: str = None,
-        client_secret: str = None,
-        resource: str = "JPMC:URI:RS-93742-Fusion-PROD",
-        auth_url: str = "https://authe.jpmorgan.com/as/token.oauth2",
-        proxies: Union[str, dict] = None,
+            credentials_file: str = 'config/client_credentials.json',
+            client_id: str = None,
+            client_secret: str = None,
+            resource: str = "JPMC:URI:RS-93742-Fusion-PROD",
+            auth_url: str = "https://authe.jpmorgan.com/as/token.oauth2",
+            proxies: Union[str, dict] = None,
     ):
         """Utility function to generate credentials file that can be used for authentication.
 
@@ -353,13 +353,13 @@ class FusionOAuthAdapter(HTTPAdapter):
     """An OAuth adapter to manage authentication and session tokens."""
 
     def __init__(
-        self,
-        credentials: Union[FusionCredentials, Union[str, dict]],
-        proxies: dict = {},
-        refresh_within_seconds: int = 5,
-        auth_retries: Union[int, Retry] = None,
-        *args,
-        **kwargs,
+            self,
+            credentials: Union[FusionCredentials, Union[str, dict]],
+            proxies: dict = {},
+            refresh_within_seconds: int = 5,
+            auth_retries: Union[int, Retry] = None,
+            *args,
+            **kwargs,
     ) -> None:
         """Class constructor to create a FusionOAuthAdapter object.
 
