@@ -130,8 +130,8 @@ class FusionCredentials:
     def add_proxies(
             http_proxy: str, https_proxy: str = None, credentials_file: str = 'config/client_credentials.json'
     ) -> None:
-        """A function to add proxies to an existing credentials files. This function can be
-        called to add proxy addresses to a credential file downloaded from the Fusion website.
+        """A function to add proxies to an existing credentials files.
+        This function can be called to add proxy addresses to a credential file downloaded from the Fusion website.
 
         Args:
             http_proxy (str): The HTTP proxy address.
