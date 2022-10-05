@@ -19,6 +19,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         """Same signature as the fsspec HTTPFileSystem.
 
         Args:
+            credentials: Credentials.
             *args: Args.
             **kwargs: Kwargs.
         """
