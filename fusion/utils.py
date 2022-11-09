@@ -13,6 +13,9 @@ from pathlib import Path
 from pyarrow import csv, json
 from io import BytesIO
 from urllib.parse import urlparse, urlunparse
+from joblib import Parallel, delayed
+import hashlib
+import base64
 import sys
 if sys.version_info >= (3, 7):
     from contextlib import nullcontext
@@ -459,3 +462,77 @@ def _stream_single_file(session: requests.Session, url: str, output_file: str, b
         tmp_name.unlink()
     except FileNotFoundError:
         pass
+
+def validate_file_names(paths, fs_fusion):
+    file_names = [i.split("/")[-1].split(".")[0] for i in paths]
+    validation = []
+    all_catalogs = fs_fusion.ls('')
+    all_datasets = {}
+    for f_n in file_names:
+        tmp = f_n.split('__')
+        if len(tmp) == 3:
+            val = tmp[1] in all_catalogs
+            if not val:
+                validation.append(False)
+            else:
+                if tmp[1] not in all_datasets.keys():
+                    all_datasets[tmp[1]] = [ i.split('/')[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
+
+                val = tmp[0] in all_datasets[tmp[1]]
+                validation.append(val)
+        else:
+            validation.append(False)
+
+    if not all(validation):
+        for i, p in enumerate(paths):
+            if not validation[i]:
+                logger.warning(f"The file in {p} has a non-compliant name and will not be processed. "
+                               f"Please rename the file to dataset__catalog__yyyymmdd.format")
+    return validation
+
+
+def path_to_url(x):
+    catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
+    return "/".join(distribution_to_url("", dataset, date, ext, catalog).split("/")[1:])
+
+
+def _construct_headers(fs_local, row):
+    dt = row["url"].split("/")[-3]
+    dt_iso = pd.Timestamp(dt).strftime("%Y-%m-%d")
+    headers = {
+        "Content-Type": "application/octet-stream",
+        "x-jpmc-distribution-created-date": dt_iso,
+        "x-jpmc-distribution-from-date": dt_iso,
+        "x-jpmc-distribution-to-date": dt_iso,
+        "x-jpmc-distribution-provider-name": "internal-use-only",
+        "x-jpmc-distribution-key": Path(row["path"]).parts[-1],
+        "Digest": ""
+    }
+    with fs_local.open(row["path"], "rb") as file_local:
+        hash_md5 = hashlib.md5()
+        for chunk in iter(lambda: file_local.read(4096), b""):
+            hash_md5.update(chunk)
+        headers["Digest"] = "md5=" + base64.b64encode(hash_md5.digest()).decode()
+    return headers
+
+
+def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1):
+    def _upload(row):
+        kw = {"headers": _construct_headers(fs_local, row)}
+        p_url = row["url"]
+        try:
+            with fs_local.open(row["path"], "rb") as file_local:
+                fs_fusion.put(file_local, p_url, chunk_size=100 * 2 ** 20, method="put", **kw)
+            return True, row["path"], None
+        except Exception as ex:
+            logger.log(
+                VERBOSE_LVL,
+                f'Failed to upload {row["path"]}. ex - {ex}',
+            )
+            return False, row["path"], ex
+
+    if parallel:
+        res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop)
+    else:
+        res = [_upload(row) for index, row in loop]
+    return res

@@ -11,7 +11,7 @@ from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
 
-from .authentication import FusionCredentials
+from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
 from .utils import (
     cpu_count,
@@ -54,6 +54,7 @@ class Fusion:
         root_url: str = "https://fusion-api.jpmorgan.com/fusion/v1/",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
+        fs=None,
     ) -> None:
         """Constructor to instantiate a new Fusion object.
 
@@ -66,6 +67,7 @@ class Fusion:
             download_folder (str, optional): The folder path where downloaded data files
                 are saved. Defaults to "downloads".
             log_level (int, optional): Set the logging level. Defaults to logging.ERROR.
+            fs (fsspec.filesystem): filesystem.
         """
         self._default_catalog = "common"
 
@@ -92,6 +94,7 @@ class Fusion:
             self.credentials = FusionCredentials.from_object(credentials)
 
         self.session = get_session(self.credentials, self.root_url)
+        self.fs = fs if fs else get_default_fs()
 
     def __repr__(self):
         """Object representation to list all available methods."""
@@ -284,6 +287,8 @@ class Fusion:
         if max_results > -1:
             df = df[0:max_results]
 
+        df["category"] = df.category.str.join(", ")
+        df["region"] = df.region.str.join(", ")
         if not display_all_columns:
             df = df[
                 ["identifier", "title", "region", "category", "coverageStartDate", "coverageEndDate", "description"]
@@ -315,13 +320,15 @@ class Fusion:
 
         return df
 
-    def list_dataset_attributes(self, dataset: str, catalog: str = None, output: bool = False) -> pd.DataFrame:
+    def list_dataset_attributes(self, dataset: str, catalog: str = None, output: bool = False, display_all_columns: bool = False) -> pd.DataFrame:
         """Returns the list of attributes that are in the dataset.
 
         Args:
             dataset (str): A dataset identifier
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             output (bool, optional): If True then print the dataframe. Defaults to False.
+            display_all_columns (bool, optional): If True displays all columns returned by the API,
+                otherwise only the key columns are displayed
 
         Returns:
             pandas.DataFrame: A dataframe with a row for each attribute
@@ -331,8 +338,11 @@ class Fusion:
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes'
         df = Fusion._call_for_dataframe(url, self.session)
 
+        if not display_all_columns:
+            df = df[["identifier", "dataType", "isDatasetKey", "description"]]
+
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
 
         return df
 
@@ -377,7 +387,7 @@ class Fusion:
 
         Returns:
             pandas.DataFrame: A dataframe with a row for each datasetseries member resource.
-                Currently this will always be distributions.
+                Currently, this will always be distributions.
         """
         catalog = self.__use_catalog(catalog)
 
@@ -469,6 +479,7 @@ class Fusion:
         show_progress: bool = True,
         force_download: bool = False,
         download_folder: str = None,
+        return_paths: bool = False,
     ):
         """Downloads the requested distributions of a dataset to disk.
 
@@ -486,6 +497,7 @@ class Fusion:
                 if it is already on disk. Defaults to True.
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
+            return_paths (bool, optional): Return paths and success statuses of the downloaded files.
 
         Returns:
 
@@ -497,15 +509,17 @@ class Fusion:
 
         if not download_folder:
             download_folder = self.download_folder
-        Path(download_folder).mkdir(parents=True, exist_ok=True)
 
+        if not self.fs.exists(download_folder):
+            self.fs.mkdir(download_folder, create_parents=True)
         download_spec = [
-            (
-                self.credentials,
-                distribution_to_url(self.root_url, series[1], series[2], series[3], series[0]),
-                distribution_to_filename(download_folder, series[1], series[2], series[3], series[0]),
-                force_download,
-            )
+            {
+                "credentials": self.credentials,
+                "url": distribution_to_url(self.root_url, series[1], series[2], series[3], series[0]),
+                "output_file": distribution_to_filename(download_folder, series[1], series[2], series[3], series[0]),
+                "overwrite": force_download,
+                "fs": self.fs
+            }
             for series in required_series
         ]
 
@@ -517,9 +531,9 @@ class Fusion:
             VERBOSE_LVL,
             f'Beginning {len(loop)} downloads in batches of {n_par}',
         )
-        res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(*spec) for spec in loop)
+        res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(**spec) for spec in loop)
 
-        return res
+        return res if return_paths else None
 
     def to_df(
         self,
@@ -534,7 +548,7 @@ class Fusion:
         force_download: bool = False,
         download_folder: str = None,
         **kwargs,
-    ):
+    ) -> pd.DataFrame:
         """Gets distributions for a specified date or date range and returns the data as a dataframe.
 
         Args:
@@ -570,7 +584,7 @@ class Fusion:
         if not download_folder:
             download_folder = self.download_folder
         download_res = self.download(
-            dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download, download_folder
+            dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download, download_folder, return_paths=True
         )
 
         if not all(res[0] for res in download_res):
