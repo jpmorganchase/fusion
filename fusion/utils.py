@@ -281,6 +281,15 @@ def _get_canonical_root_url(any_url: str) -> str:
 
 
 async def get_client(credentials, **kwargs):
+    """Gets session for async.
+
+    Args:
+        credentials: Credentials.
+        **kwargs: Kwargs.
+
+    Returns:
+
+    """
     async def on_request_start(session, trace_config_ctx, params):
         payload = (
             {
@@ -299,15 +308,21 @@ async def get_client(credentials, **kwargs):
             }
         )
         async with aiohttp.ClientSession() as session:
-            response = await session.post(credentials.auth_url, data=payload, proxy=http_proxy)
+            if credentials.proxies:
+                response = await session.post(credentials.auth_url, data=payload, proxy=http_proxy)
+            else:
+                response = await session.post(credentials.auth_url, data=payload)
             response_data = await response.json()
 
         access_token = response_data["access_token"]
         params.headers.update({'Authorization': f'Bearer {access_token}'})
 
     if credentials.proxies:
-        http_proxy = credentials.proxies["http"]
-        # https_proxy = credentials.proxies["https"]
+        if "http" in credentials.proxies.keys():
+            http_proxy = credentials.proxies["http"]
+        elif "https" in credentials.proxies.keys():
+            http_proxy = credentials.proxies["https"]
+
     trace_config = aiohttp.TraceConfig()
     trace_config.on_request_start.append(on_request_start)
     return aiohttp.ClientSession(trace_configs=[trace_config], trust_env=True)
@@ -316,7 +331,7 @@ async def get_client(credentials, **kwargs):
 def get_session(
     credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None
 ) -> requests.Session:
-    """Create a new http session and set paramaters.
+    """Create a new http session and set parameters.
 
     Args:
         credentials (FusionCredentials): Valid user credentials to provide an acces token
