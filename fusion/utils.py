@@ -14,7 +14,6 @@ from pyarrow import csv, json
 from io import BytesIO
 from urllib.parse import urlparse, urlunparse
 from joblib import Parallel, delayed
-from tqdm import tqdm
 import hashlib
 import base64
 import sys
@@ -48,7 +47,6 @@ DT_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
 DEFAULT_CHUNK_SIZE = 2**16
 DEFAULT_THREAD_POOL_SIZE = 5
-ALLOWED_FORMATS = ["csv", "parquet", "json"]
 
 
 def cpu_count(thread_pool_size: int = None):
@@ -286,6 +284,15 @@ def _get_canonical_root_url(any_url: str) -> str:
 
 
 async def get_client(credentials, **kwargs):
+    """Gets session for async.
+
+    Args:
+        credentials: Credentials.
+        **kwargs: Kwargs.
+
+    Returns:
+
+    """
     async def on_request_start(session, trace_config_ctx, params):
         payload = (
             {
@@ -327,7 +334,7 @@ async def get_client(credentials, **kwargs):
 def get_session(
     credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None
 ) -> requests.Session:
-    """Create a new http session and set paramaters.
+    """Create a new http session and set parameters.
 
     Args:
         credentials (FusionCredentials): Valid user credentials to provide an acces token
@@ -456,7 +463,6 @@ def _stream_single_file(session: requests.Session, url: str, output_file: str, b
     except FileNotFoundError:
         pass
 
-
 def validate_file_names(paths, fs_fusion):
     file_names = [i.split("/")[-1].split(".")[0] for i in paths]
     validation = []
@@ -498,8 +504,6 @@ def _construct_headers(fs_local, row):
         "x-jpmc-distribution-created-date": dt_iso,
         "x-jpmc-distribution-from-date": dt_iso,
         "x-jpmc-distribution-to-date": dt_iso,
-        "x-jpmc-distribution-provider-name": "internal-use-only",
-        "x-jpmc-distribution-key": Path(row["path"]).parts[-1],
         "Digest": ""
     }
     with fs_local.open(row["path"], "rb") as file_local:

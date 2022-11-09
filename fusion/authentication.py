@@ -7,14 +7,12 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Dict, Union
 from urllib.parse import urlparse
-
+import fsspec
+import os
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from datetime import timedelta
-import requests
-import fsspec
-import os
+
 from .exceptions import CredentialError
 
 logger = logging.getLogger(__name__)
@@ -94,15 +92,15 @@ class FusionCredentials:
     """Utility functions to manage credentials."""
 
     def __init__(
-        self,
-        client_id: str = None,
-        client_secret: str = None,
-        username: str = None,
-        password: str = None,
-        resource: str = None,
-        auth_url: str = None,
-        proxies={},
-        grant_type: str = 'client_credentials',
+            self,
+            client_id: str = None,
+            client_secret: str = None,
+            username: str = None,
+            password: str = None,
+            resource: str = None,
+            auth_url: str = None,
+            proxies={},
+            grant_type: str = 'client_credentials',
     ) -> None:
         """Constructor for the FusionCredentials authentication management class.
 
@@ -128,15 +126,15 @@ class FusionCredentials:
 
     @staticmethod
     def add_proxies(
-        http_proxy: str, https_proxy: str = None, credentials_file: str = 'config/client_credentials.json'
+            http_proxy: str, https_proxy: str = None, credentials_file: str = 'config/client_credentials.json'
     ) -> None:
-        """A function to add proxies to an existing credentials files. This function can be
-        called to add proxy addresses to a credential file downloaded from the Fusion website.
+        """A function to add proxies to an existing credentials files.
+        This function can be called to add proxy addresses to a credential file downloaded from the Fusion website.
 
         Args:
-            http_proxy (str): The HTTP proxy address
+            http_proxy (str): The HTTP proxy address.
             https_proxy (str): The HTTPS proxy address. If not specified then this will be the
-                copied form the HTTP proxy
+                copied form the HTTP proxy.
             credentials_file (str, optional): The path and filename to store the credentials under.
                 Path may be absolute or relative to current working directory.
                 Defaults to 'config/client_credentials.json'.
@@ -169,12 +167,12 @@ class FusionCredentials:
 
     @staticmethod
     def generate_credentials_file(
-        credentials_file: str = 'config/client_credentials.json',
-        client_id: str = None,
-        client_secret: str = None,
-        resource: str = "JPMC:URI:RS-93742-Fusion-PROD",
-        auth_url: str = "https://authe.jpmorgan.com/as/token.oauth2",
-        proxies: Union[str, dict] = None,
+            credentials_file: str = 'config/client_credentials.json',
+            client_id: str = None,
+            client_secret: str = None,
+            resource: str = "JPMC:URI:RS-93742-Fusion-PROD",
+            auth_url: str = "https://authe.jpmorgan.com/as/token.oauth2",
+            proxies: Union[str, dict] = None,
     ):
         """Utility function to generate credentials file that can be used for authentication.
 
@@ -353,13 +351,13 @@ class FusionOAuthAdapter(HTTPAdapter):
     """An OAuth adapter to manage authentication and session tokens."""
 
     def __init__(
-        self,
-        credentials: Union[FusionCredentials, Union[str, dict]],
-        proxies: dict = {},
-        refresh_within_seconds: int = 5,
-        auth_retries: Union[int, Retry] = None,
-        *args,
-        **kwargs,
+            self,
+            credentials: Union[FusionCredentials, Union[str, dict]],
+            proxies: dict = {},
+            refresh_within_seconds: int = 5,
+            auth_retries: Union[int, Retry] = None,
+            *args,
+            **kwargs,
     ) -> None:
         """Class constructor to create a FusionOAuthAdapter object.
 

@@ -10,6 +10,7 @@ import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
+
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
