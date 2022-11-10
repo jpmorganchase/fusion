@@ -672,6 +672,8 @@ class Fusion:
 
 
         """
+        catalog = self.__use_catalog(catalog)
+
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
 
