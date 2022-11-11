@@ -2,16 +2,18 @@
 
 import logging
 import sys
+import warnings
 from pathlib import Path
 from typing import Dict, List, Union
-
 import pandas as pd
 import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
+
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
+from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     cpu_count,
     distribution_to_filename,
@@ -21,6 +23,9 @@ from .utils import (
     read_csv,
     read_parquet,
     stream_single_file_new_session,
+    validate_file_names,
+    path_to_url,
+    upload_files
 )
 
 logger = logging.getLogger(__name__)
@@ -133,6 +138,7 @@ class Fusion:
         """
         self._default_catalog = catalog
 
+
     def __use_catalog(self, catalog):
         """Determine which catalog to use in an API call.
 
@@ -146,6 +152,14 @@ class Fusion:
             return self.default_catalog
         else:
             return catalog
+
+    def get_fusion_filesystem(self):
+        """Creates Fusion Filesystem
+
+        Returns: Fusion Filesystem
+
+        """
+        return FusionHTTPFileSystem(client_kwargs={"root_url": self.root_url, "credentials": self.credentials})
 
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
@@ -629,3 +643,78 @@ class Fusion:
             df = pd.concat(dataframes, ignore_index=True)
 
         return df
+
+    def upload(self,
+               path: str,
+               dataset: str = None,
+               dt_str: str = 'latest',
+               catalog: str = None,
+               n_par: int = None,
+               show_progress: bool = True,
+               return_paths: bool = False,
+               ):
+        """Uploads the requested files/files to Fusion.
+
+        Args:
+            path (str): path to a file or a folder with files
+            dataset (str, optional): Dataset name to which the file will be uplaoded (for single file only).
+                                    If not provided the dataset will be implied from file's name.
+            dt_str (str, optional): A single date. Defaults to 'latest' which will return the most recent.
+                                    Relevant for a single file upload only. If not provided the dataset will
+                                    be implied from file's name.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            n_par (int, optional): Specify how many distributions to download in parallel.
+                Defaults to all cpus available.
+            show_progress (bool, optional): Display a progress bar during data download Defaults to True.
+            return_paths (bool, optional): Return paths and success statuses of the downloaded files.
+
+        Returns:
+
+
+        """
+        catalog = self.__use_catalog(catalog)
+
+        if not self.fs.exists(path):
+            raise RuntimeError("The provided path does not exist")
+
+        fs_fusion = self.get_fusion_filesystem()
+        if self.fs.info(path)["type"] == "directory":
+            file_path_lst = self.fs.find(path)
+            local_file_validation = validate_file_names(file_path_lst, fs_fusion)
+            file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
+            local_url_eqiv = [path_to_url(i) for i in file_path_lst]
+        else:
+            file_path_lst = [path]
+            if not catalog or not dataset:
+                local_file_validation = validate_file_names(file_path_lst, fs_fusion)
+                file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
+                local_url_eqiv = [path_to_url(i) for i in file_path_lst]
+            else:
+                file_format = path.split(".")[-1]
+                dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
+                dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
+                if catalog not in fs_fusion.ls('') or dataset not in [ i.split('/')[-1] for i in fs_fusion.ls(f"{catalog}/datasets")]:
+                    msg = f"File file has not been uploaded, one of the catalog: {catalog} or dataset: {dataset} does not exit."
+                    warnings.warn(msg)
+                    return [(False, path, Exception(msg))]
+                local_url_eqiv = [path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}")]
+
+        df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
+        df.columns = ["path", "url"]
+
+        if show_progress:
+            loop = tqdm(df.iterrows(), total=len(df))
+        else:
+            loop = df.iterrows()
+
+        n_par = cpu_count(n_par)
+        parallel = True if len(df) > 1 else False
+        res = upload_files(fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par)
+
+        if not all(r[0] for r in res):
+            failed_res = [r for r in res if not r[0]]
+            msg = f"Not all uploads were successfully completed. The following failed:\n{failed_res}"
+            logger.warning(msg)
+            warnings.warn(msg)
+
+        return res if return_paths else None

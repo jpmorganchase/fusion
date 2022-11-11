@@ -7,14 +7,12 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Dict, Union
 from urllib.parse import urlparse
-
+import fsspec
+import os
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from datetime import timedelta
-import requests
-import fsspec
-import os
+
 from .exceptions import CredentialError
 
 logger = logging.getLogger(__name__)

@@ -234,7 +234,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         """
 
         rpath = self._decorate_url(rpath)
-        raise NotImplementedError
+        args = [lpath, rpath, chunk_size, callback, method]
+        return sync(super().loop, super()._put_file, *args, **kwargs)
 
     def find(self, path, maxdepth=None, withdirs=False, **kwargs):
         """Find all file in a folder.
