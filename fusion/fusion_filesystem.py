@@ -1,6 +1,6 @@
 """Fusion FileSystem."""
 
-from fsspec.implementations.http import HTTPFileSystem
+from fsspec.implementations.http import HTTPFileSystem, sync
 from fsspec.callbacks import _DEFAULT_CALLBACK
 import logging
 from urllib.parse import urljoin

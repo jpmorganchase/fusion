@@ -463,7 +463,17 @@ def _stream_single_file(session: requests.Session, url: str, output_file: str, b
     except FileNotFoundError:
         pass
 
+
 def validate_file_names(paths, fs_fusion):
+    """Validate if the file name format adheres to the standard.
+
+    Args:
+        paths (list): List of file paths.
+        fs_fusion: Fusion filesystem.
+
+    Returns (list): List of booleans.
+
+    """
     file_names = [i.split("/")[-1].split(".")[0] for i in paths]
     validation = []
     all_catalogs = fs_fusion.ls('')
@@ -492,6 +502,14 @@ def validate_file_names(paths, fs_fusion):
 
 
 def path_to_url(x):
+    """Convert file name to fusion url.
+
+    Args:
+        x (str): File path.
+
+    Returns (str): Fusion url string.
+
+    """
     catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
     return "/".join(distribution_to_url("", dataset, date, ext, catalog).split("/")[1:])
 
@@ -515,6 +533,18 @@ def _construct_headers(fs_local, row):
 
 
 def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1):
+    """Upload file into Fusion.
+
+    Args:
+        fs_fusion: Fusion filesystem.
+        fs_local: Local filesystem.
+        loop (iterable): Loop of files to iterate through.
+        parallel (bool): Is parallel mode enabled.
+        n_par (int): Number of subprocesses.
+
+    Returns: List of update statuses.
+
+    """
     def _upload(row):
         kw = {"headers": _construct_headers(fs_local, row)}
         p_url = row["url"]
