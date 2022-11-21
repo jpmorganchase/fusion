@@ -5,17 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.1] - 2022-05-12
+## [1.0.6] - 2022-11-21
 
-* First live release on JPMC gitub
+* Support setting of the default catalog
+* Fusion filesystem module
+* Upload functionality
+* Folder traversing for credentials
+* Filters for parquet and csv file opening
 
-## [1.0.2] - 2022-05-12
+## [1.0.5] - 2022-06-22
 
-* Integrate build with docs 
-
-## [1.0.3] - 2022-05-12
-
-* Add support for 'latest' datasets
+* Add support for internal auth methods
 
 ## [1.0.4] - 2022-05-19
 
@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Various bug fixes
 * Streamline credentials creation
 
-## [1.0.5] - 2022-06-22
+## [1.0.3] - 2022-05-12
 
-* Add support for internal auth methods
+* Add support for 'latest' datasets
+
+## [1.0.2] - 2022-05-12
+
+* Integrate build with docs 
+
+## [1.0.1] - 2022-05-12
+
+* First live release on JPMC gitub
