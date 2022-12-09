@@ -10,6 +10,7 @@ import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
+from zipfile import ZipFile
 
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
@@ -614,12 +615,14 @@ class Fusion:
             'parquet': read_parquet,
             'parq': read_parquet,
             'json': pd.read_json,
+            'raw': read_csv,
         }
 
         pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
             'csv': {'columns': columns, 'filters': filters},
             'parquet': {'columns': columns, 'filters': filters},
             'json': {'columns': columns, 'filters': filters},
+            'raw': {'columns': columns, 'filters': filters},
         }
 
         pd_read_default_kwargs['parq'] = pd_read_default_kwargs['parquet']
@@ -638,6 +641,10 @@ class Fusion:
             )
         if dataset_format in ["parquet", "parq"]:
             df = pd_reader(files, **pd_read_kwargs)
+        elif dataset_format == 'raw':
+            dataframes = (pd.concat([pd_reader(ZipFile(f).open(p), **pd_read_kwargs) 
+                                        for p in ZipFile(f).namelist()], ignore_index=True) for f in files)
+            df = pd.concat(dataframes, ignore_index=True)
         else:
             dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)
             df = pd.concat(dataframes, ignore_index=True)
