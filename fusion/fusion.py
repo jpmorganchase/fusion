@@ -660,7 +660,7 @@ class Fusion:
                show_progress: bool = True,
                return_paths: bool = False,
                multipart = True,
-               chunk_size=5 * 10**2
+               chunk_size=5 * 2 ** 20,
                ):
         """Uploads the requested files/files to Fusion.
 
