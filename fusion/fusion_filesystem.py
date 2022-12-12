@@ -4,9 +4,18 @@ from fsspec.implementations.http import HTTPFileSystem, sync
 from fsspec.callbacks import _DEFAULT_CALLBACK
 import logging
 from urllib.parse import urljoin
+import hashlib
+import base64
+import asyncio
+from copy import deepcopy
+import pandas as pd
+import nest_asyncio
+import io
+from fsspec.utils import DEFAULT_BLOCK_SIZE, isfilelike, nullcontext
 from fusion.utils import get_client
 from .authentication import FusionCredentials
 
+nest_asyncio.apply()
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 
@@ -44,6 +53,14 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             kwargs["headers"] = {"Accept-Encoding": "identity"}
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def loop(self):
+        return self._loop
+
+    @loop.setter
+    def loop(self, value):
+        self._loop = value
 
     async def _decorate_url_a(self, url):
         url = urljoin(f'{self.client_kwargs["root_url"]}catalogs/', url) if "http" not in url else url
@@ -212,12 +229,118 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         rpath = self._decorate_url(rpath)
         return super().get(rpath, lpath, chunk_size=5 * 2 ** 20, callback=_DEFAULT_CALLBACK, **kwargs)
 
+    async def _put_file(
+        self,
+        lpath,
+        rpath,
+        chunk_size=5 * 2**20,
+        callback=_DEFAULT_CALLBACK,
+        method="post",
+        multipart=False,
+        **kwargs,
+    ):
+        async def put_data():
+            # Support passing arbitrary file-like objects
+            # and use them instead of streams.
+            if isinstance(lpath, io.IOBase):
+                context = nullcontext(lpath)
+                use_seek = False  # might not support seeking
+            else:
+                context = open(lpath, "rb")
+                use_seek = True
+
+            with context as f:
+                if use_seek:
+                    callback.set_size(f.seek(0, 2))
+                    f.seek(0)
+                else:
+                    callback.set_size(getattr(f, "size", None))
+
+                if not chunk_size:
+                    pass
+                    #yield f.read()
+                else:
+                    chunk = f.read(chunk_size)
+                    i = 0
+                    lst = []
+                    while chunk:
+                        kw = self.kwargs.copy()
+                        url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
+                        kw.update({"headers": kwargs["chunk_headers_lst"][i]})
+                        lst.append([meth(url, data=chunk, **kw)])
+                        yield meth(url=url, data=chunk, **kw)
+                        callback.relative_update(len(chunk))
+                        chunk = f.read(chunk_size)
+                    #ret = await asyncio.gather(*lst)
+                    #return ret
+
+        session = await self.set_session()
+
+        method = method.lower()
+        if method not in ("post", "put"):
+            raise ValueError(
+                f"method has to be either 'post' or 'put', not: {method!r}"
+            )
+
+        headers = kwargs["headers"]
+
+        meth = getattr(session, method)
+        if not multipart:
+            kw = self.kwargs.copy()
+            kw.update({"headers": headers})
+            async with meth(rpath, data=lpath.read(), **kw) as resp:
+                self._raise_not_found_for_status(resp, rpath)
+        else:
+            async with session.post(rpath + f"/operations?operationType=upload") as resp:
+            #resp = await session.post(rpath + f"/operations?operationType=upload")
+                self._raise_not_found_for_status(resp, rpath)
+            # yield resp
+            operation_id = resp.json()["operationId"]
+            resp = await asyncio.gather(put_data())
+            # async for resp in put_data():
+            #     self._raise_not_found_for_status(resp, rpath)
+            kw = self.kwargs.copy()
+            kw.update({"headers": headers})
+            async with session.post(url=rpath + f"/operations?operationType=upload&operationId={operation_id}", data=resp, **kw) as resp:
+                self._raise_not_found_for_status(resp, rpath)
+
+    @staticmethod
+    def _construct_headers(file_local, dt_iso, url, operation_id=None, chunk_size=5 * 2 ** 20):
+
+        headers = {
+            "Content-Type": "application/octet-stream",
+            "x-jpmc-distribution-created-date": dt_iso,
+            "x-jpmc-distribution-from-date": dt_iso,
+            "x-jpmc-distribution-to-date": dt_iso,
+            "Digest": ""
+        }
+
+        headers_chunks = {
+            "Content-Type": "application/octet-stream",
+            "Digest": ""
+        }
+
+        headers_chunk_lst = []
+        hash_md5 = hashlib.md5()
+        for i, chunk in enumerate(iter(lambda: file_local.read(chunk_size), b"")):
+            hash_md5_chunk = hashlib.md5()
+            hash_md5_chunk.update(chunk)
+            hash_md5.update(chunk)
+            headers_chunks = deepcopy(headers_chunks)
+            headers_chunks["Digest"] = "md5=" + base64.b64encode(hash_md5.digest()).decode()
+            headers_chunk_lst.append(headers_chunks)
+
+        file_local.seek(0)
+        headers["Digest"] = "md5=" + base64.b64encode(hash_md5.digest()).decode()
+        return headers, headers_chunk_lst
+
     def put(self,
             lpath,
             rpath,
             chunk_size=5 * 2 ** 20,
             callback=_DEFAULT_CALLBACK,
             method="put",
+            multipart=False,
             **kwargs):
         """Copy file(s) from local.
 
@@ -227,15 +350,24 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             chunk_size: Chunk size.
             callback: Callback function.
             method: Method: put/post.
+            multipart: Flag which indicated whether it's a multipart uplaod.
             **kwargs: Kwargs.
 
         Returns:
 
         """
 
+        dt_iso = pd.Timestamp(rpath.split("/")[-3]).strftime("%Y-%m-%d")
+        headers, chunk_headers_lst = self._construct_headers(lpath, dt_iso, chunk_size)
         rpath = self._decorate_url(rpath)
-        args = [lpath, rpath, chunk_size, callback, method]
-        return sync(super().loop, super()._put_file, *args, **kwargs)
+        kwargs.update({"headers": headers})
+        if multipart:
+            kwargs.update({"chunk_headers_lst": chunk_headers_lst})
+            args = [lpath, rpath, chunk_size, callback, method, multipart]
+        else:
+            args = [lpath, rpath, None, callback, method, multipart]
+
+        return sync(super().loop, self._put_file, *args, **kwargs)
 
     def find(self, path, maxdepth=None, withdirs=False, **kwargs):
         """Find all file in a folder.
