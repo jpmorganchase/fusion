@@ -256,23 +256,18 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 else:
                     callback.set_size(getattr(f, "size", None))
 
-                if not chunk_size:
-                    pass
-                    #yield f.read()
-                else:
+                chunk = f.read(chunk_size)
+                i = 0
+                while chunk:
+                    kw = self.kwargs.copy()
+                    url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
+                    kw.update({"headers": kwargs["chunk_headers_lst"][i]})
+                    async with meth(url=url, data=chunk, **kw) as resp:
+                        self._raise_not_found_for_status(resp, rpath)
+                        yield await resp.json()
+                    i += 1
+                    callback.relative_update(len(chunk))
                     chunk = f.read(chunk_size)
-                    i = 0
-                    lst = []
-                    while chunk:
-                        kw = self.kwargs.copy()
-                        url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
-                        kw.update({"headers": kwargs["chunk_headers_lst"][i]})
-                        lst.append([meth(url, data=chunk, **kw)])
-                        yield meth(url=url, data=chunk, **kw)
-                        callback.relative_update(len(chunk))
-                        chunk = f.read(chunk_size)
-                    #ret = await asyncio.gather(*lst)
-                    #return ret
 
         session = await self.set_session()
 
@@ -292,20 +287,22 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 self._raise_not_found_for_status(resp, rpath)
         else:
             async with session.post(rpath + f"/operations?operationType=upload") as resp:
-            #resp = await session.post(rpath + f"/operations?operationType=upload")
                 self._raise_not_found_for_status(resp, rpath)
-            # yield resp
-            operation_id = resp.json()["operationId"]
-            resp = await asyncio.gather(put_data())
-            # async for resp in put_data():
-            #     self._raise_not_found_for_status(resp, rpath)
+                operation_id = await resp.json()
+
+            operation_id = operation_id["operationId"]
+            resps = []
+            async for resp in put_data():
+                resps.append(resp)
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
-            async with session.post(url=rpath + f"/operations?operationType=upload&operationId={operation_id}", data=resp, **kw) as resp:
-                self._raise_not_found_for_status(resp, rpath)
+            async with session.post(url=rpath + f"/operations?operationType=upload&operationId={operation_id}",
+                                    data={"parts": resps}, **kw) as resp:
+                self._raise_not_found_for_status(resp,
+                                                 rpath + f"/operations?operationType=upload&operationId={operation_id}")
 
     @staticmethod
-    def _construct_headers(file_local, dt_iso, url, operation_id=None, chunk_size=5 * 2 ** 20):
+    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2 ** 20):
 
         headers = {
             "Content-Type": "application/octet-stream",
@@ -322,12 +319,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         headers_chunk_lst = []
         hash_md5 = hashlib.md5()
-        for i, chunk in enumerate(iter(lambda: file_local.read(chunk_size), b"")):
+        for chunk in iter(lambda: file_local.read(chunk_size), b""):
             hash_md5_chunk = hashlib.md5()
             hash_md5_chunk.update(chunk)
             hash_md5.update(chunk)
             headers_chunks = deepcopy(headers_chunks)
-            headers_chunks["Digest"] = "md5=" + base64.b64encode(hash_md5.digest()).decode()
+            headers_chunks["Digest"] = "md5=" + base64.b64encode(hash_md5_chunk.digest()).decode()
             headers_chunk_lst.append(headers_chunks)
 
         file_local.seek(0)
