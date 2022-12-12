@@ -530,7 +530,7 @@ def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1, multipart=T
     def _upload(row):
         p_url = row["url"]
         try:
-            mp = multipart and fs_local.size() > chunk_size
+            mp = multipart and fs_local.size(row["path"]) > chunk_size
             with fs_local.open(row["path"], "rb") as file_local:
                 fs_fusion.put(file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp)
             return True, row["path"], None
