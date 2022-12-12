@@ -659,6 +659,8 @@ class Fusion:
                n_par: int = None,
                show_progress: bool = True,
                return_paths: bool = False,
+               multipart = True,
+               chunk_size=5 * 10**2
                ):
         """Uploads the requested files/files to Fusion.
 
@@ -674,6 +676,8 @@ class Fusion:
                 Defaults to all cpus available.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
+            multipart (bool): Is multipart upload.
+            chunk_size (int): Maximum chunk size.
 
         Returns:
 
@@ -718,7 +722,7 @@ class Fusion:
 
         n_par = cpu_count(n_par)
         parallel = True if len(df) > 1 else False
-        res = upload_files(fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par)
+        res = upload_files(fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par, multipart=multipart, chunk_size=chunk_size)
 
         if not all(r[0] for r in res):
             failed_res = [r for r in res if not r[0]]
