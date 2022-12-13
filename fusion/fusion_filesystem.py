@@ -6,16 +6,13 @@ import logging
 from urllib.parse import urljoin
 import hashlib
 import base64
-import asyncio
 from copy import deepcopy
 import pandas as pd
-#import nest_asyncio
 import io
 from fsspec.utils import nullcontext
 from fusion.utils import get_client
 from .authentication import FusionCredentials
 
-#nest_asyncio.apply()
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 
@@ -82,6 +79,22 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
             return False
 
+    async def _changes(self, url):
+        path = self._decorate_url(url)
+        try:
+            session = await self.set_session()
+            async with session.get(url, **self.kwargs) as r:
+                self._raise_not_found_for_status(r, url)
+                try:
+                    out = await r.json()
+                except Exception as ex:
+                    logger.log(VERBOSE_LVL, f"{url} cannot be parsed to json, {ex}")
+                    out = None
+            return out
+        except Exception as ex:
+            logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
+            raise Exception(ex)
+
     async def _ls_real(self, url, detail=True, **kwargs):
         # ignoring URL-encoded arguments
         clean_url = url
@@ -141,10 +154,14 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         path = self._decorate_url(path)
         kwargs["keep_protocol"] = True
         res = super().ls(path, detail=True, **kwargs)[0]
-        if res["type"] == "file":
-            return res
-        else:
-            return super().info(path, **kwargs)
+        if res["type"] != "file":
+            res = super().info(path, **kwargs)
+            if path.split("/")[-2] == "datasets":
+                target = path.split("/")[-1]
+                args = ["/".join(path.split("/")[:-1]) + f"/changes?datasets={target}"]
+                res["changes"] = sync(super().loop, self._changes, *args)
+
+        return res
 
     async def _ls(self, url, detail=True, **kwargs):
         url = await self._decorate_url_a(url)
