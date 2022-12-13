@@ -9,13 +9,13 @@ import base64
 import asyncio
 from copy import deepcopy
 import pandas as pd
-import nest_asyncio
+#import nest_asyncio
 import io
-from fsspec.utils import DEFAULT_BLOCK_SIZE, isfilelike, nullcontext
+from fsspec.utils import nullcontext
 from fusion.utils import get_client
 from .authentication import FusionCredentials
 
-nest_asyncio.apply()
+#nest_asyncio.apply()
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 
@@ -43,11 +43,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 self.credentials = FusionCredentials.from_object(credentials)
             kwargs["client_kwargs"] = {"credentials": self.credentials,
                                        "root_url": "https://fusion-api.jpmorgan.com/fusion/v1/"}
-            if self.credentials.proxies:
-                if "http" in self.credentials.proxies.keys():
-                    kwargs["proxy"] = self.credentials.proxies["http"]
-                elif "https" in self.credentials.proxies.keys():
-                    kwargs["proxy"] = self.credentials.proxies["https"]
+        if self.credentials.proxies:
+            if "http" in self.credentials.proxies.keys():
+                kwargs["proxy"] = self.credentials.proxies["http"]
+            elif "https" in self.credentials.proxies.keys():
+                kwargs["proxy"] = self.credentials.proxies["https"]
 
         if "headers" not in kwargs:
             kwargs["headers"] = {"Accept-Encoding": "identity"}
