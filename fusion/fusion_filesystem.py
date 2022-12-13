@@ -43,6 +43,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 self.credentials = FusionCredentials.from_object(credentials)
             kwargs["client_kwargs"] = {"credentials": self.credentials,
                                        "root_url": "https://fusion-api.jpmorgan.com/fusion/v1/"}
+        else:
+            self.credentials = kwargs["client_kwargs"]["credentials"]
+
         if self.credentials.proxies:
             if "http" in self.credentials.proxies.keys():
                 kwargs["proxy"] = self.credentials.proxies["http"]
