@@ -3,7 +3,9 @@ import numpy as np
 import os
 from os.path import splitext, relpath
 from pathlib import Path
-from .utils import distribution_to_filename, path_to_url, distribution_to_url, validate_file_names
+import hashlib
+import base64
+from .utils import distribution_to_filename, path_to_url, validate_file_names
 
 from tqdm.auto import tqdm
 from joblib import Parallel, delayed
@@ -14,6 +16,7 @@ logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 SYNC_PATH = ""
 ALLOWED_FORMATS = ["csv", "parquet", "pq", "gz", "zip", "json"]
+DEFAULT_CHUNK_SIZE = 2**16
 
 
 def rename_to_convention(fs_local, dir_local):
@@ -57,24 +60,29 @@ def download(fs_fusion, fs_local, df):
     def _download(row):
         p_path = url_to_path(row["url"])
         if not fs_local.exists(p_path):
-            fs_local.mkdir(Path(p_path).parent)
+            try:
+                fs_local.mkdir(Path(p_path).parent, exist_ok=True, create_parents=True)
+            except Exception as ex:
+                logger.info(f"Path {p_path} exists already", ex)
         try:
-            with fs_local.open(p_path, "wb") as file_local:
-                pass
-                # fs_fusion.get(row["url"], file_local)
+            fs_fusion.get(row["url"], p_path, chunk_size=DEFAULT_CHUNK_SIZE)
             return True, p_path, None
         except Exception as ex:
             logger.log(
                 VERBOSE_LVL,
                 f'Failed to write to {p_path}. ex - {ex}',
             )
-            return False, p_path, ex
+            try:
+                msg = ex.message
+            except:
+                msg = ""
+            return False, p_path, msg
 
     # create local directories based on paths...
     if len(df) > 1:
-        res = Parallel(n_jobs=-1)(delayed(_download)(row) for index, row in tqdm(df.iterrows()))
+        res = Parallel(n_jobs=-1)(delayed(_download)(row) for index, row in tqdm(df.iterrows(), total=len(df)))
     else:
-        res = [_download(row) for index, row in tqdm(df.iterrows())]
+        res = [_download(row) for index, row in tqdm(df.iterrows(), total=len(df))]
 
     return res
 
@@ -83,15 +91,28 @@ def upload(fs_fusion, fs_local, join_df):
     pass
 
 
+def _generate_md5_token(path, fs):
+    hash_md5 = hashlib.md5()
+    with fs.open(path, "rb") as file:
+        for chunk in iter(lambda: file.read(4096), b""):
+            hash_md5_chunk = hashlib.md5()
+            hash_md5_chunk.update(chunk)
+            hash_md5.update(chunk)
+
+    return base64.b64encode(hash_md5.digest()).decode()
+
+
 def _get_fusion_df(fs_fusion, datasets_lst, catalog):
     df_lst = []
     for dataset in datasets_lst:
-        changes = fs_fusion.info("")["changes"]["datasets"][0]["distributions"]
-        keys = [catalog + "/datasets/" + "/".join(i["key"].split(".")) for i in changes]
-        ts = [pd.Timestamp(i["values"][0]) for i in changes]
+        changes = fs_fusion.info(f"{catalog}/datasets/{dataset}")["changes"]["datasets"][0]["distributions"]
+        urls = [catalog + "/datasets/" + "/".join(i["key"].split(".")) for i in changes]
+        urls = [i.replace("distribution", "distributions") for i in urls]
+        urls = ["/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:]) if "datasetseries" not in i else i for i in urls]
+        ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
         sz = [int(i["values"][1]) for i in changes]
         md = [i["values"][2].split("md5=")[-1] for i in changes]
-        urls = [path_to_url(i) for i in keys]
+        keys = [url_to_path(i) for i in urls]
         df = pd.DataFrame([keys, urls, sz, ts, md]).T
         df.columns = ["path", "url", "size", "mtime", "md5"]
         df_lst.append(df)
@@ -99,19 +120,29 @@ def _get_fusion_df(fs_fusion, datasets_lst, catalog):
     return pd.concat(df_lst)
 
 
-def synchronize(fs_fusion, fs_local, dir_fusion: str, dir_local: str = "", direction: str = "upload"):
+def synchronize(fs_fusion, fs_local, datasets, catalog, direction: str = "upload"):
     """Synchronize two filesystems."""
     # check overall catalog level checksum
 
-    local_files = fs_local.find(dir_local)
-    # validate file names if not rename?
-    local_rel_path = ["/".join(i.split("/")[i.split("/").index(dir_local):]) for i in local_files]
-    local_file_validation = validate_file_names(local_rel_path, fs_fusion)
-    local_files = [f for flag, f in zip(local_file_validation, local_files) if flag]
+    local_files = []
+    local_files_rel = []
+    local_dirs = [f"{catalog}/{i}" for i in datasets] if len(datasets)>0 else [catalog]
+    # fusion_dirs = [f"{catalog}/datasets/{i}" for i in datasets] if len(datasets) > 0 else [catalog]
 
-    local_files_rel = [os.path.join(dir_local, relpath(i, dir_local).replace("\\", "/")) for i in local_files]
+    for local_dir in local_dirs:
+        if not fs_local.exists(local_dir):
+            fs_local.mkdir(local_dir, exist_ok=True, create_parents=True)
+
+        local_files = fs_local.find(local_dir)
+        # validate file names if not rename?
+        local_rel_path = [i[i.find(local_dir):] for i in local_files]
+        local_file_validation = validate_file_names(local_rel_path, fs_fusion)
+        local_files += [f for flag, f in zip(local_file_validation, local_files) if flag]
+        local_files_rel += [os.path.join(local_dir, relpath(i, local_dir)).replace("\\", "/") for i in local_files]
+    # datasets_lst = list(set([i.split("/")[-1].split("__")[0] for i in local_files_rel]))
+
     local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
-    local_md5 = [fs_local.ukey(x) for x in local_files]
+    local_md5 = [_generate_md5_token(x, fs_local) for x in local_files] # TODO: generate md5
     # local_ext = [splitext(i)[1][1:] for i in local_files]
     # local_datasets = [i.split("\\")[0] for i in local_files_rel]
     # local_dates = [i.split("\\")[1] for i in local_files_rel]
@@ -119,19 +150,15 @@ def synchronize(fs_fusion, fs_local, dir_fusion: str, dir_local: str = "", direc
     df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_mtime, local_md5]).T
     df_local.columns = ["path", "url", "mtime", "md5"]
 
-    local_max_mtime = df_local.mtime.max() # TODO: this will go to request to fusion
-    #fusion_df = pd.read_parquet(fs_fusion.cat(SYNC_PATH)) # TODO: specify path
-    df_fusion = pd.read_csv("sample_fusion_checksum.csv")
-    # fusion_files = fusion_df["url"] # TODO: change
-    # If upload
+    df_fusion = _get_fusion_df(fs_fusion, datasets, catalog)
+
     if direction == "upload":
         join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="left")
-        join_df = join_df[join_df["mtime"] != join_df["mtime"]]
+        join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
         res = upload(fs_fusion, fs_local, join_df)
-    # If download
     elif direction == "download":
         join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="right")
-        join_df = join_df[join_df["mtime_local"] != join_df["mtime_fusion"]]
+        join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
         res = download(fs_fusion, fs_local, join_df)
     else:
         raise ValueError("Unknown direction of operation.")
