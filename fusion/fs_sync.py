@@ -6,7 +6,7 @@ from os.path import splitext, relpath
 from pathlib import Path
 import hashlib
 import base64
-from .utils import distribution_to_filename, path_to_url, validate_file_names
+from .utils import distribution_to_filename, path_to_url, validate_file_names, upload_files
 
 from tqdm.auto import tqdm
 from joblib import Parallel, delayed
@@ -20,46 +20,35 @@ ALLOWED_FORMATS = ["csv", "parquet", "pq", "gz", "zip", "json"]
 DEFAULT_CHUNK_SIZE = 2**16
 
 
-def rename_to_convention(fs_local, dir_local):
-    local_rel_path = ["/".join(i.split("/")[i.split("/").index(dir_local):]) for i in fs_local.find(dir_local)]
-    file_names = [i.split("/")[-1].split(".")[0] for i in local_rel_path]
-    local_ext = [splitext(i)[1][1:] for i in local_rel_path]
-    for p, f_n, ext in zip(local_rel_path, file_names, local_ext):
-        tmp = p.split("/")
-        des_name = tmp[1] + "__" + tmp[0] + "__" + tmp[2]
-        if des_name != f_n:
-            new_path = os.path.join("/".join(p.split("/")[:-1]), des_name + "." + ext)
-            logger.log(VERBOSE_LVL, f"Renaming {p} to {new_path}")
-            fs_local.mv(p , new_path)
+# def rename_to_convention(fs_local, dir_local):
+#     local_rel_path = ["/".join(i.split("/")[i.split("/").index(dir_local):]) for i in fs_local.find(dir_local)]
+#     file_names = [i.split("/")[-1].split(".")[0] for i in local_rel_path]
+#     local_ext = [splitext(i)[1][1:] for i in local_rel_path]
+#     for p, f_n, ext in zip(local_rel_path, file_names, local_ext):
+#         tmp = p.split("/")
+#         des_name = tmp[1] + "__" + tmp[0] + "__" + tmp[2]
+#         if des_name != f_n:
+#             new_path = os.path.join("/".join(p.split("/")[:-1]), des_name + "." + ext)
+#             logger.log(VERBOSE_LVL, f"Renaming {p} to {new_path}")
+#             fs_local.mv(p , new_path)
 
 
-def validate_uniqueness_of_format(rel_paths):
-    file_paths_no_file = np.asarray(["/".join(i.split("/")[:-1]) for i in rel_paths])
-    local_ext = np.asarray([splitext(i)[1][1:] for i in rel_paths])
-    counts_paths = [(file_paths_no_file == i).sum() for i in file_paths_no_file]
-    validation = []
-    for i, c in enumerate(counts_paths):
-        if c > 1:
-            idx = np.where(file_paths_no_file == file_paths_no_file[i])[0]
-            exts = np.asarray(local_ext[idx])
-            counts_exts = np.array([(exts == k).sum() for k in exts])
-            if any(counts_exts > 1):
-                validation.append(False)
-            else:
-                validation.append(True)
-        else:
-            validation.append(True)
-    return validation
+def _get_loop(df, show_progress):
+    if show_progress:
+        loop = tqdm(df.iterrows(), total=len(df))
+    else:
+        loop = df.iterrows()
+    return loop
 
 
-def url_to_path(x):
+def _url_to_path(x):
     file_name = distribution_to_filename("", x.split('/')[2], x.split('/')[4], x.split('/')[6], x.split("/")[0])
     return f"{x.split('/')[0]}/{x.split('/')[2]}/{x.split('/')[4]}/{file_name}"
 
 
-def download(fs_fusion, fs_local, df):
-    def _download(row):
-        p_path = url_to_path(row["url"])
+def _download(fs_fusion, fs_local, df, show_progress=True):
+    def _download_files(row):
+        p_path = row["path_fusion"] # url_to_path(row["url"])
         if not fs_local.exists(p_path):
             try:
                 fs_local.mkdir(Path(p_path).parent, exist_ok=True, create_parents=True)
@@ -79,16 +68,22 @@ def download(fs_fusion, fs_local, df):
                 msg = ""
             return False, p_path, msg
 
+    loop = _get_loop(df, show_progress)
     if len(df) > 1:
-        res = Parallel(n_jobs=-1)(delayed(_download)(row) for index, row in tqdm(df.iterrows(), total=len(df)))
+        res = Parallel(n_jobs=-1)(delayed(_download_files)(row) for index, row in loop)
     else:
-        res = [_download(row) for index, row in tqdm(df.iterrows(), total=len(df))]
+        res = [_download_files(row) for index, row in loop]
 
     return res
 
 
-def upload(fs_fusion, fs_local, join_df):
-    pass
+def _upload(fs_fusion, fs_local, df, show_progress=True):
+    df.rename(columns={"path_local": "path"}, inplace=True)
+    loop = _get_loop(df, show_progress)
+    parallel = True if len(df) > 1 else False
+    res = upload_files(fs_fusion, fs_local, loop, parallel=parallel, n_par=-1, multipart=True)
+
+    return res
 
 
 def _generate_md5_token(path, fs):
@@ -102,7 +97,7 @@ def _generate_md5_token(path, fs):
     return base64.b64encode(hash_md5.digest()).decode()
 
 
-def _get_fusion_df(fs_fusion, datasets_lst, catalog):
+def _get_fusion_df(fs_fusion, datasets_lst, catalog, flatten=False, dataset_format=None):
     df_lst = []
     for dataset in datasets_lst:
         changes = fs_fusion.info(f"{catalog}/datasets/{dataset}")["changes"]["datasets"][0]["distributions"]
@@ -112,15 +107,21 @@ def _get_fusion_df(fs_fusion, datasets_lst, catalog):
         # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
         sz = [int(i["values"][1]) for i in changes]
         md = [i["values"][2].split("md5=")[-1] for i in changes]
-        keys = [url_to_path(i) for i in urls]
+        keys = [_url_to_path(i) for i in urls]
+
+        if flatten:
+            keys = ["/".join(k.split("/")[:2] + k.split("/")[-1:]) for k in keys]
+
         df = pd.DataFrame([keys, urls, sz, md]).T
         df.columns = ["path", "url", "size", "md5"]
+        if dataset_format:
+            df = df[df.url.str.split("/").str[-1] == dataset_format]
         df_lst.append(df)
 
     return pd.concat(df_lst)
 
 
-def _get_local_state(fs_local, fs_fusion, datasets, catalog):
+def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None):
     local_files = []
     local_files_rel = []
     local_dirs = [f"{catalog}/{i}" for i in datasets] if len(datasets) > 0 else [catalog]
@@ -140,7 +141,11 @@ def _get_local_state(fs_local, fs_fusion, datasets, catalog):
     local_url_eqiv = [path_to_url(i) for i in local_files]
     df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_md5]).T
     df_local.columns = ["path", "url", "md5"]
-    df_local = df_local.sort_values("path")
+
+    if dataset_format:
+        df_local = df_local[df_local.url.str.split("/").str[-1] == dataset_format]
+
+    df_local = df_local.sort_values("path").drop_duplicates()
     return df_local
 
 
@@ -150,26 +155,26 @@ def _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction: str = "upl
     if direction == "upload":
         join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="left")
         join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
-        res = upload(fs_fusion, fs_local, join_df)
+        res = _upload(fs_fusion, fs_local, join_df)
     elif direction == "download":
         join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="right")
         join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
-        res = download(fs_fusion, fs_local, join_df)
+        res = _download(fs_fusion, fs_local, join_df)
     else:
         raise ValueError("Unknown direction of operation.")
     return res
 
 
-def fsync(fs_fusion, fs_local, datasets, catalog, direction: str = "upload"):
+def fsync(fs_fusion, fs_local, datasets, catalog, direction: str = "upload", flatten=False, dataset_format=None):
 
     assert direction in ["upload", "download"]
     local_state = pd.DataFrame()
     while True:
         try:
-            local_state_temp = _get_local_state(fs_local, fs_fusion, datasets, catalog)
+            local_state_temp = _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format)
             if not local_state_temp.equals(local_state):
                 local_state = local_state_temp
-                fusion_state = _get_fusion_df(fs_fusion, datasets, catalog)
+                fusion_state = _get_fusion_df(fs_fusion, datasets, catalog, flatten, dataset_format)
                 _synchronize(fs_fusion, fs_local, local_state, fusion_state, direction)
             else:
                 print("All synced, sleeping")
