@@ -247,7 +247,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         """
         rpath = self._decorate_url(rpath)
-        return super().get(rpath, lpath, chunk_size=5 * 2 ** 20, callback=_DEFAULT_CALLBACK, **kwargs)
+        return super().get(rpath, lpath, chunk_size=chunk_size, callback=_DEFAULT_CALLBACK, **kwargs)
 
     async def _put_file(
         self,

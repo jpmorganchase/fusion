@@ -484,7 +484,7 @@ def validate_file_names(paths, fs_fusion):
                 validation.append(False)
             else:
                 if tmp[1] not in all_datasets.keys():
-                    all_datasets[tmp[1]] = [ i.split('/')[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
+                    all_datasets[tmp[1]] = [i.split('/')[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
 
                 val = tmp[0] in all_datasets[tmp[1]]
                 validation.append(val)

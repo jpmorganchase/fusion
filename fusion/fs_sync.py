@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import numpy as np
 import os
@@ -74,11 +75,10 @@ def download(fs_fusion, fs_local, df):
             )
             try:
                 msg = ex.message
-            except:
+            except Exception as ex:
                 msg = ""
             return False, p_path, msg
 
-    # create local directories based on paths...
     if len(df) > 1:
         res = Parallel(n_jobs=-1)(delayed(_download)(row) for index, row in tqdm(df.iterrows(), total=len(df)))
     else:
@@ -109,48 +109,43 @@ def _get_fusion_df(fs_fusion, datasets_lst, catalog):
         urls = [catalog + "/datasets/" + "/".join(i["key"].split(".")) for i in changes]
         urls = [i.replace("distribution", "distributions") for i in urls]
         urls = ["/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:]) if "datasetseries" not in i else i for i in urls]
-        ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
+        # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
         sz = [int(i["values"][1]) for i in changes]
         md = [i["values"][2].split("md5=")[-1] for i in changes]
         keys = [url_to_path(i) for i in urls]
-        df = pd.DataFrame([keys, urls, sz, ts, md]).T
-        df.columns = ["path", "url", "size", "mtime", "md5"]
+        df = pd.DataFrame([keys, urls, sz, md]).T
+        df.columns = ["path", "url", "size", "md5"]
         df_lst.append(df)
 
     return pd.concat(df_lst)
 
 
-def synchronize(fs_fusion, fs_local, datasets, catalog, direction: str = "upload"):
-    """Synchronize two filesystems."""
-    # check overall catalog level checksum
-
+def _get_local_state(fs_local, fs_fusion, datasets, catalog):
     local_files = []
     local_files_rel = []
-    local_dirs = [f"{catalog}/{i}" for i in datasets] if len(datasets)>0 else [catalog]
-    # fusion_dirs = [f"{catalog}/datasets/{i}" for i in datasets] if len(datasets) > 0 else [catalog]
+    local_dirs = [f"{catalog}/{i}" for i in datasets] if len(datasets) > 0 else [catalog]
 
     for local_dir in local_dirs:
         if not fs_local.exists(local_dir):
             fs_local.mkdir(local_dir, exist_ok=True, create_parents=True)
 
         local_files = fs_local.find(local_dir)
-        # validate file names if not rename?
         local_rel_path = [i[i.find(local_dir):] for i in local_files]
         local_file_validation = validate_file_names(local_rel_path, fs_fusion)
         local_files += [f for flag, f in zip(local_file_validation, local_files) if flag]
         local_files_rel += [os.path.join(local_dir, relpath(i, local_dir)).replace("\\", "/") for i in local_files]
-    # datasets_lst = list(set([i.split("/")[-1].split("__")[0] for i in local_files_rel]))
 
-    local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
-    local_md5 = [_generate_md5_token(x, fs_local) for x in local_files] # TODO: generate md5
-    # local_ext = [splitext(i)[1][1:] for i in local_files]
-    # local_datasets = [i.split("\\")[0] for i in local_files_rel]
-    # local_dates = [i.split("\\")[1] for i in local_files_rel]
+    #local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
+    local_md5 = [_generate_md5_token(x, fs_local) for x in local_files]
     local_url_eqiv = [path_to_url(i) for i in local_files]
-    df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_mtime, local_md5]).T
-    df_local.columns = ["path", "url", "mtime", "md5"]
+    df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_md5]).T
+    df_local.columns = ["path", "url", "md5"]
+    df_local = df_local.sort_values("path")
+    return df_local
 
-    df_fusion = _get_fusion_df(fs_fusion, datasets, catalog)
+
+def _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction: str = "upload"):
+    """Synchronize two filesystems."""
 
     if direction == "upload":
         join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="left")
@@ -163,3 +158,29 @@ def synchronize(fs_fusion, fs_local, datasets, catalog, direction: str = "upload
     else:
         raise ValueError("Unknown direction of operation.")
     return res
+
+
+def fsync(fs_fusion, fs_local, datasets, catalog, direction: str = "upload"):
+
+    assert direction in ["upload", "download"]
+    local_state = pd.DataFrame()
+    while True:
+        try:
+            local_state_temp = _get_local_state(fs_local, fs_fusion, datasets, catalog)
+            if not local_state_temp.equals(local_state):
+                local_state = local_state_temp
+                fusion_state = _get_fusion_df(fs_fusion, datasets, catalog)
+                _synchronize(fs_fusion, fs_local, local_state, fusion_state, direction)
+            else:
+                print("All synced, sleeping")
+                time.sleep(10)
+
+        except KeyboardInterrupt:
+            if input("Type exit to exit: ") != "exit":
+                continue
+            break
+
+        except Exception as ex:
+            print(ex)
+            continue
+
