@@ -114,7 +114,7 @@ def _get_fusion_df(fs_fusion, datasets_lst, catalog, flatten=False, dataset_form
 
         df = pd.DataFrame([keys, urls, sz, md]).T
         df.columns = ["path", "url", "size", "md5"]
-        if dataset_format:
+        if dataset_format and len(df) > 0:
             df = df[df.url.str.split("/").str[-1] == dataset_format]
         df_lst.append(df)
 
@@ -142,7 +142,7 @@ def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None
     df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_md5]).T
     df_local.columns = ["path", "url", "md5"]
 
-    if dataset_format:
+    if dataset_format and len(df_local) > 0:
         df_local = df_local[df_local.url.str.split("/").str[-1] == dataset_format]
 
     df_local = df_local.sort_values("path").drop_duplicates()
