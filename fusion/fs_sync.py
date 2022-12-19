@@ -100,23 +100,27 @@ def _generate_md5_token(path, fs):
 def _get_fusion_df(fs_fusion, datasets_lst, catalog, flatten=False, dataset_format=None):
     df_lst = []
     for dataset in datasets_lst:
-        changes = fs_fusion.info(f"{catalog}/datasets/{dataset}")["changes"]["datasets"][0]["distributions"]
-        urls = [catalog + "/datasets/" + "/".join(i["key"].split(".")) for i in changes]
-        urls = [i.replace("distribution", "distributions") for i in urls]
-        urls = ["/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:]) if "datasetseries" not in i else i for i in urls]
-        # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
-        sz = [int(i["values"][1]) for i in changes]
-        md = [i["values"][2].split("md5=")[-1] for i in changes]
-        keys = [_url_to_path(i) for i in urls]
+        changes = fs_fusion.info(f"{catalog}/datasets/{dataset}")["changes"]["datasets"]
+        if len(changes) > 0:
+            changes = changes[0]["distributions"]
+            urls = [catalog + "/datasets/" + "/".join(i["key"].split(".")) for i in changes]
+            urls = [i.replace("distribution", "distributions") for i in urls]
+            urls = ["/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:]) if "datasetseries" not in i else i for i in urls]
+            # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
+            sz = [int(i["values"][1]) for i in changes]
+            md = [i["values"][2].split("md5=")[-1] for i in changes]
+            keys = [_url_to_path(i) for i in urls]
 
-        if flatten:
-            keys = ["/".join(k.split("/")[:2] + k.split("/")[-1:]) for k in keys]
+            if flatten:
+                keys = ["/".join(k.split("/")[:2] + k.split("/")[-1:]) for k in keys]
 
-        df = pd.DataFrame([keys, urls, sz, md]).T
-        df.columns = ["path", "url", "size", "md5"]
-        if dataset_format and len(df) > 0:
-            df = df[df.url.str.split("/").str[-1] == dataset_format]
-        df_lst.append(df)
+            df = pd.DataFrame([keys, urls, sz, md]).T
+            df.columns = ["path", "url", "size", "md5"]
+            if dataset_format and len(df) > 0:
+                df = df[df.url.str.split("/").str[-1] == dataset_format]
+            df_lst.append(df)
+        else:
+            df_lst.append(pd.DataFrame(columns=["path", "url", "size", "md5"]))
 
     return pd.concat(df_lst)
 
