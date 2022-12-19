@@ -316,13 +316,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 resps.append(resp)
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
-            async with session.post(url=rpath + f"/operations?operationType=upload&operationId={operation_id}",
-                                    data={"parts": resps}, **kw) as resp:
+            async with session.post(url=rpath + f"/operations/upload&operationId={operation_id}",
+                                    json={"parts": resps}, **kw) as resp:
                 self._raise_not_found_for_status(resp,
-                                                 rpath + f"/operations?operationType=upload&operationId={operation_id}")
+                                                 rpath + f"/operations/upload&operationId={operation_id}")
 
     @staticmethod
-    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2 ** 20):
+    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2 ** 20, multipart=False):
 
         headers = {
             "Content-Type": "application/octet-stream",
@@ -331,7 +331,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             "x-jpmc-distribution-to-date": dt_iso,
             "Digest": ""
         }
-
+        headers["Content-Type"] = "application/json" if multipart else headers["Content-Type"]
         headers_chunks = {
             "Content-Type": "application/octet-stream",
             "Digest": ""
@@ -375,7 +375,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         """
 
         dt_iso = pd.Timestamp(rpath.split("/")[-3]).strftime("%Y-%m-%d")
-        headers, chunk_headers_lst = self._construct_headers(lpath, dt_iso, chunk_size)
+        headers, chunk_headers_lst = self._construct_headers(lpath, dt_iso, chunk_size, multipart)
         rpath = self._decorate_url(rpath)
         kwargs.update({"headers": headers})
         if multipart:
