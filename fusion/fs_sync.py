@@ -177,9 +177,9 @@ def fsync(fs_fusion, fs_local, datasets, catalog, direction: str = "upload", fla
         try:
             local_state_temp = _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format)
             if not local_state_temp.equals(local_state):
-                local_state = local_state_temp
                 fusion_state = _get_fusion_df(fs_fusion, datasets, catalog, flatten, dataset_format)
-                _synchronize(fs_fusion, fs_local, local_state, fusion_state, direction)
+                _synchronize(fs_fusion, fs_local, local_state_temp, fusion_state, direction)
+                local_state = local_state_temp
             else:
                 print("All synced, sleeping")
                 time.sleep(10)
