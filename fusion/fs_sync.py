@@ -1,8 +1,8 @@
 import time
 import pandas as pd
-import numpy as np
+import sys
 import os
-from os.path import splitext, relpath
+from os.path import relpath
 from pathlib import Path
 import hashlib
 import base64
@@ -18,19 +18,6 @@ VERBOSE_LVL = 25
 SYNC_PATH = ""
 ALLOWED_FORMATS = ["csv", "parquet", "pq", "gz", "zip", "json"]
 DEFAULT_CHUNK_SIZE = 2**16
-
-
-# def rename_to_convention(fs_local, dir_local):
-#     local_rel_path = ["/".join(i.split("/")[i.split("/").index(dir_local):]) for i in fs_local.find(dir_local)]
-#     file_names = [i.split("/")[-1].split(".")[0] for i in local_rel_path]
-#     local_ext = [splitext(i)[1][1:] for i in local_rel_path]
-#     for p, f_n, ext in zip(local_rel_path, file_names, local_ext):
-#         tmp = p.split("/")
-#         des_name = tmp[1] + "__" + tmp[0] + "__" + tmp[2]
-#         if des_name != f_n:
-#             new_path = os.path.join("/".join(p.split("/")[:-1]), des_name + "." + ext)
-#             logger.log(VERBOSE_LVL, f"Renaming {p} to {new_path}")
-#             fs_local.mv(p , new_path)
 
 
 def _get_loop(df, show_progress):
@@ -169,8 +156,21 @@ def _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction: str = "upl
     return res
 
 
-def fsync(fs_fusion, fs_local, datasets, catalog, direction: str = "upload", flatten=False, dataset_format=None):
+def fsync(fs_fusion, fs_local, datasets, catalog, direction: str = "upload", flatten=False, dataset_format=None, log_level=logging.ERROR):
 
+
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    file_handler = logging.FileHandler(filename="fusion_fsync.log")
+    logging.addLevelName(VERBOSE_LVL, "VERBOSE")
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter(
+        "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    stdout_handler.setFormatter(formatter)
+    logger.addHandler(stdout_handler)
+    logger.addHandler(file_handler)
+    logger.setLevel(log_level)
     assert direction in ["upload", "download"]
     local_state = pd.DataFrame()
     while True:
@@ -178,10 +178,11 @@ def fsync(fs_fusion, fs_local, datasets, catalog, direction: str = "upload", fla
             local_state_temp = _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format)
             if not local_state_temp.equals(local_state):
                 fusion_state = _get_fusion_df(fs_fusion, datasets, catalog, flatten, dataset_format)
-                _synchronize(fs_fusion, fs_local, local_state_temp, fusion_state, direction)
-                local_state = local_state_temp
+                res = _synchronize(fs_fusion, fs_local, local_state_temp, fusion_state, direction)
+                if len(res) == 0 or all([i[0] for i in res]):
+                    local_state = local_state_temp
             else:
-                print("All synced, sleeping")
+                logger.info("All synced, sleeping")
                 time.sleep(10)
 
         except KeyboardInterrupt:
@@ -190,6 +191,5 @@ def fsync(fs_fusion, fs_local, datasets, catalog, direction: str = "upload", fla
             break
 
         except Exception as ex:
-            print(ex)
+            logger.warning("Issue occurred but the program continues to synchronize", ex)
             continue
-
