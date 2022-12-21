@@ -350,7 +350,7 @@ class Fusion:
         catalog = self.__use_catalog(catalog)
 
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes'
-        df = Fusion._call_for_dataframe(url, self.session)
+        df = Fusion._call_for_dataframe(url, self.session).sort_values(by="index").reset_index(drop=True)
 
         if not display_all_columns:
             df = df[["identifier", "dataType", "isDatasetKey", "description"]]
