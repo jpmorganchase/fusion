@@ -1,5 +1,6 @@
-import time
+"""Fusion fsync."""
 
+import time
 import fsspec
 import pandas as pd
 import sys
