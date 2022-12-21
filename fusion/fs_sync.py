@@ -225,7 +225,7 @@ def fsync(fs_fusion: fsspec.filesystem,
             if not local_state_temp.equals(local_state):
                 fusion_state = _get_fusion_df(fs_fusion, datasets, catalog, flatten, dataset_format)
                 res = _synchronize(fs_fusion, fs_local, local_state_temp, fusion_state, direction, n_par, show_progress)
-                if len(res) == 0 or all([i[0] for i in res]):
+                if len(res) == 0 or all((i[0] for i in res)):
                     local_state = local_state_temp
             else:
                 logger.info("All synced, sleeping")
@@ -237,5 +237,5 @@ def fsync(fs_fusion: fsspec.filesystem,
             break
 
         except Exception as ex:
-            logger.warning("Issue occurred but the program continues to synchronize", ex)
+            logger.error('%s Issue occurred: %s', type(ex), ex)
             continue
