@@ -546,8 +546,10 @@ class Fusion:
             f'Beginning {len(loop)} downloads in batches of {n_par}',
         )
         res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(**spec) for spec in loop)
-        if (res > 0) and (not all((r[0] for r in res))):
-            warnings.warn("Note all downloads were successful", res)
+        if (len(res) > 0) and (not all((r[0] for r in res))):
+            for r in res:
+                if not r[0]:
+                    warnings.warn(f"The download of {r[1]} was not successful")
         return res if return_paths else None
 
     def to_df(
