@@ -316,10 +316,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 resps.append(resp)
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
-            async with session.post(url=rpath + f"/operations/upload&operationId={operation_id}",
+            async with session.post(url=rpath + f"/operations/upload?operationId={operation_id}",
                                     json={"parts": resps}, **kw) as resp:
                 self._raise_not_found_for_status(resp,
-                                                 rpath + f"/operations/upload&operationId={operation_id}")
+                                                 rpath + f"/operations/upload?operationId={operation_id}")
 
     @staticmethod
     def _construct_headers(file_local, dt_iso, chunk_size=5 * 2 ** 20, multipart=False):
