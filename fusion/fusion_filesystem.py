@@ -1,16 +1,16 @@
 """Fusion FileSystem."""
 
-from fsspec.implementations.http import HTTPFileSystem, sync
-from fsspec.callbacks import _DEFAULT_CALLBACK
 import logging
 from urllib.parse import urljoin
 import hashlib
 import base64
 from copy import deepcopy
-import pandas as pd
 import io
+from fsspec.implementations.http import HTTPFileSystem, sync
+from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.utils import nullcontext
-from fusion.utils import get_client
+import pandas as pd
+from .utils import get_client
 from .authentication import FusionCredentials
 
 logger = logging.getLogger(__name__)

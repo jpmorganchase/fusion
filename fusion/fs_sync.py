@@ -1,8 +1,6 @@
 """Fusion fsync."""
 
 import time
-import fsspec
-import pandas as pd
 import sys
 import os
 from os.path import relpath
@@ -10,10 +8,13 @@ import json
 from pathlib import Path
 import hashlib
 import base64
+import logging
 from tqdm.auto import tqdm
 from joblib import Parallel, delayed
-import logging
-from .utils import distribution_to_filename, path_to_url, validate_file_names, upload_files, cpu_count
+import fsspec
+import pandas as pd
+from .utils import distribution_to_filename, path_to_url, validate_file_names, upload_files, \
+    cpu_count
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -35,7 +36,7 @@ def _url_to_path(x):
 
 def _download(fs_fusion, fs_local, df, n_par, show_progress=True):
     def _download_files(row):
-        p_path = row["path_fusion"]  # url_to_path(row["url"])
+        p_path = row["path_fusion"]
         if not fs_local.exists(p_path):
             try:
                 fs_local.mkdir(Path(p_path).parent, exist_ok=True, create_parents=True)
@@ -149,11 +150,11 @@ def _synchronize(fs_fusion: fsspec.filesystem, fs_local: fsspec.filesystem, df_l
     if direction == "upload":
         join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="left")
         join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
-        res = _upload(fs_fusion, fs_local, join_df, n_par)
+        res = _upload(fs_fusion, fs_local, join_df, n_par, show_progress=show_progress)
     elif direction == "download":
         join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="right")
         join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
-        res = _download(fs_fusion, fs_local, join_df, n_par)
+        res = _download(fs_fusion, fs_local, join_df, n_par, show_progress=show_progress)
     else:
         raise ValueError("Unknown direction of operation.")
     return res
