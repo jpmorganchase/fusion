@@ -15,10 +15,14 @@ theme:
   language: en
   palette:
     - scheme: default
+      primary: black
+      accent: black
       toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to dark mode
     - scheme: slate
+      primary: black
+      accent: black
       toggle:
         icon: material/toggle-switch
         name: Switch to light mode
