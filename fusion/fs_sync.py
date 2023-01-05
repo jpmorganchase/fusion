@@ -170,7 +170,8 @@ def fsync(fs_fusion: fsspec.filesystem,
           dataset_format=None,
           n_par=None,
           show_progress=True,
-          log_level=logging.ERROR
+          log_level=logging.ERROR,
+          log_path: str = "."
           ):
     """
     Synchronisation between the local filesystem and Fusion.
@@ -188,6 +189,7 @@ def fsync(fs_fusion: fsspec.filesystem,
                 Defaults to all cpus available.
         show_progress (bool, optional): Display a progress bar during data download Defaults to True.
         log_level: Logging level. Error level by default.
+        log_path (str, optional): The folder path where the log is stored.
 
     Returns:
 
@@ -195,7 +197,7 @@ def fsync(fs_fusion: fsspec.filesystem,
 
     if logger.hasHandlers():
         logger.handlers.clear()
-    file_handler = logging.FileHandler(filename="fusion_fsync.log")
+    file_handler = logging.FileHandler(filename="{0}/{1}".format(log_path, "fusion_fsync.log"))
     logging.addLevelName(VERBOSE_LVL, "VERBOSE")
     stdout_handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter(
