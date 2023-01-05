@@ -21,6 +21,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://jpmorganchase.github.io/fusion/1.0.6/get_started/</loc>
+         <lastmod>2023-01-05</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://jpmorganchase.github.io/fusion/1.0.6/installation/</loc>
          <lastmod>2023-01-05</lastmod>
          <changefreq>daily</changefreq>
