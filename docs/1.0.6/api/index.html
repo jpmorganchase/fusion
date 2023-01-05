@@ -56,7 +56,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="" data-md-color-accent="">
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black">
   
     
     
@@ -120,7 +120,7 @@
         
           
           
-          <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="" data-md-color-accent=""  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+          <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
           
             <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6zm0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4zM7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
@@ -129,7 +129,7 @@
         
           
           
-          <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="" data-md-color-accent=""  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_2">
+          <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="black"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_2">
           
             <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3Z"/></svg>
@@ -1531,7 +1531,7 @@ Defaults to client_credentials.</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/authentication.py</code></summary>
+          <summary>Source code in <code>fusion\authentication.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">client_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1543,7 +1543,7 @@ Defaults to client_credentials.</p></td>
         <span class="n">proxies</span><span class="o">=</span><span class="p">{},</span>
         <span class="n">grant_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;client_credentials&#39;</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Constructor for the FusionCredentials authentication management class.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Constructor for the FusionCredentials authentication management class.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        client_id (str, optional): A valid OAuth client identifier. Defaults to None.</span>
@@ -1640,12 +1640,12 @@ Defaults to 'config/client_credentials.json'.</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/authentication.py</code></summary>
+          <summary>Source code in <code>fusion\authentication.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">add_proxies</span><span class="p">(</span>
         <span class="n">http_proxy</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">https_proxy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">credentials_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;config/client_credentials.json&#39;</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;A function to add proxies to an existing credentials files.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A function to add proxies to an existing credentials files.</span>
 <span class="sd">    This function can be called to add proxy addresses to a credential file downloaded from the Fusion website.</span>
 
 <span class="sd">    Args:</span>
@@ -1745,10 +1745,10 @@ resource, auth_url, and optionally proxies and an OAuth grant type.</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/authentication.py</code></summary>
+          <summary>Source code in <code>fusion\authentication.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="n">credentials</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Create a credentials object from a dictionary.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a credentials object from a dictionary.</span>
 
 <span class="sd">        This is the only FusionCredentials creation method that supports the password grant type</span>
 <span class="sd">        since the username and password should be provided by the user.</span>
@@ -1857,10 +1857,10 @@ to load credentials from. Defaults to 'config/client.credentials.json'.</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/authentication.py</code></summary>
+          <summary>Source code in <code>fusion\authentication.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">from_file</span><span class="p">(</span><span class="n">file_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;config/client.credentials.json&#39;</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">walk_up_dirs</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Create a credentials object from a file.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a credentials object from a file.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        file_path (str, optional): Path (absolute or relative) and filename</span>
@@ -1975,10 +1975,10 @@ to load credentials from. Defaults to 'config/client.credentials.json'.</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/authentication.py</code></summary>
+          <summary>Source code in <code>fusion\authentication.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">from_object</span><span class="p">(</span><span class="n">credentials_source</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]):</span>
-    <span class="sd">&quot;&quot;&quot;Utility function that will determine how to create a credentials object based on data passed.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Utility function that will determine how to create a credentials object based on data passed.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        credentials_source (Union[str, dict]): A string which could be a filename or a JSON object, or a dictionary.</span>
@@ -2107,7 +2107,7 @@ URL to set both http and https</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/authentication.py</code></summary>
+          <summary>Source code in <code>fusion\authentication.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">generate_credentials_file</span><span class="p">(</span>
         <span class="n">credentials_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;config/client_credentials.json&#39;</span><span class="p">,</span>
@@ -2117,7 +2117,7 @@ URL to set both http and https</p></td>
         <span class="n">auth_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;https://authe.jpmorgan.com/as/token.oauth2&quot;</span><span class="p">,</span>
         <span class="n">proxies</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Utility function to generate credentials file that can be used for authentication.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Utility function to generate credentials file that can be used for authentication.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        credentials_file (str, optional): The path and filename to store the credentials under.</span>
@@ -2289,7 +2289,7 @@ Defaults to None.</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/authentication.py</code></summary>
+          <summary>Source code in <code>fusion\authentication.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">credentials</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">FusionCredentials</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]],</span>
@@ -2299,7 +2299,7 @@ Defaults to None.</p></td>
         <span class="o">*</span><span class="n">args</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Class constructor to create a FusionOAuthAdapter object.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class constructor to create a FusionOAuthAdapter object.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        credentials (Union[FusionCredentials, Union[str, dict]): Valid user credentials to authenticate.</span>
@@ -2374,9 +2374,9 @@ Defaults to None.</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/authentication.py</code></summary>
+          <summary>Source code in <code>fusion\authentication.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Function to send a request to the authentication server.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to send a request to the authentication server.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        request (requests.Session): A HTTP Session.</span>
@@ -2466,9 +2466,9 @@ Defaults to None.</p></td>
 <p>Returns: filesystem</p>
 
         <details class="quote">
-          <summary>Source code in <code>fusion/authentication.py</code></summary>
+          <summary>Source code in <code>fusion\authentication.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">get_default_fs</span><span class="p">():</span>
-    <span class="sd">&quot;&quot;&quot;Retrieve default filesystem.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieve default filesystem.</span>
 
 <span class="sd">    Returns: filesystem</span>
 
@@ -2919,7 +2919,7 @@ are saved. Defaults to "downloads".</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">credentials</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;config/client_credentials.json&#39;</span><span class="p">,</span>
@@ -2928,7 +2928,7 @@ are saved. Defaults to "downloads".</p></td>
     <span class="n">log_level</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">,</span>
     <span class="n">fs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Constructor to instantiate a new Fusion object.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Constructor to instantiate a new Fusion object.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        credentials (Union[str, dict], optional): A path to a credentials file or</span>
@@ -2993,9 +2993,9 @@ are saved. Defaults to "downloads".</p></td>
       <p>Object representation to list all available methods.</p>
 
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Object representation to list all available methods.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Object representation to list all available methods.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="s2">&quot;Fusion object </span><span class="se">\n</span><span class="s2">Available methods:</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">tabulate</span><span class="p">(</span>
         <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
             <span class="p">[</span>
@@ -3072,9 +3072,9 @@ are saved. Defaults to "downloads".</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">catalog_resources</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;List the resources contained within the catalog, for example products and datasets.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List the resources contained within the catalog, for example products and datasets.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        catalog (str, optional): A catalog identifier. Defaults to &#39;common&#39;.</span>
@@ -3161,9 +3161,9 @@ are saved. Defaults to "downloads".</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">dataset_resources</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;List the resources available for a dataset, currently this will always be a datasetseries.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List the resources available for a dataset, currently this will always be a datasetseries.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        dataset (str): A dataset identifier</span>
@@ -3258,11 +3258,11 @@ are saved. Defaults to "downloads".</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">datasetmember_resources</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">series</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;List the available resources for a datasetseries member.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List the available resources for a datasetseries member.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        dataset (str): A dataset identifier</span>
@@ -3378,7 +3378,7 @@ Defaults to download_folder as set in <strong>init</strong></p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">download</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -3391,7 +3391,7 @@ Defaults to download_folder as set in <strong>init</strong></p></td>
     <span class="n">download_folder</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">return_paths</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Downloads the requested distributions of a dataset to disk.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Downloads the requested distributions of a dataset to disk.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        dataset (str): A dataset identifier</span>
@@ -3468,9 +3468,9 @@ Defaults to download_folder as set in <strong>init</strong></p></td>
 <p>Returns: Fusion Filesystem</p>
 
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">get_fusion_filesystem</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Creates Fusion Filesystem.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates Fusion Filesystem.</span>
 
 <span class="sd">    Returns: Fusion Filesystem</span>
 
@@ -3533,9 +3533,9 @@ Defaults to download_folder as set in <strong>init</strong></p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">list_catalogs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Lists the catalogs available to the API account.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Lists the catalogs available to the API account.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        output (bool, optional): If True then print the dataframe. Defaults to False.</span>
@@ -3626,9 +3626,9 @@ otherwise only the key columns are displayed</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">list_dataset_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">display_all_columns</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Returns the list of attributes that are in the dataset.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the list of attributes that are in the dataset.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        dataset (str): A dataset identifier</span>
@@ -3728,11 +3728,11 @@ Defaults to -1 which returns all results.</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">list_datasetmembers</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">max_results</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;List the available members in the dataset series.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List the available members in the dataset series.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        dataset (str): A dataset identifier</span>
@@ -3848,7 +3848,7 @@ otherwise only the key columns are displayed</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">list_datasets</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">contains</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -3858,7 +3858,7 @@ otherwise only the key columns are displayed</p></td>
     <span class="n">max_results</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">display_all_columns</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;_summary_.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;_summary_.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        contains (Union[str, list], optional): A string or a list of strings that are dataset</span>
@@ -3981,9 +3981,9 @@ otherwise only the key columns are displayed</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">list_distributions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">series</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;List the available distributions (downloadable instances of the dataset with a format type).</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List the available distributions (downloadable instances of the dataset with a format type).</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        dataset (str): A dataset identifier</span>
@@ -4095,7 +4095,7 @@ otherwise only the key columns are displayed</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">list_products</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">contains</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -4105,7 +4105,7 @@ otherwise only the key columns are displayed</p></td>
     <span class="n">max_results</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
     <span class="n">display_all_columns</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Get the products contained in a catalog. A product is a grouping of datasets.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the products contained in a catalog. A product is a grouping of datasets.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        contains (Union[str, list], optional): A string or a list of strings that are product</span>
@@ -4275,7 +4275,7 @@ Defaults to download_folder as set in <strong>init</strong></p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">to_df</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -4290,7 +4290,7 @@ Defaults to download_folder as set in <strong>init</strong></p></td>
     <span class="n">download_folder</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Gets distributions for a specified date or date range and returns the data as a dataframe.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Gets distributions for a specified date or date range and returns the data as a dataframe.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        dataset (str): A dataset identifier</span>
@@ -4342,12 +4342,14 @@ Defaults to download_folder as set in <strong>init</strong></p></td>
         <span class="s1">&#39;parquet&#39;</span><span class="p">:</span> <span class="n">read_parquet</span><span class="p">,</span>
         <span class="s1">&#39;parq&#39;</span><span class="p">:</span> <span class="n">read_parquet</span><span class="p">,</span>
         <span class="s1">&#39;json&#39;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_json</span><span class="p">,</span>
+        <span class="s1">&#39;raw&#39;</span><span class="p">:</span> <span class="n">read_csv</span><span class="p">,</span>
     <span class="p">}</span>
 
     <span class="n">pd_read_default_kwargs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s1">&#39;csv&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;columns&#39;</span><span class="p">:</span> <span class="n">columns</span><span class="p">,</span> <span class="s1">&#39;filters&#39;</span><span class="p">:</span> <span class="n">filters</span><span class="p">},</span>
         <span class="s1">&#39;parquet&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;columns&#39;</span><span class="p">:</span> <span class="n">columns</span><span class="p">,</span> <span class="s1">&#39;filters&#39;</span><span class="p">:</span> <span class="n">filters</span><span class="p">},</span>
         <span class="s1">&#39;json&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;columns&#39;</span><span class="p">:</span> <span class="n">columns</span><span class="p">,</span> <span class="s1">&#39;filters&#39;</span><span class="p">:</span> <span class="n">filters</span><span class="p">},</span>
+        <span class="s1">&#39;raw&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;columns&#39;</span><span class="p">:</span> <span class="n">columns</span><span class="p">,</span> <span class="s1">&#39;filters&#39;</span><span class="p">:</span> <span class="n">filters</span><span class="p">},</span>
     <span class="p">}</span>
 
     <span class="n">pd_read_default_kwargs</span><span class="p">[</span><span class="s1">&#39;parq&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd_read_default_kwargs</span><span class="p">[</span><span class="s1">&#39;parquet&#39;</span><span class="p">]</span>
@@ -4366,6 +4368,10 @@ Defaults to download_folder as set in <strong>init</strong></p></td>
         <span class="p">)</span>
     <span class="k">if</span> <span class="n">dataset_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;parquet&quot;</span><span class="p">,</span> <span class="s2">&quot;parq&quot;</span><span class="p">]:</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd_reader</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="o">**</span><span class="n">pd_read_kwargs</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">dataset_format</span> <span class="o">==</span> <span class="s1">&#39;raw&#39;</span><span class="p">:</span>
+        <span class="n">dataframes</span> <span class="o">=</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">pd_reader</span><span class="p">(</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="o">**</span><span class="n">pd_read_kwargs</span><span class="p">)</span> 
+                                    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">ZipFile</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">namelist</span><span class="p">()],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">dataframes</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">dataframes</span> <span class="o">=</span> <span class="p">(</span><span class="n">pd_reader</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="o">**</span><span class="n">pd_read_kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">)</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">dataframes</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -4453,7 +4459,7 @@ Defaults to all cpus available.</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion.py</code></summary>
+          <summary>Source code in <code>fusion\fusion.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">upload</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
            <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
            <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -4463,7 +4469,7 @@ Defaults to all cpus available.</p></td>
            <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
            <span class="n">return_paths</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
            <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Uploads the requested files/files to Fusion.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Uploads the requested files/files to Fusion.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        path (str): path to a file or a folder with files</span>
@@ -4665,9 +4671,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">credentials</span><span class="o">=</span><span class="s1">&#39;config/client_credentials.json&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Same signature as the fsspec HTTPFileSystem.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Same signature as the fsspec HTTPFileSystem.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        credentials: Credentials.</span>
@@ -4755,9 +4761,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">cat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Fetch paths&#39; contents.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch paths&#39; contents.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        url: Url.</span>
@@ -4824,9 +4830,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">exists</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Check existence.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check existence.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        url: Url.</span>
@@ -4898,9 +4904,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">find</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">maxdepth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">withdirs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Find all file in a folder.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find all file in a folder.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        path: Path.</span>
@@ -4926,7 +4932,7 @@ FusionHTTPFileSystem        </code>
 
 
 <h4 id="fusion.fusion_filesystem.FusionHTTPFileSystem.get" class="doc doc-heading">
-<code class="highlight language-python"><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rpath</span><span class="p">,</span> <span class="n">lpath</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">5242880</span><span class="p">,</span> <span class="n">callback</span><span class="o">=&lt;</span><span class="n">fsspec</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">NoOpCallback</span> <span class="nb">object</span> <span class="n">at</span> <span class="mh">0x7f6ab1c21e50</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+<code class="highlight language-python"><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rpath</span><span class="p">,</span> <span class="n">lpath</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">5242880</span><span class="p">,</span> <span class="n">callback</span><span class="o">=&lt;</span><span class="n">fsspec</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">NoOpCallback</span> <span class="nb">object</span> <span class="n">at</span> <span class="mh">0x0000024534010340</span><span class="o">&gt;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
 
 
 <a href="#fusion.fusion_filesystem.FusionHTTPFileSystem.get" class="headerlink" title="Permanent link">&para;</a></h4>
@@ -4968,7 +4974,7 @@ FusionHTTPFileSystem        </code>
         <td><code>callback</code></td>
         <td></td>
         <td><p>Callback function.</p></td>
-        <td><code>&lt;fsspec.callbacks.NoOpCallback object at 0x7f6ab1c21e50&gt;</code></td>
+        <td><code>&lt;fsspec.callbacks.NoOpCallback object at 0x0000024534010340&gt;</code></td>
       </tr>
       <tr>
         <td><code>**kwargs</code></td>
@@ -4979,9 +4985,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rpath</span><span class="p">,</span> <span class="n">lpath</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">5</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">**</span> <span class="mi">20</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="n">_DEFAULT_CALLBACK</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Copy file(s) to local.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Copy file(s) to local.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        rpath: Rpath.</span>
@@ -5043,9 +5049,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">glob</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Glob.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Glob.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        path: Path.</span>
@@ -5104,9 +5110,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Return info.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return info.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        path: Path.</span>
@@ -5164,9 +5170,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">isfile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Is path a file.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Is path a file.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        path: Path.</span>
@@ -5230,9 +5236,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">ls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;List resources.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List resources.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        url: Url.</span>
@@ -5309,13 +5315,13 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
          <span class="n">path</span><span class="p">,</span>
          <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">,</span>
          <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
          <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Open.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Open.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        path: Path.</span>
@@ -5341,7 +5347,7 @@ FusionHTTPFileSystem        </code>
 
 
 <h4 id="fusion.fusion_filesystem.FusionHTTPFileSystem.put" class="doc doc-heading">
-<code class="highlight language-python"><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lpath</span><span class="p">,</span> <span class="n">rpath</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">5242880</span><span class="p">,</span> <span class="n">callback</span><span class="o">=&lt;</span><span class="n">fsspec</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">NoOpCallback</span> <span class="nb">object</span> <span class="n">at</span> <span class="mh">0x7f6ab1c21e50</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;put&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
+<code class="highlight language-python"><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lpath</span><span class="p">,</span> <span class="n">rpath</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">5242880</span><span class="p">,</span> <span class="n">callback</span><span class="o">=&lt;</span><span class="n">fsspec</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">NoOpCallback</span> <span class="nb">object</span> <span class="n">at</span> <span class="mh">0x0000024534010340</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;put&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></code>
 
 
 <a href="#fusion.fusion_filesystem.FusionHTTPFileSystem.put" class="headerlink" title="Permanent link">&para;</a></h4>
@@ -5383,7 +5389,7 @@ FusionHTTPFileSystem        </code>
         <td><code>callback</code></td>
         <td></td>
         <td><p>Callback function.</p></td>
-        <td><code>&lt;fsspec.callbacks.NoOpCallback object at 0x7f6ab1c21e50&gt;</code></td>
+        <td><code>&lt;fsspec.callbacks.NoOpCallback object at 0x0000024534010340&gt;</code></td>
       </tr>
       <tr>
         <td><code>method</code></td>
@@ -5400,7 +5406,7 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/fusion_filesystem.py</code></summary>
+          <summary>Source code in <code>fusion\fusion_filesystem.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
         <span class="n">lpath</span><span class="p">,</span>
         <span class="n">rpath</span><span class="p">,</span>
@@ -5408,7 +5414,7 @@ FusionHTTPFileSystem        </code>
         <span class="n">callback</span><span class="o">=</span><span class="n">_DEFAULT_CALLBACK</span><span class="p">,</span>
         <span class="n">method</span><span class="o">=</span><span class="s2">&quot;put&quot;</span><span class="p">,</span>
         <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Copy file(s) from local.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Copy file(s) from local.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        lpath: Lpath.</span>
@@ -5522,9 +5528,9 @@ FusionHTTPFileSystem        </code>
 </table>      
 
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">cpu_count</span><span class="p">(</span><span class="n">thread_pool_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Determine the number of cpus/threads for parallelization.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Determine the number of cpus/threads for parallelization.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        thread_pool_size: override argument for number of cpus/threads.</span>
@@ -5623,11 +5629,11 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">distribution_to_filename</span><span class="p">(</span>
     <span class="n">root_folder</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">datasetseries</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">file_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;common&#39;</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Returns a filename representing a dataset distribution.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a filename representing a dataset distribution.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        root_folder (str): The root folder path.</span>
@@ -5724,11 +5730,11 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">distribution_to_url</span><span class="p">(</span>
     <span class="n">root_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">datasetseries</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">file_format</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;common&#39;</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Returns the API URL to download a dataset distribution.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the API URL to download a dataset distribution.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        root_url (str): The base url for the API.</span>
@@ -5795,9 +5801,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">async</span> <span class="k">def</span> <span class="nf">get_client</span><span class="p">(</span><span class="n">credentials</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Gets session for async.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Gets session for async.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        credentials: Credentials.</span>
@@ -5905,11 +5911,11 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">get_session</span><span class="p">(</span>
     <span class="n">credentials</span><span class="p">:</span> <span class="n">FusionCredentials</span><span class="p">,</span> <span class="n">root_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">get_retries</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Retry</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">requests</span><span class="o">.</span><span class="n">Session</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Create a new http session and set parameters.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a new http session and set parameters.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        credentials (FusionCredentials): Valid user credentials to provide an acces token</span>
@@ -5991,9 +5997,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">normalise_dt_param_str</span><span class="p">(</span><span class="n">dt</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Convert a date parameter which may be a single date or a date range into a tuple.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert a date parameter which may be a single date or a date range into a tuple.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        dt (str): Either a single date or a date range separated by a &quot;:&quot;.</span>
@@ -6050,9 +6056,9 @@ FusionHTTPFileSystem        </code>
 </table>      <p>Returns (str): Fusion url string.</p>
 
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">path_to_url</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Convert file name to fusion url.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert file name to fusion url.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        x (str): File path.</span>
@@ -6137,9 +6143,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Reads csv with possibility of selecting columns and filtering the data.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reads csv with possibility of selecting columns and filtering the data.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        path (str): path to the csv file.</span>
@@ -6256,9 +6262,9 @@ FusionHTTPFileSystem        </code>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">read_parquet</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Read parquet files(s) to pandas.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read parquet files(s) to pandas.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        path (Union[list, str]): path or a list of paths to parquet files.</span>
@@ -6366,7 +6372,7 @@ downloading the data. Defaults to False.</p></td>
   </tbody>
 </table>
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">stream_single_file_new_session</span><span class="p">(</span>
     <span class="n">credentials</span><span class="p">,</span>
     <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -6376,7 +6382,7 @@ downloading the data. Defaults to False.</p></td>
     <span class="n">dry_run</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">fs</span><span class="o">=</span><span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;Function to stream a single file from the API to a file on disk.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Function to stream a single file from the API to a file on disk.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        credentials (FusionCredentials): Valid user credentials to provide an acces token</span>
@@ -6491,9 +6497,9 @@ downloading the data. Defaults to False.</p></td>
 </table>      
 
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">upload_files</span><span class="p">(</span><span class="n">fs_fusion</span><span class="p">,</span> <span class="n">fs_local</span><span class="p">,</span> <span class="n">loop</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">n_par</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Upload file into Fusion.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Upload file into Fusion.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        fs_fusion: Fusion filesystem.</span>
@@ -6573,9 +6579,9 @@ downloading the data. Defaults to False.</p></td>
 </table>      <p>Returns (list): List of booleans.</p>
 
         <details class="quote">
-          <summary>Source code in <code>fusion/utils.py</code></summary>
+          <summary>Source code in <code>fusion\utils.py</code></summary>
           <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">validate_file_names</span><span class="p">(</span><span class="n">paths</span><span class="p">,</span> <span class="n">fs_fusion</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Validate if the file name format adheres to the standard.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validate if the file name format adheres to the standard.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        paths (list): List of file paths.</span>
