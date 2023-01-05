@@ -10,6 +10,7 @@ nav:
   - Usage: usage.md
   - Modules: api.md
   - Changelog: changelog.md
+  - Get Started: get_started.ipynb
 theme:
   name: material
   language: en
@@ -55,6 +56,7 @@ markdown_extensions:
       slugify: !!python/name:pymdownx.slugs.uslugify
   - meta
 plugins:
+  - mkdocs-jupyter
   - include-markdown
   - search:
       lang: en

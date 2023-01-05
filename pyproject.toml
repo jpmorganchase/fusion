@@ -96,6 +96,7 @@ doc = [
     "mkdocs-autorefs",
     "mkdocs-include-markdown-plugin",
     "mkdocs-git-revision-date-plugin",
+	"mkdocs-jupyter",
     "mike"
     ]
 
