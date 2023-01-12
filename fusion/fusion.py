@@ -60,6 +60,7 @@ class Fusion:
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
         fs=None,
+        log_path: str = "."
     ) -> None:
         """Constructor to instantiate a new Fusion object.
 
@@ -73,6 +74,7 @@ class Fusion:
                 are saved. Defaults to "downloads".
             log_level (int, optional): Set the logging level. Defaults to logging.ERROR.
             fs (fsspec.filesystem): filesystem.
+            log_path (str, optional): The folder path where the log is stored.
         """
         self._default_catalog = "common"
 
@@ -82,7 +84,7 @@ class Fusion:
 
         if logger.hasHandlers():
             logger.handlers.clear()
-        file_handler = logging.FileHandler(filename="fusion_sdk.log")
+        file_handler = logging.FileHandler(filename="{0}/{1}".format(log_path, "fusion_sdk.log"))
         logging.addLevelName(VERBOSE_LVL, "VERBOSE")
         stdout_handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
@@ -139,7 +141,6 @@ class Fusion:
         """
         self._default_catalog = catalog
 
-
     def __use_catalog(self, catalog):
         """Determine which catalog to use in an API call.
 
@@ -169,7 +170,7 @@ class Fusion:
             output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-            pandas.DataFrame: A dataframe with a row for each catalog
+            class:`pandas.DataFrame`: A dataframe with a row for each catalog
         """
         url = f'{self.root_url}catalogs/'
         df = Fusion._call_for_dataframe(url, self.session)
@@ -187,7 +188,7 @@ class Fusion:
             output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-           pandas.DataFrame: A dataframe with a row for each resource within the catalog
+           class:`pandas.DataFrame`: A dataframe with a row for each resource within the catalog
         """
         catalog = self.__use_catalog(catalog)
 
@@ -224,7 +225,7 @@ class Fusion:
                 otherwise only the key columns are displayed
 
         Returns:
-            pandas.DataFrame: a dataframe with a row for each product
+            class:`pandas.DataFrame`: a dataframe with a row for each product
         """
         catalog = self.__use_catalog(catalog)
 
@@ -280,7 +281,7 @@ class Fusion:
                 otherwise only the key columns are displayed
 
         Returns:
-            pandas.DataFrame: a dataframe with a row for each dataset.
+            class:`pandas.DataFrame`: a dataframe with a row for each dataset.
         """
         catalog = self.__use_catalog(catalog)
 
@@ -322,7 +323,7 @@ class Fusion:
             output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-            pandas.DataFrame: A dataframe with a row for each resource
+            class:`pandas.DataFrame`: A dataframe with a row for each resource
         """
         catalog = self.__use_catalog(catalog)
 
@@ -345,12 +346,12 @@ class Fusion:
                 otherwise only the key columns are displayed
 
         Returns:
-            pandas.DataFrame: A dataframe with a row for each attribute
+            class:`pandas.DataFrame`: A dataframe with a row for each attribute
         """
         catalog = self.__use_catalog(catalog)
 
         url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes'
-        df = Fusion._call_for_dataframe(url, self.session)
+        df = Fusion._call_for_dataframe(url, self.session).sort_values(by="index").reset_index(drop=True)
 
         if not display_all_columns:
             df = df[["identifier", "dataType", "isDatasetKey", "description"]]
@@ -373,7 +374,7 @@ class Fusion:
                 Defaults to -1 which returns all results.
 
         Returns:
-            pandas.DataFrame: a dataframe with a row for each dataset member.
+            class:`pandas.DataFrame`: a dataframe with a row for each dataset member.
         """
         catalog = self.__use_catalog(catalog)
 
@@ -400,7 +401,7 @@ class Fusion:
             output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-            pandas.DataFrame: A dataframe with a row for each datasetseries member resource.
+            class:`pandas.DataFrame`: A dataframe with a row for each datasetseries member resource.
                 Currently, this will always be distributions.
         """
         catalog = self.__use_catalog(catalog)
@@ -423,7 +424,7 @@ class Fusion:
             output (bool, optional): If True then print the dataframe. Defaults to False.
 
         Returns:
-            pandas.DataFrame: A dataframe with a row for each distribution.
+            class:`pandas.DataFrame`: A dataframe with a row for each distribution.
         """
         catalog = self.__use_catalog(catalog)
 
@@ -546,7 +547,10 @@ class Fusion:
             f'Beginning {len(loop)} downloads in batches of {n_par}',
         )
         res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(**spec) for spec in loop)
-
+        if (len(res) > 0) and (not all((r[0] for r in res))):
+            for r in res:
+                if not r[0]:
+                    warnings.warn(f"The download of {r[1]} was not successful")
         return res if return_paths else None
 
     def to_df(
@@ -589,7 +593,7 @@ class Fusion:
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
         Returns:
-            pandas.DataFrame: a dataframe containing the requested data.
+            class:`pandas.DataFrame`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
         """
         catalog = self.__use_catalog(catalog)
@@ -659,6 +663,8 @@ class Fusion:
                n_par: int = None,
                show_progress: bool = True,
                return_paths: bool = False,
+               multipart = True,
+               chunk_size=5 * 2 ** 20,
                ):
         """Uploads the requested files/files to Fusion.
 
@@ -674,6 +680,8 @@ class Fusion:
                 Defaults to all cpus available.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
+            multipart (bool): Is multipart upload.
+            chunk_size (int): Maximum chunk size.
 
         Returns:
 
@@ -718,7 +726,7 @@ class Fusion:
 
         n_par = cpu_count(n_par)
         parallel = True if len(df) > 1 else False
-        res = upload_files(fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par)
+        res = upload_files(fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par, multipart=multipart, chunk_size=chunk_size)
 
         if not all(r[0] for r in res):
             failed_res = [r for r in res if not r[0]]

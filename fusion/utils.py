@@ -14,8 +14,6 @@ from pyarrow import csv, json
 from io import BytesIO
 from urllib.parse import urlparse, urlunparse
 from joblib import Parallel, delayed
-import hashlib
-import base64
 import sys
 if sys.version_info >= (3, 7):
     from contextlib import nullcontext
@@ -486,7 +484,7 @@ def validate_file_names(paths, fs_fusion):
                 validation.append(False)
             else:
                 if tmp[1] not in all_datasets.keys():
-                    all_datasets[tmp[1]] = [ i.split('/')[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
+                    all_datasets[tmp[1]] = [i.split('/')[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
 
                 val = tmp[0] in all_datasets[tmp[1]]
                 validation.append(val)
@@ -514,25 +512,7 @@ def path_to_url(x):
     return "/".join(distribution_to_url("", dataset, date, ext, catalog).split("/")[1:])
 
 
-def _construct_headers(fs_local, row):
-    dt = row["url"].split("/")[-3]
-    dt_iso = pd.Timestamp(dt).strftime("%Y-%m-%d")
-    headers = {
-        "Content-Type": "application/octet-stream",
-        "x-jpmc-distribution-created-date": dt_iso,
-        "x-jpmc-distribution-from-date": dt_iso,
-        "x-jpmc-distribution-to-date": dt_iso,
-        "Digest": ""
-    }
-    with fs_local.open(row["path"], "rb") as file_local:
-        hash_md5 = hashlib.md5()
-        for chunk in iter(lambda: file_local.read(4096), b""):
-            hash_md5.update(chunk)
-        headers["Digest"] = "md5=" + base64.b64encode(hash_md5.digest()).decode()
-    return headers
-
-
-def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1):
+def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1, multipart=True, chunk_size=5 * 2 ** 20):
     """Upload file into Fusion.
 
     Args:
@@ -541,16 +521,18 @@ def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1):
         loop (iterable): Loop of files to iterate through.
         parallel (bool): Is parallel mode enabled.
         n_par (int): Number of subprocesses.
+        multipart (bool): Is multipart upload.
+        chunk_size (int): Maximum chunk size.
 
     Returns: List of update statuses.
 
     """
     def _upload(row):
-        kw = {"headers": _construct_headers(fs_local, row)}
         p_url = row["url"]
         try:
+            mp = multipart and fs_local.size(row["path"]) > chunk_size
             with fs_local.open(row["path"], "rb") as file_local:
-                fs_fusion.put(file_local, p_url, chunk_size=100 * 2 ** 20, method="put", **kw)
+                fs_fusion.put(file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp)
             return True, row["path"], None
         except Exception as ex:
             logger.log(
