@@ -54,14 +54,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         super().__init__(*args, **kwargs)
 
-    @property
-    def loop(self):
-        return self._loop
-
-    @loop.setter
-    def loop(self, value):
-        self._loop = value
-
     async def _decorate_url_a(self, url):
         url = urljoin(f'{self.client_kwargs["root_url"]}catalogs/', url) if "http" not in url else url
         return url
@@ -80,7 +72,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             return False
 
     async def _changes(self, url):
-        path = self._decorate_url(url)
+        url = self._decorate_url(url)
         try:
             session = await self.set_session()
             async with session.get(url, **self.kwargs) as r:
@@ -306,7 +298,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             async with meth(rpath, data=lpath.read(), **kw) as resp:
                 self._raise_not_found_for_status(resp, rpath)
         else:
-            async with session.post(rpath + f"/operations?operationType=upload") as resp:
+            async with session.post(rpath + "/operations?operationType=upload") as resp:
                 self._raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
 
