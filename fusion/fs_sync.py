@@ -171,8 +171,7 @@ def fsync(fs_fusion: fsspec.filesystem,
           log_level=logging.ERROR,
           log_path: str = "."
           ):
-    """
-    Synchronisation between the local filesystem and Fusion.
+    """Synchronisation between the local filesystem and Fusion.
 
     Args:
         fs_fusion (fsspec.filesystem): Fusion filesystem.
