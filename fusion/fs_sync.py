@@ -183,7 +183,7 @@ def fsync(fs_fusion: fsspec.filesystem,
         direction (str): Direction of synchronisation: upload/download.
         flatten (bool): Flatten the folder structure.
         dataset_format (str): Dataset format for upload/download.
-        n_par (int, optional): Specify how many distributions to download in parallel. Defaults to all cpus available.
+        n_par (int, optional): Specify how many distributions to download in parallel. Defaults to all.
         show_progress (bool, optional): Display a progress bar during data download Defaults to True.
         log_level: Logging level. Error level by default.
         log_path (str, optional): The folder path where the log is stored.
