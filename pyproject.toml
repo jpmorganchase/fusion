@@ -51,16 +51,16 @@ tox  = { version = "^3.20.1", optional = true}
 tox-conda = {version = "^0.8.2", optional = true}
 virtualenv  = { version = "^20.2.2", optional = true}
 pip  = { version = "^20.3.1", optional = true}
-mkdocs = {version = "^1.2.3", optional = true}
-mkdocs-material = {version = "^8.1.0", optional = true}
-mkdocs-material-extensions = {version="^1.0.1",optional=true}
-mkdocstrings  = { version = "^0.16.0", optional = true}
-mkdocs-autorefs = {version = "^0.2.1", optional = true}
-mkdocs-include-markdown-plugin = {version = "^2.8.0", optional=true}
-mkdocs-git-revision-date-plugin = {version = "^0.3.1", optional = true}
-mkdocs-jupyter = {version = "^0.22.0", optional = true}
-jupyter_contrib_nbextensions = {version = "^0.7.0", optional = true}
-mike = {version = "^1.1.2", optional = true}
+mkdocs = {version = ">=1.2.3", optional = true}
+mkdocs-material = {version = ">=8.1.0", optional = true}
+mkdocs-material-extensions = {version=">=1.0.1",optional=true}
+mkdocstrings  = { version = ">=0.16.0", optional = true}
+mkdocs-autorefs = {version = ">=0.2.1", optional = true}
+mkdocs-include-markdown-plugin = {version = ">=2.8.0", optional=true}
+mkdocs-git-revision-date-plugin = {version = ">=0.3.1", optional = true}
+mkdocs-jupyter = {version = ">=0.22.0", optional = true}
+jupyter_contrib_nbextensions = {version = ">=0.7.0", optional = true}
+mike = {version = ">=1.1.2", optional = true}
 twine  = { version = "^3.3.0", optional = true}
 pre-commit = {version = "^2.12.0", optional = true}
 toml = {version = "^0.10.2", optional = true}
@@ -98,8 +98,8 @@ doc = [
     "mkdocs-autorefs",
     "mkdocs-include-markdown-plugin",
     "mkdocs-git-revision-date-plugin",
-	"mkdocs-jupyter",
-	"jupyter_contrib_nbextensions",
+    "mkdocs-jupyter",
+    "jupyter_contrib_nbextensions",
     "mike"
     ]
 
