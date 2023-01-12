@@ -96,9 +96,11 @@ def test_FusionCredentials_from_both_alt_dict(
     assert creds.proxies['https'] == example_https_proxy
     assert creds.proxies['http'] == example_http_proxy
 
+
 def test_date_parsing():
     import datetime
     from fusion.utils import _normalise_dt_param
+
     assert '2020-12-12' == _normalise_dt_param(20201212)
     assert '2020-12-12' == _normalise_dt_param('20201212')
     assert '2020-12-12' == _normalise_dt_param('2020-12-12')

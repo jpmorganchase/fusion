@@ -219,7 +219,7 @@ def normalise_dt_param_str(dt: str) -> tuple:
 
 def distribution_to_filename(
     root_folder: str, dataset: str, datasetseries: str, file_format: str, catalog: str = 'common'
-) -> str:
+) -> Path:
     """Returns a filename representing a dataset distribution.
 
     Args:
@@ -230,16 +230,12 @@ def distribution_to_filename(
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
 
     Returns:
-        str: FQ distro file name
+        tuple: A tuple of dates.
     """
     if datasetseries[-1] == '/' or datasetseries[-1] == '\\':
         datasetseries = datasetseries[0:-1]
     file_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
-
-    sep = "/"
-    if "\\" in root_folder:
-        sep = "\\"
-    return f"{root_folder}{sep}{file_name}"
+    return Path(root_folder, file_name)
 
 
 def _filename_to_distribution(file_name: str) -> tuple:

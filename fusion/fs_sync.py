@@ -1,24 +1,25 @@
 """Fusion fsync."""
 
-import time
-import sys
-import os
-from os.path import relpath
-import json
-from pathlib import Path
-import hashlib
 import base64
+import hashlib
+import json
 import logging
-from tqdm.auto import tqdm
-from joblib import Parallel, delayed
+import os
+import sys
+import time
+from os.path import relpath
+from pathlib import Path
+
 import fsspec
 import pandas as pd
-from .utils import distribution_to_filename, path_to_url, validate_file_names, upload_files, \
-    cpu_count
+from joblib import Parallel, delayed
+from tqdm.auto import tqdm
+
+from .utils import cpu_count, distribution_to_filename, path_to_url, upload_files, validate_file_names
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
-DEFAULT_CHUNK_SIZE = 2 ** 16
+DEFAULT_CHUNK_SIZE = 2**16
 
 
 def _get_loop(df, show_progress):
@@ -91,8 +92,10 @@ def _get_fusion_df(fs_fusion, datasets_lst, catalog, flatten=False, dataset_form
             changes = changes[0]["distributions"]
             urls = [catalog + "/datasets/" + "/".join(i["key"].split(".")) for i in changes]
             urls = [i.replace("distribution", "distributions") for i in urls]
-            urls = ["/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:]) if "datasetseries" not in i else i
-                    for i in urls]
+            urls = [
+                "/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:]) if "datasetseries" not in i else i
+                for i in urls
+            ]
             # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
             sz = [int(i["values"][1]) for i in changes]
             md = [i["values"][2].split("md5=")[-1] for i in changes]
@@ -122,7 +125,7 @@ def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None
             fs_local.mkdir(local_dir, exist_ok=True, create_parents=True)
 
         local_files = fs_local.find(local_dir)
-        local_rel_path = [i[i.find(local_dir):] for i in local_files]
+        local_rel_path = [i[i.find(local_dir) :] for i in local_files]
         local_file_validation = validate_file_names(local_rel_path, fs_fusion)
         local_files += [f for flag, f in zip(local_file_validation, local_files) if flag]
         local_files_rel += [os.path.join(local_dir, relpath(i, local_dir)).replace("\\", "/") for i in local_files]
@@ -140,8 +143,15 @@ def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None
     return df_local
 
 
-def _synchronize(fs_fusion: fsspec.filesystem, fs_local: fsspec.filesystem, df_local: pd.DataFrame,
-                 df_fusion: pd.DataFrame, direction: str = "upload", n_par: int = None, show_progress: bool = True):
+def _synchronize(
+    fs_fusion: fsspec.filesystem,
+    fs_local: fsspec.filesystem,
+    df_local: pd.DataFrame,
+    df_fusion: pd.DataFrame,
+    direction: str = "upload",
+    n_par: int = None,
+    show_progress: bool = True,
+):
     """Synchronize two filesystems."""
 
     n_par = cpu_count(n_par)
@@ -158,19 +168,20 @@ def _synchronize(fs_fusion: fsspec.filesystem, fs_local: fsspec.filesystem, df_l
     return res
 
 
-def fsync(fs_fusion: fsspec.filesystem,
-          fs_local: fsspec.filesystem,
-          products: list = None,
-          datasets: list = None,
-          catalog: str= None,
-          direction: str = "upload",
-          flatten=False,
-          dataset_format=None,
-          n_par=None,
-          show_progress=True,
-          log_level=logging.ERROR,
-          log_path: str = "."
-          ):
+def fsync(
+    fs_fusion: fsspec.filesystem,
+    fs_local: fsspec.filesystem,
+    products: list = None,
+    datasets: list = None,
+    catalog: str = None,
+    direction: str = "upload",
+    flatten=False,
+    dataset_format=None,
+    n_par=None,
+    show_progress=True,
+    log_level=logging.ERROR,
+    log_path: str = ".",
+):
     """Synchronisation between the local filesystem and Fusion.
 
     Args:

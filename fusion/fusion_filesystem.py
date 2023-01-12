@@ -1,25 +1,26 @@
 """Fusion FileSystem."""
 
-import logging
-from urllib.parse import urljoin
-import hashlib
 import base64
-from copy import deepcopy
+import hashlib
 import io
-from fsspec.implementations.http import HTTPFileSystem, sync
-from fsspec.callbacks import _DEFAULT_CALLBACK
-from fsspec.utils import nullcontext
+import logging
+from copy import deepcopy
+from urllib.parse import urljoin
+
 import pandas as pd
-from .utils import get_client
+from fsspec.callbacks import _DEFAULT_CALLBACK
+from fsspec.implementations.http import HTTPFileSystem, sync
+from fsspec.utils import nullcontext
+
 from .authentication import FusionCredentials
+from .utils import get_client
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 
 
 class FusionHTTPFileSystem(HTTPFileSystem):
-    """Fusion HTTP filesystem.
-    """
+    """Fusion HTTP filesystem."""
 
     def __init__(self, credentials='config/client_credentials.json', *args, **kwargs):
         """Same signature as the fsspec HTTPFileSystem.
@@ -38,8 +39,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 self.credentials = credentials
             else:
                 self.credentials = FusionCredentials.from_object(credentials)
-            kwargs["client_kwargs"] = {"credentials": self.credentials,
-                                       "root_url": "https://fusion-api.jpmorgan.com/fusion/v1/"}
+            kwargs["client_kwargs"] = {
+                "credentials": self.credentials,
+                "root_url": "https://fusion-api.jpmorgan.com/fusion/v1/",
+            }
         else:
             self.credentials = kwargs["client_kwargs"]["credentials"]
 
@@ -225,7 +228,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         url = self._decorate_url(url)
         return super().cat(url, start=start, end=end, **kwargs)
 
-    def get(self, rpath, lpath, chunk_size=5 * 2 ** 20, callback=_DEFAULT_CALLBACK, **kwargs):
+    def get(self, rpath, lpath, chunk_size=5 * 2**20, callback=_DEFAULT_CALLBACK, **kwargs):
         """Copy file(s) to local.
 
         Args:
@@ -285,9 +288,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         method = method.lower()
         if method not in ("post", "put"):
-            raise ValueError(
-                f"method has to be either 'post' or 'put', not: {method!r}"
-            )
+            raise ValueError(f"method has to be either 'post' or 'put', not: {method!r}")
 
         headers = kwargs["headers"]
 
@@ -308,26 +309,23 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 resps.append(resp)
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
-            async with session.post(url=rpath + f"/operations/upload?operationId={operation_id}",
-                                    json={"parts": resps}, **kw) as resp:
-                self._raise_not_found_for_status(resp,
-                                                 rpath + f"/operations/upload?operationId={operation_id}")
+            async with session.post(
+                url=rpath + f"/operations/upload?operationId={operation_id}", json={"parts": resps}, **kw
+            ) as resp:
+                self._raise_not_found_for_status(resp, rpath + f"/operations/upload?operationId={operation_id}")
 
     @staticmethod
-    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2 ** 20, multipart=False):
+    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2**20, multipart=False):
 
         headers = {
             "Content-Type": "application/octet-stream",
             "x-jpmc-distribution-created-date": dt_iso,
             "x-jpmc-distribution-from-date": dt_iso,
             "x-jpmc-distribution-to-date": dt_iso,
-            "Digest": ""
+            "Digest": "",
         }
         headers["Content-Type"] = "application/json" if multipart else headers["Content-Type"]
-        headers_chunks = {
-            "Content-Type": "application/octet-stream",
-            "Digest": ""
-        }
+        headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
 
         headers_chunk_lst = []
         hash_md5 = hashlib.md5()
@@ -343,14 +341,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         headers["Digest"] = "md5=" + base64.b64encode(hash_md5.digest()).decode()
         return headers, headers_chunk_lst
 
-    def put(self,
-            lpath,
-            rpath,
-            chunk_size=5 * 2 ** 20,
-            callback=_DEFAULT_CALLBACK,
-            method="put",
-            multipart=False,
-            **kwargs):
+    def put(
+        self, lpath, rpath, chunk_size=5 * 2**20, callback=_DEFAULT_CALLBACK, method="put", multipart=False, **kwargs
+    ):
         """Copy file(s) from local.
 
         Args:
@@ -406,11 +399,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         return super().glob(path, **kwargs)
 
-    def open(self,
-             path,
-             mode="rb",
-             **kwargs,
-             ):
+    def open(
+        self,
+        path,
+        mode="rb",
+        **kwargs,
+    ):
         """Open.
 
         Args:
