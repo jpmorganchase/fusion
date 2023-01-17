@@ -147,6 +147,9 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
     return res
 
 
+def read_json(path: str, columns: list = None, filters: list = None, fs=None):
+    pd.read_json(path=path, columns=columns, fs=fs)
+
 def read_parquet(path: Union[list, str], columns: list = None, filters: list = None, fs=None):
     """Read parquet files(s) to pandas.
 

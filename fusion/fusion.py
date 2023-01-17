@@ -25,6 +25,7 @@ from .utils import (
     path_to_url,
     read_csv,
     read_parquet,
+    read_json,
     stream_single_file_new_session,
     upload_files,
     validate_file_names,
@@ -628,15 +629,15 @@ class Fusion:
             'csv': read_csv,
             'parquet': read_parquet,
             'parq': read_parquet,
-            'json': pd.read_json,
+            'json': read_json,
             'raw': read_csv,
         }
 
         pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
-            'csv': {'columns': columns, 'filters': filters},
-            'parquet': {'columns': columns, 'filters': filters},
-            'json': {'columns': columns, 'filters': filters},
-            'raw': {'columns': columns, 'filters': filters},
+            'csv': {'columns': columns, 'filters': filters, 'fs': self.fs},
+            'parquet': {'columns': columns, 'filters': filters, 'fs': self.fs},
+            'json': {'columns': columns, 'filters': filters, 'fs': self.fs},
+            'raw': {'columns': columns, 'filters': filters, 'fs': self.fs},
         }
 
         pd_read_default_kwargs['parq'] = pd_read_default_kwargs['parquet']
