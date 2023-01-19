@@ -2,41 +2,45 @@
 
 import datetime
 import logging
-import pyarrow.parquet as pq
-import pandas as pd
-import re
-import requests
 import os
-import aiohttp
-from typing import Union
-from pathlib import Path
-from pyarrow import csv, json
-from io import BytesIO
-from urllib.parse import urlparse, urlunparse
-from joblib import Parallel, delayed
+import re
 import sys
+from io import BytesIO
+from typing import Union
+from urllib.parse import urlparse, urlunparse
+
+import aiohttp
+import pandas as pd
+import pyarrow.parquet as pq
+import requests
+from joblib import Parallel, delayed
+from pyarrow import csv, json
+
 if sys.version_info >= (3, 7):
     from contextlib import nullcontext
 else:
+
     class nullcontext(object):
         """Class for Python 3.6 compatibility."""
+
         def __init__(self, dummy_resource=None):
-            """Constructor.
-            """
+            """Constructor."""
             self.dummy_resource = dummy_resource
 
         def __enter__(self):
-            """Enter.
-            """
+            """Enter."""
             return self.dummy_resource
 
         def __exit__(self, *args):
-            """Exit.
-            """
+            """Exit."""
             pass
 
-from urllib3.util.retry import Retry
+
 import multiprocessing as mp
+
+import fsspec
+from urllib3.util.retry import Retry
+
 from .authentication import FusionCredentials, FusionOAuthAdapter
 
 logger = logging.getLogger(__name__)
@@ -143,6 +147,9 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
     return res
 
 
+def read_json(path: str, columns: list = None, filters: list = None, fs=None):
+    pd.read_json(path=path, columns=columns, fs=fs)
+
 def read_parquet(path: Union[list, str], columns: list = None, filters: list = None, fs=None):
     """Read parquet files(s) to pandas.
 
@@ -156,8 +163,11 @@ def read_parquet(path: Union[list, str], columns: list = None, filters: list = N
         pandas.DataFrame: a dataframe containing the data.
 
     """
-    return pq.ParquetDataset(path, use_legacy_dataset=False, filters=filters, filesystem=fs,
-                             memory_map=True).read_pandas(columns=columns).to_pandas()
+    return (
+        pq.ParquetDataset(path, use_legacy_dataset=False, filters=filters, filesystem=fs, memory_map=True)
+        .read_pandas(columns=columns)
+        .to_pandas()
+    )
 
 
 def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -> str:
@@ -212,7 +222,7 @@ def normalise_dt_param_str(dt: str) -> tuple:
 
 def distribution_to_filename(
     root_folder: str, dataset: str, datasetseries: str, file_format: str, catalog: str = 'common'
-) -> Path:
+) -> str:
     """Returns a filename representing a dataset distribution.
 
     Args:
@@ -223,12 +233,16 @@ def distribution_to_filename(
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
 
     Returns:
-        tuple: A tuple of dates.
+        str: FQ distro file name
     """
     if datasetseries[-1] == '/' or datasetseries[-1] == '\\':
         datasetseries = datasetseries[0:-1]
     file_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
-    return Path(root_folder, file_name)
+
+    sep = "/"
+    if "\\" in root_folder:
+        sep = "\\"
+    return f"{root_folder}{sep}{file_name}"
 
 
 def _filename_to_distribution(file_name: str) -> tuple:
@@ -291,6 +305,7 @@ async def get_client(credentials, **kwargs):
     Returns:
 
     """
+
     async def on_request_start(session, trace_config_ctx, params):
         payload = (
             {
@@ -386,7 +401,7 @@ def stream_single_file_new_session(
     overwrite: bool = True,
     block_size=DEFAULT_CHUNK_SIZE,
     dry_run: bool = False,
-    fs=None
+    fs: fsspec.AbstractFileSystem = fsspec.filesystem('file'),
 ) -> tuple:
     """Function to stream a single file from the API to a file on disk.
 
@@ -407,59 +422,28 @@ def stream_single_file_new_session(
     if dry_run:
         return _stream_single_file_new_session_dry_run(credentials, url, output_file)
 
-    output_file_path = Path(output_file)
-    if not overwrite and output_file_path.exists():
+    if not overwrite and fs.exists(output_file):
         return (True, output_file, None)
 
-    tmp_name = output_file_path.with_name(output_file_path.name + ".tmp")
     try:
         with get_session(credentials, url).get(url, stream=True) as r:
             r.raise_for_status()
             byte_cnt = 0
-            with fs.open(tmp_name, "wb") as outfile:
+            with fs.open(output_file, "wb") as outfile:
                 for chunk in r.iter_content(block_size):
                     byte_cnt += len(chunk)
                     outfile.write(chunk)
-        tmp_name.rename(output_file_path)
-        try:
-            tmp_name.unlink()
-        except FileNotFoundError:
-            pass
         logger.log(
             VERBOSE_LVL,
-            f'Wrote {byte_cnt:,} bytes to {output_file_path}, via {tmp_name}',
+            f'Wrote {byte_cnt:,} bytes to {output_file}',
         )
         return (True, output_file, None)
     except Exception as ex:
         logger.log(
             VERBOSE_LVL,
-            f'Failed to write to {output_file_path}, via {tmp_name}. ex - {ex}',
+            f'Failed to write to {output_file}. ex - {ex}',
         )
         return False, output_file, ex
-
-
-def _stream_single_file(session: requests.Session, url: str, output_file: str, block_size=DEFAULT_CHUNK_SIZE):
-    """Streams a file downloaded from a URL to a file.
-
-    Args:
-        session (FusionCredentials): A HTTP Session
-        url (str): The URL to call for the file download.
-        output_file (str): The filename that the data will be saved into.
-        block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
-
-    """
-    output_file_path = Path(output_file)
-    tmp_name = output_file_path.with_name(output_file_path.name + ".tmp")
-    with session.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(tmp_name, "wb") as outfile:
-            for chunk in r.iter_content(block_size):
-                outfile.write(chunk)
-    tmp_name.rename(output_file_path)
-    try:
-        tmp_name.unlink()
-    except FileNotFoundError:
-        pass
 
 
 def validate_file_names(paths, fs_fusion):
@@ -494,8 +478,10 @@ def validate_file_names(paths, fs_fusion):
     if not all(validation):
         for i, p in enumerate(paths):
             if not validation[i]:
-                logger.warning(f"The file in {p} has a non-compliant name and will not be processed. "
-                               f"Please rename the file to dataset__catalog__yyyymmdd.format")
+                logger.warning(
+                    f"The file in {p} has a non-compliant name and will not be processed. "
+                    f"Please rename the file to dataset__catalog__yyyymmdd.format"
+                )
     return validation
 
 
@@ -512,7 +498,7 @@ def path_to_url(x):
     return "/".join(distribution_to_url("", dataset, date, ext, catalog).split("/")[1:])
 
 
-def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1, multipart=True, chunk_size=5 * 2 ** 20):
+def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1, multipart=True, chunk_size=5 * 2**20):
     """Upload file into Fusion.
 
     Args:
@@ -527,6 +513,7 @@ def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1, multipart=T
     Returns: List of update statuses.
 
     """
+
     def _upload(row):
         p_url = row["url"]
         try:

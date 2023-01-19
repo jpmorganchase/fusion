@@ -5,12 +5,13 @@ import sys
 import warnings
 from pathlib import Path
 from typing import Dict, List, Union
+from zipfile import ZipFile
+
 import pandas as pd
 import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
-from zipfile import ZipFile
 
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
@@ -21,12 +22,13 @@ from .utils import (
     distribution_to_url,
     get_session,
     normalise_dt_param_str,
+    path_to_url,
     read_csv,
     read_parquet,
+    read_json,
     stream_single_file_new_session,
+    upload_files,
     validate_file_names,
-    path_to_url,
-    upload_files
 )
 
 logger = logging.getLogger(__name__)
@@ -60,7 +62,7 @@ class Fusion:
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
         fs=None,
-        log_path: str = "."
+        log_path: str = ".",
     ) -> None:
         """Constructor to instantiate a new Fusion object.
 
@@ -127,7 +129,6 @@ class Fusion:
             None
         """
         return self._default_catalog
-
 
     @default_catalog.setter
     def default_catalog(self, catalog) -> None:
@@ -335,7 +336,9 @@ class Fusion:
 
         return df
 
-    def list_dataset_attributes(self, dataset: str, catalog: str = None, output: bool = False, display_all_columns: bool = False) -> pd.DataFrame:
+    def list_dataset_attributes(
+        self, dataset: str, catalog: str = None, output: bool = False, display_all_columns: bool = False
+    ) -> pd.DataFrame:
         """Returns the list of attributes that are in the dataset.
 
         Args:
@@ -533,7 +536,7 @@ class Fusion:
                 "url": distribution_to_url(self.root_url, series[1], series[2], series[3], series[0]),
                 "output_file": distribution_to_filename(download_folder, series[1], series[2], series[3], series[0]),
                 "overwrite": force_download,
-                "fs": self.fs
+                "fs": self.fs,
             }
             for series in required_series
         ]
@@ -602,7 +605,15 @@ class Fusion:
         if not download_folder:
             download_folder = self.download_folder
         download_res = self.download(
-            dataset, dt_str, dataset_format, catalog, n_par, show_progress, force_download, download_folder, return_paths=True
+            dataset,
+            dt_str,
+            dataset_format,
+            catalog,
+            n_par,
+            show_progress,
+            force_download,
+            download_folder,
+            return_paths=True,
         )
 
         if not all(res[0] for res in download_res):
@@ -618,15 +629,15 @@ class Fusion:
             'csv': read_csv,
             'parquet': read_parquet,
             'parq': read_parquet,
-            'json': pd.read_json,
+            'json': read_json,
             'raw': read_csv,
         }
 
         pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
-            'csv': {'columns': columns, 'filters': filters},
-            'parquet': {'columns': columns, 'filters': filters},
-            'json': {'columns': columns, 'filters': filters},
-            'raw': {'columns': columns, 'filters': filters},
+            'csv': {'columns': columns, 'filters': filters, 'fs': self.fs},
+            'parquet': {'columns': columns, 'filters': filters, 'fs': self.fs},
+            'json': {'columns': columns, 'filters': filters, 'fs': self.fs},
+            'raw': {'columns': columns, 'filters': filters, 'fs': self.fs},
         }
 
         pd_read_default_kwargs['parq'] = pd_read_default_kwargs['parquet']
@@ -646,8 +657,12 @@ class Fusion:
         if dataset_format in ["parquet", "parq"]:
             df = pd_reader(files, **pd_read_kwargs)
         elif dataset_format == 'raw':
-            dataframes = (pd.concat([pd_reader(ZipFile(f).open(p), **pd_read_kwargs) 
-                                        for p in ZipFile(f).namelist()], ignore_index=True) for f in files)
+            dataframes = (
+                pd.concat(
+                    [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()], ignore_index=True
+                )
+                for f in files
+            )
             df = pd.concat(dataframes, ignore_index=True)
         else:
             dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)
@@ -655,17 +670,18 @@ class Fusion:
 
         return df
 
-    def upload(self,
-               path: str,
-               dataset: str = None,
-               dt_str: str = 'latest',
-               catalog: str = None,
-               n_par: int = None,
-               show_progress: bool = True,
-               return_paths: bool = False,
-               multipart = True,
-               chunk_size=5 * 2 ** 20,
-               ):
+    def upload(
+        self,
+        path: str,
+        dataset: str = None,
+        dt_str: str = 'latest',
+        catalog: str = None,
+        n_par: int = None,
+        show_progress: bool = True,
+        return_paths: bool = False,
+        multipart=True,
+        chunk_size=5 * 2**20,
+    ):
         """Uploads the requested files/files to Fusion.
 
         Args:
@@ -708,10 +724,13 @@ class Fusion:
                 file_format = path.split(".")[-1]
                 dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
                 dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
-                if catalog not in fs_fusion.ls('') or dataset not in [i.split('/')[-1] for i in
-                                                                      fs_fusion.ls(f"{catalog}/datasets")]:
-                    msg = f"File file has not been uploaded, one of the catalog: {catalog} " \
-                          f"or dataset: {dataset} does not exit."
+                if catalog not in fs_fusion.ls('') or dataset not in [
+                    i.split('/')[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
+                ]:
+                    msg = (
+                        f"File file has not been uploaded, one of the catalog: {catalog} "
+                        f"or dataset: {dataset} does not exit."
+                    )
                     warnings.warn(msg)
                     return [(False, path, Exception(msg))]
                 local_url_eqiv = [path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}")]
@@ -726,7 +745,9 @@ class Fusion:
 
         n_par = cpu_count(n_par)
         parallel = True if len(df) > 1 else False
-        res = upload_files(fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par, multipart=multipart, chunk_size=chunk_size)
+        res = upload_files(
+            fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par, multipart=multipart, chunk_size=chunk_size
+        )
 
         if not all(r[0] for r in res):
             failed_res = [r for r in res if not r[0]]
