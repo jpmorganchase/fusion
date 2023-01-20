@@ -659,7 +659,7 @@ class Fusion:
         elif dataset_format == 'raw':
             dataframes = (
                 pd.concat(
-                    [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()], ignore_index=True
+                    [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()], ignore_index=True  # type: ignore
                 )  # type: ignore
                 for f in files
             )  # type: ignore
