@@ -8,7 +8,7 @@ import sys
 from io import BytesIO
 from typing import Union
 from urllib.parse import urlparse, urlunparse
-
+from pathlib import Path
 import aiohttp
 import pandas as pd
 import pyarrow.parquet as pq
@@ -148,7 +148,19 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
 
 
 def read_json(path: str, columns: list = None, filters: list = None, fs=None):
+    """Read json files(s) to pandas.
+
+    Args:
+        path (str): path or a list of paths to parquet files.
+        columns (list): list of selected fields.
+        filters (list): filters.
+        fs: filesystem object.
+
+    Returns:
+        pandas.DataFrame: a dataframe containing the data.
+    """
     pd.read_json(path=path, columns=columns, fs=fs)
+
 
 def read_parquet(path: Union[list, str], columns: list = None, filters: list = None, fs=None):
     """Read parquet files(s) to pandas.
@@ -256,7 +268,7 @@ def _filename_to_distribution(file_name: str) -> tuple:
     """
     dataset, catalog, series_format = Path(file_name).name.split('__')
     datasetseries, file_format = series_format.split('.')
-    return (catalog, dataset, datasetseries, file_format)
+    return catalog, dataset, datasetseries, file_format
 
 
 def distribution_to_url(
