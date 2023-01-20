@@ -655,12 +655,12 @@ class Fusion:
                 f"in date or date range: {dt_str} and format: {dataset_format}"
             )
         if dataset_format in ["parquet", "parq"]:
-            df = pd_reader(files, **pd_read_kwargs)
+            df = pd_reader(files, **pd_read_kwargs)  # type: ignore
         elif dataset_format == 'raw':
             dataframes = (
                 pd.concat(
                     [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()], ignore_index=True
-                )
+                )  # type: ignore
                 for f in files
             )
             df = pd.concat(dataframes, ignore_index=True)
