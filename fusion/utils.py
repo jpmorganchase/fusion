@@ -159,7 +159,36 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
     Returns:
         pandas.DataFrame: a dataframe containing the data.
     """
-    pd.read_json(path=path, columns=columns, fs=fs)
+
+    try:
+        try:
+            tbl = _json_to_table(path, fs)
+        except Exception as err:
+            logger.log(
+                VERBOSE_LVL,
+                f'Failed to read {path}, with arrow reader. {err}',
+            )
+            raise Exception
+
+        out = BytesIO()
+        pq.write_table(tbl, out)
+        del tbl
+        res = pq.read_table(out, filters=filters, columns=columns).to_pandas()
+    except Exception as err:
+        logger.log(
+            VERBOSE_LVL,
+            f"Could not parse {path} properly. " f"Trying with pandas json reader. {err}",
+        )
+        try:
+            with (fs.open(path) if fs else nullcontext(path)) as f:
+                res = pd.read_json(f)
+        except Exception as err:
+            logger.error(
+                VERBOSE_LVL,
+                f"Could not parse {path} properly. " f"{err}",
+            )
+            raise Exception(err)
+    return res
 
 
 def read_parquet(path: Union[list, str], columns: list = None, filters: list = None, fs=None):
