@@ -662,10 +662,10 @@ class Fusion:
                     [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()], ignore_index=True
                 )  # type: ignore
                 for f in files
-            )
+            )  # type: ignore
             df = pd.concat(dataframes, ignore_index=True)
         else:
-            dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)
+            dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)  # type: ignore
             df = pd.concat(dataframes, ignore_index=True)
 
         return df
