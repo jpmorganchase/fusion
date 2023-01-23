@@ -6,9 +6,10 @@ import os
 import re
 import sys
 from io import BytesIO
+from pathlib import Path
 from typing import Union
 from urllib.parse import urlparse, urlunparse
-from pathlib import Path
+
 import aiohttp
 import pandas as pd
 import pyarrow.parquet as pq
@@ -121,7 +122,7 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
-                f'Failed to read {path}, with comma delimiter. {err}',
+                f"Failed to read {path}, with comma delimiter. {err}",
             )
             raise Exception
 
@@ -132,7 +133,8 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
     except Exception as err:
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. " f"Trying with pandas csv reader. {err}",
+            f"Could not parse {path} properly. "
+            f"Trying with pandas csv reader. {err}",
         )
         try:
             with (fs.open(path) if fs else nullcontext(path)) as f:
@@ -140,10 +142,13 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
-                f"Could not parse {path} properly. " f"Trying with pandas csv reader pandas engine. {err}",
+                f"Could not parse {path} properly. "
+                f"Trying with pandas csv reader pandas engine. {err}",
             )
             with (fs.open(path) if fs else nullcontext(path)) as f:
-                res = pd.read_table(f, usecols=columns, index_col=False, engine="python", delimiter=None)
+                res = pd.read_table(
+                    f, usecols=columns, index_col=False, engine="python", delimiter=None
+                )
     return res
 
 
@@ -166,7 +171,7 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
-                f'Failed to read {path}, with arrow reader. {err}',
+                f"Failed to read {path}, with arrow reader. {err}",
             )
             raise Exception
 
@@ -177,7 +182,8 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
     except Exception as err:
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. " f"Trying with pandas json reader. {err}",
+            f"Could not parse {path} properly. "
+            f"Trying with pandas json reader. {err}",
         )
         try:
             with (fs.open(path) if fs else nullcontext(path)) as f:
@@ -191,7 +197,9 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
     return res
 
 
-def read_parquet(path: Union[list, str], columns: list = None, filters: list = None, fs=None):
+def read_parquet(
+    path: Union[list, str], columns: list = None, filters: list = None, fs=None
+):
     """Read parquet files(s) to pandas.
 
     Args:
@@ -205,7 +213,13 @@ def read_parquet(path: Union[list, str], columns: list = None, filters: list = N
 
     """
     return (
-        pq.ParquetDataset(path, use_legacy_dataset=False, filters=filters, filesystem=fs, memory_map=True)
+        pq.ParquetDataset(
+            path,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+        )
         .read_pandas(columns=columns)
         .to_pandas()
     )
@@ -258,11 +272,17 @@ def normalise_dt_param_str(dt: str) -> tuple:
     if not date_parts or len(date_parts) > 2:
         raise ValueError(f"Unable to parse {dt} as either a date or an interval")
 
-    return tuple((_normalise_dt_param(dt_part) if dt_part else dt_part for dt_part in date_parts))
+    return tuple(
+        (_normalise_dt_param(dt_part) if dt_part else dt_part for dt_part in date_parts)
+    )
 
 
 def distribution_to_filename(
-    root_folder: str, dataset: str, datasetseries: str, file_format: str, catalog: str = 'common'
+    root_folder: str,
+    dataset: str,
+    datasetseries: str,
+    file_format: str,
+    catalog: str = "common",
 ) -> str:
     """Returns a filename representing a dataset distribution.
 
@@ -276,7 +296,7 @@ def distribution_to_filename(
     Returns:
         str: FQ distro file name
     """
-    if datasetseries[-1] == '/' or datasetseries[-1] == '\\':
+    if datasetseries[-1] == "/" or datasetseries[-1] == "\\":
         datasetseries = datasetseries[0:-1]
     file_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
 
@@ -295,13 +315,17 @@ def _filename_to_distribution(file_name: str) -> tuple:
     Returns:
         tuple: A tuple consisting of catalog id, dataset id, datasetseries instane id, and file format (e.g. CSV).
     """
-    dataset, catalog, series_format = Path(file_name).name.split('__')
-    datasetseries, file_format = series_format.split('.')
+    dataset, catalog, series_format = Path(file_name).name.split("__")
+    datasetseries, file_format = series_format.split(".")
     return catalog, dataset, datasetseries, file_format
 
 
 def distribution_to_url(
-    root_url: str, dataset: str, datasetseries: str, file_format: str, catalog: str = 'common'
+    root_url: str,
+    dataset: str,
+    datasetseries: str,
+    file_format: str,
+    catalog: str = "common",
 ) -> str:
     """Returns the API URL to download a dataset distribution.
 
@@ -315,7 +339,7 @@ def distribution_to_url(
     Returns:
         str: A URL for the API distribution endpoint.
     """
-    if datasetseries[-1] == '/' or datasetseries[-1] == '\\':
+    if datasetseries[-1] == "/" or datasetseries[-1] == "\\":
         datasetseries = datasetseries[0:-1]
 
     return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
@@ -332,7 +356,7 @@ def _get_canonical_root_url(any_url: str) -> str:
 
     """
     url_parts = urlparse(any_url)
-    root_url = urlunparse((url_parts[0], url_parts[1], '', '', '', ''))
+    root_url = urlunparse((url_parts[0], url_parts[1], "", "", "", ""))
     return root_url
 
 
@@ -355,7 +379,7 @@ async def get_client(credentials, **kwargs):
                 "client_secret": credentials.client_secret,
                 "aud": credentials.resource,
             }
-            if credentials.grant_type == 'client_credentials'
+            if credentials.grant_type == "client_credentials"
             else {
                 "grant_type": "password",
                 "client_id": credentials.client_id,
@@ -366,13 +390,15 @@ async def get_client(credentials, **kwargs):
         )
         async with aiohttp.ClientSession() as session:
             if credentials.proxies:
-                response = await session.post(credentials.auth_url, data=payload, proxy=http_proxy)
+                response = await session.post(
+                    credentials.auth_url, data=payload, proxy=http_proxy
+                )
             else:
                 response = await session.post(credentials.auth_url, data=payload)
             response_data = await response.json()
 
         access_token = response_data["access_token"]
-        params.headers.update({'Authorization': f'Bearer {access_token}'})
+        params.headers.update({"Authorization": f"Bearer {access_token}"})
 
     if credentials.proxies:
         if "http" in credentials.proxies.keys():
@@ -399,7 +425,9 @@ def get_session(
 
     """
     if not get_retries:
-        get_retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504])
+        get_retries = Retry(
+            total=5, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504]
+        )
     else:
         get_retries = Retry.from_int(get_retries)
     session = requests.Session()
@@ -442,7 +470,7 @@ def stream_single_file_new_session(
     overwrite: bool = True,
     block_size=DEFAULT_CHUNK_SIZE,
     dry_run: bool = False,
-    fs: fsspec.AbstractFileSystem = fsspec.filesystem('file'),
+    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
 ) -> tuple:
     """Function to stream a single file from the API to a file on disk.
 
@@ -476,13 +504,13 @@ def stream_single_file_new_session(
                     outfile.write(chunk)
         logger.log(
             VERBOSE_LVL,
-            f'Wrote {byte_cnt:,} bytes to {output_file}',
+            f"Wrote {byte_cnt:,} bytes to {output_file}",
         )
         return (True, output_file, None)
     except Exception as ex:
         logger.log(
             VERBOSE_LVL,
-            f'Failed to write to {output_file}. ex - {ex}',
+            f"Failed to write to {output_file}. ex - {ex}",
         )
         return False, output_file, ex
 
@@ -499,17 +527,19 @@ def validate_file_names(paths, fs_fusion):
     """
     file_names = [i.split("/")[-1].split(".")[0] for i in paths]
     validation = []
-    all_catalogs = fs_fusion.ls('')
+    all_catalogs = fs_fusion.ls("")
     all_datasets = {}
     for f_n in file_names:
-        tmp = f_n.split('__')
+        tmp = f_n.split("__")
         if len(tmp) == 3:
             val = tmp[1] in all_catalogs
             if not val:
                 validation.append(False)
             else:
                 if tmp[1] not in all_datasets.keys():
-                    all_datasets[tmp[1]] = [i.split('/')[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
+                    all_datasets[tmp[1]] = [
+                        i.split("/")[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")
+                    ]
 
                 val = tmp[0] in all_datasets[tmp[1]]
                 validation.append(val)
@@ -539,7 +569,15 @@ def path_to_url(x):
     return "/".join(distribution_to_url("", dataset, date, ext, catalog).split("/")[1:])
 
 
-def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1, multipart=True, chunk_size=5 * 2**20):
+def upload_files(
+    fs_fusion,
+    fs_local,
+    loop,
+    parallel=True,
+    n_par=-1,
+    multipart=True,
+    chunk_size=5 * 2**20,
+):
     """Upload file into Fusion.
 
     Args:
@@ -560,7 +598,9 @@ def upload_files(fs_fusion, fs_local, loop, parallel=True, n_par=-1, multipart=T
         try:
             mp = multipart and fs_local.size(row["path"]) > chunk_size
             with fs_local.open(row["path"], "rb") as file_local:
-                fs_fusion.put(file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp)
+                fs_fusion.put(
+                    file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp
+                )
             return True, row["path"], None
         except Exception as ex:
             logger.log(

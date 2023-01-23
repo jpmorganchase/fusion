@@ -23,22 +23,22 @@ def example_https_proxy():
 
 @pytest.fixture
 def example_proxy_http_dict(example_http_proxy):
-    return {'http': example_http_proxy}
+    return {"http": example_http_proxy}
 
 
 @pytest.fixture
 def example_proxy_https_dict(example_https_proxy):
-    return {'https': example_https_proxy}
+    return {"https": example_https_proxy}
 
 
 @pytest.fixture
 def example_proxy_both_dict(example_http_proxy, example_https_proxy):
-    return {'http': example_http_proxy, 'https': example_https_proxy}
+    return {"http": example_http_proxy, "https": example_https_proxy}
 
 
 @pytest.fixture
 def example_proxy_both_alt_dict(example_http_proxy, example_https_proxy):
-    return {'http_proxy': example_http_proxy, 'https_proxy': example_https_proxy}
+    return {"http_proxy": example_http_proxy, "https_proxy": example_https_proxy}
 
 
 @pytest.fixture
@@ -48,7 +48,7 @@ def example_proxy_str1(example_http_proxy):
 
 @pytest.fixture
 def example_proxy_str_bad():
-    return 'not_a_proxy'
+    return "not_a_proxy"
 
 
 @pytest.fixture
@@ -68,14 +68,14 @@ def example_creds_dict(example_client_id, example_client_secret):
 
 @pytest.fixture
 def example_creds_dict_no_pxy(example_creds_dict):
-    example_creds_dict.pop('proxies')
+    example_creds_dict.pop("proxies")
     return example_creds_dict
 
 
 @pytest.fixture
 def example_creds_dict_empty_pxy(example_creds_dict):
-    example_creds_dict['proxies'].pop('http')
-    example_creds_dict['proxies'].pop('https')
+    example_creds_dict["proxies"].pop("http")
+    example_creds_dict["proxies"].pop("https")
     return example_creds_dict
 
 
