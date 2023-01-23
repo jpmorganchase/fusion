@@ -24,8 +24,8 @@ from .utils import (
     normalise_dt_param_str,
     path_to_url,
     read_csv,
-    read_parquet,
     read_json,
+    read_parquet,
     stream_single_file_new_session,
     upload_files,
     validate_file_names,
@@ -51,13 +51,13 @@ class Fusion:
         """
         response = session.get(url)
         response.raise_for_status()
-        table = response.json()['resources']
+        table = response.json()["resources"]
         df = pd.DataFrame(table).reset_index(drop=True)
         return df
 
     def __init__(
         self,
-        credentials: Union[str, dict] = 'config/client_credentials.json',
+        credentials: Union[str, dict] = "config/client_credentials.json",
         root_url: str = "https://fusion-api.jpmorgan.com/fusion/v1/",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
@@ -86,11 +86,14 @@ class Fusion:
 
         if logger.hasHandlers():
             logger.handlers.clear()
-        file_handler = logging.FileHandler(filename="{0}/{1}".format(log_path, "fusion_sdk.log"))
+        file_handler = logging.FileHandler(
+            filename="{0}/{1}".format(log_path, "fusion_sdk.log")
+        )
         logging.addLevelName(VERBOSE_LVL, "VERBOSE")
         stdout_handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
-            "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+            "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
         stdout_handler.setFormatter(formatter)
         logger.addHandler(stdout_handler)
@@ -113,9 +116,14 @@ class Fusion:
                     [
                         method_name
                         for method_name in dir(Fusion)
-                        if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
+                        if callable(getattr(Fusion, method_name))
+                        and not method_name.startswith("_")
                     ]
-                    + [p for p in dir(Fusion) if isinstance(getattr(Fusion, p), property)]
+                    + [
+                        p
+                        for p in dir(Fusion)
+                        if isinstance(getattr(Fusion, p), property)
+                    ]
                 ]
             ).T.set_index(0),
             tablefmt="psql",
@@ -162,7 +170,9 @@ class Fusion:
         Returns: Fusion Filesystem
 
         """
-        return FusionHTTPFileSystem(client_kwargs={"root_url": self.root_url, "credentials": self.credentials})
+        return FusionHTTPFileSystem(
+            client_kwargs={"root_url": self.root_url, "credentials": self.credentials}
+        )
 
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
@@ -173,7 +183,7 @@ class Fusion:
         Returns:
             class:`pandas.DataFrame`: A dataframe with a row for each catalog
         """
-        url = f'{self.root_url}catalogs/'
+        url = f"{self.root_url}catalogs/"
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
@@ -181,7 +191,9 @@ class Fusion:
 
         return df
 
-    def catalog_resources(self, catalog: str = None, output: bool = False) -> pd.DataFrame:
+    def catalog_resources(
+        self, catalog: str = None, output: bool = False
+    ) -> pd.DataFrame:
         """List the resources contained within the catalog, for example products and datasets.
 
         Args:
@@ -193,7 +205,7 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-        url = f'{self.root_url}catalogs/{catalog}'
+        url = f"{self.root_url}catalogs/{catalog}"
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
@@ -230,24 +242,26 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-        url = f'{self.root_url}catalogs/{catalog}/products'
+        url = f"{self.root_url}catalogs/{catalog}/products"
         df = Fusion._call_for_dataframe(url, self.session)
 
         if contains:
             if isinstance(contains, list):
-                contains = "|".join(f'{s}' for s in contains)
+                contains = "|".join(f"{s}" for s in contains)
             if id_contains:
-                df = df[df['identifier'].str.contains(contains, case=False)]
+                df = df[df["identifier"].str.contains(contains, case=False)]
             else:
                 df = df[
-                    df['identifier'].str.contains(contains, case=False)
-                    | df['description'].str.contains(contains, case=False)
+                    df["identifier"].str.contains(contains, case=False)
+                    | df["description"].str.contains(contains, case=False)
                 ]
 
         df["category"] = df.category.str.join(", ")
         df["region"] = df.region.str.join(", ")
         if not display_all_columns:
-            df = df[["identifier", "title", "region", "category", "status", "description"]]
+            df = df[
+                ["identifier", "title", "region", "category", "status", "description"]
+            ]
 
         if max_results > -1:
             df = df[0:max_results]
@@ -286,18 +300,18 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-        url = f'{self.root_url}catalogs/{catalog}/datasets'
+        url = f"{self.root_url}catalogs/{catalog}/datasets"
         df = Fusion._call_for_dataframe(url, self.session)
 
         if contains:
             if isinstance(contains, list):
-                contains = "|".join(f'{s}' for s in contains)
+                contains = "|".join(f"{s}" for s in contains)
             if id_contains:
-                df = df[df['identifier'].str.contains(contains, case=False)]
+                df = df[df["identifier"].str.contains(contains, case=False)]
             else:
                 df = df[
-                    df['identifier'].str.contains(contains, case=False)
-                    | df['description'].str.contains(contains, case=False)
+                    df["identifier"].str.contains(contains, case=False)
+                    | df["description"].str.contains(contains, case=False)
                 ]
 
         if max_results > -1:
@@ -307,7 +321,15 @@ class Fusion:
         df["region"] = df.region.str.join(", ")
         if not display_all_columns:
             df = df[
-                ["identifier", "title", "region", "category", "coverageStartDate", "coverageEndDate", "description"]
+                [
+                    "identifier",
+                    "title",
+                    "region",
+                    "category",
+                    "coverageStartDate",
+                    "coverageEndDate",
+                    "description",
+                ]
             ]
 
         if output:
@@ -315,7 +337,9 @@ class Fusion:
 
         return df
 
-    def dataset_resources(self, dataset: str, catalog: str = None, output: bool = False) -> pd.DataFrame:
+    def dataset_resources(
+        self, dataset: str, catalog: str = None, output: bool = False
+    ) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
 
         Args:
@@ -328,7 +352,7 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-        url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}'
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}"
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
@@ -337,7 +361,11 @@ class Fusion:
         return df
 
     def list_dataset_attributes(
-        self, dataset: str, catalog: str = None, output: bool = False, display_all_columns: bool = False
+        self,
+        dataset: str,
+        catalog: str = None,
+        output: bool = False,
+        display_all_columns: bool = False,
     ) -> pd.DataFrame:
         """Returns the list of attributes that are in the dataset.
 
@@ -353,8 +381,12 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-        url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes'
-        df = Fusion._call_for_dataframe(url, self.session).sort_values(by="index").reset_index(drop=True)
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
+        df = (
+            Fusion._call_for_dataframe(url, self.session)
+            .sort_values(by="index")
+            .reset_index(drop=True)
+        )
 
         if not display_all_columns:
             df = df[["identifier", "dataType", "isDatasetKey", "description"]]
@@ -365,7 +397,11 @@ class Fusion:
         return df
 
     def list_datasetmembers(
-        self, dataset: str, catalog: str = None, output: bool = False, max_results: int = -1
+        self,
+        dataset: str,
+        catalog: str = None,
+        output: bool = False,
+        max_results: int = -1,
     ) -> pd.DataFrame:
         """List the available members in the dataset series.
 
@@ -381,7 +417,7 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-        url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries'
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
         df = Fusion._call_for_dataframe(url, self.session)
 
         if max_results > -1:
@@ -409,7 +445,7 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-        url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}'
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}"
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
@@ -417,7 +453,9 @@ class Fusion:
 
         return df
 
-    def list_distributions(self, dataset: str, series: str, catalog: str = None, output: bool = False) -> pd.DataFrame:
+    def list_distributions(
+        self, dataset: str, series: str, catalog: str = None, output: bool = False
+    ) -> pd.DataFrame:
         """List the available distributions (downloadable instances of the dataset with a format type).
 
         Args:
@@ -431,7 +469,7 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-        url = f'{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}/distributions'
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}/distributions"
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
@@ -440,7 +478,11 @@ class Fusion:
         return df
 
     def _resolve_distro_tuples(
-        self, dataset: str, dt_str: str = 'latest', dataset_format: str = 'parquet', catalog: str = None
+        self,
+        dataset: str,
+        dt_str: str = "latest",
+        dataset_format: str = "parquet",
+        catalog: str = None,
     ):
         """Resolve distribution tuples given specification params.
 
@@ -465,33 +507,41 @@ class Fusion:
 
         if datasetseries_list.empty:
             raise APIResponseError(
-                f'No data available for dataset {dataset}. '
-                f'Check that a valid dataset identifier and date/date range has been set.'
+                f"No data available for dataset {dataset}. "
+                f"Check that a valid dataset identifier and date/date range has been set."
             )
 
-        if dt_str == 'latest':
-            dt_str = datasetseries_list.iloc[datasetseries_list['createdDate'].values.argmax()]['identifier']
+        if dt_str == "latest":
+            dt_str = datasetseries_list.iloc[
+                datasetseries_list["createdDate"].values.argmax()
+            ]["identifier"]
 
         parsed_dates = normalise_dt_param_str(dt_str)
         if len(parsed_dates) == 1:
             parsed_dates = (parsed_dates[0], parsed_dates[0])
 
         if parsed_dates[0]:
-            datasetseries_list = datasetseries_list[datasetseries_list['fromDate'] >= parsed_dates[0]]
+            datasetseries_list = datasetseries_list[
+                datasetseries_list["fromDate"] >= parsed_dates[0]
+            ]
 
         if parsed_dates[1]:
-            datasetseries_list = datasetseries_list[datasetseries_list['toDate'] <= parsed_dates[1]]
+            datasetseries_list = datasetseries_list[
+                datasetseries_list["toDate"] <= parsed_dates[1]
+            ]
 
-        required_series = list(datasetseries_list['@id'])
-        tups = [(catalog, dataset, series, dataset_format) for series in required_series]
+        required_series = list(datasetseries_list["@id"])
+        tups = [
+            (catalog, dataset, series, dataset_format) for series in required_series
+        ]
 
         return tups
 
     def download(
         self,
         dataset: str,
-        dt_str: str = 'latest',
-        dataset_format: str = 'parquet',
+        dt_str: str = "latest",
+        dataset_format: str = "parquet",
         catalog: str = None,
         n_par: int = None,
         show_progress: bool = True,
@@ -523,7 +573,9 @@ class Fusion:
         catalog = self.__use_catalog(catalog)
 
         n_par = cpu_count(n_par)
-        required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
+        required_series = self._resolve_distro_tuples(
+            dataset, dt_str, dataset_format, catalog
+        )
 
         if not download_folder:
             download_folder = self.download_folder
@@ -533,8 +585,12 @@ class Fusion:
         download_spec = [
             {
                 "credentials": self.credentials,
-                "url": distribution_to_url(self.root_url, series[1], series[2], series[3], series[0]),
-                "output_file": distribution_to_filename(download_folder, series[1], series[2], series[3], series[0]),
+                "url": distribution_to_url(
+                    self.root_url, series[1], series[2], series[3], series[0]
+                ),
+                "output_file": distribution_to_filename(
+                    download_folder, series[1], series[2], series[3], series[0]
+                ),
                 "overwrite": force_download,
                 "fs": self.fs,
             }
@@ -547,9 +603,11 @@ class Fusion:
             loop = download_spec
         logger.log(
             VERBOSE_LVL,
-            f'Beginning {len(loop)} downloads in batches of {n_par}',
+            f"Beginning {len(loop)} downloads in batches of {n_par}",
         )
-        res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(**spec) for spec in loop)
+        res = Parallel(n_jobs=n_par)(
+            delayed(stream_single_file_new_session)(**spec) for spec in loop
+        )
         if (len(res) > 0) and (not all((r[0] for r in res))):
             for r in res:
                 if not r[0]:
@@ -559,8 +617,8 @@ class Fusion:
     def to_df(
         self,
         dataset: str,
-        dt_str: str = 'latest',
-        dataset_format: str = 'parquet',
+        dt_str: str = "latest",
+        dataset_format: str = "parquet",
         catalog: str = None,
         n_par: int = None,
         show_progress: bool = True,
@@ -626,26 +684,28 @@ class Fusion:
         files = [res[1] for res in download_res]
 
         pd_read_fn_map = {
-            'csv': read_csv,
-            'parquet': read_parquet,
-            'parq': read_parquet,
-            'json': read_json,
-            'raw': read_csv,
+            "csv": read_csv,
+            "parquet": read_parquet,
+            "parq": read_parquet,
+            "json": read_json,
+            "raw": read_csv,
         }
 
         pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
-            'csv': {'columns': columns, 'filters': filters, 'fs': self.fs},
-            'parquet': {'columns': columns, 'filters': filters, 'fs': self.fs},
-            'json': {'columns': columns, 'filters': filters, 'fs': self.fs},
-            'raw': {'columns': columns, 'filters': filters, 'fs': self.fs},
+            "csv": {"columns": columns, "filters": filters, "fs": self.fs},
+            "parquet": {"columns": columns, "filters": filters, "fs": self.fs},
+            "json": {"columns": columns, "filters": filters, "fs": self.fs},
+            "raw": {"columns": columns, "filters": filters, "fs": self.fs},
         }
 
-        pd_read_default_kwargs['parq'] = pd_read_default_kwargs['parquet']
+        pd_read_default_kwargs["parq"] = pd_read_default_kwargs["parquet"]
 
         pd_reader = pd_read_fn_map.get(dataset_format)
         pd_read_kwargs = pd_read_default_kwargs.get(dataset_format, {})
         if not pd_reader:
-            raise Exception(f'No pandas function to read file in format {dataset_format}')
+            raise Exception(
+                f"No pandas function to read file in format {dataset_format}"
+            )
 
         pd_read_kwargs.update(kwargs)
 
@@ -656,7 +716,7 @@ class Fusion:
             )
         if dataset_format in ["parquet", "parq"]:
             df = pd_reader(files, **pd_read_kwargs)  # type: ignore
-        elif dataset_format == 'raw':
+        elif dataset_format == "raw":
             dataframes = (
                 pd.concat(
                     [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()], ignore_index=True  # type: ignore
@@ -674,7 +734,7 @@ class Fusion:
         self,
         path: str,
         dataset: str = None,
-        dt_str: str = 'latest',
+        dt_str: str = "latest",
         catalog: str = None,
         n_par: int = None,
         show_progress: bool = True,
@@ -712,20 +772,28 @@ class Fusion:
         if self.fs.info(path)["type"] == "directory":
             file_path_lst = self.fs.find(path)
             local_file_validation = validate_file_names(file_path_lst, fs_fusion)
-            file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
+            file_path_lst = [
+                f for flag, f in zip(local_file_validation, file_path_lst) if flag
+            ]
             local_url_eqiv = [path_to_url(i) for i in file_path_lst]
         else:
             file_path_lst = [path]
             if not catalog or not dataset:
                 local_file_validation = validate_file_names(file_path_lst, fs_fusion)
-                file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
+                file_path_lst = [
+                    f for flag, f in zip(local_file_validation, file_path_lst) if flag
+                ]
                 local_url_eqiv = [path_to_url(i) for i in file_path_lst]
             else:
                 file_format = path.split(".")[-1]
-                dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
+                dt_str = (
+                    dt_str
+                    if dt_str != "latest"
+                    else pd.Timestamp("today").date().strftime("%Y%m%d")
+                )
                 dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
-                if catalog not in fs_fusion.ls('') or dataset not in [
-                    i.split('/')[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
+                if catalog not in fs_fusion.ls("") or dataset not in [
+                    i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
                 ]:
                     msg = (
                         f"File file has not been uploaded, one of the catalog: {catalog} "
@@ -733,7 +801,9 @@ class Fusion:
                     )
                     warnings.warn(msg)
                     return [(False, path, Exception(msg))]
-                local_url_eqiv = [path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}")]
+                local_url_eqiv = [
+                    path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}")
+                ]
 
         df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
         df.columns = ["path", "url"]
@@ -746,7 +816,13 @@ class Fusion:
         n_par = cpu_count(n_par)
         parallel = True if len(df) > 1 else False
         res = upload_files(
-            fs_fusion, self.fs, loop, parallel=parallel, n_par=n_par, multipart=multipart, chunk_size=chunk_size
+            fs_fusion,
+            self.fs,
+            loop,
+            parallel=parallel,
+            n_par=n_par,
+            multipart=multipart,
+            chunk_size=chunk_size,
         )
 
         if not all(r[0] for r in res):
