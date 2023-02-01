@@ -268,15 +268,16 @@ def fsync(
     assert len(datasets) > 0, "The supplied products did not contain any datasets."
 
     local_state = pd.DataFrame()
+    fusion_state = pd.DataFrame()
     while True:
         try:
             local_state_temp = _get_local_state(
                 fs_local, fs_fusion, datasets, catalog, dataset_format
             )
-            if not local_state_temp.equals(local_state):
-                fusion_state = _get_fusion_df(
-                    fs_fusion, datasets, catalog, flatten, dataset_format
-                )
+            fusion_state_temp = _get_fusion_df(
+                fs_fusion, datasets, catalog, flatten, dataset_format
+            )
+            if not local_state_temp.equals(local_state) or not fusion_state_temp.equals(fusion_state):
                 res = _synchronize(
                     fs_fusion,
                     fs_local,
@@ -288,6 +289,7 @@ def fsync(
                 )
                 if len(res) == 0 or all((i[0] for i in res)):
                     local_state = local_state_temp
+                    fusion_state = fusion_state_temp
             else:
                 logger.info("All synced, sleeping")
                 time.sleep(10)
