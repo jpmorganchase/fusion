@@ -282,7 +282,7 @@ def fsync(
                     fs_fusion,
                     fs_local,
                     local_state_temp,
-                    fusion_state,
+                    fusion_state_temp,
                     direction,
                     n_par,
                     show_progress,
