@@ -133,7 +133,7 @@ def _get_fusion_df(
     return pd.concat(df_lst)
 
 
-def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None):
+def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None, local_state=None):
     local_files = []
     local_files_rel = []
     local_dirs = (
@@ -155,11 +155,20 @@ def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None
             for i in local_files
         ]
 
-    # local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
-    local_md5 = [_generate_md5_token(x, fs_local) for x in local_files]
+    local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
     local_url_eqiv = [path_to_url(i) for i in local_files]
-    df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_md5]).T
-    df_local.columns = ["path", "url", "md5"]
+    df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_mtime, local_files]).T
+    df_local.columns = ["path", "url", "mtime", "local_path"]
+
+    if local_state is not None and len(local_state) > 0:
+        df_join = df_local.merge(local_state, on="path", how="left", suffixes=("", "_prev"))
+        df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "md5"] = [_generate_md5_token(x, fs_local) for x in
+                                                                             df_join[df_join["mtime"] != df_join[
+                                                                                 "mtime_prev"]].local_path]
+        df_local = df_join[["path", "url", "mtime", "md5"]]
+    else:
+        df_local["md5"] = [_generate_md5_token(x, fs_local) for x in local_files]
+    # local_md5 = [_generate_md5_token(x, fs_local) for x in local_files]
 
     if dataset_format and len(df_local) > 0:
         df_local = df_local[df_local.url.str.split("/").str[-1] == dataset_format]
@@ -272,7 +281,7 @@ def fsync(
     while True:
         try:
             local_state_temp = _get_local_state(
-                fs_local, fs_fusion, datasets, catalog, dataset_format
+                fs_local, fs_fusion, datasets, catalog, dataset_format, local_state
             )
             fusion_state_temp = _get_fusion_df(
                 fs_fusion, datasets, catalog, flatten, dataset_format
