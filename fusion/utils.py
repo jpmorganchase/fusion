@@ -529,7 +529,7 @@ def validate_file_names(paths, fs_fusion):
     validation = []
     all_catalogs = fs_fusion.ls("")
     all_datasets = {}
-    for f_n in file_names:
+    for i, f_n in enumerate(file_names):
         tmp = f_n.split("__")
         if len(tmp) == 3:
             val = tmp[1] in all_catalogs
@@ -545,14 +545,17 @@ def validate_file_names(paths, fs_fusion):
                 validation.append(val)
         else:
             validation.append(False)
+        if not validation and len(tmp) == 3:
+            logger.warning(
+                f"You might not have access to the catalog {tmp[1]} or dataset {tmp[0]}."
+                "Please check you permission on the platform."
+            )
+        if not validation and len(tmp) != 3:
+            logger.warning(
+                f"The file in {paths[i]} has a non-compliant name and will not be processed. "
+                f"Please rename the file to dataset__catalog__yyyymmdd.format"
+            )
 
-    if not all(validation):
-        for i, p in enumerate(paths):
-            if not validation[i]:
-                logger.warning(
-                    f"The file in {p} has a non-compliant name and will not be processed. "
-                    f"Please rename the file to dataset__catalog__yyyymmdd.format"
-                )
     return validation
 
 
