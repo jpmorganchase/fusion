@@ -13,7 +13,7 @@ from pathlib import Path
 import fsspec
 import pandas as pd
 from joblib import Parallel, delayed
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from .utils import (
     cpu_count,
