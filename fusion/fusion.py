@@ -552,6 +552,7 @@ class Fusion:
         force_download: bool = False,
         download_folder: str = None,
         return_paths: bool = False,
+        partitioning: str = None,
     ):
         """Downloads the requested distributions of a dataset to disk.
 
@@ -570,6 +571,7 @@ class Fusion:
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
+            partitioning (str, optional): Partitioning specification.
 
         Returns:
 
@@ -581,11 +583,16 @@ class Fusion:
             dataset, dt_str, dataset_format, catalog
         )
 
-        if not download_folder:
-            download_folder = self.download_folder
+        if not download_folder or not isinstance(download_folder, list):
+            download_folders = [self.download_folder] * len(required_series)
 
-        if not self.fs.exists(download_folder):
-            self.fs.mkdir(download_folder, create_parents=True)
+        if partitioning == 'hive':
+            members = [series[2].strip('/') for series in required_series]
+            download_folders = [f"{download_folders[i]}/{series[0]}/{series[1]}/{members[i]}" for i, series in enumerate(required_series)]
+
+        for download_folder in download_folders:
+            if not self.fs.exists(download_folder):
+                self.fs.mkdir(download_folder, create_parents=True)
         download_spec = [
             {
                 "credentials": self.credentials,
@@ -593,12 +600,12 @@ class Fusion:
                     self.root_url, series[1], series[2], series[3], series[0]
                 ),
                 "output_file": distribution_to_filename(
-                    download_folder, series[1], series[2], series[3], series[0]
+                    download_folders[i], series[1], series[2], series[3], series[0]
                 ),
                 "overwrite": force_download,
                 "fs": self.fs,
             }
-            for series in required_series
+            for i, series in enumerate(required_series)
         ]
 
         if show_progress:

@@ -522,7 +522,7 @@ def stream_single_file_new_session(
         return _stream_single_file_new_session_dry_run(credentials, url, output_file)
 
     if not overwrite and fs.exists(output_file):
-        return (True, output_file, None)
+        return True, output_file, None
 
     try:
         with get_session(credentials, url).get(url, stream=True) as r:
