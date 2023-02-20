@@ -5,7 +5,6 @@ import logging
 import os
 import re
 import sys
-from io import BytesIO
 from pathlib import Path
 from typing import Union
 from urllib.parse import urlparse, urlunparse
@@ -16,6 +15,7 @@ import pyarrow.parquet as pq
 import requests
 from joblib import Parallel, delayed
 from pyarrow import csv, json
+from pyarrow.parquet import filters_to_expression
 
 if sys.version_info >= (3, 7):
     from contextlib import nullcontext
@@ -73,34 +73,72 @@ def cpu_count(thread_pool_size: int = None):
     return thread_pool_size
 
 
-def _csv_to_table(path: str, fs=None, delimiter: str = None):
+def csv_to_table(path: str, fs=None, columns: list = None, filters: list = None):
     """Reads csv data to pyarrow table.
 
     Args:
         path (str): path to the file.
         fs: filesystem object.
-        delimiter (str): delimiter.
+        columns: columns to read.
+        filters: arrow filters.
 
     Returns:
-        pyarrow.table pyarrow table with the data.
+        class:`pyarrow.Table` pyarrow table with the data.
     """
-    parse_options = csv.ParseOptions(delimiter=delimiter)
+    # parse_options = csv.ParseOptions(delimiter=delimiter)
+    filters = filters_to_expression(filters) if filters else filters
     with (fs.open(path) if fs else nullcontext(path)) as f:
-        return csv.read_csv(f, parse_options=parse_options)
+        tbl = csv.read_csv(f)
+        if filters is not None:
+            tbl = tbl.filter(filters)
+        if columns is not None:
+            tbl = tbl.select(columns)
+        return tbl
 
 
-def _json_to_table(path: str, fs=None):
+def json_to_table(path: str, fs=None, columns: list = None, filters: list = None):
     """Reads json data to pyarrow table.
 
     Args:
         path: path to json file.
         fs: filesystem.
+        columns: columns to read.
+        filters: arrow filters.
 
     Returns:
-
+        class:`pyarrow.Table` pyarrow table with the data.
     """
+    filters = filters_to_expression(filters) if filters else filters
     with (fs.open(path) if fs else nullcontext(path)) as f:
-        return json.read_json(f)
+        tbl = json.read_json(f)
+        if filters is not None:
+            tbl = tbl.filter(filters)
+        if columns is not None:
+            tbl = tbl.select(columns)
+        return tbl
+
+
+def parquet_to_table(path: str, fs=None, columns: list = None, filters: list = None):
+    """Reads parquet data to pyarrow table.
+
+    Args:
+        path: path to parquet file.
+        fs: filesystem.
+        columns: columns to read.
+        filters: arrow filters.
+
+    Returns:
+        class:`pyarrow.Table` pyarrow table with the data.
+    """
+    return (
+        pq.ParquetDataset(
+            path,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+        ).read(columns=columns)
+    )
 
 
 def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
@@ -118,7 +156,7 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
     """
     try:
         try:
-            tbl = _csv_to_table(path, fs)
+            res = csv_to_table(path, fs)
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -126,10 +164,6 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
             )
             raise Exception
 
-        out = BytesIO()
-        pq.write_table(tbl, out)
-        del tbl
-        res = pq.read_table(out, filters=filters, columns=columns).to_pandas()
     except Exception as err:
         logger.log(
             VERBOSE_LVL,
@@ -167,7 +201,7 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
 
     try:
         try:
-            tbl = _json_to_table(path, fs)
+            res = json_to_table(path, fs)
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -175,10 +209,6 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
             )
             raise Exception
 
-        out = BytesIO()
-        pq.write_table(tbl, out)
-        del tbl
-        res = pq.read_table(out, filters=filters, columns=columns).to_pandas()
     except Exception as err:
         logger.log(
             VERBOSE_LVL,

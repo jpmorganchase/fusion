@@ -218,7 +218,7 @@ def fsync(
     Args:
         fs_fusion (fsspec.filesystem): Fusion filesystem.
         fs_local (fsspec.filesystem): Local filesystem.
-        datasets (list): List of products.
+        products (list): List of products.
         datasets (list): List of datasets.
         catalog (str): Fusion catalog.
         direction (str): Direction of synchronisation: upload/download.
