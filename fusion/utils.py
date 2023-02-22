@@ -610,7 +610,7 @@ def upload_files(
                 VERBOSE_LVL,
                 f'Failed to upload {row["path"]}. ex - {ex}',
             )
-            return False, row["path"], ex
+            return False, row["path"], str(ex)
 
     if parallel:
         res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop)
