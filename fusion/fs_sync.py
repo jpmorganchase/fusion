@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import logging
+import warnings
 import os
 import sys
 import time
@@ -227,7 +228,7 @@ def fsync(
     Args:
         fs_fusion (fsspec.filesystem): Fusion filesystem.
         fs_local (fsspec.filesystem): Local filesystem.
-        datasets (list): List of products.
+        products (list): List of products.
         datasets (list): List of datasets.
         catalog (str): Fusion catalog.
         direction (str): Direction of synchronisation: upload/download.
@@ -299,6 +300,15 @@ def fsync(
                 if len(res) == 0 or all((i[0] for i in res)):
                     local_state = local_state_temp
                     fusion_state = fusion_state_temp
+
+                if not all(r[0] for r in res):
+                    failed_res = [r for r in res if not r[0]]
+                    msg = f"Not all {direction}s were successfully completed. The following failed:\n{failed_res}"
+                    errs = [r for r in res if not r[2]]
+                    logger.warning(msg)
+                    logger.warning(errs)
+                    warnings.warn(msg)
+
             else:
                 logger.info("All synced, sleeping")
                 time.sleep(10)
