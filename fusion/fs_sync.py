@@ -191,19 +191,31 @@ def _synchronize(
 
     n_par = cpu_count(n_par)
     if direction == "upload":
-        join_df = df_local.merge(
-            df_fusion, on="url", suffixes=("_local", "_fusion"), how="left"
-        )
-        join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
-        res = _upload(fs_fusion, fs_local, join_df, n_par, show_progress=show_progress)
+        if len(df_local) == 0:
+            msg = f"No dataset members available for upload for your dataset selection."
+            logger.warning(msg)
+            warnings.warn(msg)
+            res = []
+        else:
+            join_df = df_local.merge(
+                df_fusion, on="url", suffixes=("_local", "_fusion"), how="left"
+            )
+            join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
+            res = _upload(fs_fusion, fs_local, join_df, n_par, show_progress=show_progress)
     elif direction == "download":
-        join_df = df_local.merge(
-            df_fusion, on="url", suffixes=("_local", "_fusion"), how="right"
-        )
-        join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
-        res = _download(
-            fs_fusion, fs_local, join_df, n_par, show_progress=show_progress
-        )
+        if len(df_fusion) == 0:
+            msg = f"No dataset members available for download for your dataset selection."
+            logger.warning(msg)
+            warnings.warn(msg)
+            res = []
+        else:
+            join_df = df_local.merge(
+                df_fusion, on="url", suffixes=("_local", "_fusion"), how="right"
+            )
+            join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
+            res = _download(
+                fs_fusion, fs_local, join_df, n_par, show_progress=show_progress
+            )
     else:
         raise ValueError("Unknown direction of operation.")
     return res
