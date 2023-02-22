@@ -105,9 +105,9 @@ def _get_fusion_df(
         changes = fs_fusion.info(f"{catalog}/datasets/{dataset}")["changes"]["datasets"]
         if len(changes) > 0:
             changes = changes[0]["distributions"]
-            urls = [
-                catalog + "/datasets/" + "/".join(i["key"].split(".")) for i in changes
-            ]
+            keys = [i["key"].replace(".", "/").split("/") for i in changes]
+            keys = ["/".join([k[0], k[1], k[2] , k[-1]]) for k in keys]
+            urls = [catalog + "/datasets/" + k for k in keys]
             urls = [i.replace("distribution", "distributions") for i in urls]
             urls = [
                 "/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:])
