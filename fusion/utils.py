@@ -313,6 +313,7 @@ def distribution_to_filename(
     datasetseries: str,
     file_format: str,
     catalog: str = "common",
+    partitioning: str = None,
 ) -> str:
     """Returns a filename representing a dataset distribution.
 
@@ -322,13 +323,18 @@ def distribution_to_filename(
         datasetseries (str): The datasetseries instance identifier.
         file_format (str): The file type, e.g. CSV or Parquet
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
+        partitioning (str, optional): Partitioning specification.
 
     Returns:
         str: FQ distro file name
     """
     if datasetseries[-1] == "/" or datasetseries[-1] == "\\":
         datasetseries = datasetseries[0:-1]
-    file_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
+
+    if partitioning == "hive":
+        file_name = f"{dataset}.{file_format}"
+    else:
+        file_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
 
     sep = "/"
     if "\\" in root_folder:

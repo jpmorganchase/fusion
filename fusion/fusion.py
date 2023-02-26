@@ -600,7 +600,7 @@ class Fusion:
                     self.root_url, series[1], series[2], series[3], series[0]
                 ),
                 "output_file": distribution_to_filename(
-                    download_folders[i], series[1], series[2], series[3], series[0]
+                    download_folders[i], series[1], series[2], series[3], series[0], partitioning=partitioning
                 ),
                 "overwrite": force_download,
                 "fs": self.fs,
