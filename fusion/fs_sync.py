@@ -192,7 +192,7 @@ def _synchronize(
     n_par = cpu_count(n_par)
     if direction == "upload":
         if len(df_local) == 0:
-            msg = f"No dataset members available for upload for your dataset selection."
+            msg = "No dataset members available for upload for your dataset selection."
             logger.warning(msg)
             warnings.warn(msg)
             res = []
@@ -204,7 +204,7 @@ def _synchronize(
             res = _upload(fs_fusion, fs_local, join_df, n_par, show_progress=show_progress)
     elif direction == "download":
         if len(df_fusion) == 0:
-            msg = f"No dataset members available for download for your dataset selection."
+            msg = "No dataset members available for download for your dataset selection."
             logger.warning(msg)
             warnings.warn(msg)
             res = []
