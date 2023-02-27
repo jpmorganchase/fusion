@@ -591,8 +591,12 @@ class Fusion:
             download_folders = [f"{download_folders[i]}/{series[0]}/{series[1]}/{members[i]}" for i, series in enumerate(required_series)]
 
         for download_folder in download_folders:
-            if not self.fs.exists(download_folder):
-                self.fs.mkdir(download_folder, create_parents=True)
+            try:
+                if not self.fs.exists(download_folder):
+                    self.fs.mkdir(download_folder, create_parents=True)
+            except PermissionError as ex:
+                logger.log(VERBOSE_LVL, f"Encountered a permission error {str(ex)}. The code will continue regardless.")
+
         download_spec = [
             {
                 "credentials": self.credentials,
