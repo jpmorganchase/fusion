@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import logging
+import warnings
 import os
 import sys
 import time
@@ -13,7 +14,7 @@ from pathlib import Path
 import fsspec
 import pandas as pd
 from joblib import Parallel, delayed
-from tqdm.auto import tqdm
+from tqdm import tqdm
 
 from .utils import (
     cpu_count,
@@ -104,9 +105,9 @@ def _get_fusion_df(
         changes = fs_fusion.info(f"{catalog}/datasets/{dataset}")["changes"]["datasets"]
         if len(changes) > 0:
             changes = changes[0]["distributions"]
-            urls = [
-                catalog + "/datasets/" + "/".join(i["key"].split(".")) for i in changes
-            ]
+            keys = [i["key"].replace(".", "/").split("/") for i in changes]
+            keys = ["/".join([k[0], k[1], k[2] , k[-1]]) for k in keys]
+            urls = [catalog + "/datasets/" + k for k in keys]
             urls = [i.replace("distribution", "distributions") for i in urls]
             urls = [
                 "/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:])
@@ -133,7 +134,7 @@ def _get_fusion_df(
     return pd.concat(df_lst)
 
 
-def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None):
+def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None, local_state=None):
     local_files = []
     local_files_rel = []
     local_dirs = (
@@ -155,11 +156,20 @@ def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None
             for i in local_files
         ]
 
-    # local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
-    local_md5 = [_generate_md5_token(x, fs_local) for x in local_files]
+    local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
     local_url_eqiv = [path_to_url(i) for i in local_files]
-    df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_md5]).T
-    df_local.columns = ["path", "url", "md5"]
+    df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_mtime, local_files]).T
+    df_local.columns = ["path", "url", "mtime", "local_path"]
+
+    if local_state is not None and len(local_state) > 0:
+        df_join = df_local.merge(local_state, on="path", how="left", suffixes=("", "_prev"))
+        df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "md5"] = [_generate_md5_token(x, fs_local) for x in
+                                                                             df_join[df_join["mtime"] != df_join[
+                                                                                 "mtime_prev"]].local_path]
+        df_local = df_join[["path", "url", "mtime", "md5"]]
+    else:
+        df_local["md5"] = [_generate_md5_token(x, fs_local) for x in local_files]
+    # local_md5 = [_generate_md5_token(x, fs_local) for x in local_files]
 
     if dataset_format and len(df_local) > 0:
         df_local = df_local[df_local.url.str.split("/").str[-1] == dataset_format]
@@ -181,19 +191,31 @@ def _synchronize(
 
     n_par = cpu_count(n_par)
     if direction == "upload":
-        join_df = df_local.merge(
-            df_fusion, on="url", suffixes=("_local", "_fusion"), how="left"
-        )
-        join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
-        res = _upload(fs_fusion, fs_local, join_df, n_par, show_progress=show_progress)
+        if len(df_local) == 0:
+            msg = f"No dataset members available for upload for your dataset selection."
+            logger.warning(msg)
+            warnings.warn(msg)
+            res = []
+        else:
+            join_df = df_local.merge(
+                df_fusion, on="url", suffixes=("_local", "_fusion"), how="left"
+            )
+            join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
+            res = _upload(fs_fusion, fs_local, join_df, n_par, show_progress=show_progress)
     elif direction == "download":
-        join_df = df_local.merge(
-            df_fusion, on="url", suffixes=("_local", "_fusion"), how="right"
-        )
-        join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
-        res = _download(
-            fs_fusion, fs_local, join_df, n_par, show_progress=show_progress
-        )
+        if len(df_fusion) == 0:
+            msg = f"No dataset members available for download for your dataset selection."
+            logger.warning(msg)
+            warnings.warn(msg)
+            res = []
+        else:
+            join_df = df_local.merge(
+                df_fusion, on="url", suffixes=("_local", "_fusion"), how="right"
+            )
+            join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
+            res = _download(
+                fs_fusion, fs_local, join_df, n_par, show_progress=show_progress
+            )
     else:
         raise ValueError("Unknown direction of operation.")
     return res
@@ -218,7 +240,7 @@ def fsync(
     Args:
         fs_fusion (fsspec.filesystem): Fusion filesystem.
         fs_local (fsspec.filesystem): Local filesystem.
-        datasets (list): List of products.
+        products (list): List of products.
         datasets (list): List of datasets.
         catalog (str): Fusion catalog.
         direction (str): Direction of synchronisation: upload/download.
@@ -268,26 +290,37 @@ def fsync(
     assert len(datasets) > 0, "The supplied products did not contain any datasets."
 
     local_state = pd.DataFrame()
+    fusion_state = pd.DataFrame()
     while True:
         try:
             local_state_temp = _get_local_state(
-                fs_local, fs_fusion, datasets, catalog, dataset_format
+                fs_local, fs_fusion, datasets, catalog, dataset_format, local_state
             )
-            if not local_state_temp.equals(local_state):
-                fusion_state = _get_fusion_df(
-                    fs_fusion, datasets, catalog, flatten, dataset_format
-                )
+            fusion_state_temp = _get_fusion_df(
+                fs_fusion, datasets, catalog, flatten, dataset_format
+            )
+            if not local_state_temp.equals(local_state) or not fusion_state_temp.equals(fusion_state):
                 res = _synchronize(
                     fs_fusion,
                     fs_local,
                     local_state_temp,
-                    fusion_state,
+                    fusion_state_temp,
                     direction,
                     n_par,
                     show_progress,
                 )
                 if len(res) == 0 or all((i[0] for i in res)):
                     local_state = local_state_temp
+                    fusion_state = fusion_state_temp
+
+                if not all(r[0] for r in res):
+                    failed_res = [r for r in res if not r[0]]
+                    msg = f"Not all {direction}s were successfully completed. The following failed:\n{failed_res}"
+                    errs = [r for r in res if not r[2]]
+                    logger.warning(msg)
+                    logger.warning(errs)
+                    warnings.warn(msg)
+
             else:
                 logger.info("All synced, sleeping")
                 time.sleep(10)

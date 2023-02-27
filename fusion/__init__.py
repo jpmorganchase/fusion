@@ -5,3 +5,4 @@ __email__ = "fusion_developers@jpmorgan.com"
 __version__ = "1.0.9"
 
 from fusion.fusion import Fusion, FusionCredentials
+from fusion.fs_sync import fsync
