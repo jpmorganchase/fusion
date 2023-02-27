@@ -6,6 +6,7 @@ import warnings
 from pathlib import Path
 from typing import Dict, List, Union
 from zipfile import ZipFile
+import nest_asyncio
 
 import pandas as pd
 import requests
@@ -37,7 +38,7 @@ from .utils import (
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
-
+nest_asyncio.apply()
 
 class Fusion:
     """Core Fusion class for API access."""
@@ -591,12 +592,8 @@ class Fusion:
             download_folders = [f"{download_folders[i]}/{series[0]}/{series[1]}/{members[i]}" for i, series in enumerate(required_series)]
 
         for download_folder in download_folders:
-            try:
-                if not self.fs.exists(download_folder):
-                    self.fs.mkdir(download_folder, create_parents=True)
-            except PermissionError as ex:
-                logger.log(VERBOSE_LVL, f"Encountered a permission error {str(ex)}. The code will continue regardless.")
-
+            if not self.fs.exists(download_folder):
+                self.fs.mkdir(download_folder, create_parents=True)
         download_spec = [
             {
                 "credentials": self.credentials,

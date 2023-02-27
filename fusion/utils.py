@@ -527,11 +527,8 @@ def stream_single_file_new_session(
     if dry_run:
         return _stream_single_file_new_session_dry_run(credentials, url, output_file)
 
-    try:
-        if not overwrite and fs.exists(output_file):
-            return True, output_file, None
-    except PermissionError as ex:
-        logger.log(VERBOSE_LVL, f"Permission error encountered {str(ex)}")
+    if not overwrite and fs.exists(output_file):
+        return True, output_file, None
 
     try:
         with get_session(credentials, url).get(url, stream=True) as r:
