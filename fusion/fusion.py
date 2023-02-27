@@ -6,7 +6,6 @@ import warnings
 from pathlib import Path
 from typing import Dict, List, Union
 from zipfile import ZipFile
-import nest_asyncio
 
 import pandas as pd
 import requests
@@ -38,7 +37,7 @@ from .utils import (
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
-nest_asyncio.apply()
+
 
 class Fusion:
     """Core Fusion class for API access."""
