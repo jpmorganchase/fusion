@@ -1,5 +1,6 @@
 import ast
 import argparse
+import inspect
 from fusion import Fusion
 
 
@@ -7,13 +8,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Fusion command line environment')
     methods = [method_name for method_name in dir(Fusion) if
                callable(getattr(Fusion, method_name)) and not method_name.startswith("_")]
-    args = set(list(Fusion.__init__.__code__.co_varnames))
+
+    args = inspect.signature(Fusion.__init__).parameters
+    args = set([param.name for param in args.values()])
+
     for m in methods:
         met = getattr(Fusion, m)
-        set(met.__code__.co_varnames)
-        args = args.union(set(met.__code__.co_varnames))
+        args = args.union(set([param.name for param in inspect.signature(met).parameters.values()]))
 
-    args = args.difference(set('self'))
+    args = args.difference({"self"})
+
     for a in args:
         parser.add_argument('--'+a, default=None)
 
@@ -28,9 +32,15 @@ if __name__ == "__main__":
     if vars(args)["method"] is not None:
         method = getattr(client, vars(args)["method"])
         kw_m = {}
-        args_m = set(method.__code__.co_varnames).difference(set('self'))
+        args_m = set([param.name for param in inspect.signature(method).parameters.values()]).difference({"self"})
         for k in args_m:
             if vars(args)[k] is not None:
-                kw_m[k] = ast.literal_eval(vars(args)[k])
+                v = vars(args)[k]
+                if v == "True":
+                    v = True
+                if v == "False":
+                    v = False
+
+                kw_m[k] = v
 
         method(**kw_m)
