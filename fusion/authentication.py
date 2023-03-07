@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import os
+import aiohttp
 from datetime import timedelta
 from pathlib import Path
 from typing import Dict, Union
@@ -482,3 +483,23 @@ class FusionOAuthAdapter(HTTPAdapter):
         request.headers.update({"Authorization": f"Bearer {self.token}"})
         response = super(FusionOAuthAdapter, self).send(request, **kwargs)
         return response
+
+
+class FusionAiohttpSession(aiohttp.ClientSession):
+    """Bespoke aiohttp session."""
+    def __int__(self, refresh_within_seconds: int = 5, *args, **kwargs):
+        """Class constructor to create a FusionOAuthAdapter object.
+
+        Args:
+            args (optional): List of argument from aiohttp session.
+            kwargs (dict, optional): Named list or arguments for aiohttp session.
+                Defaults to {}.
+            refresh_within_seconds (int, optional): When an API call is made with less than the specified
+                number of seconds until the access token expires, or after expiry, it will refresh the token.
+                Defaults to 5.
+        """
+        self.token = None
+        self.token_bearer_expiry = datetime.datetime.now()
+        self.refresh_within_seconds = refresh_within_seconds
+        self.number_token_refreshes = 0
+        super().__init__(*args, **kwargs)
