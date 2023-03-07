@@ -42,7 +42,7 @@ import multiprocessing as mp
 import fsspec
 from urllib3.util.retry import Retry
 
-from .authentication import FusionCredentials, FusionOAuthAdapter
+from .authentication import FusionCredentials, FusionOAuthAdapter, FusionAiohttpSession
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -82,7 +82,7 @@ def _csv_to_table(path: str, fs=None, delimiter: str = None):
         delimiter (str): delimiter.
 
     Returns:
-        pyarrow.table pyarrow table with the data.
+        pyarrow.Table pyarrow table with the data.
     """
     parse_options = csv.ParseOptions(delimiter=delimiter)
     with (fs.open(path) if fs else nullcontext(path)) as f:
@@ -372,33 +372,48 @@ async def get_client(credentials, **kwargs):
     """
 
     async def on_request_start(session, trace_config_ctx, params):
-        payload = (
-            {
-                "grant_type": "client_credentials",
-                "client_id": credentials.client_id,
-                "client_secret": credentials.client_secret,
-                "aud": credentials.resource,
-            }
-            if credentials.grant_type == "client_credentials"
-            else {
-                "grant_type": "password",
-                "client_id": credentials.client_id,
-                "username": credentials.username,
-                "password": credentials.password,
-                "resource": credentials.resource,
-            }
-        )
-        async with aiohttp.ClientSession() as session:
-            if credentials.proxies:
-                response = await session.post(
-                    credentials.auth_url, data=payload, proxy=http_proxy
-                )
-            else:
-                response = await session.post(credentials.auth_url, data=payload)
-            response_data = await response.json()
+        async def _refresh_token_data():
+            payload = (
+                {
+                    "grant_type": "client_credentials",
+                    "client_id": credentials.client_id,
+                    "client_secret": credentials.client_secret,
+                    "aud": credentials.resource,
+                }
+                if credentials.grant_type == "client_credentials"
+                else {
+                    "grant_type": "password",
+                    "client_id": credentials.client_id,
+                    "username": credentials.username,
+                    "password": credentials.password,
+                    "resource": credentials.resource,
+                }
+            )
+            async with aiohttp.ClientSession() as session:
+                if credentials.proxies:
+                    response = await session.post(
+                        credentials.auth_url, data=payload, proxy=http_proxy
+                    )
+                else:
+                    response = await session.post(credentials.auth_url, data=payload)
+                response_data = await response.json()
 
-        access_token = response_data["access_token"]
-        params.headers.update({"Authorization": f"Bearer {access_token}"})
+            access_token = response_data["access_token"]
+            expiry = response_data["expires_in"]
+            return access_token, expiry
+
+        token_expires_in = (
+                session.bearer_token_expiry - datetime.datetime.now()
+        ).total_seconds()
+        if token_expires_in < session.refresh_within_seconds:
+            token, expiry = await _refresh_token_data()
+            session.token = token
+            session.bearer_token_expiry = datetime.datetime.now() + datetime.timedelta(
+                seconds=int(expiry)
+            )
+            session.number_token_refreshes += 1
+
+        params.headers.update({"Authorization": f"Bearer {session.token}"})
 
     if credentials.proxies:
         if "http" in credentials.proxies.keys():
@@ -408,7 +423,7 @@ async def get_client(credentials, **kwargs):
 
     trace_config = aiohttp.TraceConfig()
     trace_config.on_request_start.append(on_request_start)
-    return aiohttp.ClientSession(trace_configs=[trace_config], trust_env=True)
+    return FusionAiohttpSession(trace_configs=[trace_config], trust_env=True)
 
 
 def get_session(
