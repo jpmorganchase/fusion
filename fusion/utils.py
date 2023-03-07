@@ -14,7 +14,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 import requests
 from joblib import Parallel, delayed
-from pyarrow import csv, json
+from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
 
 if sys.version_info >= (3, 7):
@@ -130,6 +130,25 @@ def parquet_to_table(path: str, fs=None, columns: list = None, filters: list = N
     Returns:
         class:`pyarrow.Table` pyarrow table with the data.
     """
+
+    if isinstance(path, list):
+        schemas = [pq.ParquetDataset(
+            p,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+        ).schema for p in path]
+    else:
+        schemas = [pq.ParquetDataset(
+            path,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+        ).schema]
+
+    schema = unify_schemas(schemas)
     return (
         pq.ParquetDataset(
             path,
@@ -137,6 +156,7 @@ def parquet_to_table(path: str, fs=None, columns: list = None, filters: list = N
             filters=filters,
             filesystem=fs,
             memory_map=True,
+            schema=schema
         ).read(columns=columns)
     )
 
@@ -242,6 +262,25 @@ def read_parquet(
         pandas.DataFrame: a dataframe containing the data.
 
     """
+
+    if isinstance(path, list):
+        schemas = [pq.ParquetDataset(
+            p,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+        ).schema for p in path]
+    else:
+        schemas = [pq.ParquetDataset(
+            path,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+        ).schema]
+
+    schema = unify_schemas(schemas)
     return (
         pq.ParquetDataset(
             path,
@@ -249,6 +288,7 @@ def read_parquet(
             filters=filters,
             filesystem=fs,
             memory_map=True,
+            schema=schema
         )
         .read_pandas(columns=columns)
         .to_pandas()
