@@ -539,7 +539,7 @@ class FusionAiohttpSession(aiohttp.ClientSession):
                 Defaults to 5.
         """
         self.token = None
-        self.token_bearer_expiry = datetime.datetime.now()
         self.refresh_within_seconds = refresh_within_seconds
         self.number_token_refreshes = 0
+        self.bearer_token_expiry = datetime.datetime.now()
         super().__init__(*args, **kwargs)
