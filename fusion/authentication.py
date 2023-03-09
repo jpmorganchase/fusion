@@ -538,8 +538,8 @@ class FusionAiohttpSession(aiohttp.ClientSession):
                 number of seconds until the access token expires, or after expiry, it will refresh the token.
                 Defaults to 5.
         """
+        super().__init__(*args, **kwargs)
         self.token = None
         self.refresh_within_seconds = refresh_within_seconds
         self.number_token_refreshes = 0
         self.bearer_token_expiry = datetime.datetime.now()
-        super().__init__(*args, **kwargs)
