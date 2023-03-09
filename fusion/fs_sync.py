@@ -97,6 +97,17 @@ def _generate_md5_token(path, fs):
     return base64.b64encode(hash_md5.digest()).decode()
 
 
+def _generate_sha256_token(path, fs, chunk_size=5 * 2**20):
+    hash_sha256 = hashlib.sha256()
+    with fs.open(path, "rb") as file:
+        for chunk in iter(lambda: file.read(chunk_size), b""):
+            hash_sha256_chunk = hashlib.md5()
+            hash_sha256_chunk.update(chunk)
+            hash_sha256.update(hash_sha256_chunk.digest())
+
+    return base64.b64encode(hash_sha256.digest()).decode()
+
+
 def _get_fusion_df(
     fs_fusion, datasets_lst, catalog, flatten=False, dataset_format=None
 ):
@@ -117,14 +128,14 @@ def _get_fusion_df(
             ]
             # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
             sz = [int(i["values"][1]) for i in changes]
-            md = [i["values"][2].split("md5=")[-1] for i in changes]
+            md = [i["values"][2].split("sha256=")[-1] for i in changes]
             keys = [_url_to_path(i) for i in urls]
 
             if flatten:
                 keys = ["/".join(k.split("/")[:2] + k.split("/")[-1:]) for k in keys]
 
             df = pd.DataFrame([keys, urls, sz, md]).T
-            df.columns = ["path", "url", "size", "md5"]
+            df.columns = ["path", "url", "size", "sha256"]
             if dataset_format and len(df) > 0:
                 df = df[df.url.str.split("/").str[-1] == dataset_format]
             df_lst.append(df)
@@ -163,13 +174,12 @@ def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None
 
     if local_state is not None and len(local_state) > 0:
         df_join = df_local.merge(local_state, on="path", how="left", suffixes=("", "_prev"))
-        df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "md5"] = [_generate_md5_token(x, fs_local) for x in
+        df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "sha256"] = [_generate_sha256_token(x, fs_local) for x in
                                                                              df_join[df_join["mtime"] != df_join[
                                                                                  "mtime_prev"]].local_path]
-        df_local = df_join[["path", "url", "mtime", "md5"]]
+        df_local = df_join[["path", "url", "mtime", "sha256"]]
     else:
-        df_local["md5"] = [_generate_md5_token(x, fs_local) for x in local_files]
-    # local_md5 = [_generate_md5_token(x, fs_local) for x in local_files]
+        df_local["sha256"] = [_generate_sha256_token(x, fs_local) for x in local_files]
 
     if dataset_format and len(df_local) > 0:
         df_local = df_local[df_local.url.str.split("/").str[-1] == dataset_format]

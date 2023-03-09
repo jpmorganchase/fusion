@@ -370,7 +370,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             headers_chunk_lst.append(headers_chunks)
 
         file_local.seek(0)
-        headers["Digest"] = "sha256=" + base64.b64encode(hash_sha256.digest()).decode()
+        if multipart:
+            headers["Digest"] = "sha256=" + base64.b64encode(hash_sha256.digest()).decode()
+        else:
+            headers["Digest"] = "sha256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
+
         return headers, headers_chunk_lst
 
     def put(
