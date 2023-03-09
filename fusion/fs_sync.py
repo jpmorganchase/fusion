@@ -99,13 +99,18 @@ def _generate_md5_token(path, fs):
 
 def _generate_sha256_token(path, fs, chunk_size=5 * 2**20):
     hash_sha256 = hashlib.sha256()
+    chunk_count = 0
     with fs.open(path, "rb") as file:
         for chunk in iter(lambda: file.read(chunk_size), b""):
             hash_sha256_chunk = hashlib.md5()
             hash_sha256_chunk.update(chunk)
             hash_sha256.update(hash_sha256_chunk.digest())
+            chunk_count += 1
 
-    return base64.b64encode(hash_sha256.digest()).decode()
+    if chunk_count > 1:
+        return base64.b64encode(hash_sha256.digest()).decode()
+    else:
+        return base64.b64encode(hash_sha256_chunk.digest()).decode()
 
 
 def _get_fusion_df(
