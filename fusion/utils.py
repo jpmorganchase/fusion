@@ -446,7 +446,6 @@ def get_session(
     else:
         get_retries = Retry.from_int(get_retries)
     session = requests.Session()
-    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries)
     if credentials.proxies:
         # mypy does note recognise session.proxies as a dict so fails this line, we'll ignore this chk
         session.proxies.update(credentials.proxies)  # type:ignore
@@ -454,6 +453,7 @@ def get_session(
         mount_url = _get_canonical_root_url(root_url)
     except Exception:
         mount_url = "https://"
+    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url)
     session.mount(mount_url, auth_handler)
     return session
 
