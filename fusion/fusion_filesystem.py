@@ -365,15 +365,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             hash_sha256.update(hash_sha256_chunk.digest())
             headers_chunks = deepcopy(headers_chunks)
             headers_chunks["Digest"] = (
-                "sha256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
+                "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
             )
             headers_chunk_lst.append(headers_chunks)
 
         file_local.seek(0)
         if multipart:
-            headers["Digest"] = "sha256=" + base64.b64encode(hash_sha256.digest()).decode()
+            headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
         else:
-            headers["Digest"] = "sha256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
+            headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
 
         return headers, headers_chunk_lst
 
