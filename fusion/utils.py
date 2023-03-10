@@ -403,11 +403,11 @@ async def get_client(credentials, **kwargs):
             expiry = response_data["expires_in"]
             return access_token, expiry
 
-        def _refresh_fusion_token_data():
+        async def _refresh_fusion_token_data():
             full_url_lst = params.url.split("/")
             url = '/'.join(full_url_lst[:full_url_lst.index("datasets")+2]) + "/authorize/token"
-            response = session.get(url)
-            response_data = response.json()
+            async with session.get(url) as response:
+                response_data = await response.json()
             access_token = response_data["access_token"]
             expiry = response_data["expires_in"]
             return access_token, expiry
@@ -431,7 +431,7 @@ async def get_client(credentials, **kwargs):
             dataset = url_lst[url_lst.index("datasets")+1]
             fusion_token_key = catalog + "_" + dataset
             if fusion_token_key not in session.fusion_token_dict.keys():
-                fusion_token, fusion_token_expiry = _refresh_fusion_token_data()
+                fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
                 session.fusion_token_dict[fusion_token_key] = fusion_token
                 session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(seconds=int(fusion_token_expiry))
                 logger.log(VERBOSE_LVL, f"Refreshed fusion token")
@@ -440,7 +440,7 @@ async def get_client(credentials, **kwargs):
                         session.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
                 ).total_seconds()
                 if fusion_token_expires_in < session.refresh_within_seconds:
-                    fusion_token, fusion_token_expiry = _refresh_fusion_token_data()
+                    fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
                     session.fusion_token_dict[fusion_token_key] = fusion_token
                     session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
                         seconds=int(fusion_token_expiry))
