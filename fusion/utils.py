@@ -424,7 +424,7 @@ async def get_client(credentials, **kwargs):
             session.number_token_refreshes += 1
 
         params.headers.update({"Authorization": f"Bearer {session.token}"})
-        url_lst = params.path_url.split('/')
+        url_lst = params.url.split('/')
         fusion_auth_req = "distributions" in url_lst
         if fusion_auth_req:
             catalog = url_lst[url_lst.index("catalogs")+1]
