@@ -91,7 +91,7 @@ def _generate_sha256_token(path, fs, chunk_size=5 * 2**20):
     chunk_count = 0
     with fs.open(path, "rb") as file:
         for chunk in iter(lambda: file.read(chunk_size), b""):
-            hash_sha256_chunk = hashlib.md5()
+            hash_sha256_chunk = hashlib.sha256()
             hash_sha256_chunk.update(chunk)
             hash_sha256.update(hash_sha256_chunk.digest())
             chunk_count += 1
