@@ -527,7 +527,7 @@ class FusionOAuthAdapter(HTTPAdapter):
 
 class FusionAiohttpSession(aiohttp.ClientSession):
     """Bespoke aiohttp session."""
-    def __int__(self, refresh_within_seconds: int = 5, *args, **kwargs):
+    def __int__(self, *args, **kwargs):
         """Class constructor to create a FusionOAuthAdapter object.
 
         Args:
@@ -538,7 +538,13 @@ class FusionAiohttpSession(aiohttp.ClientSession):
                 number of seconds until the access token expires, or after expiry, it will refresh the token.
                 Defaults to 5.
         """
+        self.token = None
+        self.refresh_within_seconds = None
+        self.number_token_refreshes = None
+        self.bearer_token_expiry = None
         super().__init__(*args, **kwargs)
+
+    def post_init(self, refresh_within_seconds: int = 5):
         self.token = None
         self.refresh_within_seconds = refresh_within_seconds
         self.number_token_refreshes = 0

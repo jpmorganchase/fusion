@@ -423,7 +423,9 @@ async def get_client(credentials, **kwargs):
 
     trace_config = aiohttp.TraceConfig()
     trace_config.on_request_start.append(on_request_start)
-    return FusionAiohttpSession(trace_configs=[trace_config], trust_env=True)
+    session = FusionAiohttpSession(trace_configs=[trace_config], trust_env=True)
+    session.post_init()
+    return session
 
 
 def get_session(
