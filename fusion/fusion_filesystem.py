@@ -323,7 +323,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             async with meth(rpath, data=lpath.read(), **kw) as resp:
                 self._raise_not_found_for_status(resp, rpath)
         else:
-            async with session.post(rpath + "/operations?operationType=upload") as resp:
+            async with session.post(rpath + "/operationType/upload") as resp:
                 self._raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
 
