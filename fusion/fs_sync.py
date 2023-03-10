@@ -122,7 +122,7 @@ def _get_fusion_df(
             ]
             # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
             sz = [int(i["values"][1]) for i in changes]
-            md = [i["values"][2].split("SHA-256=")[-1] for i in changes]
+            md = [i["values"][2].split("SHA-256=")[-1][:44] for i in changes]
             keys = [_url_to_path(i) for i in urls]
 
             if flatten:
