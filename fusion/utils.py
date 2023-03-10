@@ -372,7 +372,7 @@ async def get_client(credentials, **kwargs):
 
     """
 
-    async def on_request_start(session, trace_config_ctx, params):
+    async def on_request_start_token(session, trace_config_ctx, params):
         async def _refresh_token_data():
             payload = (
                 {
@@ -403,15 +403,6 @@ async def get_client(credentials, **kwargs):
             expiry = response_data["expires_in"]
             return access_token, expiry
 
-        async def _refresh_fusion_token_data():
-            full_url_lst = str(params.url).split("/")
-            url = '/'.join(full_url_lst[:full_url_lst.index("datasets")+2]) + "/authorize/token"
-            async with session.get(url) as response:
-                response_data = await response.json()
-            access_token = response_data["access_token"]
-            expiry = response_data["expires_in"]
-            return access_token, expiry
-
         token_expires_in = (
                 session.bearer_token_expiry - datetime.datetime.now()
         ).total_seconds()
@@ -424,16 +415,28 @@ async def get_client(credentials, **kwargs):
             session.number_token_refreshes += 1
 
         params.headers.update({"Authorization": f"Bearer {session.token}"})
+
+    async def on_request_start_fusion_token(session, trace_config_ctx, params):
+        async def _refresh_fusion_token_data():
+            full_url_lst = str(params.url).split("/")
+            url = '/'.join(full_url_lst[:full_url_lst.index("datasets")+2]) + "/authorize/token"
+            async with session.get(url) as response:
+                response_data = await response.json()
+            access_token = response_data["access_token"]
+            expiry = response_data["expires_in"]
+            return access_token, expiry
+
         url_lst = params.url.path.split('/')
         fusion_auth_req = "distributions" in url_lst
         if fusion_auth_req:
-            catalog = url_lst[url_lst.index("catalogs")+1]
-            dataset = url_lst[url_lst.index("datasets")+1]
+            catalog = url_lst[url_lst.index("catalogs") + 1]
+            dataset = url_lst[url_lst.index("datasets") + 1]
             fusion_token_key = catalog + "_" + dataset
             if fusion_token_key not in session.fusion_token_dict.keys():
                 fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
                 session.fusion_token_dict[fusion_token_key] = fusion_token
-                session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(seconds=int(fusion_token_expiry))
+                session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
+                    seconds=int(fusion_token_expiry))
                 logger.log(VERBOSE_LVL, f"Refreshed fusion token")
             else:
                 fusion_token_expires_in = (
@@ -455,7 +458,8 @@ async def get_client(credentials, **kwargs):
             http_proxy = credentials.proxies["https"]
 
     trace_config = aiohttp.TraceConfig()
-    trace_config.on_request_start.append(on_request_start)
+    trace_config.on_request_start.append(on_request_start_token)
+    trace_config.on_request_start.append(on_request_start_fusion_token)
     session = FusionAiohttpSession(trace_configs=[trace_config], trust_env=True)
     session.post_init()
     return session
