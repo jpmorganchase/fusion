@@ -1,6 +1,7 @@
 """Fusion utilities."""
 
 import datetime
+from datetime import timedelta
 import logging
 import os
 import re
@@ -402,6 +403,15 @@ async def get_client(credentials, **kwargs):
             expiry = response_data["expires_in"]
             return access_token, expiry
 
+        def _refresh_fusion_token_data():
+            full_url_lst = params.url.split("/")
+            url = '/'.join(full_url_lst[:full_url_lst.index("datasets")+2]) + "/authorize/token"
+            response = session.get(url)
+            response_data = response.json()
+            access_token = response_data["access_token"]
+            expiry = response_data["expires_in"]
+            return access_token, expiry
+
         token_expires_in = (
                 session.bearer_token_expiry - datetime.datetime.now()
         ).total_seconds()
@@ -414,6 +424,29 @@ async def get_client(credentials, **kwargs):
             session.number_token_refreshes += 1
 
         params.headers.update({"Authorization": f"Bearer {session.token}"})
+        url_lst = params.path_url.split('/')
+        fusion_auth_req = "distributions" in url_lst
+        if fusion_auth_req:
+            catalog = url_lst[url_lst.index("catalogs")+1]
+            dataset = url_lst[url_lst.index("datasets")+1]
+            fusion_token_key = catalog + "_" + dataset
+            if fusion_token_key not in session.fusion_token_dict.keys():
+                fusion_token, fusion_token_expiry = _refresh_fusion_token_data()
+                session.fusion_token_dict[fusion_token_key] = fusion_token
+                session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(seconds=int(fusion_token_expiry))
+                logger.log(VERBOSE_LVL, f"Refreshed fusion token")
+            else:
+                fusion_token_expires_in = (
+                        session.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
+                ).total_seconds()
+                if fusion_token_expires_in < session.refresh_within_seconds:
+                    fusion_token, fusion_token_expiry = _refresh_fusion_token_data()
+                    session.fusion_token_dict[fusion_token_key] = fusion_token
+                    session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
+                        seconds=int(fusion_token_expiry))
+                    logger.log(VERBOSE_LVL, f"Refreshed fusion token")
+
+            params.headers.update({"Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"})
 
     if credentials.proxies:
         if "http" in credentials.proxies.keys():

@@ -519,7 +519,7 @@ class FusionOAuthAdapter(HTTPAdapter):
                         seconds=int(fusion_token_expiry))
                     logger.log(VERBOSE_LVL, f"Refreshed fusion token")
 
-            request.headers.update({"Fusion-Authorization": f"Bearer {self.token}"})
+            request.headers.update({"Fusion-Authorization": f"Bearer {self.fusion_token_dict[fusion_token_key]}"})
 
         response = super(FusionOAuthAdapter, self).send(request, **kwargs)
         return response
@@ -549,3 +549,5 @@ class FusionAiohttpSession(aiohttp.ClientSession):
         self.refresh_within_seconds = refresh_within_seconds
         self.number_token_refreshes = 0
         self.bearer_token_expiry = datetime.datetime.now()
+        self.fusion_token_dict = {}
+        self.fusion_token_expiry_dict = {}
