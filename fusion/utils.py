@@ -404,7 +404,7 @@ async def get_client(credentials, **kwargs):
             return access_token, expiry
 
         async def _refresh_fusion_token_data():
-            full_url_lst = params.url.split("/")
+            full_url_lst = str(params.url).split("/")
             url = '/'.join(full_url_lst[:full_url_lst.index("datasets")+2]) + "/authorize/token"
             async with session.get(url) as response:
                 response_data = await response.json()
@@ -424,7 +424,7 @@ async def get_client(credentials, **kwargs):
             session.number_token_refreshes += 1
 
         params.headers.update({"Authorization": f"Bearer {session.token}"})
-        url_lst = params.url.split('/')
+        url_lst = params.url.path.split('/')
         fusion_auth_req = "distributions" in url_lst
         if fusion_auth_req:
             catalog = url_lst[url_lst.index("catalogs")+1]
