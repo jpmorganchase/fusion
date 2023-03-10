@@ -86,17 +86,6 @@ def _upload(fs_fusion, fs_local, df, n_par, show_progress=True):
     return res
 
 
-def _generate_md5_token(path, fs):
-    hash_md5 = hashlib.md5()
-    with fs.open(path, "rb") as file:
-        for chunk in iter(lambda: file.read(4096), b""):
-            hash_md5_chunk = hashlib.md5()
-            hash_md5_chunk.update(chunk)
-            hash_md5.update(chunk)
-
-    return base64.b64encode(hash_md5.digest()).decode()
-
-
 def _generate_sha256_token(path, fs, chunk_size=5 * 2**20):
     hash_sha256 = hashlib.sha256()
     chunk_count = 0
@@ -215,7 +204,7 @@ def _synchronize(
             join_df = df_local.merge(
                 df_fusion, on="url", suffixes=("_local", "_fusion"), how="left"
             )
-            join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
+            join_df = join_df[join_df["sha256_local"] != join_df["sha256_fusion"]]
             res = _upload(fs_fusion, fs_local, join_df, n_par, show_progress=show_progress)
     elif direction == "download":
         if len(df_fusion) == 0:
@@ -227,7 +216,7 @@ def _synchronize(
             join_df = df_local.merge(
                 df_fusion, on="url", suffixes=("_local", "_fusion"), how="right"
             )
-            join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
+            join_df = join_df[join_df["sha256_local"] != join_df["sha256_fusion"]]
             res = _download(
                 fs_fusion, fs_local, join_df, n_par, show_progress=show_progress
             )
