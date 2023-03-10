@@ -473,8 +473,7 @@ class FusionOAuthAdapter(HTTPAdapter):
             full_url_lst = request.url.split("/")
             url = '/'.join(full_url_lst[:full_url_lst.index("datasets")+2]) + "/authorize/token"
             session = requests.Session()
-            session.mount(self.mount_url, self)
-            response = session.get(url)
+            response = session.get(url, headers=request.headers, **kwargs)
             response_data = response.json()
             access_token = response_data["access_token"]
             expiry = response_data["expires_in"]
