@@ -391,7 +391,7 @@ async def get_client(credentials, **kwargs):
                     "resource": credentials.resource,
                 }
             )
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(trust_env=True) as session:
                 if credentials.proxies:
                     response = await session.post(
                         credentials.auth_url, data=payload, proxy=http_proxy
