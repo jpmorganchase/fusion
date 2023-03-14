@@ -12,6 +12,7 @@ from typing import Union
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
+import json as js
 import pandas as pd
 import pyarrow.parquet as pq
 import requests
@@ -612,16 +613,40 @@ def validate_file_names(paths, fs_fusion):
     return validation
 
 
-def path_to_url(x):
+def is_dataset_raw(paths, fs_fusion):
+    """Check if the files correspond to a raw dataset.
+
+    Args:
+        paths (list): List of file paths.
+        fs_fusion: Fusion filesystem.
+
+    Returns (list): List of booleans.
+
+    """
+    file_names = [i.split("/")[-1].split(".")[0] for i in paths]
+    ret = []
+    is_raw = {}
+    for i, f_n in enumerate(file_names):
+        tmp = f_n.split("__")
+        if tmp[0] not in is_raw.keys():
+            is_raw[tmp[0]] = js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))["isRawData"]
+        ret.append(is_raw[tmp[0]])
+
+    return ret
+
+
+def path_to_url(x, is_raw=False):
     """Convert file name to fusion url.
 
     Args:
         x (str): File path.
+        is_raw(bool, optional): Is the dataset raw.
 
     Returns (str): Fusion url string.
 
     """
     catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
+    ext = "raw" if is_raw else ext
     return "/".join(distribution_to_url("", dataset, date, ext, catalog).split("/")[1:])
 
 

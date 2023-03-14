@@ -6,7 +6,7 @@ import warnings
 from pathlib import Path
 from typing import Dict, List, Union
 from zipfile import ZipFile
-
+import json as js
 import pandas as pd
 import requests
 from joblib import Parallel, delayed
@@ -29,6 +29,7 @@ from .utils import (
     stream_single_file_new_session,
     upload_files,
     validate_file_names,
+    is_dataset_raw
 )
 
 logger = logging.getLogger(__name__)
@@ -775,7 +776,8 @@ class Fusion:
             file_path_lst = [
                 f for flag, f in zip(local_file_validation, file_path_lst) if flag
             ]
-            local_url_eqiv = [path_to_url(i) for i in file_path_lst]
+            is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
+            local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
         else:
             file_path_lst = [path]
             if not catalog or not dataset:
@@ -783,9 +785,9 @@ class Fusion:
                 file_path_lst = [
                     f for flag, f in zip(local_file_validation, file_path_lst) if flag
                 ]
-                local_url_eqiv = [path_to_url(i) for i in file_path_lst]
+                is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
+                local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
             else:
-                file_format = path.split(".")[-1]
                 dt_str = (
                     dt_str
                     if dt_str != "latest"
@@ -801,8 +803,10 @@ class Fusion:
                     )
                     warnings.warn(msg)
                     return [(False, path, Exception(msg))]
+                is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
+                file_format = path.split(".")[-1]
                 local_url_eqiv = [
-                    path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}")
+                    path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}", is_raw)
                 ]
 
         df = pd.DataFrame([file_path_lst, local_url_eqiv]).T

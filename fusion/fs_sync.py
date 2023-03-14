@@ -22,6 +22,7 @@ from .utils import (
     path_to_url,
     upload_files,
     validate_file_names,
+    is_dataset_raw
 )
 
 logger = logging.getLogger(__name__)
@@ -173,7 +174,8 @@ def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None
         ]
 
     local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
-    local_url_eqiv = [path_to_url(i) for i in local_files]
+    is_raw_lst = is_dataset_raw(local_files, fs_fusion)
+    local_url_eqiv = [path_to_url(i, r) for i, r in zip(local_files, is_raw_lst)]
     df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_mtime, local_files]).T
     df_local.columns = ["path", "url", "mtime", "local_path"]
 
