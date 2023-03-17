@@ -290,7 +290,7 @@ def fsync(
     ], "The direction must be either upload or download."
 
     for product in products:
-        res = json.loads(fs_fusion.cat(f"common/products/{product}").decode())
+        res = json.loads(fs_fusion.cat(f"{catalog}/products/{product}").decode())
         datasets += [r["identifier"] for r in res["resources"]]
 
     assert len(datasets) > 0, "The supplied products did not contain any datasets."
