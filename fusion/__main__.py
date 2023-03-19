@@ -1,4 +1,4 @@
-import ast
+"""Command line environment for fusion."""
 import argparse
 import inspect
 from fusion import Fusion
