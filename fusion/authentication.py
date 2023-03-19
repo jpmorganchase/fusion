@@ -506,7 +506,7 @@ class FusionOAuthAdapter(HTTPAdapter):
                 fusion_token, fusion_token_expiry = _refresh_fusion_token_data()
                 self.fusion_token_dict[fusion_token_key] = fusion_token
                 self.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(seconds=int(fusion_token_expiry))
-                logger.log(VERBOSE_LVL, f"Refreshed fusion token")
+                logger.log(VERBOSE_LVL, "Refreshed fusion token")
             else:
                 fusion_token_expires_in = (
                         self.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
@@ -516,7 +516,7 @@ class FusionOAuthAdapter(HTTPAdapter):
                     self.fusion_token_dict[fusion_token_key] = fusion_token
                     self.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
                         seconds=int(fusion_token_expiry))
-                    logger.log(VERBOSE_LVL, f"Refreshed fusion token")
+                    logger.log(VERBOSE_LVL, "Refreshed fusion token")
 
             request.headers.update({"Fusion-Authorization": f"Bearer {self.fusion_token_dict[fusion_token_key]}"})
 
@@ -544,6 +544,7 @@ class FusionAiohttpSession(aiohttp.ClientSession):
         super().__init__(*args, **kwargs)
 
     def post_init(self, refresh_within_seconds: int = 5):
+        """Set member variables."""
         self.token = None
         self.refresh_within_seconds = refresh_within_seconds
         self.number_token_refreshes = 0

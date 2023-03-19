@@ -514,7 +514,7 @@ async def get_client(credentials, **kwargs):
                 session.fusion_token_dict[fusion_token_key] = fusion_token
                 session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
                     seconds=int(fusion_token_expiry))
-                logger.log(VERBOSE_LVL, f"Refreshed fusion token")
+                logger.log(VERBOSE_LVL, "Refreshed fusion token")
             else:
                 fusion_token_expires_in = (
                         session.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
@@ -524,7 +524,7 @@ async def get_client(credentials, **kwargs):
                     session.fusion_token_dict[fusion_token_key] = fusion_token
                     session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
                         seconds=int(fusion_token_expiry))
-                    logger.log(VERBOSE_LVL, f"Refreshed fusion token")
+                    logger.log(VERBOSE_LVL, "Refreshed fusion token")
 
             params.headers.update({"Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"})
 
