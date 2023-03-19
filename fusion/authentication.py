@@ -418,8 +418,8 @@ class FusionOAuthAdapter(HTTPAdapter):
         self.bearer_token_expiry = datetime.datetime.now()
         self.number_token_refreshes = 0
         self.refresh_within_seconds = refresh_within_seconds
-        self.fusion_token_dict = {}
-        self.fusion_token_expiry_dict = {}
+        self.fusion_token_dict: Dict[str, str] = {}
+        self.fusion_token_expiry_dict: Dict[str, int] = {}
         self.mount_url = mount_url
 
         if not auth_retries:
@@ -548,5 +548,5 @@ class FusionAiohttpSession(aiohttp.ClientSession):
         self.refresh_within_seconds = refresh_within_seconds
         self.number_token_refreshes = 0
         self.bearer_token_expiry = datetime.datetime.now()
-        self.fusion_token_dict = {}
-        self.fusion_token_expiry_dict = {}
+        self.fusion_token_dict: Dict[str, str] = {}
+        self.fusion_token_expiry_dict: Dict[str, int] = {}
