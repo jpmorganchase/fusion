@@ -10,11 +10,11 @@ if __name__ == "__main__":
                callable(getattr(Fusion, method_name)) and not method_name.startswith("_")]
 
     args = inspect.signature(Fusion.__init__).parameters
-    args = set([param.name for param in args.values()])
+    args = {param.name for param in args.values()}
 
     for m in methods:
         met = getattr(Fusion, m)
-        args = args.union(set([param.name for param in inspect.signature(met).parameters.values()]))
+        args = args.union({param.name for param in inspect.signature(met).parameters.values()})
 
     args = args.difference({"self"})
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     if vars(args)["method"] is not None:
         method = getattr(client, vars(args)["method"])
         kw_m = {}
-        args_m = set([param.name for param in inspect.signature(method).parameters.values()]).difference({"self"})
+        args_m = {param.name for param in inspect.signature(method).parameters.values()}.difference({"self"})
         for k in args_m:
             if vars(args)[k] is not None:
                 v = vars(args)[k]
