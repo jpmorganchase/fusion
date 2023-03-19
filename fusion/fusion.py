@@ -12,6 +12,7 @@ import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
+import pyarrow as pa
 
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
@@ -26,6 +27,9 @@ from .utils import (
     read_csv,
     read_json,
     read_parquet,
+    parquet_to_table,
+    csv_to_table,
+    json_to_table,
     stream_single_file_new_session,
     upload_files,
     validate_file_names,
@@ -549,6 +553,7 @@ class Fusion:
         force_download: bool = False,
         download_folder: str = None,
         return_paths: bool = False,
+        partitioning: str = None,
     ):
         """Downloads the requested distributions of a dataset to disk.
 
@@ -567,6 +572,7 @@ class Fusion:
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
+            partitioning (str, optional): Partitioning specification.
 
         Returns:
 
@@ -578,11 +584,16 @@ class Fusion:
             dataset, dt_str, dataset_format, catalog
         )
 
-        if not download_folder:
-            download_folder = self.download_folder
+        if not download_folder or not isinstance(download_folder, list):
+            download_folders = [self.download_folder] * len(required_series)
 
-        if not self.fs.exists(download_folder):
-            self.fs.mkdir(download_folder, create_parents=True)
+        if partitioning == 'hive':
+            members = [series[2].strip('/') for series in required_series]
+            download_folders = [f"{download_folders[i]}/{series[0]}/{series[1]}/{members[i]}" for i, series in enumerate(required_series)]
+
+        for download_folder in download_folders:
+            if not self.fs.exists(download_folder):
+                self.fs.mkdir(download_folder, create_parents=True)
         download_spec = [
             {
                 "credentials": self.credentials,
@@ -590,12 +601,12 @@ class Fusion:
                     self.root_url, series[1], series[2], series[3], series[0]
                 ),
                 "output_file": distribution_to_filename(
-                    download_folder, series[1], series[2], series[3], series[0]
+                    download_folders[i], series[1], series[2], series[3], series[0], partitioning=partitioning
                 ),
                 "overwrite": force_download,
                 "fs": self.fs,
             }
-            for series in required_series
+            for i, series in enumerate(required_series)
         ]
 
         if show_progress:
@@ -730,6 +741,113 @@ class Fusion:
             df = pd.concat(dataframes, ignore_index=True)
 
         return df
+
+    def to_table(
+        self,
+        dataset: str,
+        dt_str: str = "latest",
+        dataset_format: str = "parquet",
+        catalog: str = None,
+        n_par: int = None,
+        show_progress: bool = True,
+        columns: List = None,
+        filters: List = None,
+        force_download: bool = False,
+        download_folder: str = None,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """Gets distributions for a specified date or date range and returns the data as an arrow table.
+
+        Args:
+            dataset (str): A dataset identifier
+            dt_str (str, optional): Either a single date or a range identified by a start or end date,
+                or both separated with a ":". Defaults to 'latest' which will return the most recent
+                instance of the dataset.
+            dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            n_par (int, optional): Specify how many distributions to download in parallel.
+                Defaults to all cpus available.
+            show_progress (bool, optional): Display a progress bar during data download Defaults to True.
+            columns (List, optional): A list of columns to return from a parquet file. Defaults to None
+            filters (List, optional): List[Tuple] or List[List[Tuple]] or None (default)
+                Rows which do not match the filter predicate will be removed from scanned data.
+                Partition keys embedded in a nested directory structure will be exploited to avoid
+                loading files at all if they contain no matching rows. If use_legacy_dataset is True,
+                filters can only reference partition keys and only a hive-style directory structure
+                is supported. When setting use_legacy_dataset to False, also within-file level filtering
+                and different partitioning schemes are supported.
+                More on https://arrow.apache.org/docs/python/generated/pyarrow.parquet.ParquetDataset.html
+            force_download (bool, optional): If True then will always download a file even
+                if it is already on disk. Defaults to False.
+            download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
+                Defaults to download_folder as set in __init__
+        Returns:
+            class:`pandas.DataFrame`: a dataframe containing the requested data.
+                If multiple dataset instances are retrieved then these are concatenated first.
+        """
+        catalog = self.__use_catalog(catalog)
+        n_par = cpu_count(n_par)
+        if not download_folder:
+            download_folder = self.download_folder
+        download_res = self.download(
+            dataset,
+            dt_str,
+            dataset_format,
+            catalog,
+            n_par,
+            show_progress,
+            force_download,
+            download_folder,
+            return_paths=True,
+        )
+
+        if not all(res[0] for res in download_res):
+            failed_res = [res for res in download_res if not res[0]]
+            raise Exception(
+                f"Not all downloads were successfully completed. "
+                f"Re-run to collect missing files. The following failed:\n{failed_res}"
+            )
+
+        files = [res[1] for res in download_res]
+
+        read_fn_map = {
+            "csv": csv_to_table,
+            "parquet": parquet_to_table,
+            "parq": parquet_to_table,
+            "json": json_to_table,
+            "raw": csv_to_table,
+        }
+
+        read_default_kwargs: Dict[str, Dict[str, object]] = {
+            "csv": {"columns": columns, "filters": filters, "fs": self.fs},
+            "parquet": {"columns": columns, "filters": filters, "fs": self.fs},
+            "json": {"columns": columns, "filters": filters, "fs": self.fs},
+            "raw": {"columns": columns, "filters": filters, "fs": self.fs},
+        }
+
+        read_default_kwargs["parq"] = read_default_kwargs["parquet"]
+
+        reader = read_fn_map.get(dataset_format)
+        read_kwargs = read_default_kwargs.get(dataset_format, {})
+        if not reader:
+            raise Exception(
+                f"No function to read file in format {dataset_format}"
+            )
+
+        read_kwargs.update(kwargs)
+
+        if len(files) == 0:
+            raise APIResponseError(
+                f"No series members for dataset: {dataset} "
+                f"in date or date range: {dt_str} and format: {dataset_format}"
+            )
+        if dataset_format in ["parquet", "parq"]:
+            tbl = reader(files, **read_kwargs)  # type: ignore
+        else:
+            tbl = (reader(f, **read_kwargs) for f in files)  # type: ignore
+            tbl = pa.concat_tables(tbl)
+
+        return tbl
 
     def upload(
         self,

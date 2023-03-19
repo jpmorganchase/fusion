@@ -6,7 +6,6 @@ import logging
 import os
 import re
 import sys
-from io import BytesIO
 from pathlib import Path
 from typing import Union
 from urllib.parse import urlparse, urlunparse
@@ -17,7 +16,8 @@ import pandas as pd
 import pyarrow.parquet as pq
 import requests
 from joblib import Parallel, delayed
-from pyarrow import csv, json
+from pyarrow import csv, json, unify_schemas
+from pyarrow.parquet import filters_to_expression
 
 if sys.version_info >= (3, 7):
     from contextlib import nullcontext
@@ -75,34 +75,92 @@ def cpu_count(thread_pool_size: int = None):
     return thread_pool_size
 
 
-def _csv_to_table(path: str, fs=None, delimiter: str = None):
+def csv_to_table(path: str, fs=None, columns: list = None, filters: list = None):
     """Reads csv data to pyarrow table.
 
     Args:
         path (str): path to the file.
         fs: filesystem object.
-        delimiter (str): delimiter.
+        columns: columns to read.
+        filters: arrow filters.
 
     Returns:
-        pyarrow.Table pyarrow table with the data.
+        class:`pyarrow.Table` pyarrow table with the data.
     """
-    parse_options = csv.ParseOptions(delimiter=delimiter)
+    # parse_options = csv.ParseOptions(delimiter=delimiter)
+    filters = filters_to_expression(filters) if filters else filters
     with (fs.open(path) if fs else nullcontext(path)) as f:
-        return csv.read_csv(f, parse_options=parse_options)
+        tbl = csv.read_csv(f)
+        if filters is not None:
+            tbl = tbl.filter(filters)
+        if columns is not None:
+            tbl = tbl.select(columns)
+        return tbl
 
 
-def _json_to_table(path: str, fs=None):
+def json_to_table(path: str, fs=None, columns: list = None, filters: list = None):
     """Reads json data to pyarrow table.
 
     Args:
         path: path to json file.
         fs: filesystem.
+        columns: columns to read.
+        filters: arrow filters.
 
     Returns:
-
+        class:`pyarrow.Table` pyarrow table with the data.
     """
+    filters = filters_to_expression(filters) if filters else filters
     with (fs.open(path) if fs else nullcontext(path)) as f:
-        return json.read_json(f)
+        tbl = json.read_json(f)
+        if filters is not None:
+            tbl = tbl.filter(filters)
+        if columns is not None:
+            tbl = tbl.select(columns)
+        return tbl
+
+
+def parquet_to_table(path: str, fs=None, columns: list = None, filters: list = None):
+    """Reads parquet data to pyarrow table.
+
+    Args:
+        path: path to parquet file.
+        fs: filesystem.
+        columns: columns to read.
+        filters: arrow filters.
+
+    Returns:
+        class:`pyarrow.Table` pyarrow table with the data.
+    """
+
+    if isinstance(path, list):
+        schemas = [pq.ParquetDataset(
+            p,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+        ).schema for p in path]
+    else:
+        schemas = [pq.ParquetDataset(
+            path,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+        ).schema]
+
+    schema = unify_schemas(schemas)
+    return (
+        pq.ParquetDataset(
+            path,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+            schema=schema
+        ).read(columns=columns)
+    )
 
 
 def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
@@ -120,7 +178,7 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
     """
     try:
         try:
-            tbl = _csv_to_table(path, fs)
+            res = csv_to_table(path, fs).to_pandas()
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -128,10 +186,6 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
             )
             raise Exception
 
-        out = BytesIO()
-        pq.write_table(tbl, out)
-        del tbl
-        res = pq.read_table(out, filters=filters, columns=columns).to_pandas()
     except Exception as err:
         logger.log(
             VERBOSE_LVL,
@@ -169,7 +223,7 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
 
     try:
         try:
-            tbl = _json_to_table(path, fs)
+            res = json_to_table(path, fs).to_pandas()
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -177,10 +231,6 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
             )
             raise Exception
 
-        out = BytesIO()
-        pq.write_table(tbl, out)
-        del tbl
-        res = pq.read_table(out, filters=filters, columns=columns).to_pandas()
     except Exception as err:
         logger.log(
             VERBOSE_LVL,
@@ -214,6 +264,25 @@ def read_parquet(
         pandas.DataFrame: a dataframe containing the data.
 
     """
+
+    if isinstance(path, list):
+        schemas = [pq.ParquetDataset(
+            p,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+        ).schema for p in path]
+    else:
+        schemas = [pq.ParquetDataset(
+            path,
+            use_legacy_dataset=False,
+            filters=filters,
+            filesystem=fs,
+            memory_map=True,
+        ).schema]
+
+    schema = unify_schemas(schemas)
     return (
         pq.ParquetDataset(
             path,
@@ -221,6 +290,7 @@ def read_parquet(
             filters=filters,
             filesystem=fs,
             memory_map=True,
+            schema=schema
         )
         .read_pandas(columns=columns)
         .to_pandas()
@@ -285,6 +355,7 @@ def distribution_to_filename(
     datasetseries: str,
     file_format: str,
     catalog: str = "common",
+    partitioning: str = None,
 ) -> str:
     """Returns a filename representing a dataset distribution.
 
@@ -294,13 +365,18 @@ def distribution_to_filename(
         datasetseries (str): The datasetseries instance identifier.
         file_format (str): The file type, e.g. CSV or Parquet
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
+        partitioning (str, optional): Partitioning specification.
 
     Returns:
         str: FQ distro file name
     """
     if datasetseries[-1] == "/" or datasetseries[-1] == "\\":
         datasetseries = datasetseries[0:-1]
-    file_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
+
+    if partitioning == "hive":
+        file_name = f"{dataset}.{file_format}"
+    else:
+        file_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
 
     sep = "/"
     if "\\" in root_folder:
@@ -546,7 +622,7 @@ def stream_single_file_new_session(
         return _stream_single_file_new_session_dry_run(credentials, url, output_file)
 
     if not overwrite and fs.exists(output_file):
-        return (True, output_file, None)
+        return True, output_file, None
 
     try:
         with get_session(credentials, url).get(url, stream=True) as r:
