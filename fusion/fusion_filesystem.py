@@ -323,7 +323,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             async with meth(rpath, data=lpath.read(), **kw) as resp:
                 self._raise_not_found_for_status(resp, rpath)
         else:
-            async with session.post(rpath + "/operations?operationType=upload") as resp:
+            async with session.post(rpath + "/operationType/upload") as resp:
                 self._raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
 
@@ -350,7 +350,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             "x-jpmc-distribution-created-date": dt_iso,
             "x-jpmc-distribution-from-date": dt_iso,
             "x-jpmc-distribution-to-date": dt_iso,
-            "Digest": "",
+            "Digest": "",  # to be changed to x-jpmc-digest
         }
         headers["Content-Type"] = (
             "application/json" if multipart else headers["Content-Type"]
@@ -358,19 +358,23 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
 
         headers_chunk_lst = []
-        hash_md5 = hashlib.md5()
+        hash_sha256 = hashlib.sha256()
         for chunk in iter(lambda: file_local.read(chunk_size), b""):
-            hash_md5_chunk = hashlib.md5()
-            hash_md5_chunk.update(chunk)
-            hash_md5.update(chunk)
+            hash_sha256_chunk = hashlib.sha256()
+            hash_sha256_chunk.update(chunk)
+            hash_sha256.update(hash_sha256_chunk.digest())
             headers_chunks = deepcopy(headers_chunks)
             headers_chunks["Digest"] = (
-                "md5=" + base64.b64encode(hash_md5_chunk.digest()).decode()
+                "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
             )
             headers_chunk_lst.append(headers_chunks)
 
         file_local.seek(0)
-        headers["Digest"] = "md5=" + base64.b64encode(hash_md5.digest()).decode()
+        if multipart:
+            headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
+        else:
+            headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
+
         return headers, headers_chunk_lst
 
     def put(

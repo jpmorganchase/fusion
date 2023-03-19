@@ -22,6 +22,7 @@ from .utils import (
     path_to_url,
     upload_files,
     validate_file_names,
+    is_dataset_raw
 )
 
 logger = logging.getLogger(__name__)
@@ -86,15 +87,20 @@ def _upload(fs_fusion, fs_local, df, n_par, show_progress=True):
     return res
 
 
-def _generate_md5_token(path, fs):
-    hash_md5 = hashlib.md5()
+def _generate_sha256_token(path, fs, chunk_size=5 * 2**20):
+    hash_sha256 = hashlib.sha256()
+    chunk_count = 0
     with fs.open(path, "rb") as file:
-        for chunk in iter(lambda: file.read(4096), b""):
-            hash_md5_chunk = hashlib.md5()
-            hash_md5_chunk.update(chunk)
-            hash_md5.update(chunk)
+        for chunk in iter(lambda: file.read(chunk_size), b""):
+            hash_sha256_chunk = hashlib.sha256()
+            hash_sha256_chunk.update(chunk)
+            hash_sha256.update(hash_sha256_chunk.digest())
+            chunk_count += 1
 
-    return base64.b64encode(hash_md5.digest()).decode()
+    if chunk_count > 1:
+        return base64.b64encode(hash_sha256.digest()).decode()
+    else:
+        return base64.b64encode(hash_sha256_chunk.digest()).decode()
 
 
 def _get_fusion_df(
@@ -117,19 +123,19 @@ def _get_fusion_df(
             ]
             # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
             sz = [int(i["values"][1]) for i in changes]
-            md = [i["values"][2].split("md5=")[-1] for i in changes]
+            md = [i["values"][2].split("SHA-256=")[-1][:44] for i in changes]
             keys = [_url_to_path(i) for i in urls]
 
             if flatten:
                 keys = ["/".join(k.split("/")[:2] + k.split("/")[-1:]) for k in keys]
 
             df = pd.DataFrame([keys, urls, sz, md]).T
-            df.columns = ["path", "url", "size", "md5"]
+            df.columns = ["path", "url", "size", "sha256"]
             if dataset_format and len(df) > 0:
                 df = df[df.url.str.split("/").str[-1] == dataset_format]
             df_lst.append(df)
         else:
-            df_lst.append(pd.DataFrame(columns=["path", "url", "size", "md5"]))
+            df_lst.append(pd.DataFrame(columns=["path", "url", "size", "sha256"]))
 
     return pd.concat(df_lst)
 
@@ -157,19 +163,19 @@ def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None
         ]
 
     local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
-    local_url_eqiv = [path_to_url(i) for i in local_files]
+    is_raw_lst = is_dataset_raw(local_files, fs_fusion)
+    local_url_eqiv = [path_to_url(i, r) for i, r in zip(local_files, is_raw_lst)]
     df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_mtime, local_files]).T
     df_local.columns = ["path", "url", "mtime", "local_path"]
 
     if local_state is not None and len(local_state) > 0:
         df_join = df_local.merge(local_state, on="path", how="left", suffixes=("", "_prev"))
-        df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "md5"] = [_generate_md5_token(x, fs_local) for x in
+        df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "sha256"] = [_generate_sha256_token(x, fs_local) for x in
                                                                              df_join[df_join["mtime"] != df_join[
                                                                                  "mtime_prev"]].local_path]
-        df_local = df_join[["path", "url", "mtime", "md5"]]
+        df_local = df_join[["path", "url", "mtime", "sha256"]]
     else:
-        df_local["md5"] = [_generate_md5_token(x, fs_local) for x in local_files]
-    # local_md5 = [_generate_md5_token(x, fs_local) for x in local_files]
+        df_local["sha256"] = [_generate_sha256_token(x, fs_local) for x in local_files]
 
     if dataset_format and len(df_local) > 0:
         df_local = df_local[df_local.url.str.split("/").str[-1] == dataset_format]
@@ -200,7 +206,7 @@ def _synchronize(
             join_df = df_local.merge(
                 df_fusion, on="url", suffixes=("_local", "_fusion"), how="left"
             )
-            join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
+            join_df = join_df[join_df["sha256_local"] != join_df["sha256_fusion"]]
             res = _upload(fs_fusion, fs_local, join_df, n_par, show_progress=show_progress)
     elif direction == "download":
         if len(df_fusion) == 0:
@@ -212,7 +218,7 @@ def _synchronize(
             join_df = df_local.merge(
                 df_fusion, on="url", suffixes=("_local", "_fusion"), how="right"
             )
-            join_df = join_df[join_df["md5_local"] != join_df["md5_fusion"]]
+            join_df = join_df[join_df["sha256_local"] != join_df["sha256_fusion"]]
             res = _download(
                 fs_fusion, fs_local, join_df, n_par, show_progress=show_progress
             )
@@ -284,7 +290,7 @@ def fsync(
     ], "The direction must be either upload or download."
 
     for product in products:
-        res = json.loads(fs_fusion.cat(f"common/products/{product}").decode())
+        res = json.loads(fs_fusion.cat(f"{catalog}/products/{product}").decode())
         datasets += [r["identifier"] for r in res["resources"]]
 
     assert len(datasets) > 0, "The supplied products did not contain any datasets."

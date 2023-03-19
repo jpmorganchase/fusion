@@ -4,6 +4,7 @@ import datetime
 import json
 import logging
 import os
+import aiohttp
 from datetime import timedelta
 from pathlib import Path
 from typing import Dict, Union
@@ -385,6 +386,7 @@ class FusionOAuthAdapter(HTTPAdapter):
         proxies: dict = {},
         refresh_within_seconds: int = 5,
         auth_retries: Union[int, Retry] = None,
+        mount_url = "",
         *args,
         **kwargs,
     ) -> None:
@@ -399,7 +401,7 @@ class FusionOAuthAdapter(HTTPAdapter):
                 Defaults to 5.
             auth_retries (Union[int, Retry]): Number of times to attempt to authenticate to handle connection problems.
                 Defaults to None.
-
+            mount_url (str, optional): Mount url.
         """
         super(FusionOAuthAdapter, self).__init__(*args, **kwargs)
 
@@ -416,6 +418,9 @@ class FusionOAuthAdapter(HTTPAdapter):
         self.bearer_token_expiry = datetime.datetime.now()
         self.number_token_refreshes = 0
         self.refresh_within_seconds = refresh_within_seconds
+        self.fusion_token_dict: Dict[str, str] = {}
+        self.fusion_token_expiry_dict: Dict[str, int] = {}
+        self.mount_url = mount_url
 
         if not auth_retries:
             self.auth_retries = Retry(total=20, backoff_factor=0.2)
@@ -426,7 +431,7 @@ class FusionOAuthAdapter(HTTPAdapter):
         """Function to send a request to the authentication server.
 
         Args:
-            request (requests.Session): A HTTP Session.
+            request (requests.PreparedRequest): A HTTP Session.
 
         Returns:
 
@@ -453,7 +458,7 @@ class FusionOAuthAdapter(HTTPAdapter):
             try:
                 s = requests.Session()
                 if self.proxies:
-                    # mypy does note recognise session.proxies as a dict so fails this line, we'll ignore this chk
+                    # mypy does not recognise session.proxies as a dict so fails this line, we'll ignore this chk
                     s.proxies.update(self.proxies)  # type:ignore
                 s.mount("http://", HTTPAdapter(max_retries=self.auth_retries))
                 response = s.post(self.credentials.auth_url, data=payload)
@@ -464,9 +469,23 @@ class FusionOAuthAdapter(HTTPAdapter):
             except Exception as ex:
                 raise Exception(f"Failed to authenticate against OAuth server {ex}")
 
+        def _refresh_fusion_token_data():
+            full_url_lst = request.url.split("/")
+            url = '/'.join(full_url_lst[:full_url_lst.index("datasets")+2]) + "/authorize/token"
+            session = requests.Session()
+            response = session.get(url, headers=request.headers, **kwargs)
+            response_data = response.json()
+            access_token = response_data["access_token"]
+            expiry = response_data["expires_in"]
+            return access_token, expiry
+
         token_expires_in = (
             self.bearer_token_expiry - datetime.datetime.now()
         ).total_seconds()
+
+        url_lst = request.path_url.split('/')
+        fusion_auth_req = "distributions" in url_lst
+
         if token_expires_in < self.refresh_within_seconds:
             token, expiry = _refresh_token_data()
             self.token = token
@@ -478,7 +497,56 @@ class FusionOAuthAdapter(HTTPAdapter):
                 VERBOSE_LVL,
                 f"Refreshed token {self.number_token_refreshes} time{_res_plural(self.number_token_refreshes)}",
             )
-
         request.headers.update({"Authorization": f"Bearer {self.token}"})
+        if fusion_auth_req:
+            catalog = url_lst[url_lst.index("catalogs")+1]
+            dataset = url_lst[url_lst.index("datasets")+1]
+            fusion_token_key = catalog + "_" + dataset
+            if fusion_token_key not in self.fusion_token_dict.keys():
+                fusion_token, fusion_token_expiry = _refresh_fusion_token_data()
+                self.fusion_token_dict[fusion_token_key] = fusion_token
+                self.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(seconds=int(fusion_token_expiry))
+                logger.log(VERBOSE_LVL, f"Refreshed fusion token")
+            else:
+                fusion_token_expires_in = (
+                        self.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
+                ).total_seconds()
+                if fusion_token_expires_in < self.refresh_within_seconds:
+                    fusion_token, fusion_token_expiry = _refresh_fusion_token_data()
+                    self.fusion_token_dict[fusion_token_key] = fusion_token
+                    self.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
+                        seconds=int(fusion_token_expiry))
+                    logger.log(VERBOSE_LVL, f"Refreshed fusion token")
+
+            request.headers.update({"Fusion-Authorization": f"Bearer {self.fusion_token_dict[fusion_token_key]}"})
+
         response = super(FusionOAuthAdapter, self).send(request, **kwargs)
         return response
+
+
+class FusionAiohttpSession(aiohttp.ClientSession):
+    """Bespoke aiohttp session."""
+    def __int__(self, *args, **kwargs):
+        """Class constructor to create a FusionOAuthAdapter object.
+
+        Args:
+            args (optional): List of argument from aiohttp session.
+            kwargs (dict, optional): Named list or arguments for aiohttp session.
+                Defaults to {}.
+            refresh_within_seconds (int, optional): When an API call is made with less than the specified
+                number of seconds until the access token expires, or after expiry, it will refresh the token.
+                Defaults to 5.
+        """
+        self.token = None
+        self.refresh_within_seconds = None
+        self.number_token_refreshes = None
+        self.bearer_token_expiry = None
+        super().__init__(*args, **kwargs)
+
+    def post_init(self, refresh_within_seconds: int = 5):
+        self.token = None
+        self.refresh_within_seconds = refresh_within_seconds
+        self.number_token_refreshes = 0
+        self.bearer_token_expiry = datetime.datetime.now()
+        self.fusion_token_dict: Dict[str, str] = {}
+        self.fusion_token_expiry_dict: Dict[str, int] = {}

@@ -1,6 +1,7 @@
 """Fusion utilities."""
 
 import datetime
+from datetime import timedelta
 import logging
 import os
 import re
@@ -10,6 +11,7 @@ from typing import Union
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
+import json as js
 import pandas as pd
 import pyarrow.parquet as pq
 import requests
@@ -42,7 +44,7 @@ import multiprocessing as mp
 import fsspec
 from urllib3.util.retry import Retry
 
-from .authentication import FusionCredentials, FusionOAuthAdapter
+from .authentication import FusionCredentials, FusionOAuthAdapter, FusionAiohttpSession
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -447,34 +449,84 @@ async def get_client(credentials, **kwargs):
 
     """
 
-    async def on_request_start(session, trace_config_ctx, params):
-        payload = (
-            {
-                "grant_type": "client_credentials",
-                "client_id": credentials.client_id,
-                "client_secret": credentials.client_secret,
-                "aud": credentials.resource,
-            }
-            if credentials.grant_type == "client_credentials"
-            else {
-                "grant_type": "password",
-                "client_id": credentials.client_id,
-                "username": credentials.username,
-                "password": credentials.password,
-                "resource": credentials.resource,
-            }
-        )
-        async with aiohttp.ClientSession() as session:
-            if credentials.proxies:
-                response = await session.post(
-                    credentials.auth_url, data=payload, proxy=http_proxy
-                )
-            else:
-                response = await session.post(credentials.auth_url, data=payload)
-            response_data = await response.json()
+    async def on_request_start_token(session, trace_config_ctx, params):
+        async def _refresh_token_data():
+            payload = (
+                {
+                    "grant_type": "client_credentials",
+                    "client_id": credentials.client_id,
+                    "client_secret": credentials.client_secret,
+                    "aud": credentials.resource,
+                }
+                if credentials.grant_type == "client_credentials"
+                else {
+                    "grant_type": "password",
+                    "client_id": credentials.client_id,
+                    "username": credentials.username,
+                    "password": credentials.password,
+                    "resource": credentials.resource,
+                }
+            )
+            async with aiohttp.ClientSession(trust_env=True) as session:
+                if credentials.proxies:
+                    response = await session.post(
+                        credentials.auth_url, data=payload, proxy=http_proxy
+                    )
+                else:
+                    response = await session.post(credentials.auth_url, data=payload)
+                response_data = await response.json()
 
-        access_token = response_data["access_token"]
-        params.headers.update({"Authorization": f"Bearer {access_token}"})
+            access_token = response_data["access_token"]
+            expiry = response_data["expires_in"]
+            return access_token, expiry
+
+        token_expires_in = (
+                session.bearer_token_expiry - datetime.datetime.now()
+        ).total_seconds()
+        if token_expires_in < session.refresh_within_seconds:
+            token, expiry = await _refresh_token_data()
+            session.token = token
+            session.bearer_token_expiry = datetime.datetime.now() + datetime.timedelta(
+                seconds=int(expiry)
+            )
+            session.number_token_refreshes += 1
+
+        params.headers.update({"Authorization": f"Bearer {session.token}"})
+
+    async def on_request_start_fusion_token(session, trace_config_ctx, params):
+        async def _refresh_fusion_token_data():
+            full_url_lst = str(params.url).split("/")
+            url = '/'.join(full_url_lst[:full_url_lst.index("datasets")+2]) + "/authorize/token"
+            async with session.get(url) as response:
+                response_data = await response.json()
+            access_token = response_data["access_token"]
+            expiry = response_data["expires_in"]
+            return access_token, expiry
+
+        url_lst = params.url.path.split('/')
+        fusion_auth_req = "distributions" in url_lst
+        if fusion_auth_req:
+            catalog = url_lst[url_lst.index("catalogs") + 1]
+            dataset = url_lst[url_lst.index("datasets") + 1]
+            fusion_token_key = catalog + "_" + dataset
+            if fusion_token_key not in session.fusion_token_dict.keys():
+                fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
+                session.fusion_token_dict[fusion_token_key] = fusion_token
+                session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
+                    seconds=int(fusion_token_expiry))
+                logger.log(VERBOSE_LVL, f"Refreshed fusion token")
+            else:
+                fusion_token_expires_in = (
+                        session.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
+                ).total_seconds()
+                if fusion_token_expires_in < session.refresh_within_seconds:
+                    fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
+                    session.fusion_token_dict[fusion_token_key] = fusion_token
+                    session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
+                        seconds=int(fusion_token_expiry))
+                    logger.log(VERBOSE_LVL, f"Refreshed fusion token")
+
+            params.headers.update({"Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"})
 
     if credentials.proxies:
         if "http" in credentials.proxies.keys():
@@ -483,8 +535,11 @@ async def get_client(credentials, **kwargs):
             http_proxy = credentials.proxies["https"]
 
     trace_config = aiohttp.TraceConfig()
-    trace_config.on_request_start.append(on_request_start)
-    return aiohttp.ClientSession(trace_configs=[trace_config], trust_env=True)
+    trace_config.on_request_start.append(on_request_start_token)
+    trace_config.on_request_start.append(on_request_start_fusion_token)
+    session = FusionAiohttpSession(trace_configs=[trace_config], trust_env=True)
+    session.post_init()
+    return session
 
 
 def get_session(
@@ -507,14 +562,13 @@ def get_session(
     else:
         get_retries = Retry.from_int(get_retries)
     session = requests.Session()
-    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries)
     if credentials.proxies:
-        # mypy does note recognise session.proxies as a dict so fails this line, we'll ignore this chk
         session.proxies.update(credentials.proxies)  # type:ignore
     try:
         mount_url = _get_canonical_root_url(root_url)
     except Exception:
         mount_url = "https://"
+    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url)
     session.mount(mount_url, auth_handler)
     return session
 
@@ -635,16 +689,40 @@ def validate_file_names(paths, fs_fusion):
     return validation
 
 
-def path_to_url(x):
+def is_dataset_raw(paths, fs_fusion):
+    """Check if the files correspond to a raw dataset.
+
+    Args:
+        paths (list): List of file paths.
+        fs_fusion: Fusion filesystem.
+
+    Returns (list): List of booleans.
+
+    """
+    file_names = [i.split("/")[-1].split(".")[0] for i in paths]
+    ret = []
+    is_raw = {}
+    for i, f_n in enumerate(file_names):
+        tmp = f_n.split("__")
+        if tmp[0] not in is_raw.keys():
+            is_raw[tmp[0]] = js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))["isRawData"]
+        ret.append(is_raw[tmp[0]])
+
+    return ret
+
+
+def path_to_url(x, is_raw=False):
     """Convert file name to fusion url.
 
     Args:
         x (str): File path.
+        is_raw(bool, optional): Is the dataset raw.
 
     Returns (str): Fusion url string.
 
     """
     catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
+    ext = "raw" if is_raw else ext
     return "/".join(distribution_to_url("", dataset, date, ext, catalog).split("/")[1:])
 
 
