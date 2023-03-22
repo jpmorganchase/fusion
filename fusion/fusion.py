@@ -128,6 +128,17 @@ class Fusion:
                         p
                         for p in dir(Fusion)
                         if isinstance(getattr(Fusion, p), property)
+                    ],
+                    [
+                        getattr(Fusion, method_name).__doc__.split("\n")[0]
+                        for method_name in dir(Fusion)
+                        if callable(getattr(Fusion, method_name))
+                           and not method_name.startswith("_")
+                    ]
+                    + [
+                        getattr(Fusion, p).__doc__.split("\n")[0]
+                        for p in dir(Fusion)
+                        if isinstance(getattr(Fusion, p), property)
                     ]
                 ]
             ).T.set_index(0),
@@ -285,7 +296,7 @@ class Fusion:
         max_results: int = -1,
         display_all_columns: bool = False,
     ) -> pd.DataFrame:
-        """_summary_.
+        """Get the datasets contained in a catalog.
 
         Args:
             contains (Union[str, list], optional): A string or a list of strings that are dataset
