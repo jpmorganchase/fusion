@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.10] - 2023-03-23
+* md5 to sha256 convention change
+* fsync continuous updates bug fix
+* to_table function addition
+* saving files in a hive friendly folder structure
+* new bearer token add for download/upload operations
+* raw data upload functionality fix
+
 ## [1.0.9] - 2023-01-23
 
 * operational enhancements
