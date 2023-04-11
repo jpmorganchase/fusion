@@ -309,7 +309,7 @@ def timestamp_to_utc(ts):
 
     try:
         return ts.tz_convert('UTC').tz_convert(None)
-    except ValueError:
+    except TypeError:
         return ts
 
 
