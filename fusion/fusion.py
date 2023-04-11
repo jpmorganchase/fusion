@@ -4,6 +4,7 @@ import logging
 import sys
 import warnings
 from pathlib import Path
+import datetime
 from typing import Dict, List, Union
 from zipfile import ZipFile
 import json as js
@@ -33,7 +34,8 @@ from .utils import (
     stream_single_file_new_session,
     upload_files,
     validate_file_names,
-    is_dataset_raw
+    is_dataset_raw,
+    timestamp_to_utc
 )
 
 logger = logging.getLogger(__name__)
@@ -532,18 +534,32 @@ class Fusion:
                 datasetseries_list["createdDate"].values.argmax()
             ]["identifier"]
 
-        parsed_dates = normalise_dt_param_str(dt_str)
+        if isinstance(dt_str, str):
+            parsed_dates = normalise_dt_param_str(dt_str)
+
+        if isinstance(dt_str, datetime.date) and not isinstance(dt_str, datetime.datetime):
+            parsed_dates = (timestamp_to_utc(pd.Timestamp(datetime.datetime.fromordinal(dt_str.toordinal()))), )
+
+        if isinstance(dt_str, datetime.datetime):
+            parsed_dates = (timestamp_to_utc(pd.Timestamp(dt_str)), )
+        if isinstance(dt_str, tuple):
+            if all([isinstance(d, datetime.date) for d in dt_str]) and not all([isinstance(d, datetime.datetime) for d in dt_str]):
+                parsed_dates = (timestamp_to_utc(pd.Timestamp(datetime.datetime.fromordinal(dt_str[0].toordinal()))),
+                                timestamp_to_utc(pd.Timestamp(datetime.datetime.fromordinal(dt_str[1].toordinal()))))
+            if all([isinstance(d, str) for d in dt_str]) or all([isinstance(d, datetime.datetime) for d in dt_str]):
+              parsed_dates = (timestamp_to_utc(pd.Timestamp(dt_str[0])), timestamp_to_utc(pd.Timestamp(dt_str[1])))
+
         if len(parsed_dates) == 1:
             parsed_dates = (parsed_dates[0], parsed_dates[0])
 
         if parsed_dates[0]:
             datasetseries_list = datasetseries_list[
-                datasetseries_list["fromDate"] >= parsed_dates[0]
+                pd.to_datetime(datasetseries_list["fromDate"]) >= parsed_dates[0]
             ]
 
         if parsed_dates[1]:
             datasetseries_list = datasetseries_list[
-                datasetseries_list["toDate"] <= parsed_dates[1]
+                pd.to_datetime(datasetseries_list["toDate"]) <= parsed_dates[1]
             ]
 
         required_series = list(datasetseries_list["@id"])
@@ -920,9 +936,9 @@ class Fusion:
                 dt_str = (
                     dt_str
                     if dt_str != "latest"
-                    else pd.Timestamp("today").date().strftime("%Y%m%d")
+                    else pd.Timestamp("today").isoformat(timespec='seconds')
                 )
-                dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
+                dt_str = timestamp_to_utc(pd.Timestamp(dt_str)).isoformat(timespec='seconds').replace(":", "x")
                 if catalog not in fs_fusion.ls("") or dataset not in [
                     i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
                 ]:

@@ -402,7 +402,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         """
 
-        dt_iso = pd.Timestamp(rpath.split("/")[-3]).strftime("%Y-%m-%d")
+        dt_iso = pd.Timestamp(rpath.split("/")[-3].replace("x", ":")).isoformat(timespec="seconds")
         headers, chunk_headers_lst = self._construct_headers(
             lpath, dt_iso, chunk_size, multipart
         )

@@ -297,17 +297,31 @@ def read_parquet(
     )
 
 
-def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -> str:
+def timestamp_to_utc(ts):
+    """Convert a timestamp to UTC.
+
+    Args:
+        ts (pd.Timestamp): A timestamp.
+
+    Returns:
+        ts_utc: UTC timestamp.
+    """
+
+    try:
+        return ts.tz_convert('UTC').tz_convert(None)
+    except ValueError:
+        return ts
+
+
+def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -> str:  # TODO: need to change to handle datetimes
     """Convert dates into a normalised string representation.
 
     Args:
         dt (Union[str, int, datetime.datetime, datetime.date]): A date represented in various types.
 
     Returns:
-        str: A normalized date string.
+        datetime: A normalized datetime.
     """
-    if isinstance(dt, (datetime.date, datetime.datetime)):
-        return dt.strftime("%Y-%m-%d")
 
     if isinstance(dt, int):
         dt = str(dt)
@@ -315,19 +329,13 @@ def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -
     if not isinstance(dt, str):
         raise ValueError(f"{dt} is not in a recognised data format")
 
-    matches = DT_YYYY_MM_DD_RE.match(dt)
-    if matches:
-        yr = matches.group(1)
-        mth = matches.group(2).zfill(2)
-        day = matches.group(3).zfill(2)
-        return f"{yr}-{mth}-{day}"
+    try:
+        dt_obj = pd.Timestamp(dt)
+    except ValueError as ex:
+        logger.error(ex)
+        raise ValueError(f"{dt} is not in a recognised data format")
 
-    matches = DT_YYYYMMDD_RE.match(dt)
-
-    if matches:
-        return "-".join(matches.groups())
-
-    raise ValueError(f"{dt} is not in a recognised data format")
+    return dt_obj
 
 
 def normalise_dt_param_str(dt: str) -> tuple:
