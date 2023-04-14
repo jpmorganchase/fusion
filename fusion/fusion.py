@@ -938,7 +938,7 @@ class Fusion:
                     if dt_str != "latest"
                     else pd.Timestamp("today").isoformat(timespec='seconds')
                 )
-                dt_str = timestamp_to_utc(pd.Timestamp(dt_str)).isoformat(timespec='seconds').replace(":", "x")
+                dt_str = timestamp_to_utc(pd.Timestamp(dt_str)).isoformat(timespec='seconds').replace(":", "x").replace("-", "")
                 if catalog not in fs_fusion.ls("") or dataset not in [
                     i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
                 ]:
