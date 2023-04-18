@@ -5,6 +5,7 @@ import sys
 import warnings
 from pathlib import Path
 import datetime
+from dateutil.tz import tzlocal
 from typing import Dict, List, Union
 from zipfile import ZipFile
 import json as js
@@ -528,14 +529,21 @@ class Fusion:
                 f"No data available for dataset {dataset}. "
                 f"Check that a valid dataset identifier and date/date range has been set."
             )
-
+        select_single_id = False
         if dt_str == "latest":
             dt_str = datasetseries_list.iloc[
                 datasetseries_list["createdDate"].values.argmax()
             ]["identifier"]
 
         if isinstance(dt_str, str):
-            parsed_dates = normalise_dt_param_str(dt_str)
+            select_single_id = True if "id=" in dt_str else False
+            if not select_single_id:
+                parsed_dates = normalise_dt_param_str(dt_str)
+            else:
+                required_series = datasetseries_list[datasetseries_list["@id"].str.replace("/", "") == dt_str.split("id=")[1]]["@id"].to_list()
+                return [
+                    (catalog, dataset, series, dataset_format) for series in required_series
+                ]
 
         if isinstance(dt_str, datetime.date) and not isinstance(dt_str, datetime.datetime):
             parsed_dates = (timestamp_to_utc(pd.Timestamp(datetime.datetime.fromordinal(dt_str.toordinal()))), )
@@ -887,6 +895,7 @@ class Fusion:
         return_paths: bool = False,
         multipart=True,
         chunk_size=5 * 2**20,
+        tz=None
     ):
         """Uploads the requested files/files to Fusion.
 
@@ -904,13 +913,14 @@ class Fusion:
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
             multipart (bool): Is multipart upload.
             chunk_size (int): Maximum chunk size.
+            tz (str): time zone.
 
         Returns:
 
 
         """
         catalog = self.__use_catalog(catalog)
-
+        tz = tzlocal() if not tz else tz
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
 
@@ -934,11 +944,10 @@ class Fusion:
                 local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
             else:
                 dt_str = (
-                    dt_str
+                    timestamp_to_utc(pd.Timestamp(dt_str, tz=tz)).isoformat(timespec='seconds').replace(":", "x").replace("-", "")
                     if dt_str != "latest"
-                    else timestamp_to_utc(pd.Timestamp("today")).isoformat(timespec='seconds')
+                    else timestamp_to_utc(pd.Timestamp("today", tz=tzlocal())).isoformat(timespec='seconds').replace(":", "x").replace("-", "")
                 )
-                dt_str = timestamp_to_utc(pd.Timestamp(dt_str)).isoformat(timespec='seconds').replace(":", "x").replace("-", "")
                 if catalog not in fs_fusion.ls("") or dataset not in [
                     i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
                 ]:

@@ -347,6 +347,7 @@ def normalise_dt_param_str(dt: str) -> tuple:
     Returns:
         tuple: A tuple of dates.
     """
+
     date_parts = dt.split(":")
 
     if not date_parts or len(date_parts) > 2:
