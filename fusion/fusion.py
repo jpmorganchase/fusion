@@ -529,7 +529,7 @@ class Fusion:
                 f"No data available for dataset {dataset}. "
                 f"Check that a valid dataset identifier and date/date range has been set."
             )
-        select_single_id = False
+
         if dt_str == "latest":
             dt_str = datasetseries_list.iloc[
                 datasetseries_list["createdDate"].values.argmax()
