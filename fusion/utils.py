@@ -494,7 +494,7 @@ async def get_client(credentials, **kwargs):
         token_expires_in = (
                 session.credentials.bearer_token_expiry - datetime.datetime.now()
         ).total_seconds()
-        if session.self.credentials.is_bearer_token_expirable and token_expires_in < session.refresh_within_seconds:
+        if session.credentials.is_bearer_token_expirable and token_expires_in < session.refresh_within_seconds:
             token, expiry = await _refresh_token_data()
             session.credentials.bearer_token = token
             session.credentials.bearer_token_expiry = datetime.datetime.now() + datetime.timedelta(
