@@ -506,8 +506,12 @@ async def get_client(credentials, **kwargs):
         async def _refresh_fusion_token_data():
             full_url_lst = str(params.url).split("/")
             url = '/'.join(full_url_lst[:full_url_lst.index("datasets")+2]) + "/authorize/token"
-            async with session.get(url) as response:
-                response_data = await response.json()
+            if credentials.proxies:
+                async with session.get(url, proxy=http_proxy) as response:
+                    response_data = await response.json()
+            else:
+                async with session.get(url) as response:
+                    response_data = await response.json()
             access_token = response_data["access_token"]
             expiry = response_data["expires_in"]
             return access_token, expiry

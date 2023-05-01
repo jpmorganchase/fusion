@@ -414,7 +414,7 @@ class FusionOAuthAdapter(HTTPAdapter):
             self.proxies = proxies
         else:
             self.proxies = self.credentials.proxies
-
+        self.token = None
         self.bearer_token_expiry = datetime.datetime.now()
         self.number_token_refreshes = 0
         self.refresh_within_seconds = refresh_within_seconds

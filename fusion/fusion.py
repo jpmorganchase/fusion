@@ -944,9 +944,9 @@ class Fusion:
                 local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
             else:
                 dt_str = (
-                    timestamp_to_utc(pd.Timestamp(dt_str, tz=tz)).isoformat(timespec='seconds').replace(":", "x").replace("-", "")
+                    timestamp_to_utc(pd.Timestamp(dt_str, tz=tz)).isoformat(timespec='seconds').replace(":", "").replace("-", "")
                     if dt_str != "latest"
-                    else timestamp_to_utc(pd.Timestamp("today", tz=tzlocal())).isoformat(timespec='seconds').replace(":", "x").replace("-", "")
+                    else timestamp_to_utc(pd.Timestamp("today", tz=tzlocal())).isoformat(timespec='seconds').replace(":", "").replace("-", "")
                 )
                 if catalog not in fs_fusion.ls("") or dataset not in [
                     i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
