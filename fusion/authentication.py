@@ -300,7 +300,7 @@ class FusionCredentials:
             password = None
             bearer_token = credentials["bearer_token"]
             bearer_token_expiry = pd.to_datetime(credentials.get("bearer_token_expiry")) if credentials.get("bearer_token_expiry") else None
-            is_bearer_token_expirable = not credentials["bearer_token_expirable"].lower() in ['false']
+            is_bearer_token_expirable = not credentials.get("bearer_token_expirable").lower() in ['false'] if credentials.get("bearer_token_expirable") else True
             resource = None
             auth_url = None
         elif grant_type == "password":
