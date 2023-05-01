@@ -502,7 +502,7 @@ async def get_client(credentials, **kwargs):
             )
             session.number_token_refreshes += 1
 
-        params.headers.update({"Authorization": f"Bearer {session.token}", "User-Agent": f"fusion-python-sdk {version}"})
+        params.headers.update({"Authorization": f"Bearer {session.credentials.bearer_token}", "User-Agent": f"fusion-python-sdk {version}"})
 
     async def on_request_start_fusion_token(session, trace_config_ctx, params):
         async def _refresh_fusion_token_data():
