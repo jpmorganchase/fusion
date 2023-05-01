@@ -283,33 +283,39 @@ class FusionCredentials:
         else:
             grant_type = "client_credentials"
 
-        client_id = credentials["client_id"]
         if grant_type == "client_credentials":
+            client_id = credentials["client_id"]
             client_secret = credentials["client_secret"]
             username = None
             password = None
             bearer_token = None
             bearer_token_expiry = datetime.datetime.now()
             is_bearer_token_expirable = True
+            resource = credentials["resource"]
+            auth_url = credentials["auth_url"]
         elif grant_type == "bearer":
+            client_id = None
             client_secret = None
             username = None
             password = None
             bearer_token = credentials["bearer_token"]
             bearer_token_expiry = pd.to_datetime(credentials.get("bearer_token_expiry")) if credentials.get("bearer_token_expiry") else None
             is_bearer_token_expirable = not credentials["bearer_token_expirable"].lower() in ['false']
+            resource = None
+            auth_url = None
         elif grant_type == "password":
+            client_id = credentials["client_id"]
             client_secret = None
             username = credentials["username"]
             password = credentials["password"]
             bearer_token = None
             bearer_token_expiry = datetime.datetime.now()
             is_bearer_token_expirable = True
+            resource = credentials["resource"]
+            auth_url = credentials["auth_url"]
         else:
             raise CredentialError(f"Unrecognised grant type {grant_type}")
 
-        resource = credentials["resource"]
-        auth_url = credentials["auth_url"]
         proxies = credentials.get("proxies")
         creds = FusionCredentials(
             client_id,
