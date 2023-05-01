@@ -578,6 +578,6 @@ class FusionAiohttpSession(aiohttp.ClientSession):
         self.token = None
         self.refresh_within_seconds = refresh_within_seconds
         self.number_token_refreshes = 0
-        self.credentials = None
+        self.credentials = credentials
         self.fusion_token_dict: Dict[str, str] = {}
         self.fusion_token_expiry_dict: Dict[str, int] = {}
