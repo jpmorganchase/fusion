@@ -12,10 +12,12 @@ from urllib.parse import urlparse
 
 import fsspec
 import requests
+import pandas as pd
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .exceptions import CredentialError
+from . import __version__ as version
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -103,6 +105,9 @@ class FusionCredentials:
         password: str = None,
         resource: str = None,
         auth_url: str = None,
+        bearer_token: str = None,
+        bearer_token_expiry: int = None,
+        is_bearer_token_expirable=None,
         proxies={},
         grant_type: str = "client_credentials",
     ) -> None:
@@ -127,6 +132,9 @@ class FusionCredentials:
         self.auth_url = auth_url
         self.proxies = proxies
         self.grant_type = grant_type
+        self.bearer_token = bearer_token
+        self.bearer_token_expiry = bearer_token_expiry
+        self.is_bearer_token_expirable = is_bearer_token_expirable
 
     @staticmethod
     def add_proxies(
@@ -280,10 +288,23 @@ class FusionCredentials:
             client_secret = credentials["client_secret"]
             username = None
             password = None
+            bearer_token = None
+            bearer_token_expiry = datetime.datetime.now()
+            is_bearer_token_expirable = True
+        elif grant_type == "bearer":
+            client_secret = None
+            username = None
+            password = None
+            bearer_token = credentials["bearer_token"]
+            bearer_token_expiry = pd.to_datetime(credentials["bearer_token_expiry"])
+            is_bearer_token_expirable = not credentials["bearer_token_expirable"].lower() in ['false']
         elif grant_type == "password":
             client_secret = None
             username = credentials["username"]
             password = credentials["password"]
+            bearer_token = None
+            bearer_token_expiry = datetime.datetime.now()
+            is_bearer_token_expirable = True
         else:
             raise CredentialError(f"Unrecognised grant type {grant_type}")
 
@@ -297,6 +318,9 @@ class FusionCredentials:
             password,
             resource,
             auth_url,
+            bearer_token,
+            bearer_token_expiry,
+            is_bearer_token_expirable,
             proxies,
             grant_type=grant_type,
         )
@@ -480,16 +504,16 @@ class FusionOAuthAdapter(HTTPAdapter):
             return access_token, expiry
 
         token_expires_in = (
-            self.bearer_token_expiry - datetime.datetime.now()
+            self.credentials.bearer_token_expiry - datetime.datetime.now()
         ).total_seconds()
 
         url_lst = request.path_url.split('/')
         fusion_auth_req = "distributions" in url_lst
 
-        if token_expires_in < self.refresh_within_seconds:
+        if self.credentials.is_bearer_token_expirable and token_expires_in < self.refresh_within_seconds:
             token, expiry = _refresh_token_data()
-            self.token = token
-            self.bearer_token_expiry = datetime.datetime.now() + timedelta(
+            self.credentials.bearer_token = token
+            self.credentials.bearer_token_expiry = datetime.datetime.now() + timedelta(
                 seconds=int(expiry)
             )
             self.number_token_refreshes += 1
@@ -497,7 +521,7 @@ class FusionOAuthAdapter(HTTPAdapter):
                 VERBOSE_LVL,
                 f"Refreshed token {self.number_token_refreshes} time{_res_plural(self.number_token_refreshes)}",
             )
-        request.headers.update({"Authorization": f"Bearer {self.token}"})
+        request.headers.update({"Authorization": f"Bearer {self.credentials.bearer_token}", "User-Agent": f"fusion-python-sdk {version}"})
         if fusion_auth_req:
             catalog = url_lst[url_lst.index("catalogs")+1]
             dataset = url_lst[url_lst.index("datasets")+1]
@@ -541,13 +565,14 @@ class FusionAiohttpSession(aiohttp.ClientSession):
         self.refresh_within_seconds = None
         self.number_token_refreshes = None
         self.bearer_token_expiry = None
+        self.credentials = None
         super().__init__(*args, **kwargs)
 
-    def post_init(self, refresh_within_seconds: int = 5):
+    def post_init(self, credentials=None, refresh_within_seconds: int = 5):
         """Set member variables."""
         self.token = None
         self.refresh_within_seconds = refresh_within_seconds
         self.number_token_refreshes = 0
-        self.bearer_token_expiry = datetime.datetime.now()
+        self.credentials = None
         self.fusion_token_dict: Dict[str, str] = {}
         self.fusion_token_expiry_dict: Dict[str, int] = {}

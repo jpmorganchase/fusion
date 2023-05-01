@@ -19,6 +19,8 @@ from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
 
+from . import __version__ as version
+
 if sys.version_info >= (3, 7):
     from contextlib import nullcontext
 else:
@@ -490,17 +492,17 @@ async def get_client(credentials, **kwargs):
             return access_token, expiry
 
         token_expires_in = (
-                session.bearer_token_expiry - datetime.datetime.now()
+                session.credentials.bearer_token_expiry - datetime.datetime.now()
         ).total_seconds()
-        if token_expires_in < session.refresh_within_seconds:
+        if session.self.credentials.is_bearer_token_expirable and token_expires_in < session.refresh_within_seconds:
             token, expiry = await _refresh_token_data()
-            session.token = token
-            session.bearer_token_expiry = datetime.datetime.now() + datetime.timedelta(
+            session.credentials.bearer_token = token
+            session.credentials.bearer_token_expiry = datetime.datetime.now() + datetime.timedelta(
                 seconds=int(expiry)
             )
             session.number_token_refreshes += 1
 
-        params.headers.update({"Authorization": f"Bearer {session.token}"})
+        params.headers.update({"Authorization": f"Bearer {session.token}", "User-Agent": f"fusion-python-sdk {version}"})
 
     async def on_request_start_fusion_token(session, trace_config_ctx, params):
         async def _refresh_fusion_token_data():
@@ -551,7 +553,7 @@ async def get_client(credentials, **kwargs):
     trace_config.on_request_start.append(on_request_start_token)
     trace_config.on_request_start.append(on_request_start_fusion_token)
     session = FusionAiohttpSession(trace_configs=[trace_config], trust_env=True)
-    session.post_init()
+    session.post_init(credentials=credentials)
     return session
 
 
