@@ -296,7 +296,7 @@ class FusionCredentials:
             username = None
             password = None
             bearer_token = credentials["bearer_token"]
-            bearer_token_expiry = pd.to_datetime(credentials["bearer_token_expiry"])
+            bearer_token_expiry = pd.to_datetime(credentials.get("bearer_token_expiry")) if credentials.get("bearer_token_expiry") else None
             is_bearer_token_expirable = not credentials["bearer_token_expirable"].lower() in ['false']
         elif grant_type == "password":
             client_secret = None
@@ -564,7 +564,6 @@ class FusionAiohttpSession(aiohttp.ClientSession):
         self.token = None
         self.refresh_within_seconds = None
         self.number_token_refreshes = None
-        self.bearer_token_expiry = None
         self.credentials = None
         super().__init__(*args, **kwargs)
 
