@@ -536,14 +536,7 @@ class Fusion:
             ]["identifier"]
 
         if isinstance(dt_str, str):
-            select_single_id = True if "id=" in dt_str else False
-            if not select_single_id:
-                parsed_dates = normalise_dt_param_str(dt_str)
-            else:
-                required_series = datasetseries_list[datasetseries_list["@id"].str.replace("/", "") == dt_str.split("id=")[1]]["@id"].to_list()
-                return [
-                    (catalog, dataset, series, dataset_format) for series in required_series
-                ]
+            parsed_dates = normalise_dt_param_str(dt_str)
 
         if isinstance(dt_str, datetime.date) and not isinstance(dt_str, datetime.datetime):
             parsed_dates = (timestamp_to_utc(pd.Timestamp(datetime.datetime.fromordinal(dt_str.toordinal()))), )
@@ -562,12 +555,12 @@ class Fusion:
 
         if parsed_dates[0]:
             datasetseries_list = datasetseries_list[
-                pd.to_datetime(datasetseries_list["fromDate"]) >= parsed_dates[0]
+                pd.to_datetime(datasetseries_list["identifier"]) >= parsed_dates[0]
             ]
 
         if parsed_dates[1]:
             datasetseries_list = datasetseries_list[
-                pd.to_datetime(datasetseries_list["toDate"]) <= parsed_dates[1]
+                pd.to_datetime(datasetseries_list["identifier"]) <= parsed_dates[1]
             ]
 
         required_series = list(datasetseries_list["@id"])
