@@ -35,8 +35,7 @@ from .utils import (
     stream_single_file_new_session,
     upload_files,
     validate_file_names,
-    is_dataset_raw,
-    timestamp_to_utc
+    is_dataset_raw
 )
 
 logger = logging.getLogger(__name__)
@@ -129,17 +128,6 @@ class Fusion:
                     ]
                     + [
                         p
-                        for p in dir(Fusion)
-                        if isinstance(getattr(Fusion, p), property)
-                    ],
-                    [
-                        getattr(Fusion, method_name).__doc__.split("\n")[0]
-                        for method_name in dir(Fusion)
-                        if callable(getattr(Fusion, method_name))
-                           and not method_name.startswith("_")
-                    ]
-                    + [
-                        getattr(Fusion, p).__doc__.split("\n")[0]
                         for p in dir(Fusion)
                         if isinstance(getattr(Fusion, p), property)
                     ]
@@ -535,32 +523,18 @@ class Fusion:
                 datasetseries_list["createdDate"].values.argmax()
             ]["identifier"]
 
-        if isinstance(dt_str, str):
-            parsed_dates = normalise_dt_param_str(dt_str)
-
-        if isinstance(dt_str, datetime.date) and not isinstance(dt_str, datetime.datetime):
-            parsed_dates = (timestamp_to_utc(pd.Timestamp(datetime.datetime.fromordinal(dt_str.toordinal()))), )
-
-        if isinstance(dt_str, datetime.datetime):
-            parsed_dates = (timestamp_to_utc(pd.Timestamp(dt_str)), )
-        if isinstance(dt_str, tuple):
-            if all([isinstance(d, datetime.date) for d in dt_str]) and not all([isinstance(d, datetime.datetime) for d in dt_str]):
-                parsed_dates = (timestamp_to_utc(pd.Timestamp(datetime.datetime.fromordinal(dt_str[0].toordinal()))),
-                                timestamp_to_utc(pd.Timestamp(datetime.datetime.fromordinal(dt_str[1].toordinal()))))
-            if all([isinstance(d, str) for d in dt_str]) or all([isinstance(d, datetime.datetime) for d in dt_str]):
-              parsed_dates = (timestamp_to_utc(pd.Timestamp(dt_str[0])), timestamp_to_utc(pd.Timestamp(dt_str[1])))
-
+        parsed_dates = normalise_dt_param_str(dt_str)
         if len(parsed_dates) == 1:
             parsed_dates = (parsed_dates[0], parsed_dates[0])
 
         if parsed_dates[0]:
             datasetseries_list = datasetseries_list[
-                pd.to_datetime(datasetseries_list["identifier"]) >= parsed_dates[0]
+                datasetseries_list["fromDate"] >= parsed_dates[0]
             ]
 
         if parsed_dates[1]:
             datasetseries_list = datasetseries_list[
-                pd.to_datetime(datasetseries_list["identifier"]) <= parsed_dates[1]
+                datasetseries_list["toDate"] <= parsed_dates[1]
             ]
 
         required_series = list(datasetseries_list["@id"])
@@ -888,7 +862,6 @@ class Fusion:
         return_paths: bool = False,
         multipart=True,
         chunk_size=5 * 2**20,
-        tz=None
     ):
         """Uploads the requested files/files to Fusion.
 
@@ -906,14 +879,13 @@ class Fusion:
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
             multipart (bool): Is multipart upload.
             chunk_size (int): Maximum chunk size.
-            tz (str): time zone.
 
         Returns:
 
 
         """
         catalog = self.__use_catalog(catalog)
-        tz = tzlocal() if not tz else tz
+
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
 
@@ -937,10 +909,11 @@ class Fusion:
                 local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
             else:
                 dt_str = (
-                    timestamp_to_utc(pd.Timestamp(dt_str, tz=tz)).isoformat(timespec='seconds').replace(":", "").replace("-", "")
+                    dt_str
                     if dt_str != "latest"
-                    else timestamp_to_utc(pd.Timestamp("today", tz=tzlocal())).isoformat(timespec='seconds').replace(":", "").replace("-", "")
+                    else pd.Timestamp("today").date().strftime("%Y%m%d")
                 )
+                dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
                 if catalog not in fs_fusion.ls("") or dataset not in [
                     i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
                 ]:
