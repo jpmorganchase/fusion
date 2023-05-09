@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 DT_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
-DEFAULT_CHUNK_SIZE = 2**16
+DEFAULT_CHUNK_SIZE = 2 ** 16
 DEFAULT_THREAD_POOL_SIZE = 5
 
 
@@ -136,33 +136,36 @@ def parquet_to_table(path: str, fs=None, columns: list = None, filters: list = N
     """
 
     if isinstance(path, list):
-        schemas = [pq.ParquetDataset(
-            p,
-            use_legacy_dataset=False,
-            filters=filters,
-            filesystem=fs,
-            memory_map=True,
-        ).schema for p in path]
+        schemas = [
+            pq.ParquetDataset(
+                p,
+                use_legacy_dataset=False,
+                filters=filters,
+                filesystem=fs,
+                memory_map=True,
+            ).schema
+            for p in path
+        ]
     else:
-        schemas = [pq.ParquetDataset(
-            path,
-            use_legacy_dataset=False,
-            filters=filters,
-            filesystem=fs,
-            memory_map=True,
-        ).schema]
+        schemas = [
+            pq.ParquetDataset(
+                path,
+                use_legacy_dataset=False,
+                filters=filters,
+                filesystem=fs,
+                memory_map=True,
+            ).schema
+        ]
 
     schema = unify_schemas(schemas)
-    return (
-        pq.ParquetDataset(
-            path,
-            use_legacy_dataset=False,
-            filters=filters,
-            filesystem=fs,
-            memory_map=True,
-            schema=schema
-        ).read(columns=columns)
-    )
+    return pq.ParquetDataset(
+        path,
+        use_legacy_dataset=False,
+        filters=filters,
+        filesystem=fs,
+        memory_map=True,
+        schema=schema,
+    ).read(columns=columns)
 
 
 def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
@@ -268,21 +271,26 @@ def read_parquet(
     """
 
     if isinstance(path, list):
-        schemas = [pq.ParquetDataset(
-            p,
-            use_legacy_dataset=False,
-            filters=filters,
-            filesystem=fs,
-            memory_map=True,
-        ).schema for p in path]
+        schemas = [
+            pq.ParquetDataset(
+                p,
+                use_legacy_dataset=False,
+                filters=filters,
+                filesystem=fs,
+                memory_map=True,
+            ).schema
+            for p in path
+        ]
     else:
-        schemas = [pq.ParquetDataset(
-            path,
-            use_legacy_dataset=False,
-            filters=filters,
-            filesystem=fs,
-            memory_map=True,
-        ).schema]
+        schemas = [
+            pq.ParquetDataset(
+                path,
+                use_legacy_dataset=False,
+                filters=filters,
+                filesystem=fs,
+                memory_map=True,
+            ).schema
+        ]
 
     schema = unify_schemas(schemas)
     return (
@@ -292,7 +300,7 @@ def read_parquet(
             filters=filters,
             filesystem=fs,
             memory_map=True,
-            schema=schema
+            schema=schema,
         )
         .read_pandas(columns=columns)
         .to_pandas()
@@ -483,22 +491,33 @@ async def get_client(credentials, **kwargs):
             return access_token, expiry
 
         token_expires_in = (
-                session.credentials.bearer_token_expiry - datetime.datetime.now()
+            session.credentials.bearer_token_expiry - datetime.datetime.now()
         ).total_seconds()
-        if session.credentials.is_bearer_token_expirable and token_expires_in < session.refresh_within_seconds:
+        if (
+            session.credentials.is_bearer_token_expirable
+            and token_expires_in < session.refresh_within_seconds
+        ):
             token, expiry = await _refresh_token_data()
             session.credentials.bearer_token = token
-            session.credentials.bearer_token_expiry = datetime.datetime.now() + datetime.timedelta(
-                seconds=int(expiry)
+            session.credentials.bearer_token_expiry = (
+                datetime.datetime.now() + datetime.timedelta(seconds=int(expiry))
             )
             session.number_token_refreshes += 1
 
-        params.headers.update({"Authorization": f"Bearer {session.credentials.bearer_token}", "User-Agent": f"fusion-python-sdk {version}"})
+        params.headers.update(
+            {
+                "Authorization": f"Bearer {session.credentials.bearer_token}",
+                "User-Agent": f"fusion-python-sdk {version}",
+            }
+        )
 
     async def on_request_start_fusion_token(session, trace_config_ctx, params):
         async def _refresh_fusion_token_data():
             full_url_lst = str(params.url).split("/")
-            url = '/'.join(full_url_lst[:full_url_lst.index("datasets")+2]) + "/authorize/token"
+            url = (
+                "/".join(full_url_lst[: full_url_lst.index("datasets") + 2])
+                + "/authorize/token"
+            )
             if credentials.proxies:
                 async with session.get(url, proxy=http_proxy) as response:
                     response_data = await response.json()
@@ -509,7 +528,7 @@ async def get_client(credentials, **kwargs):
             expiry = response_data["expires_in"]
             return access_token, expiry
 
-        url_lst = params.url.path.split('/')
+        url_lst = params.url.path.split("/")
         fusion_auth_req = "distributions" in url_lst
         if fusion_auth_req:
             catalog = url_lst[url_lst.index("catalogs") + 1]
@@ -518,21 +537,35 @@ async def get_client(credentials, **kwargs):
             if fusion_token_key not in session.fusion_token_dict.keys():
                 fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
                 session.fusion_token_dict[fusion_token_key] = fusion_token
-                session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
-                    seconds=int(fusion_token_expiry))
+                session.fusion_token_expiry_dict[
+                    fusion_token_key
+                ] = datetime.datetime.now() + timedelta(
+                    seconds=int(fusion_token_expiry)
+                )
                 logger.log(VERBOSE_LVL, "Refreshed fusion token")
             else:
                 fusion_token_expires_in = (
-                        session.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
+                    session.fusion_token_expiry_dict[fusion_token_key]
+                    - datetime.datetime.now()
                 ).total_seconds()
                 if fusion_token_expires_in < session.refresh_within_seconds:
-                    fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
+                    (
+                        fusion_token,
+                        fusion_token_expiry,
+                    ) = await _refresh_fusion_token_data()
                     session.fusion_token_dict[fusion_token_key] = fusion_token
-                    session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
-                        seconds=int(fusion_token_expiry))
+                    session.fusion_token_expiry_dict[
+                        fusion_token_key
+                    ] = datetime.datetime.now() + timedelta(
+                        seconds=int(fusion_token_expiry)
+                    )
                     logger.log(VERBOSE_LVL, "Refreshed fusion token")
 
-            params.headers.update({"Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"})
+            params.headers.update(
+                {
+                    "Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"
+                }
+            )
 
     if credentials.proxies:
         if "http" in credentials.proxies.keys():
@@ -574,7 +607,9 @@ def get_session(
         mount_url = _get_canonical_root_url(root_url)
     except Exception:
         mount_url = "https://"
-    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url)
+    auth_handler = FusionOAuthAdapter(
+        credentials, max_retries=get_retries, mount_url=mount_url
+    )
     session.mount(mount_url, auth_handler)
     return session
 
@@ -711,7 +746,9 @@ def is_dataset_raw(paths, fs_fusion):
     for i, f_n in enumerate(file_names):
         tmp = f_n.split("__")
         if tmp[0] not in is_raw.keys():
-            is_raw[tmp[0]] = js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))["isRawData"]
+            is_raw[tmp[0]] = js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))[
+                "isRawData"
+            ]
         ret.append(is_raw[tmp[0]])
 
     return ret
@@ -739,7 +776,7 @@ def upload_files(
     parallel=True,
     n_par=-1,
     multipart=True,
-    chunk_size=5 * 2**20,
+    chunk_size=5 * 2 ** 20,
 ):
     """Upload file into Fusion.
 

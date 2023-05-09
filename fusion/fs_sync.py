@@ -22,12 +22,12 @@ from .utils import (
     path_to_url,
     upload_files,
     validate_file_names,
-    is_dataset_raw
+    is_dataset_raw,
 )
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
-DEFAULT_CHUNK_SIZE = 2**16
+DEFAULT_CHUNK_SIZE = 2 ** 16
 
 
 def _get_loop(df, show_progress):
@@ -87,7 +87,7 @@ def _upload(fs_fusion, fs_local, df, n_par, show_progress=True):
     return res
 
 
-def _generate_sha256_token(path, fs, chunk_size=5 * 2**20):
+def _generate_sha256_token(path, fs, chunk_size=5 * 2 ** 20):
     hash_sha256 = hashlib.sha256()
     chunk_count = 0
     with fs.open(path, "rb") as file:
@@ -112,7 +112,7 @@ def _get_fusion_df(
         if len(changes) > 0:
             changes = changes[0]["distributions"]
             keys = [i["key"].replace(".", "/").split("/") for i in changes]
-            keys = ["/".join([k[0], k[1], k[2] , k[-1]]) for k in keys]
+            keys = ["/".join([k[0], k[1], k[2], k[-1]]) for k in keys]
             urls = [catalog + "/datasets/" + k for k in keys]
             urls = [i.replace("distribution", "distributions") for i in urls]
             urls = [
@@ -140,7 +140,9 @@ def _get_fusion_df(
     return pd.concat(df_lst)
 
 
-def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None, local_state=None):
+def _get_local_state(
+    fs_local, fs_fusion, datasets, catalog, dataset_format=None, local_state=None
+):
     local_files = []
     local_files_rel = []
     local_dirs = (
@@ -165,14 +167,19 @@ def _get_local_state(fs_local, fs_fusion, datasets, catalog, dataset_format=None
     local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
     is_raw_lst = is_dataset_raw(local_files, fs_fusion)
     local_url_eqiv = [path_to_url(i, r) for i, r in zip(local_files, is_raw_lst)]
-    df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_mtime, local_files]).T
+    df_local = pd.DataFrame(
+        [local_files_rel, local_url_eqiv, local_mtime, local_files]
+    ).T
     df_local.columns = ["path", "url", "mtime", "local_path"]
 
     if local_state is not None and len(local_state) > 0:
-        df_join = df_local.merge(local_state, on="path", how="left", suffixes=("", "_prev"))
-        df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "sha256"] = [_generate_sha256_token(x, fs_local) for x in
-                                                                             df_join[df_join["mtime"] != df_join[
-                                                                                 "mtime_prev"]].local_path]
+        df_join = df_local.merge(
+            local_state, on="path", how="left", suffixes=("", "_prev")
+        )
+        df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "sha256"] = [
+            _generate_sha256_token(x, fs_local)
+            for x in df_join[df_join["mtime"] != df_join["mtime_prev"]].local_path
+        ]
         df_local = df_join[["path", "url", "mtime", "sha256"]]
     else:
         df_local["sha256"] = [_generate_sha256_token(x, fs_local) for x in local_files]
@@ -207,10 +214,14 @@ def _synchronize(
                 df_fusion, on="url", suffixes=("_local", "_fusion"), how="left"
             )
             join_df = join_df[join_df["sha256_local"] != join_df["sha256_fusion"]]
-            res = _upload(fs_fusion, fs_local, join_df, n_par, show_progress=show_progress)
+            res = _upload(
+                fs_fusion, fs_local, join_df, n_par, show_progress=show_progress
+            )
     elif direction == "download":
         if len(df_fusion) == 0:
-            msg = "No dataset members available for download for your dataset selection."
+            msg = (
+                "No dataset members available for download for your dataset selection."
+            )
             logger.warning(msg)
             warnings.warn(msg)
             res = []
@@ -305,7 +316,9 @@ def fsync(
             fusion_state_temp = _get_fusion_df(
                 fs_fusion, datasets, catalog, flatten, dataset_format
             )
-            if not local_state_temp.equals(local_state) or not fusion_state_temp.equals(fusion_state):
+            if not local_state_temp.equals(local_state) or not fusion_state_temp.equals(
+                fusion_state
+            ):
                 res = _synchronize(
                     fs_fusion,
                     fs_local,

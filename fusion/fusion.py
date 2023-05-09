@@ -33,7 +33,7 @@ from .utils import (
     stream_single_file_new_session,
     upload_files,
     validate_file_names,
-    is_dataset_raw
+    is_dataset_raw,
 )
 
 logger = logging.getLogger(__name__)
@@ -133,13 +133,13 @@ class Fusion:
                         getattr(Fusion, method_name).__doc__.split("\n")[0]
                         for method_name in dir(Fusion)
                         if callable(getattr(Fusion, method_name))
-                           and not method_name.startswith("_")
+                        and not method_name.startswith("_")
                     ]
                     + [
                         getattr(Fusion, p).__doc__.split("\n")[0]
                         for p in dir(Fusion)
                         if isinstance(getattr(Fusion, p), property)
-                    ]
+                    ],
                 ]
             ).T.set_index(0),
             tablefmt="psql",
@@ -598,9 +598,12 @@ class Fusion:
         if not download_folder or not isinstance(download_folder, list):
             download_folders = [self.download_folder] * len(required_series)
 
-        if partitioning == 'hive':
-            members = [series[2].strip('/') for series in required_series]
-            download_folders = [f"{download_folders[i]}/{series[0]}/{series[1]}/{members[i]}" for i, series in enumerate(required_series)]
+        if partitioning == "hive":
+            members = [series[2].strip("/") for series in required_series]
+            download_folders = [
+                f"{download_folders[i]}/{series[0]}/{series[1]}/{members[i]}"
+                for i, series in enumerate(required_series)
+            ]
 
         for download_folder in download_folders:
             if not self.fs.exists(download_folder):
@@ -612,7 +615,12 @@ class Fusion:
                     self.root_url, series[1], series[2], series[3], series[0]
                 ),
                 "output_file": distribution_to_filename(
-                    download_folders[i], series[1], series[2], series[3], series[0], partitioning=partitioning
+                    download_folders[i],
+                    series[1],
+                    series[2],
+                    series[3],
+                    series[0],
+                    partitioning=partitioning,
                 ),
                 "overwrite": force_download,
                 "fs": self.fs,
@@ -841,9 +849,7 @@ class Fusion:
         reader = read_fn_map.get(dataset_format)
         read_kwargs = read_default_kwargs.get(dataset_format, {})
         if not reader:
-            raise Exception(
-                f"No function to read file in format {dataset_format}"
-            )
+            raise Exception(f"No function to read file in format {dataset_format}")
 
         read_kwargs.update(kwargs)
 
@@ -870,7 +876,7 @@ class Fusion:
         show_progress: bool = True,
         return_paths: bool = False,
         multipart=True,
-        chunk_size=5 * 2**20,
+        chunk_size=5 * 2 ** 20,
     ):
         """Uploads the requested files/files to Fusion.
 
@@ -906,7 +912,9 @@ class Fusion:
                 f for flag, f in zip(local_file_validation, file_path_lst) if flag
             ]
             is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
-            local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
+            local_url_eqiv = [
+                path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)
+            ]
         else:
             file_path_lst = [path]
             if not catalog or not dataset:
@@ -915,7 +923,9 @@ class Fusion:
                     f for flag, f in zip(local_file_validation, file_path_lst) if flag
                 ]
                 is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
-                local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
+                local_url_eqiv = [
+                    path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)
+                ]
             else:
                 dt_str = (
                     dt_str
@@ -932,7 +942,9 @@ class Fusion:
                     )
                     warnings.warn(msg)
                     return [(False, path, Exception(msg))]
-                is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
+                is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))[
+                    "isRawData"
+                ]
                 file_format = path.split(".")[-1]
                 local_url_eqiv = [
                     path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}", is_raw)
