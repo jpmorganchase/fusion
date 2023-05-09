@@ -307,9 +307,13 @@ class FusionCredentials:
                 if credentials.get("bearer_token_expiry")
                 else None
             )
+            bearer_token_expirable = credentials.get("bearer_token_expirable")
+            if isinstance(bearer_token_expirable, str):
+                bearer_token_expirable = bearer_token_expirable.lower()
+
             is_bearer_token_expirable = (
-                not credentials.get("bearer_token_expirable").lower() in ["false"]
-                if credentials.get("bearer_token_expirable")
+                not bearer_token_expirable in ["false"]
+                if bearer_token_expirable
                 else True
             )
             resource = None
@@ -407,11 +411,11 @@ class FusionCredentials:
         """
         if isinstance(credentials_source, dict):
             return FusionCredentials.from_dict(credentials_source)
-        elif isinstance(credentials_source, str):
+        if isinstance(credentials_source, str):
             if _is_json(credentials_source):
                 return FusionCredentials.from_dict(json.loads(credentials_source))
-            else:
-                return FusionCredentials.from_file(credentials_source)
+
+            return FusionCredentials.from_file(credentials_source)
 
         raise CredentialError(
             f"Could not resolve the credentials provided: {credentials_source}"
