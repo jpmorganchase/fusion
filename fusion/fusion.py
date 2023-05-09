@@ -4,8 +4,6 @@ import logging
 import sys
 import warnings
 from pathlib import Path
-import datetime
-from dateutil.tz import tzlocal
 from typing import Dict, List, Union
 from zipfile import ZipFile
 import json as js
@@ -128,6 +126,17 @@ class Fusion:
                     ]
                     + [
                         p
+                        for p in dir(Fusion)
+                        if isinstance(getattr(Fusion, p), property)
+                    ],
+                    [
+                        getattr(Fusion, method_name).__doc__.split("\n")[0]
+                        for method_name in dir(Fusion)
+                        if callable(getattr(Fusion, method_name))
+                           and not method_name.startswith("_")
+                    ]
+                    + [
+                        getattr(Fusion, p).__doc__.split("\n")[0]
                         for p in dir(Fusion)
                         if isinstance(getattr(Fusion, p), property)
                     ]
