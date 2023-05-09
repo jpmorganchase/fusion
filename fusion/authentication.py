@@ -312,7 +312,7 @@ class FusionCredentials:
                 bearer_token_expirable = bearer_token_expirable.lower()
 
             is_bearer_token_expirable = (
-                not bearer_token_expirable in ["false"]
+                bearer_token_expirable not in ["false"]
                 if bearer_token_expirable
                 else True
             )
