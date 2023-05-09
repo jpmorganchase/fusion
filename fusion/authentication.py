@@ -106,7 +106,7 @@ class FusionCredentials:
         resource: str = None,
         auth_url: str = None,
         bearer_token: str = None,
-        bearer_token_expiry: int = None,
+        bearer_token_expiry: datetime.datetime = None,
         is_bearer_token_expirable=None,
         proxies={},
         grant_type: str = "client_credentials",
@@ -120,6 +120,9 @@ class FusionCredentials:
             password (str, optional): A valid password for the username. Defaults to None.
             resource (str, optional): The OAuth audience. Defaults to None.
             auth_url (str, optional): URL for the OAuth authentication server. Defaults to None.
+            bearer_token (str, optional): Bearer token. Defaults to None.
+            bearer_token_expiry (datetime.datetime, optional): Bearer token expiry. Defaults to None.
+            is_bearer_token_expirable (bool, optional): Is bearer token expirable. Defaults to None.
             proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet.
             grant_type (str, optional): Allows the grant type to be changed to support different credential types.
                 Defaults to client_credentials.
