@@ -470,6 +470,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#fusion.fsync" class="md-nav__link">
+    fusion.fsync
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -675,6 +682,13 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fusion.fsync" class="md-nav__link">
+    fusion.fsync
+  </a>
   
 </li>
       
@@ -2606,8 +2620,8 @@
 <code class="highlight language-python"><span class="n">default_catalog</span><span class="p">:</span> <span class="nb">str</span></code>
   
   <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-property"><code>property</code></small>
       <small class="doc doc-label doc-label-writable"><code>writable</code></small>
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
   </span>
 
 <a href="#fusion.fusion.Fusion.default_catalog" class="headerlink" title="Permanent link">&para;</a></h3>
@@ -5903,6 +5917,378 @@ Defaults to all cpus available.</p></td>
 
   </div>
 
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<a id="fusion.fsync"></a>
+  <div class="doc doc-contents first">
+  
+      <p>Synchronisation between the local filesystem and Fusion.</p>
+
+  <p><strong>Parameters:</strong></p>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+        <tr>
+          <td><code>fs_fusion</code></td>
+          <td>
+                <code>fsspec.<span title="fsspec.filesystem">filesystem</span></code>
+          </td>
+          <td><p>Fusion filesystem.</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>fs_local</code></td>
+          <td>
+                <code>fsspec.<span title="fsspec.filesystem">filesystem</span></code>
+          </td>
+          <td><p>Local filesystem.</p></td>
+          <td>
+              <em>required</em>
+          </td>
+        </tr>
+        <tr>
+          <td><code>products</code></td>
+          <td>
+                <code>list</code>
+          </td>
+          <td><p>List of products.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>datasets</code></td>
+          <td>
+                <code>list</code>
+          </td>
+          <td><p>List of datasets.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>catalog</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>Fusion catalog.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>direction</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>Direction of synchronisation: upload/download.</p></td>
+          <td>
+                <code>&#39;upload&#39;</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>flatten</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Flatten the folder structure.</p></td>
+          <td>
+                <code>False</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>dataset_format</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>Dataset format for upload/download.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>n_par</code></td>
+          <td>
+                <code>int</code>
+          </td>
+          <td><p>Specify how many distributions to download in parallel. Defaults to all.</p></td>
+          <td>
+                <code>None</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>show_progress</code></td>
+          <td>
+                <code>bool</code>
+          </td>
+          <td><p>Display a progress bar during data download Defaults to True.</p></td>
+          <td>
+                <code>True</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>log_level</code></td>
+          <td>
+          </td>
+          <td><p>Logging level. Error level by default.</p></td>
+          <td>
+                <code>logging.ERROR</code>
+          </td>
+        </tr>
+        <tr>
+          <td><code>log_path</code></td>
+          <td>
+                <code>str</code>
+          </td>
+          <td><p>The folder path where the log is stored.</p></td>
+          <td>
+                <code>&#39;.&#39;</code>
+          </td>
+        </tr>
+    </tbody>
+  </table>
+
+      <details class="quote">
+        <summary>Source code in <code>fusion\fs_sync.py</code></summary>
+        <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">fsync</span><span class="p">(</span>
+    <span class="n">fs_fusion</span><span class="p">:</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">filesystem</span><span class="p">,</span>
+    <span class="n">fs_local</span><span class="p">:</span> <span class="n">fsspec</span><span class="o">.</span><span class="n">filesystem</span><span class="p">,</span>
+    <span class="n">products</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">datasets</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">catalog</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;upload&quot;</span><span class="p">,</span>
+    <span class="n">flatten</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">dataset_format</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">n_par</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">log_level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">,</span>
+    <span class="n">log_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Synchronisation between the local filesystem and Fusion.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fs_fusion (fsspec.filesystem): Fusion filesystem.</span>
+<span class="sd">        fs_local (fsspec.filesystem): Local filesystem.</span>
+<span class="sd">        products (list): List of products.</span>
+<span class="sd">        datasets (list): List of datasets.</span>
+<span class="sd">        catalog (str): Fusion catalog.</span>
+<span class="sd">        direction (str): Direction of synchronisation: upload/download.</span>
+<span class="sd">        flatten (bool): Flatten the folder structure.</span>
+<span class="sd">        dataset_format (str): Dataset format for upload/download.</span>
+<span class="sd">        n_par (int, optional): Specify how many distributions to download in parallel. Defaults to all.</span>
+<span class="sd">        show_progress (bool, optional): Display a progress bar during data download Defaults to True.</span>
+<span class="sd">        log_level: Logging level. Error level by default.</span>
+<span class="sd">        log_path (str, optional): The folder path where the log is stored.</span>
+
+<span class="sd">    Returns:</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">logger</span><span class="o">.</span><span class="n">hasHandlers</span><span class="p">():</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="n">file_handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span>
+        <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{0}</span><span class="s2">/</span><span class="si">{1}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">log_path</span><span class="p">,</span> <span class="s2">&quot;fusion_fsync.log&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">addLevelName</span><span class="p">(</span><span class="n">VERBOSE_LVL</span><span class="p">,</span> <span class="s2">&quot;VERBOSE&quot;</span><span class="p">)</span>
+    <span class="n">stdout_handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+    <span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
+        <span class="s2">&quot;</span><span class="si">%(asctime)s</span><span class="s2">.</span><span class="si">%(msecs)03d</span><span class="s2"> </span><span class="si">%(name)s</span><span class="s2">:</span><span class="si">%(levelname)s</span><span class="s2"> </span><span class="si">%(message)s</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">datefmt</span><span class="o">=</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2"> %H:%M:%S&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">stdout_handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">stdout_handler</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">file_handler</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">log_level</span><span class="p">)</span>
+
+    <span class="n">catalog</span> <span class="o">=</span> <span class="s2">&quot;common&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">catalog</span> <span class="k">else</span> <span class="n">catalog</span>
+    <span class="n">datasets</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">datasets</span> <span class="k">else</span> <span class="n">datasets</span>
+    <span class="n">products</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">products</span> <span class="k">else</span> <span class="n">products</span>
+
+    <span class="k">assert</span> <span class="p">(</span>
+        <span class="nb">len</span><span class="p">(</span><span class="n">products</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="p">),</span> <span class="s2">&quot;At least one list products or datasets should be non-empty.&quot;</span>
+    <span class="k">assert</span> <span class="n">direction</span> <span class="ow">in</span> <span class="p">[</span>
+        <span class="s2">&quot;upload&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;download&quot;</span><span class="p">,</span>
+    <span class="p">],</span> <span class="s2">&quot;The direction must be either upload or download.&quot;</span>
+
+    <span class="k">for</span> <span class="n">product</span> <span class="ow">in</span> <span class="n">products</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">fs_fusion</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">catalog</span><span class="si">}</span><span class="s2">/products/</span><span class="si">{</span><span class="n">product</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+        <span class="n">datasets</span> <span class="o">+=</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;identifier&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;resources&quot;</span><span class="p">]]</span>
+
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">datasets</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;The supplied products did not contain any datasets.&quot;</span>
+
+    <span class="n">local_state</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    <span class="n">fusion_state</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">local_state_temp</span> <span class="o">=</span> <span class="n">_get_local_state</span><span class="p">(</span>
+                <span class="n">fs_local</span><span class="p">,</span> <span class="n">fs_fusion</span><span class="p">,</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">catalog</span><span class="p">,</span> <span class="n">dataset_format</span><span class="p">,</span> <span class="n">local_state</span>
+            <span class="p">)</span>
+            <span class="n">fusion_state_temp</span> <span class="o">=</span> <span class="n">_get_fusion_df</span><span class="p">(</span>
+                <span class="n">fs_fusion</span><span class="p">,</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">catalog</span><span class="p">,</span> <span class="n">flatten</span><span class="p">,</span> <span class="n">dataset_format</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">local_state_temp</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">local_state</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">fusion_state_temp</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">fusion_state</span><span class="p">):</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">_synchronize</span><span class="p">(</span>
+                    <span class="n">fs_fusion</span><span class="p">,</span>
+                    <span class="n">fs_local</span><span class="p">,</span>
+                    <span class="n">local_state_temp</span><span class="p">,</span>
+                    <span class="n">fusion_state_temp</span><span class="p">,</span>
+                    <span class="n">direction</span><span class="p">,</span>
+                    <span class="n">n_par</span><span class="p">,</span>
+                    <span class="n">show_progress</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="nb">all</span><span class="p">((</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">res</span><span class="p">)):</span>
+                    <span class="n">local_state</span> <span class="o">=</span> <span class="n">local_state_temp</span>
+                    <span class="n">fusion_state</span> <span class="o">=</span> <span class="n">fusion_state_temp</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="p">):</span>
+                    <span class="n">failed_res</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Not all </span><span class="si">{</span><span class="n">direction</span><span class="si">}</span><span class="s2">s were successfully completed. The following failed:</span><span class="se">\n</span><span class="si">{</span><span class="n">failed_res</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="n">errs</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">errs</span><span class="p">)</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;All synced, sleeping&quot;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Type exit to exit: &quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="s2">&quot;exit&quot;</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">break</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> Issue occurred: </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">ex</span><span class="p">),</span> <span class="n">ex</span><span class="p">)</span>
+            <span class="k">continue</span>
+</code></pre></div></td></tr></table></div>
+      </details>
   </div>
 
 </div>
