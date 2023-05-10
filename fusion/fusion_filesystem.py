@@ -244,7 +244,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         return super().cat(url, start=start, end=end, **kwargs)
 
     def get(
-        self, rpath, lpath, chunk_size=5 * 2**20, callback=_DEFAULT_CALLBACK, **kwargs
+        self, rpath, lpath, chunk_size=5 * 2 ** 20, callback=_DEFAULT_CALLBACK, **kwargs
     ):
         """Copy file(s) to local.
 
@@ -267,7 +267,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         self,
         lpath,
         rpath,
-        chunk_size=5 * 2**20,
+        chunk_size=5 * 2 ** 20,
         callback=_DEFAULT_CALLBACK,
         method="post",
         multipart=False,
@@ -343,7 +343,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 )
 
     @staticmethod
-    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2**20, multipart=False):
+    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2 ** 20, multipart=False):
 
         headers = {
             "Content-Type": "application/octet-stream",
@@ -371,9 +371,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         file_local.seek(0)
         if multipart:
-            headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
+            headers["Digest"] = (
+                "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
+            )
         else:
-            headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
+            headers["Digest"] = (
+                "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
+            )
 
         return headers, headers_chunk_lst
 
@@ -381,7 +385,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         self,
         lpath,
         rpath,
-        chunk_size=5 * 2**20,
+        chunk_size=5 * 2 ** 20,
         callback=_DEFAULT_CALLBACK,
         method="put",
         multipart=False,
