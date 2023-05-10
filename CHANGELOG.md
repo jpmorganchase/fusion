@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [1.0.10] - 2023-03-23
+* support bearer token authentication
+* fix proxy support to aiohttp
+* fix filtering support for csv and json
+
+## [1.0.10] - 2023-03-23
 * md5 to sha256 convention change
 * fsync continuous updates bug fix
 * to_table function addition
