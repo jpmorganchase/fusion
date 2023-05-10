@@ -183,7 +183,7 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
     """
     try:
         try:
-            res = csv_to_table(path, fs).to_pandas()
+            res = csv_to_table(path, fs, columns=columns, filters=filters).to_pandas()
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -228,7 +228,7 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
 
     try:
         try:
-            res = json_to_table(path, fs).to_pandas()
+            res = json_to_table(path, fs, columns=columns, filters=filters).to_pandas()
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
