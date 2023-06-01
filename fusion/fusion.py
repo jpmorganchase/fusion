@@ -597,8 +597,8 @@ class Fusion:
 
         if not download_folder:
             download_folder = self.download_folder
-        if not isinstance(download_folder, list):
-            download_folders = [download_folder] * len(required_series)
+
+        download_folders = [download_folder] * len(required_series)
 
         if partitioning == "hive":
             members = [series[2].strip("/") for series in required_series]
