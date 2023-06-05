@@ -291,6 +291,7 @@ class Fusion:
         self,
         contains: Union[str, list] = None,
         id_contains: bool = False,
+        product: Union[str, list] = None,
         catalog: str = None,
         output: bool = False,
         max_results: int = -1,
@@ -304,6 +305,8 @@ class Fusion:
                 datasets whose identifier matches any of the strings. Defaults to None.
             id_contains (bool): Filter datasets only where the string(s) are contained in the identifier,
                 ignoring description.
+            product (Union[str, list], optional): A string or a list of strings that are product
+                identifiers to filter the datasets list. Defaults to None.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             output (bool, optional): If True then print the dataframe. Defaults to False.
             max_results (int, optional): Limit the number of rows returned in the dataframe.
@@ -329,6 +332,13 @@ class Fusion:
                     df["identifier"].str.contains(contains, case=False)
                     | df["description"].str.contains(contains, case=False)
                 ]
+
+        if product:
+            url = f"{self.root_url}catalogs/{catalog}/productDatasets"
+            df_pr = Fusion._call_for_dataframe(url, self.session)
+            df_pr = df_pr[df_pr["product"] == product] if isinstance(product, str) \
+                else df_pr[df_pr["product"].isin(product)]
+            df = df[df["identifier"].isin(df_pr["dataset"])].reset_index(drop=True)
 
         if max_results > -1:
             df = df[0:max_results]
@@ -405,7 +415,7 @@ class Fusion:
         )
 
         if not display_all_columns:
-            df = df[["identifier", "dataType", "isDatasetKey", "description"]]
+            df = df[["identifier", "title", "dataType", "isDatasetKey", "description", "source"]]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
