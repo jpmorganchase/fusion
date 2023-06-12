@@ -346,17 +346,18 @@ class Fusion:
         df["category"] = df.category.str.join(", ")
         df["region"] = df.region.str.join(", ")
         if not display_all_columns:
-            df = df[
-                [
+            cols = [
                     "identifier",
                     "title",
+                    "containerType",
                     "region",
                     "category",
                     "coverageStartDate",
                     "coverageEndDate",
                     "description",
                 ]
-            ]
+            cols = [c for c in cols if c in df.columns]
+            df = df[cols]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
@@ -548,12 +549,12 @@ class Fusion:
 
         if parsed_dates[0]:
             datasetseries_list = datasetseries_list[
-                datasetseries_list["fromDate"] >= parsed_dates[0]
+                pd.to_datetime(datasetseries_list["identifier"]) >= parsed_dates[0]
             ]
 
         if parsed_dates[1]:
             datasetseries_list = datasetseries_list[
-                datasetseries_list["toDate"] <= parsed_dates[1]
+                pd.to_datetime(datasetseries_list["identifier"]) <= parsed_dates[1]
             ]
 
         required_series = list(datasetseries_list["@id"])
