@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 DT_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
-DEFAULT_CHUNK_SIZE = 2 ** 16
+DEFAULT_CHUNK_SIZE = 2**16
 DEFAULT_THREAD_POOL_SIZE = 5
 
 
@@ -168,7 +168,13 @@ def parquet_to_table(path: str, fs=None, columns: list = None, filters: list = N
     ).read(columns=columns)
 
 
-def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
+def read_csv(
+    path: str,
+    columns: list = None,
+    filters: list = None,
+    fs=None,
+    dataframe_type="pandas",
+):
     """Reads csv with possibility of selecting columns and filtering the data.
 
     Args:
@@ -176,14 +182,24 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
         columns: list of selected fields.
         filters: filters.
         fs: filesystem object.
+        dataframe_type (str, optional): Datafame type pandas or polars
 
     Returns:
-        pandas.DataFrame: a dataframe containing the data.
+        Union[pandas.DataFrame, polars.DataFrame]: a dataframe containing the data.
 
     """
     try:
         try:
-            res = csv_to_table(path, fs, columns=columns, filters=filters).to_pandas()
+            res = csv_to_table(path, fs, columns=columns, filters=filters)
+
+            if dataframe_type == "pandas":
+                res = res.to_pandas()
+            elif dataframe_type == "polars":
+                import polars as pl
+
+                res = pl.from_arrow(res)
+            else:
+                raise ValueError(f"Unknown DataFrame type {dataframe_type}")
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -199,7 +215,15 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
         )
         try:
             with (fs.open(path) if fs else nullcontext(path)) as f:
-                res = pd.read_csv(f, usecols=columns, index_col=False)
+                if dataframe_type == "pandas":
+                    res = pd.read_csv(f, usecols=columns, index_col=False)
+                elif dataframe_type == "polars":
+                    import polars as pl
+
+                    res = pl.read_csv(f, columns=columns)
+                else:
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -207,13 +231,26 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
                 f"Trying with pandas csv reader pandas engine. {err}",
             )
             with (fs.open(path) if fs else nullcontext(path)) as f:
-                res = pd.read_table(
-                    f, usecols=columns, index_col=False, engine="python", delimiter=None
-                )
+                if dataframe_type == "pandas":
+                    res = pd.read_table(
+                        f,
+                        usecols=columns,
+                        index_col=False,
+                        engine="python",
+                        delimiter=None,
+                    )
+                else:
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
     return res
 
 
-def read_json(path: str, columns: list = None, filters: list = None, fs=None):
+def read_json(
+    path: str,
+    columns: list = None,
+    filters: list = None,
+    fs=None,
+    dataframe_type="pandas",
+):
     """Read json files(s) to pandas.
 
     Args:
@@ -221,14 +258,23 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
         columns (list): list of selected fields.
         filters (list): filters.
         fs: filesystem object.
+        dataframe_type (str, optional): Datafame type pandas or polars
 
     Returns:
-        pandas.DataFrame: a dataframe containing the data.
+        Union[pandas.DataFrame, polars.DataFrame]: a dataframe containing the data.
     """
 
     try:
         try:
-            res = json_to_table(path, fs, columns=columns, filters=filters).to_pandas()
+            res = json_to_table(path, fs, columns=columns, filters=filters)
+            if dataframe_type == "pandas":
+                res = res.to_pandas()
+            elif dataframe_type == "polars":
+                import polars as pl
+
+                res = pl.from_arrow(res)
+            else:
+                raise ValueError(f"Unknown DataFrame type {dataframe_type}")
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -244,7 +290,15 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
         )
         try:
             with (fs.open(path) if fs else nullcontext(path)) as f:
-                res = pd.read_json(f)
+                if dataframe_type == "pandas":
+                    res = pd.read_json(f)
+                elif dataframe_type == "polars":
+                    import polars as pl
+
+                    res = pl.read_json(f)
+                else:
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+
         except Exception as err:
             logger.error(
                 VERBOSE_LVL,
@@ -255,7 +309,11 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
 
 
 def read_parquet(
-    path: Union[list, str], columns: list = None, filters: list = None, fs=None
+    path: Union[list, str],
+    columns: list = None,
+    filters: list = None,
+    fs=None,
+    dataframe_type="pandas",
 ):
     """Read parquet files(s) to pandas.
 
@@ -264,47 +322,22 @@ def read_parquet(
         columns (list): list of selected fields.
         filters (list): filters.
         fs: filesystem object.
+        dataframe_type (str, optional): Datafame type pandas or polars
 
     Returns:
-        pandas.DataFrame: a dataframe containing the data.
+        Union[pandas.DataFrame, polars.DataFrame]: a dataframe containing the data.
 
     """
 
-    if isinstance(path, list):
-        schemas = [
-            pq.ParquetDataset(
-                p,
-                use_legacy_dataset=False,
-                filters=filters,
-                filesystem=fs,
-                memory_map=True,
-            ).schema
-            for p in path
-        ]
-    else:
-        schemas = [
-            pq.ParquetDataset(
-                path,
-                use_legacy_dataset=False,
-                filters=filters,
-                filesystem=fs,
-                memory_map=True,
-            ).schema
-        ]
+    tbl = parquet_to_table(path, columns=columns, filters=filters, fs=fs)
+    if dataframe_type == "pandas":
+        return tbl.to_pandas()
+    elif dataframe_type == "polars":
+        import polars as pl
 
-    schema = unify_schemas(schemas)
-    return (
-        pq.ParquetDataset(
-            path,
-            use_legacy_dataset=False,
-            filters=filters,
-            filesystem=fs,
-            memory_map=True,
-            schema=schema,
-        )
-        .read_pandas(columns=columns)
-        .to_pandas()
-    )
+        return pl.from_arrow(tbl)
+    else:
+        raise ValueError(f"Unknown DataFrame type {dataframe_type}")
 
 
 def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -> str:
@@ -776,7 +809,7 @@ def upload_files(
     parallel=True,
     n_par=-1,
     multipart=True,
-    chunk_size=5 * 2 ** 20,
+    chunk_size=5 * 2**20,
 ):
     """Upload file into Fusion.
 

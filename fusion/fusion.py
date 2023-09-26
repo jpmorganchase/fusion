@@ -336,8 +336,11 @@ class Fusion:
         if product:
             url = f"{self.root_url}catalogs/{catalog}/productDatasets"
             df_pr = Fusion._call_for_dataframe(url, self.session)
-            df_pr = df_pr[df_pr["product"] == product] if isinstance(product, str) \
+            df_pr = (
+                df_pr[df_pr["product"] == product]
+                if isinstance(product, str)
                 else df_pr[df_pr["product"].isin(product)]
+            )
             df = df[df["identifier"].isin(df_pr["dataset"])].reset_index(drop=True)
 
         if max_results > -1:
@@ -347,15 +350,15 @@ class Fusion:
         df["region"] = df.region.str.join(", ")
         if not display_all_columns:
             cols = [
-                    "identifier",
-                    "title",
-                    "containerType",
-                    "region",
-                    "category",
-                    "coverageStartDate",
-                    "coverageEndDate",
-                    "description",
-                ]
+                "identifier",
+                "title",
+                "containerType",
+                "region",
+                "category",
+                "coverageStartDate",
+                "coverageEndDate",
+                "description",
+            ]
             cols = [c for c in cols if c in df.columns]
             df = df[cols]
 
@@ -416,7 +419,16 @@ class Fusion:
         )
 
         if not display_all_columns:
-            df = df[["identifier", "title", "dataType", "isDatasetKey", "description", "source"]]
+            df = df[
+                [
+                    "identifier",
+                    "title",
+                    "dataType",
+                    "isDatasetKey",
+                    "description",
+                    "source",
+                ]
+            ]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
@@ -670,6 +682,7 @@ class Fusion:
         filters: List = None,
         force_download: bool = False,
         download_folder: str = None,
+        dataframe_type: str = "pandas",
         **kwargs,
     ) -> pd.DataFrame:
         """Gets distributions for a specified date or date range and returns the data as a dataframe.
@@ -697,6 +710,7 @@ class Fusion:
                 if it is already on disk. Defaults to False.
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
+            dataframe_type (str, optional): Type
         Returns:
             class:`pandas.DataFrame`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
@@ -736,10 +750,30 @@ class Fusion:
         }
 
         pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
-            "csv": {"columns": columns, "filters": filters, "fs": self.fs},
-            "parquet": {"columns": columns, "filters": filters, "fs": self.fs},
-            "json": {"columns": columns, "filters": filters, "fs": self.fs},
-            "raw": {"columns": columns, "filters": filters, "fs": self.fs},
+            "csv": {
+                "columns": columns,
+                "filters": filters,
+                "fs": self.fs,
+                "dataframe_type": dataframe_type,
+            },
+            "parquet": {
+                "columns": columns,
+                "filters": filters,
+                "fs": self.fs,
+                "dataframe_type": dataframe_type,
+            },
+            "json": {
+                "columns": columns,
+                "filters": filters,
+                "fs": self.fs,
+                "dataframe_type": dataframe_type,
+            },
+            "raw": {
+                "columns": columns,
+                "filters": filters,
+                "fs": self.fs,
+                "dataframe_type": dataframe_type,
+            },
         }
 
         pd_read_default_kwargs["parq"] = pd_read_default_kwargs["parquet"]
@@ -770,7 +804,12 @@ class Fusion:
             df = pd.concat(dataframes, ignore_index=True)
         else:
             dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)  # type: ignore
-            df = pd.concat(dataframes, ignore_index=True)
+            if dataframe_type == "pandas":
+                df = pd.concat(dataframes, ignore_index=True)
+            if dataframe_type == "polars":
+                import polars as pl
+
+                df = pl.concat(dataframes, how="diagonal")
 
         return df
 
@@ -889,7 +928,7 @@ class Fusion:
         show_progress: bool = True,
         return_paths: bool = False,
         multipart=True,
-        chunk_size=5 * 2 ** 20,
+        chunk_size=5 * 2**20,
     ):
         """Uploads the requested files/files to Fusion.
 
