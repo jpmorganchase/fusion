@@ -543,6 +543,10 @@ class Fusion:
         catalog = self.__use_catalog(catalog)
 
         datasetseries_list = self.list_datasetmembers(dataset, catalog)
+        if len(datasetseries_list) == 0:
+            raise AssertionError(
+                f"There are no dataset members for dataset {dataset} in catalog {catalog}"
+            )
 
         if datasetseries_list.empty:
             raise APIResponseError(
@@ -568,6 +572,12 @@ class Fusion:
             datasetseries_list = datasetseries_list[
                 pd.to_datetime(datasetseries_list["identifier"]) <= parsed_dates[1]
             ]
+
+        if len(datasetseries_list) == 0:
+            raise APIResponseError(
+                f"No data available for dataset {dataset} in catalog {catalog}.\n"
+                f"Check that a valid dataset identifier and date/date range has been set."
+            )
 
         required_series = list(datasetseries_list["@id"])
         tups = [
