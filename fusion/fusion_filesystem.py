@@ -109,14 +109,23 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         session = await self.set_session()
         is_file = False
         size = None
-        async with session.get(url, **self.kwargs) as r:
+        async with session.head(url + "/operationType/download", **self.kwargs) as r:
             self._raise_not_found_for_status(r, url)
             try:
                 out = await r.json()
             except Exception as ex:
                 logger.log(VERBOSE_LVL, f"{url} cannot be parsed to json, {ex}")
                 # out = await r.content.read(10)
-                out = [r.headers["Content-Disposition"].split("=")[-1]]
+                out = [
+                    url.split("/")[6]
+                    + "-"
+                    + url.split("/")[8]
+                    + "-"
+                    + url.split("/")[10]
+                    + "."
+                    + url.split("/")[-1]
+                ]
+
                 size = int(r.headers["Content-Length"])
                 is_file = True
 
@@ -244,7 +253,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         return super().cat(url, start=start, end=end, **kwargs)
 
     def get(
-        self, rpath, lpath, chunk_size=5 * 2 ** 20, callback=_DEFAULT_CALLBACK, **kwargs
+        self, rpath, lpath, chunk_size=5 * 2**20, callback=_DEFAULT_CALLBACK, **kwargs
     ):
         """Copy file(s) to local.
 
@@ -267,7 +276,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         self,
         lpath,
         rpath,
-        chunk_size=5 * 2 ** 20,
+        chunk_size=5 * 2**20,
         callback=_DEFAULT_CALLBACK,
         method="post",
         multipart=False,
@@ -343,7 +352,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 )
 
     @staticmethod
-    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2 ** 20, multipart=False):
+    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2**20, multipart=False):
 
         headers = {
             "Content-Type": "application/octet-stream",
@@ -385,7 +394,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         self,
         lpath,
         rpath,
-        chunk_size=5 * 2 ** 20,
+        chunk_size=5 * 2**20,
         callback=_DEFAULT_CALLBACK,
         method="put",
         multipart=False,
