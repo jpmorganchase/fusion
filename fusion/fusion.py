@@ -1063,13 +1063,17 @@ class Fusion:
         from aiohttp_sse_client import client as sse_client
         from .utils import get_client
 
+        kwargs = {}
+        if last_event_id:
+            kwargs = {'headers': {"Last-Event-ID": last_event_id}}
+
         async def async_events():
             timeout = 1e100
             session = await get_client(self.credentials, timeout=timeout)
             async with sse_client.EventSource(
                 f"{self.root_url}catalogs/{catalog}/notifications/subscribe",
                 session=session,
-                headers={'Last-Event-ID': last_event_id},
+                **kwargs,
             ) as messages:
                 try:
                     async for msg in messages:
