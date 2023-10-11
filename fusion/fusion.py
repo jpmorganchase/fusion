@@ -1069,7 +1069,7 @@ class Fusion:
             async with sse_client.EventSource(
                 f"{self.root_url}catalogs/{catalog}/notifications/subscribe",
                 session=session,
-                last_event_id=last_event_id,
+                headers={'Last-Event-ID': last_event_id},
             ) as messages:
                 try:
                     async for msg in messages:
@@ -1111,7 +1111,7 @@ class Fusion:
             messages = SSEClient(
                 session=self.session,
                 url=f"{self.root_url}catalogs/{catalog}/notifications/subscribe",
-                last_event_id=last_event_id,
+                last_id=last_event_id,
             )
             lst = []
             try:
