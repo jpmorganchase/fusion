@@ -112,6 +112,7 @@ class Fusion:
 
         self.session = get_session(self.credentials, self.root_url)
         self.fs = fs if fs else get_default_fs()
+        self.events = None
 
     def __repr__(self):
         """Object representation to list all available methods."""
@@ -1039,3 +1040,89 @@ class Fusion:
             warnings.warn(msg)
 
         return res if return_paths else None
+
+    def listen_to_events(
+        self, last_event_id: str = None, catalog: str = None
+    ) -> Union[None, pd.DataFrame]:
+        """
+        Run server sent event listener in the background. Retrieve results by running get_events.
+
+        Args:
+            last_event_id (str):
+            catalog (str):
+        Returns:
+            Union[None, class:`pandas.DataFrame`]: If in_background is True then the function returns no output.
+                If in_background is set to False then pandas DataFrame is output upon keyboard termination.
+        """
+
+        catalog = self.__use_catalog(catalog)
+        import json
+
+        import threading
+        import asyncio
+        from aiohttp_sse_client import client as sse_client
+        from .utils import get_client
+
+        async def async_events():
+            timeout = 1e100
+            session = await get_client(self.credentials, timeout=timeout)
+            async with sse_client.EventSource(
+                f"{self.root_url}catalogs/{catalog}/notifications/subscribe",
+                session=session,
+                last_event_id=last_event_id,
+            ) as messages:
+                try:
+                    async for msg in messages:
+                        event = json.loads(msg.data)
+                        if self.events is None:
+                            self.events = pd.DataFrame([event])
+                        else:
+                            self.events = pd.concat(
+                                [self.events, event], ignore_index=True
+                            )
+                except TimeoutError:
+                    raise TimeoutError
+                except Exception as e:
+                    raise Exception(e)
+
+        th = threading.Thread(target=asyncio.run, args=(async_events(),), daemon=True)
+        th.start()
+
+    def get_events(
+        self, last_event_id: str = None, catalog: str = None, in_background: bool = True
+    ) -> Union[None, pd.DataFrame]:
+        """
+        Run server sent event listener and print out the new events. Keyboard terminate to stop.
+
+        Args:
+            last_event_id (str):
+            catalog (str):
+            in_background (bool):
+        Returns:
+            Union[None, class:`pandas.DataFrame`]: If in_background is True then the function returns no output.
+                If in_background is set to False then pandas DataFrame is output upon keyboard termination.
+        """
+
+        catalog = self.__use_catalog(catalog)
+        if not in_background:
+            from sseclient import SSEClient
+            import json
+
+            messages = SSEClient(
+                session=self.session,
+                url=f"{self.root_url}catalogs/{catalog}/notifications/subscribe",
+                last_event_id=last_event_id,
+            )
+            lst = []
+            try:
+                for msg in messages:
+                    event = json.loads(msg.data)
+                    print(event)
+                    if event["type"] != "HeartBeatNotification":
+                        lst.append(event)
+            except KeyboardInterrupt:
+                return pd.DataFrame(lst)
+            except Exception as e:
+                raise Exception(e)
+        else:
+            return self.events
