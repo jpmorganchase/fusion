@@ -1065,7 +1065,7 @@ class Fusion:
 
         kwargs = {}
         if last_event_id:
-            kwargs = {'headers': {"Last-Event-ID": last_event_id}}
+            kwargs = {"headers": {"Last-Event-ID": last_event_id}}
 
         async def async_events():
             timeout = 1e100
@@ -1082,7 +1082,7 @@ class Fusion:
                             self.events = pd.DataFrame([event])
                         else:
                             self.events = pd.concat(
-                                [self.events, event], ignore_index=True
+                                [self.events, pd.DataFrame(event)], ignore_index=True
                             )
                 except TimeoutError:
                     raise TimeoutError
