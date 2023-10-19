@@ -601,10 +601,18 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
+       
+
         n_par = cpu_count(n_par)
-        required_series = self._resolve_distro_tuples(
-            dataset, dt_str, dataset_format, catalog
-        )
+
+        #sample data is limited to csv
+        if dt_str == 'sample':
+            dataset_format = 'csv'
+            required_series = [(catalog, dataset, dt_str, dataset_format)]
+        else:
+            required_series = self._resolve_distro_tuples(
+                dataset, dt_str, dataset_format, catalog
+            )
 
         if not download_folder:
             download_folder = self.download_folder
@@ -702,6 +710,10 @@ class Fusion:
                 If multiple dataset instances are retrieved then these are concatenated first.
         """
         catalog = self.__use_catalog(catalog)
+
+        #sample data is limited to csv
+        if dt_str == 'sample':
+            dataset_format = 'csv'
 
         n_par = cpu_count(n_par)
         if not download_folder:
