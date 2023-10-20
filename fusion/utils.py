@@ -51,6 +51,7 @@ from .authentication import FusionCredentials, FusionOAuthAdapter, FusionAiohttp
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 DT_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
+DT_YYYYMMDDTHHMM_RE = re.compile(r"(\d{4})(\d{2})(\d{2})T(\d{4})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
 DEFAULT_CHUNK_SIZE = 2 ** 16
 DEFAULT_THREAD_POOL_SIZE = 5
@@ -333,6 +334,11 @@ def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -
         return f"{yr}-{mth}-{day}"
 
     matches = DT_YYYYMMDD_RE.match(dt)
+
+    if matches:
+        return "-".join(matches.groups())
+    
+    matches = DT_YYYYMMDDTHHMM_RE.match(dt)
 
     if matches:
         return "-".join(matches.groups())
