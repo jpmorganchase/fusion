@@ -13,6 +13,7 @@ from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
 import pyarrow as pa
+import re
 
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
@@ -601,18 +602,20 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-       
-
         n_par = cpu_count(n_par)
 
-        #sample data is limited to csv
-        if dt_str == 'sample':
-            dataset_format = 'csv'
-            required_series = [(catalog, dataset, dt_str, dataset_format)]
-        else:
+        valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
+
+        if valid_date_range.match(dt_str):
             required_series = self._resolve_distro_tuples(
                 dataset, dt_str, dataset_format, catalog
             )
+        else:
+            #sample data is limited to csv
+            if dt_str == 'sample':
+                dataset_format = 'csv'
+            required_series = [(catalog, dataset, dt_str, dataset_format)]
+
 
         if not download_folder:
             download_folder = self.download_folder
