@@ -606,7 +606,7 @@ class Fusion:
 
         valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
 
-        if valid_date_range.match(dt_str):
+        if valid_date_range.match(dt_str) or dt_str == 'latest':
             required_series = self._resolve_distro_tuples(
                 dataset, dt_str, dataset_format, catalog
             )
