@@ -1,5 +1,6 @@
 """Fusion utilities."""
 
+import contextlib
 import datetime
 from datetime import timedelta
 import logging
@@ -15,6 +16,8 @@ import json as js
 import pandas as pd
 import pyarrow.parquet as pq
 import requests
+import joblib
+from tqdm import tqdm
 from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
@@ -54,6 +57,39 @@ DT_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
 DEFAULT_CHUNK_SIZE = 2**16
 DEFAULT_THREAD_POOL_SIZE = 5
+
+
+@contextlib.contextmanager
+def tqdm_joblib(tqdm_object):
+    """
+    Progress bar sensitive to exceptions during the batch processing.
+
+    Args:
+        tqdm_object (tqdm.tqdm):
+
+    Yields: tqdm.tqdm object
+
+    """
+
+    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
+        def __call__(self, *args, **kwargs):
+            n = 0
+            for i in args[0]._result:
+                try:
+                    if i[0] is True:
+                        n += 1
+                except Exception as ex:
+                    n += 1
+            tqdm_object.update(n=n)
+            return super().__call__(*args, **kwargs)
+
+    old_batch_callback = joblib.parallel.BatchCompletionCallBack
+    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
+    try:
+        yield tqdm_object
+    finally:
+        joblib.parallel.BatchCompletionCallBack = old_batch_callback
+        tqdm_object.close()
 
 
 def cpu_count(thread_pool_size: int = None):
@@ -812,10 +848,11 @@ def upload_files(
     fs_fusion,
     fs_local,
     loop,
-    parallel=True,
-    n_par=-1,
-    multipart=True,
-    chunk_size=5 * 2**20,
+    parallel: bool = True,
+    n_par: int = -1,
+    multipart: bool = True,
+    chunk_size: int = 5 * 2**20,
+    show_progress: bool = True,
 ):
     """Upload file into Fusion.
 
@@ -827,6 +864,7 @@ def upload_files(
         n_par (int): Number of subprocesses.
         multipart (bool): Is multipart upload.
         chunk_size (int): Maximum chunk size.
+        show_progress (bool): Show progress bar
 
     Returns: List of update statuses.
 
@@ -849,7 +887,14 @@ def upload_files(
             return False, row["path"], str(ex)
 
     if parallel:
-        res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop)
+        if show_progress:
+            with tqdm_joblib(tqdm(total=len(loop))) as _:
+                res = Parallel(n_jobs=n_par)(
+                    delayed(_upload)(row) for index, row in loop
+                )
+        else:
+            res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop)
     else:
+        loop = tqdm(loop, total=len(loop)) if show_progress else loop
         res = [_upload(row) for index, row in loop]
     return res

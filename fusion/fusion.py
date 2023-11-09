@@ -34,6 +34,7 @@ from .utils import (
     upload_files,
     validate_file_names,
     is_dataset_raw,
+    tqdm_joblib,
 )
 
 logger = logging.getLogger(__name__)
@@ -664,17 +665,22 @@ class Fusion:
             for i, series in enumerate(required_series)
         ]
 
-        if show_progress:
-            loop = tqdm(download_spec)
-        else:
-            loop = download_spec
         logger.log(
             VERBOSE_LVL,
-            f"Beginning {len(loop)} downloads in batches of {n_par}",
+            f"Beginning {len(download_spec)} downloads in batches of {n_par}",
         )
-        res = Parallel(n_jobs=n_par)(
-            delayed(stream_single_file_new_session)(**spec) for spec in loop
-        )
+        if show_progress:
+            with tqdm_joblib(tqdm(total=len(download_spec))) as _:
+                res = Parallel(n_jobs=n_par)(
+                    delayed(stream_single_file_new_session)(**spec)
+                    for spec in download_spec
+                )
+        else:
+            res = Parallel(n_jobs=n_par)(
+                delayed(stream_single_file_new_session)(**spec)
+                for spec in download_spec
+            )
+
         if (len(res) > 0) and (not all((r[0] for r in res))):
             for r in res:
                 if not r[0]:
@@ -1016,21 +1022,17 @@ class Fusion:
         df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
         df.columns = ["path", "url"]
 
-        if show_progress:
-            loop = tqdm(df.iterrows(), total=len(df))
-        else:
-            loop = df.iterrows()
-
         n_par = cpu_count(n_par)
         parallel = True if len(df) > 1 else False
         res = upload_files(
             fs_fusion,
             self.fs,
-            loop,
+            df.iterrows(),
             parallel=parallel,
             n_par=n_par,
             multipart=multipart,
             chunk_size=chunk_size,
+            show_progress=show_progress,
         )
 
         if not all(r[0] for r in res):
