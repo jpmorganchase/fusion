@@ -13,6 +13,7 @@ from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
 import pyarrow as pa
+import re
 
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
@@ -277,9 +278,9 @@ class Fusion:
         df["category"] = df.category.str.join(", ")
         df["region"] = df.region.str.join(", ")
         if not display_all_columns:
-            df = df[
+            df = df[df.columns.intersection(
                 ["identifier", "title", "region", "category", "status", "description"]
-            ]
+            )]
 
         if max_results > -1:
             df = df[0:max_results]
@@ -421,16 +422,7 @@ class Fusion:
         )
 
         if not display_all_columns:
-            df = df[
-                [
-                    "identifier",
-                    "title",
-                    "dataType",
-                    "isDatasetKey",
-                    "description",
-                    "source",
-                ]
-            ]
+            df = df[df.columns.intersection(["identifier", "title", "dataType", "isDatasetKey", "description", "source"])]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
@@ -626,9 +618,19 @@ class Fusion:
         catalog = self.__use_catalog(catalog)
 
         n_par = cpu_count(n_par)
-        required_series = self._resolve_distro_tuples(
-            dataset, dt_str, dataset_format, catalog
-        )
+
+        valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
+
+        if valid_date_range.match(dt_str) or dt_str == 'latest':
+            required_series = self._resolve_distro_tuples(
+                dataset, dt_str, dataset_format, catalog
+            )
+        else:
+            #sample data is limited to csv
+            if dt_str == 'sample':
+                dataset_format = 'csv'
+            required_series = [(catalog, dataset, dt_str, dataset_format)]
+
 
         if not download_folder:
             download_folder = self.download_folder
@@ -733,6 +735,10 @@ class Fusion:
                 If multiple dataset instances are retrieved then these are concatenated first.
         """
         catalog = self.__use_catalog(catalog)
+
+        #sample data is limited to csv
+        if dt_str == 'sample':
+            dataset_format = 'csv'
 
         n_par = cpu_count(n_par)
         if not download_folder:
