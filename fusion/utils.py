@@ -1,5 +1,6 @@
 """Fusion utilities."""
 
+import contextlib
 import datetime
 from datetime import timedelta
 import logging
@@ -15,6 +16,8 @@ import json as js
 import pandas as pd
 import pyarrow.parquet as pq
 import requests
+import joblib
+from tqdm import tqdm
 from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
@@ -53,8 +56,41 @@ VERBOSE_LVL = 25
 DT_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
 DT_YYYYMMDDTHHMM_RE = re.compile(r"(\d{4})(\d{2})(\d{2})T(\d{4})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
-DEFAULT_CHUNK_SIZE = 2 ** 16
+DEFAULT_CHUNK_SIZE = 2**16
 DEFAULT_THREAD_POOL_SIZE = 5
+
+
+@contextlib.contextmanager
+def tqdm_joblib(tqdm_object):
+    """
+    Progress bar sensitive to exceptions during the batch processing.
+
+    Args:
+        tqdm_object (tqdm.tqdm):
+
+    Yields: tqdm.tqdm object
+
+    """
+
+    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
+        def __call__(self, *args, **kwargs):
+            n = 0
+            for i in args[0]._result:
+                try:
+                    if i[0] is True:
+                        n += 1
+                except Exception as ex:
+                    n += 1
+            tqdm_object.update(n=n)
+            return super().__call__(*args, **kwargs)
+
+    old_batch_callback = joblib.parallel.BatchCompletionCallBack
+    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
+    try:
+        yield tqdm_object
+    finally:
+        joblib.parallel.BatchCompletionCallBack = old_batch_callback
+        tqdm_object.close()
 
 
 def cpu_count(thread_pool_size: int = None):
@@ -169,7 +205,13 @@ def parquet_to_table(path: str, fs=None, columns: list = None, filters: list = N
     ).read(columns=columns)
 
 
-def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
+def read_csv(
+    path: str,
+    columns: list = None,
+    filters: list = None,
+    fs=None,
+    dataframe_type="pandas",
+):
     """Reads csv with possibility of selecting columns and filtering the data.
 
     Args:
@@ -177,14 +219,24 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
         columns: list of selected fields.
         filters: filters.
         fs: filesystem object.
+        dataframe_type (str, optional): Datafame type pandas or polars
 
     Returns:
-        pandas.DataFrame: a dataframe containing the data.
+        Union[pandas.DataFrame, polars.DataFrame]: a dataframe containing the data.
 
     """
     try:
         try:
-            res = csv_to_table(path, fs, columns=columns, filters=filters).to_pandas()
+            res = csv_to_table(path, fs, columns=columns, filters=filters)
+
+            if dataframe_type == "pandas":
+                res = res.to_pandas()
+            elif dataframe_type == "polars":
+                import polars as pl
+
+                res = pl.from_arrow(res)
+            else:
+                raise ValueError(f"Unknown DataFrame type {dataframe_type}")
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -200,7 +252,15 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
         )
         try:
             with (fs.open(path) if fs else nullcontext(path)) as f:
-                res = pd.read_csv(f, usecols=columns, index_col=False)
+                if dataframe_type == "pandas":
+                    res = pd.read_csv(f, usecols=columns, index_col=False)
+                elif dataframe_type == "polars":
+                    import polars as pl
+
+                    res = pl.read_csv(f, columns=columns)
+                else:
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -208,13 +268,26 @@ def read_csv(path: str, columns: list = None, filters: list = None, fs=None):
                 f"Trying with pandas csv reader pandas engine. {err}",
             )
             with (fs.open(path) if fs else nullcontext(path)) as f:
-                res = pd.read_table(
-                    f, usecols=columns, index_col=False, engine="python", delimiter=None
-                )
+                if dataframe_type == "pandas":
+                    res = pd.read_table(
+                        f,
+                        usecols=columns,
+                        index_col=False,
+                        engine="python",
+                        delimiter=None,
+                    )
+                else:
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
     return res
 
 
-def read_json(path: str, columns: list = None, filters: list = None, fs=None):
+def read_json(
+    path: str,
+    columns: list = None,
+    filters: list = None,
+    fs=None,
+    dataframe_type="pandas",
+):
     """Read json files(s) to pandas.
 
     Args:
@@ -222,14 +295,23 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
         columns (list): list of selected fields.
         filters (list): filters.
         fs: filesystem object.
+        dataframe_type (str, optional): Datafame type pandas or polars
 
     Returns:
-        pandas.DataFrame: a dataframe containing the data.
+        Union[pandas.DataFrame, polars.DataFrame]: a dataframe containing the data.
     """
 
     try:
         try:
-            res = json_to_table(path, fs, columns=columns, filters=filters).to_pandas()
+            res = json_to_table(path, fs, columns=columns, filters=filters)
+            if dataframe_type == "pandas":
+                res = res.to_pandas()
+            elif dataframe_type == "polars":
+                import polars as pl
+
+                res = pl.from_arrow(res)
+            else:
+                raise ValueError(f"Unknown DataFrame type {dataframe_type}")
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
@@ -245,7 +327,15 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
         )
         try:
             with (fs.open(path) if fs else nullcontext(path)) as f:
-                res = pd.read_json(f)
+                if dataframe_type == "pandas":
+                    res = pd.read_json(f)
+                elif dataframe_type == "polars":
+                    import polars as pl
+
+                    res = pl.read_json(f)
+                else:
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+
         except Exception as err:
             logger.error(
                 VERBOSE_LVL,
@@ -256,7 +346,11 @@ def read_json(path: str, columns: list = None, filters: list = None, fs=None):
 
 
 def read_parquet(
-    path: Union[list, str], columns: list = None, filters: list = None, fs=None
+    path: Union[list, str],
+    columns: list = None,
+    filters: list = None,
+    fs=None,
+    dataframe_type="pandas",
 ):
     """Read parquet files(s) to pandas.
 
@@ -265,47 +359,22 @@ def read_parquet(
         columns (list): list of selected fields.
         filters (list): filters.
         fs: filesystem object.
+        dataframe_type (str, optional): Datafame type pandas or polars
 
     Returns:
-        pandas.DataFrame: a dataframe containing the data.
+        Union[pandas.DataFrame, polars.DataFrame]: a dataframe containing the data.
 
     """
 
-    if isinstance(path, list):
-        schemas = [
-            pq.ParquetDataset(
-                p,
-                use_legacy_dataset=False,
-                filters=filters,
-                filesystem=fs,
-                memory_map=True,
-            ).schema
-            for p in path
-        ]
-    else:
-        schemas = [
-            pq.ParquetDataset(
-                path,
-                use_legacy_dataset=False,
-                filters=filters,
-                filesystem=fs,
-                memory_map=True,
-            ).schema
-        ]
+    tbl = parquet_to_table(path, columns=columns, filters=filters, fs=fs)
+    if dataframe_type == "pandas":
+        return tbl.to_pandas()
+    elif dataframe_type == "polars":
+        import polars as pl
 
-    schema = unify_schemas(schemas)
-    return (
-        pq.ParquetDataset(
-            path,
-            use_legacy_dataset=False,
-            filters=filters,
-            filesystem=fs,
-            memory_map=True,
-            schema=schema,
-        )
-        .read_pandas(columns=columns)
-        .to_pandas()
-    )
+        return pl.from_arrow(tbl)
+    else:
+        raise ValueError(f"Unknown DataFrame type {dataframe_type}")
 
 
 def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -> str:
@@ -585,7 +654,13 @@ async def get_client(credentials, **kwargs):
     trace_config = aiohttp.TraceConfig()
     trace_config.on_request_start.append(on_request_start_token)
     trace_config.on_request_start.append(on_request_start_fusion_token)
-    session = FusionAiohttpSession(trace_configs=[trace_config], trust_env=True)
+    if "timeout" in kwargs:
+        timeout = aiohttp.ClientTimeout(total=kwargs["timeout"])
+    else:
+        timeout = aiohttp.ClientTimeout(total=30 * 60)  # default 30min timeout
+    session = FusionAiohttpSession(
+        trace_configs=[trace_config], trust_env=True, timeout=timeout
+    )
     session.post_init(credentials=credentials)
     return session
 
@@ -782,10 +857,11 @@ def upload_files(
     fs_fusion,
     fs_local,
     loop,
-    parallel=True,
-    n_par=-1,
-    multipart=True,
-    chunk_size=5 * 2 ** 20,
+    parallel: bool = True,
+    n_par: int = -1,
+    multipart: bool = True,
+    chunk_size: int = 5 * 2**20,
+    show_progress: bool = True,
 ):
     """Upload file into Fusion.
 
@@ -797,6 +873,7 @@ def upload_files(
         n_par (int): Number of subprocesses.
         multipart (bool): Is multipart upload.
         chunk_size (int): Maximum chunk size.
+        show_progress (bool): Show progress bar
 
     Returns: List of update statuses.
 
@@ -819,7 +896,14 @@ def upload_files(
             return False, row["path"], str(ex)
 
     if parallel:
-        res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop)
+        if show_progress:
+            with tqdm_joblib(tqdm(total=len(loop))) as _:
+                res = Parallel(n_jobs=n_par)(
+                    delayed(_upload)(row) for index, row in loop
+                )
+        else:
+            res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop)
     else:
+        loop = tqdm(loop, total=len(loop)) if show_progress else loop
         res = [_upload(row) for index, row in loop]
     return res
