@@ -1076,6 +1076,7 @@ class Fusion:
             kwargs = {"headers": {"Last-Event-ID": last_event_id}}
 
         async def async_events():
+		""" Events sync function. """
             timeout = 1e100
             session = await get_client(self.credentials, timeout=timeout)
             async with sse_client.EventSource(
@@ -1103,13 +1104,12 @@ class Fusion:
     def get_events(
         self, last_event_id: str = None, catalog: str = None, in_background: bool = True
     ) -> Union[None, pd.DataFrame]:
-        """
-        Run server sent event listener and print out the new events. Keyboard terminate to stop.
+        """ Run server sent event listener and print out the new events. Keyboard terminate to stop.
 
         Args:
-            last_event_id (str):
-            catalog (str):
-            in_background (bool):
+            last_event_id (str): id of the last event.
+            catalog (str): catalog.
+            in_background (bool): execute event monitoring in the background (default = True).
         Returns:
             Union[None, class:`pandas.DataFrame`]: If in_background is True then the function returns no output.
                 If in_background is set to False then pandas DataFrame is output upon keyboard termination.

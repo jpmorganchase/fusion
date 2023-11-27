@@ -62,11 +62,10 @@ DEFAULT_THREAD_POOL_SIZE = 5
 
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
-    """
-    Progress bar sensitive to exceptions during the batch processing.
+    """ Progress bar sensitive to exceptions during the batch processing.
 
     Args:
-        tqdm_object (tqdm.tqdm):
+        tqdm_object (tqdm.tqdm): tqdm object.
 
     Yields: tqdm.tqdm object
 
@@ -79,7 +78,7 @@ def tqdm_joblib(tqdm_object):
                 try:
                     if i[0] is True:
                         n += 1
-                except Exception as ex:
+                except Exception as _:
                     n += 1
             tqdm_object.update(n=n)
             return super().__call__(*args, **kwargs)
