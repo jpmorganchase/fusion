@@ -33,11 +33,11 @@ jobs:
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout main repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
         with:
           path: main_repo
           fetch-depth: 0
-          token: ${{ secrets.PERSONAL_TOKEN }}
+#          token: ${{ secrets.PERSONAL_TOKEN }}
 
       - name: Get Changelog Entry
         id: changelog_reader
