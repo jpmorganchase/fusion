@@ -1073,8 +1073,7 @@ class Fusion:
     def listen_to_events(
         self, last_event_id: str = None, catalog: str = None
     ) -> Union[None, pd.DataFrame]:
-        """
-        Run server sent event listener in the background. Retrieve results by running get_events.
+        """ Run server sent event listener in the background. Retrieve results by running get_events.
 
         Args:
             last_event_id (str):

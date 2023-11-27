@@ -62,7 +62,7 @@ DEFAULT_THREAD_POOL_SIZE = 5
 
 @contextlib.contextmanager
 def tqdm_joblib(tqdm_object):
-    """ Progress bar sensitive to exceptions during the batch processing.
+    """Progress bar sensitive to exceptions during the batch processing.
 
     Args:
         tqdm_object (tqdm.tqdm): tqdm object.
@@ -78,7 +78,7 @@ def tqdm_joblib(tqdm_object):
                 try:
                     if i[0] is True:
                         n += 1
-                except Exception as _:
+                except Exception as _:  # pylint disable=D417
                     n += 1
             tqdm_object.update(n=n)
             return super().__call__(*args, **kwargs)
@@ -127,7 +127,7 @@ def csv_to_table(path: str, fs=None, columns: list = None, filters: list = None)
     """
     # parse_options = csv.ParseOptions(delimiter=delimiter)
     filters = filters_to_expression(filters) if filters else filters
-    with (fs.open(path) if fs else nullcontext(path)) as f:
+    with fs.open(path) if fs else nullcontext(path) as f:
         tbl = csv.read_csv(f)
         if filters is not None:
             tbl = tbl.filter(filters)
@@ -149,7 +149,7 @@ def json_to_table(path: str, fs=None, columns: list = None, filters: list = None
         class:`pyarrow.Table` pyarrow table with the data.
     """
     filters = filters_to_expression(filters) if filters else filters
-    with (fs.open(path) if fs else nullcontext(path)) as f:
+    with fs.open(path) if fs else nullcontext(path) as f:
         tbl = json.read_json(f)
         if filters is not None:
             tbl = tbl.filter(filters)
@@ -250,7 +250,7 @@ def read_csv(
             f"Trying with pandas csv reader. {err}",
         )
         try:
-            with (fs.open(path) if fs else nullcontext(path)) as f:
+            with fs.open(path) if fs else nullcontext(path) as f:
                 if dataframe_type == "pandas":
                     res = pd.read_csv(f, usecols=columns, index_col=False)
                 elif dataframe_type == "polars":
@@ -266,7 +266,7 @@ def read_csv(
                 f"Could not parse {path} properly. "
                 f"Trying with pandas csv reader pandas engine. {err}",
             )
-            with (fs.open(path) if fs else nullcontext(path)) as f:
+            with fs.open(path) if fs else nullcontext(path) as f:
                 if dataframe_type == "pandas":
                     res = pd.read_table(
                         f,
@@ -325,7 +325,7 @@ def read_json(
             f"Trying with pandas json reader. {err}",
         )
         try:
-            with (fs.open(path) if fs else nullcontext(path)) as f:
+            with fs.open(path) if fs else nullcontext(path) as f:
                 if dataframe_type == "pandas":
                     res = pd.read_json(f)
                 elif dataframe_type == "polars":
@@ -405,7 +405,7 @@ def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -
 
     if matches:
         return "-".join(matches.groups())
-    
+
     matches = DT_YYYYMMDDTHHMM_RE.match(dt)
 
     if matches:
@@ -504,8 +504,10 @@ def distribution_to_url(
     if datasetseries[-1] == "/" or datasetseries[-1] == "\\":
         datasetseries = datasetseries[0:-1]
 
-    if datasetseries == 'sample':
-        return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
+    if datasetseries == "sample":
+        return (
+            f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
+        )
     else:
         return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
 
