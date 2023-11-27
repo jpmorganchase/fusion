@@ -92,7 +92,7 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def cpu_count(thread_pool_size: int = None):
+def cpu_count(thread_pool_size: int = None) -> int:
     """Determine the number of cpus/threads for parallelization.
 
     Args:
@@ -158,7 +158,9 @@ def json_to_table(path: str, fs=None, columns: list = None, filters: list = None
         return tbl
 
 
-def parquet_to_table(path: str, fs=None, columns: list = None, filters: list = None):
+def parquet_to_table(
+    path: Union[str, list], fs=None, columns: list = None, filters: list = None
+):
     """Reads parquet data to pyarrow table.
 
     Args:

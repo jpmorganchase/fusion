@@ -4,7 +4,7 @@ import logging
 import sys
 import warnings
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 from zipfile import ZipFile
 import json as js
 import pandas as pd
@@ -1124,6 +1124,7 @@ class Fusion:
 
         th = threading.Thread(target=asyncio.run, args=(async_events(),), daemon=True)
         th.start()
+        return None
 
     def get_events(
         self, last_event_id: str = None, catalog: str = None, in_background: bool = True
@@ -1159,5 +1160,7 @@ class Fusion:
                 return pd.DataFrame(lst)
             except Exception as e:
                 raise Exception(e)
+            finally:
+                return None
         else:
             return self.events
