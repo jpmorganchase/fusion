@@ -78,7 +78,7 @@ def tqdm_joblib(tqdm_object):
                 try:
                     if i[0] is True:
                         n += 1
-                except Exception as _:  # pylint disable=D417, noqa: F84
+                except Exception as _:  # noqa: F841, pylint disable=D417
                     n += 1
             tqdm_object.update(n=n)
             return super().__call__(*args, **kwargs)
