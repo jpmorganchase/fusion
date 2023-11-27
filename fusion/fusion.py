@@ -4,7 +4,7 @@ import logging
 import sys
 import warnings
 from pathlib import Path
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union
 from zipfile import ZipFile
 import json as js
 import pandas as pd
