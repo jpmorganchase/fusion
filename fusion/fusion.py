@@ -1076,7 +1076,7 @@ class Fusion:
             kwargs = {"headers": {"Last-Event-ID": last_event_id}}
 
         async def async_events():
-		""" Events sync function. """
+			""" Events sync function. """
             timeout = 1e100
             session = await get_client(self.credentials, timeout=timeout)
             async with sse_client.EventSource(
