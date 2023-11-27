@@ -1073,11 +1073,11 @@ class Fusion:
     def listen_to_events(
         self, last_event_id: str = None, catalog: str = None
     ) -> Union[None, pd.DataFrame]:
-        """ Run server sent event listener in the background. Retrieve results by running get_events.
+        """Run server sent event listener in the background. Retrieve results by running get_events.
 
         Args:
-            last_event_id (str):
-            catalog (str):
+            last_event_id (str): Last event ID (exclusive).
+            catalog (str): catalog.
         Returns:
             Union[None, class:`pandas.DataFrame`]: If in_background is True then the function returns no output.
                 If in_background is set to False then pandas DataFrame is output upon keyboard termination.
@@ -1142,7 +1142,6 @@ class Fusion:
         catalog = self.__use_catalog(catalog)
         if not in_background:
             from sseclient import SSEClient
-            import json
 
             messages = SSEClient(
                 session=self.session,
@@ -1152,7 +1151,7 @@ class Fusion:
             lst = []
             try:
                 for msg in messages:
-                    event = json.loads(msg.data)
+                    event = js.loads(msg.data)
                     print(event)
                     if event["type"] != "HeartBeatNotification":
                         lst.append(event)
