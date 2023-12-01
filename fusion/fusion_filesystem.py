@@ -110,7 +110,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         is_file = False
         size = None
         try:
-            async with session.head(url + "/operationType/download", **self.kwargs) as r:
+            async with session.head(
+                url + "/operationType/download", **self.kwargs
+            ) as r:
                 self._raise_not_found_for_status(r, url)
                 out = [
                     url.split("/")[6]
@@ -125,6 +127,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 size = int(r.headers["Content-Length"])
                 is_file = True
         except Exception as _:
+            logger.debug("Not a file - " + _)
             async with session.get(url, **self.kwargs) as r:
                 self._raise_not_found_for_status(r, url)
                 out = await r.json()
@@ -353,7 +356,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
     @staticmethod
     def _construct_headers(file_local, dt_iso, chunk_size=5 * 2**20, multipart=False):
-
         headers = {
             "Content-Type": "application/octet-stream",
             "x-jpmc-distribution-created-date": dt_iso,

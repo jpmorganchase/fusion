@@ -72,7 +72,8 @@ def tqdm_joblib(tqdm_object):
     """
 
     class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
-        """ Tqdm execution wrapper."""
+        """Tqdm execution wrapper."""
+
         def __call__(self, *args, **kwargs):
             n = 0
             for i in args[0]._result:
@@ -906,7 +907,9 @@ def upload_files(
                     delayed(_upload)(row) for index, row in loop.iterrows()
                 )
         else:
-            res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop.iterrows())
+            res = Parallel(n_jobs=n_par)(
+                delayed(_upload)(row) for index, row in loop.iterrows()
+            )
     else:
         if show_progress:
             with tqdm_joblib(tqdm(total=len(loop.iterrows()))) as _:
