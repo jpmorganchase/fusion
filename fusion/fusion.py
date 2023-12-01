@@ -1054,7 +1054,7 @@ class Fusion:
         res = upload_files(
             fs_fusion,
             self.fs,
-            df.iterrows(),
+            df,
             parallel=parallel,
             n_par=n_par,
             multipart=multipart,
