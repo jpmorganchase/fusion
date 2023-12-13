@@ -68,8 +68,8 @@ jobs:
           poetry run mike deploy --branch fusion_release --deploy-prefix docs --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
           poetry run mike set-default --branch fusion_release --deploy-prefix docs --push latest
         working-directory: main_repo
-        # env:
-        #   GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        env:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Build wheels and source tarball
         run: |
