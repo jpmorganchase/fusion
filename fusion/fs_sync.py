@@ -23,19 +23,12 @@ from .utils import (
     upload_files,
     validate_file_names,
     is_dataset_raw,
+    tqdm_joblib
 )
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 DEFAULT_CHUNK_SIZE = 2 ** 16
-
-
-def _get_loop(df, show_progress):
-    if show_progress:
-        loop = tqdm(df.iterrows(), total=len(df))
-    else:
-        loop = df.iterrows()
-    return loop
 
 
 def _url_to_path(x):
@@ -45,9 +38,9 @@ def _url_to_path(x):
     return f"{x.split('/')[0]}/{x.split('/')[2]}/{x.split('/')[4]}/{file_name}"
 
 
-def _download(fs_fusion, fs_local, df, n_par, show_progress=True):
+def _download(fs_fusion, fs_local, df, n_par, show_progress=True, local_path=""):
     def _download_files(row):
-        p_path = row["path_fusion"]
+        p_path = local_path + row["path_fusion"]
         if not fs_local.exists(p_path):
             try:
                 fs_local.mkdir(Path(p_path).parent, exist_ok=True, create_parents=True)
@@ -65,23 +58,32 @@ def _download(fs_fusion, fs_local, df, n_par, show_progress=True):
 
             return False, p_path, msg
 
-    loop = _get_loop(df, show_progress)
-    if len(df) > 1:
-        res = Parallel(n_jobs=n_par)(
-            delayed(_download_files)(row) for index, row in loop
-        )
+    if n_par > 1 and len(df) > 0:
+        if show_progress:
+            with tqdm_joblib(tqdm(total=len(df))) as _:
+                res = Parallel(n_jobs=n_par)(
+                    delayed(_download_files)(row) for index, row in df.iterrows()
+                )
+        else:
+            res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for index, row in df.iterrows())
+    elif len(df) > 0:
+        if tqdm_joblib:
+            with tqdm_joblib(tqdm(total=len(df))) as _:
+                res = [_download_files(row) for index, row in df.iterrows()]
+        else:
+            res = [_download_files(row) for index, row in df]
     else:
-        res = [_download_files(row) for index, row in loop]
+        return []
 
     return res
 
 
-def _upload(fs_fusion, fs_local, df, n_par, show_progress=True):
+def _upload(fs_fusion, fs_local, df, n_par, show_progress=True, local_path=""):
     df.rename(columns={"path_local": "path"}, inplace=True)
-    loop = _get_loop(df, show_progress)
+    df["path"] = local_path + df["path"]
     parallel = True if len(df) > 1 else False
     res = upload_files(
-        fs_fusion, fs_local, loop, parallel=parallel, n_par=n_par, multipart=True
+        fs_fusion, fs_local, df, parallel=parallel, n_par=n_par, multipart=True, show_progress=show_progress
     )
 
     return res
@@ -141,12 +143,12 @@ def _get_fusion_df(
 
 
 def _get_local_state(
-    fs_local, fs_fusion, datasets, catalog, dataset_format=None, local_state=None
+    fs_local, fs_fusion, datasets, catalog, dataset_format=None, local_state=None, local_path=""
 ):
     local_files = []
     local_files_rel = []
     local_dirs = (
-        [f"{catalog}/{i}" for i in datasets] if len(datasets) > 0 else [catalog]
+        [f"{local_path}{catalog}/{i}" for i in datasets] if len(datasets) > 0 else [local_path + catalog]
     )
 
     for local_dir in local_dirs:
@@ -160,7 +162,7 @@ def _get_local_state(
             f for flag, f in zip(local_file_validation, local_files) if flag
         ]
         local_files_rel += [
-            os.path.join(local_dir, relpath(i, local_dir)).replace("\\", "/")
+            os.path.join(local_dir, relpath(i, local_dir)).replace("\\", "/").replace(local_path, "")
             for i in local_files
         ]
 
@@ -199,6 +201,7 @@ def _synchronize(
     direction: str = "upload",
     n_par: int = None,
     show_progress: bool = True,
+    local_path = ""
 ):
     """Synchronize two filesystems."""
 
@@ -215,7 +218,7 @@ def _synchronize(
             )
             join_df = join_df[join_df["sha256_local"] != join_df["sha256_fusion"]]
             res = _upload(
-                fs_fusion, fs_local, join_df, n_par, show_progress=show_progress
+                fs_fusion, fs_local, join_df, n_par, show_progress=show_progress, local_path=local_path
             )
     elif direction == "download":
         if len(df_fusion) == 0:
@@ -231,7 +234,7 @@ def _synchronize(
             )
             join_df = join_df[join_df["sha256_local"] != join_df["sha256_fusion"]]
             res = _download(
-                fs_fusion, fs_local, join_df, n_par, show_progress=show_progress
+                fs_fusion, fs_local, join_df, n_par, show_progress=show_progress, local_path=local_path
             )
     else:
         raise ValueError("Unknown direction of operation.")
@@ -249,6 +252,7 @@ def fsync(
     dataset_format=None,
     n_par=None,
     show_progress=True,
+    local_path = "",
     log_level=logging.ERROR,
     log_path: str = ".",
 ):
@@ -265,6 +269,7 @@ def fsync(
         dataset_format (str): Dataset format for upload/download.
         n_par (int, optional): Specify how many distributions to download in parallel. Defaults to all.
         show_progress (bool, optional): Display a progress bar during data download Defaults to True.
+        local_path (str, optional): path to files in the local filesystem, e.g., "s3a://my_bucket/"
         log_level: Logging level. Error level by default.
         log_path (str, optional): The folder path where the log is stored.
 
@@ -300,6 +305,9 @@ def fsync(
         "download",
     ], "The direction must be either upload or download."
 
+    if len(local_path) > 0 and local_path[-1] != "/":
+        local_path += "/"
+
     for product in products:
         res = json.loads(fs_fusion.cat(f"{catalog}/products/{product}").decode())
         datasets += [r["identifier"] for r in res["resources"]]
@@ -311,7 +319,7 @@ def fsync(
     while True:
         try:
             local_state_temp = _get_local_state(
-                fs_local, fs_fusion, datasets, catalog, dataset_format, local_state
+                fs_local, fs_fusion, datasets, catalog, dataset_format, local_state, local_path
             )
             fusion_state_temp = _get_fusion_df(
                 fs_fusion, datasets, catalog, flatten, dataset_format
@@ -327,6 +335,7 @@ def fsync(
                     direction,
                     n_par,
                     show_progress,
+                    local_path
                 )
                 if len(res) == 0 or all((i[0] for i in res)):
                     local_state = local_state_temp

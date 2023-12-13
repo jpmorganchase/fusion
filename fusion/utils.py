@@ -72,6 +72,8 @@ def tqdm_joblib(tqdm_object):
     """
 
     class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
+        """Tqdm execution wrapper."""
+
         def __call__(self, *args, **kwargs):
             n = 0
             for i in args[0]._result:
@@ -370,7 +372,7 @@ def read_parquet(
     tbl = parquet_to_table(path, columns=columns, filters=filters, fs=fs)
     if dataframe_type == "pandas":
         return tbl.to_pandas()
-    elif dataframe_type == "polars":
+    if dataframe_type == "polars":
         import polars as pl
 
         return pl.from_arrow(tbl)
@@ -510,8 +512,8 @@ def distribution_to_url(
         return (
             f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
         )
-    else:
-        return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
+
+    return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
 
 
 def _get_canonical_root_url(any_url: str) -> str:
@@ -871,7 +873,7 @@ def upload_files(
     Args:
         fs_fusion: Fusion filesystem.
         fs_local: Local filesystem.
-        loop (iterable): Loop of files to iterate through.
+        loop (pd.DataFrame): DataFrame of files to iterate through.
         parallel (bool): Is parallel mode enabled.
         n_par (int): Number of subprocesses.
         multipart (bool): Is multipart upload.
@@ -902,11 +904,17 @@ def upload_files(
         if show_progress:
             with tqdm_joblib(tqdm(total=len(loop))) as _:
                 res = Parallel(n_jobs=n_par)(
-                    delayed(_upload)(row) for index, row in loop
+                    delayed(_upload)(row) for index, row in loop.iterrows()
                 )
         else:
-            res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop)
+            res = Parallel(n_jobs=n_par)(
+                delayed(_upload)(row) for index, row in loop.iterrows()
+            )
     else:
-        loop = tqdm(loop, total=len(loop)) if show_progress else loop
-        res = [_upload(row) for index, row in loop]
+        if show_progress:
+            with tqdm_joblib(tqdm(total=len(loop.iterrows()))) as _:
+                res = [_upload(row) for index, row in loop.iterrows()]
+        else:
+            res = [_upload(row) for index, row in loop.iterrows()]
+
     return res

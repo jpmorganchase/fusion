@@ -109,13 +109,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         session = await self.set_session()
         is_file = False
         size = None
-        async with session.head(url + "/operationType/download", **self.kwargs) as r:
-            self._raise_not_found_for_status(r, url)
-            try:
-                out = await r.json()
-            except Exception as ex:
-                logger.log(VERBOSE_LVL, f"{url} cannot be parsed to json, {ex}")
-                # out = await r.content.read(10)
+        try:
+            async with session.head(
+                url + "/operationType/download", **self.kwargs
+            ) as r:
+                self._raise_not_found_for_status(r, url)
                 out = [
                     url.split("/")[6]
                     + "-"
@@ -128,6 +126,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
                 size = int(r.headers["Content-Length"])
                 is_file = True
+        except Exception as _:
+            logger.debug("Not a file - ", _)
+            async with session.get(url, **self.kwargs) as r:
+                self._raise_not_found_for_status(r, url)
+                out = await r.json()
 
         if not is_file:
             out = [urljoin(clean_url + "/", x["identifier"]) for x in out["resources"]]
@@ -167,8 +170,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         """
         path = self._decorate_url(path)
         kwargs["keep_protocol"] = True
-        res = super().ls(path, detail=True, **kwargs)[0]
-        if res["type"] != "file":
+        res = super().ls(path, detail=True, **kwargs)
+        if res[0]["type"] != "file":
             res = super().info(path, **kwargs)
             if path.split("/")[-2] == "datasets":
                 target = path.split("/")[-1]
@@ -353,7 +356,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
     @staticmethod
     def _construct_headers(file_local, dt_iso, chunk_size=5 * 2**20, multipart=False):
-
         headers = {
             "Content-Type": "application/octet-stream",
             "x-jpmc-distribution-created-date": dt_iso,
