@@ -69,7 +69,7 @@ jobs:
           poetry run mike set-default --branch fusion_release --deploy-prefix docs --push latest
         working-directory: main_repo
         env:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Build wheels and source tarball
         run: |
