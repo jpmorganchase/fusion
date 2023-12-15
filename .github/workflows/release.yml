@@ -37,7 +37,7 @@ jobs:
         with:
           path: main_repo
           fetch-depth: 0
-#          token: ${{ secrets.PERSONAL_TOKEN }}
+          token: ${{ secrets.PERSONAL_TOKEN }}
 
       - name: Get Changelog Entry
         id: changelog_reader
@@ -84,7 +84,7 @@ jobs:
           files: main_repo/dist/*.whl
           draft: false
           prerelease: false
-          # token: ${{ secrets.PERSONAL_TOKEN }}
+          token: ${{ secrets.PERSONAL_TOKEN }}
 
       - name: publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
