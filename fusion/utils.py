@@ -911,9 +911,14 @@ def upload_files(
                 delayed(_upload)(row) for index, row in loop.iterrows()
             )
     else:
+        res = [None] * len(loop)
         if show_progress:
-            with tqdm_joblib(tqdm(total=len(loop))) as _:
-                res = [_upload(row) for index, row in loop.iterrows()]
+            with tqdm(total=len(loop)) as p:
+                for i, row in loop.iterrows():
+                    r = _upload(row)
+                    res[i] = r
+                    if r[0] is True:
+                        p.update(1)
         else:
             res = [_upload(row) for index, row in loop.iterrows()]
 
