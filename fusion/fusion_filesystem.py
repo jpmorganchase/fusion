@@ -6,7 +6,6 @@ import io
 import logging
 from copy import deepcopy
 from urllib.parse import urljoin
-from aiohttp.client_exceptions import ClientResponseError
 
 import pandas as pd
 from fsspec.callbacks import _DEFAULT_CALLBACK
@@ -59,9 +58,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         super().__init__(*args, **kwargs)
 
     async def _async_raise_not_found_for_status(self, response, url):
-        """
-        Raises FileNotFoundError for 404s, otherwise uses raise_for_status.
-        """
+        """Raises FileNotFoundError for 404s, otherwise uses raise_for_status."""
         if response.status == 404:
             self._raise_not_found_for_status(response, url)
         else:
@@ -124,7 +121,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         session = await self.set_session()
         is_file = False
         size = None
-        if "distributions" in url:
+        url = url if url[-1] != "/" else url[:-1]
+        url_parts = url.split("/")
+        if url_parts[-2] == "distributions":
             async with session.head(
                 url + "/operationType/download", **self.kwargs
             ) as r:
