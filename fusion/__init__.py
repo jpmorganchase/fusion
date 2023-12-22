@@ -2,7 +2,7 @@
 
 __author__ = """Fusion Devs"""
 __email__ = "fusion_developers@jpmorgan.com"
-__version__ = "1.0.13"
+__version__ = "1.0.14"
 
 from fusion.fusion import Fusion, FusionCredentials
 from fusion.fs_sync import fsync
