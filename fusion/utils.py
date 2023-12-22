@@ -912,7 +912,7 @@ def upload_files(
             )
     else:
         if show_progress:
-            with tqdm_joblib(tqdm(total=len(loop.iterrows()))) as _:
+            with tqdm_joblib(tqdm(total=len(loop))) as _:
                 res = [_upload(row) for index, row in loop.iterrows()]
         else:
             res = [_upload(row) for index, row in loop.iterrows()]
