@@ -6,6 +6,7 @@ import io
 import logging
 from copy import deepcopy
 from urllib.parse import urljoin
+from aiohttp.client_exceptions import ClientResponseError
 
 import pandas as pd
 from fsspec.callbacks import _DEFAULT_CALLBACK
@@ -56,6 +57,20 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             kwargs["headers"] = {"Accept-Encoding": "identity"}
 
         super().__init__(*args, **kwargs)
+
+    async def _async_raise_not_found_for_status(self, response, url):
+        """
+        Raises FileNotFoundError for 404s, otherwise uses raise_for_status.
+        """
+        if response.status == 404:
+            self._raise_not_found_for_status(response, url)
+        else:
+            real_reason = ""
+            try:
+                real_reason = await response.text()
+                response.reason = real_reason
+            finally:
+                self._raise_not_found_for_status(response, url)
 
     async def _decorate_url_a(self, url):
         url = (
@@ -109,7 +124,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         session = await self.set_session()
         is_file = False
         size = None
-        try:
+        if "distributions" in url:
             async with session.head(
                 url + "/operationType/download", **self.kwargs
             ) as r:
@@ -126,8 +141,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
                 size = int(r.headers["Content-Length"])
                 is_file = True
-        except Exception as _:
-            logger.debug("Not a file - ", _)
+        else:
             async with session.get(url, **self.kwargs) as r:
                 self._raise_not_found_for_status(r, url)
                 out = await r.json()
@@ -312,7 +326,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                     )
                     kw.update({"headers": kwargs["chunk_headers_lst"][i]})
                     async with meth(url=url, data=chunk, **kw) as resp:
-                        self._raise_not_found_for_status(resp, rpath)
+                        await self._async_raise_not_found_for_status(resp, rpath)
                         yield await resp.json()
                     i += 1
                     callback.relative_update(len(chunk))
@@ -333,10 +347,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
             async with meth(rpath, data=lpath.read(), **kw) as resp:
-                self._raise_not_found_for_status(resp, rpath)
+                await self._async_raise_not_found_for_status(resp, rpath)
         else:
             async with session.post(rpath + "/operationType/upload") as resp:
-                self._raise_not_found_for_status(resp, rpath)
+                await self._async_raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
 
             operation_id = operation_id["operationId"]
