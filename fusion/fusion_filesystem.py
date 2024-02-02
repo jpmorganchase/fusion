@@ -507,8 +507,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         size=None,
         **kwargs,
     ):
-        """
-        Make a file-like object.
+        """Make a file-like object.
 
         Args:
             path (str): Full URL with protocol
