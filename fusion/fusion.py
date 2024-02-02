@@ -1071,13 +1071,17 @@ class Fusion:
         return res if return_paths else None
 
     def listen_to_events(
-        self, last_event_id: str = None, catalog: str = None
+        self,
+        last_event_id: str = None,
+        catalog: str = None,
+        url: str = "https://fusion.jpmorgan.com/api/v1/",
     ) -> Union[None, pd.DataFrame]:
         """Run server sent event listener in the background. Retrieve results by running get_events.
 
         Args:
             last_event_id (str): Last event ID (exclusive).
             catalog (str): catalog.
+            url (str): subscription url.
         Returns:
             Union[None, class:`pandas.DataFrame`]: If in_background is True then the function returns no output.
                 If in_background is set to False then pandas DataFrame is output upon keyboard termination.
@@ -1104,7 +1108,7 @@ class Fusion:
             timeout = 1e100
             session = await get_client(self.credentials, timeout=timeout)
             async with sse_client.EventSource(
-                f"{self.root_url}catalogs/{catalog}/notifications/subscribe",
+                f"{url}catalogs/{catalog}/notifications/subscribe",
                 session=session,
                 **kwargs,
             ) as messages:
@@ -1127,7 +1131,11 @@ class Fusion:
         return None
 
     def get_events(
-        self, last_event_id: str = None, catalog: str = None, in_background: bool = True
+        self,
+        last_event_id: str = None,
+        catalog: str = None,
+        in_background: bool = True,
+        url: str = "https://fusion.jpmorgan.com/api/v1/",
     ) -> Union[None, pd.DataFrame]:
         """Run server sent event listener and print out the new events. Keyboard terminate to stop.
 
@@ -1135,6 +1143,7 @@ class Fusion:
             last_event_id (str): id of the last event.
             catalog (str): catalog.
             in_background (bool): execute event monitoring in the background (default = True).
+            url (str): subscription url.
         Returns:
             Union[None, class:`pandas.DataFrame`]: If in_background is True then the function returns no output.
                 If in_background is set to False then pandas DataFrame is output upon keyboard termination.
@@ -1144,10 +1153,14 @@ class Fusion:
         if not in_background:
             from sseclient import SSEClient
 
+            _ = self.list_catalogs()  # refresh token
             messages = SSEClient(
                 session=self.session,
-                url=f"{self.root_url}catalogs/{catalog}/notifications/subscribe",
+                url=f"{url}catalogs/{catalog}/notifications/subscribe",
                 last_id=last_event_id,
+                headers={
+                    "authorization": f"bearer {self.credentials.bearer_token}",
+                },
             )
             lst = []
             try:

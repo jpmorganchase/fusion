@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 
 import pandas as pd
 from fsspec.callbacks import _DEFAULT_CALLBACK
-from fsspec.implementations.http import HTTPFileSystem, sync
+from fsspec.implementations.http import HTTPFileSystem, sync, HTTPFile, sync_wrapper
 from fsspec.utils import nullcontext
 
 from .authentication import FusionCredentials
@@ -83,6 +83,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             if "http" not in url
             else url
         )
+        url = url[:-1] if url[-1] == "/" else url
         return url
 
     async def _isdir(self, path):
@@ -190,6 +191,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 target = path.split("/")[-1]
                 args = ["/".join(path.split("/")[:-1]) + f"/changes?datasets={target}"]
                 res["changes"] = sync(super().loop, self._changes, *args)
+        split_path = path.split("/")
+        if len(split_path) > 1 and split_path[-2] == "distributions":
+            res = res[0]
 
         return res
 
@@ -491,3 +495,102 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         path = self._decorate_url(path)
         return super().open(path, mode, **kwargs)
+
+    def _open(
+        self,
+        path,
+        mode="rb",
+        block_size=None,
+        autocommit=None,  # XXX: This differs from the base class.
+        cache_type=None,
+        cache_options=None,
+        size=None,
+        **kwargs,
+    ):
+        """Make a file-like object
+
+        Parameters
+        ----------
+        path: str
+            Full URL with protocol
+        mode: string
+            must be "rb"
+        block_size: int or None
+            Bytes to download in one request; use instance value if None. If
+            zero, will return a streaming Requests file-like instance.
+        kwargs: key-value
+            Any other parameters, passed to requests calls
+        """
+        if mode != "rb":
+            raise NotImplementedError
+        block_size = block_size if block_size is not None else self.block_size
+        kw = self.kwargs.copy()
+        kw["asynchronous"] = self.asynchronous
+        kw.update(kwargs)
+        size = size or self.info(path, **kwargs)["size"]
+        session = sync(self.loop, self.set_session)
+        if block_size and size:
+            return FusionFile(
+                self,
+                path,
+                session=session,
+                block_size=block_size,
+                mode=mode,
+                size=size,
+                cache_type=cache_type or self.cache_type,
+                cache_options=cache_options or self.cache_options,
+                loop=self.loop,
+                **kw,
+            )
+        else:
+            raise NotImplementedError
+
+
+class FusionFile(HTTPFile):
+    """Fusion File."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def async_fetch_range(self, start, end):
+        """Download a block of data
+
+        The expectation is that the server returns only the requested bytes,
+        with HTTP code 206. If this is not the case, we first check the headers,
+        and then stream the output - if the data size is bigger than we
+        requested, an exception is raised.
+        """
+        logger.debug(f"Fetch range for {self}: {start}-{end}")
+        kwargs = self.kwargs.copy()
+        headers = kwargs.pop("headers", {}).copy()
+        url = self.url + f"/operationType/download?downloadRange=bytes={start}-{end-1}"
+        # headers["Range"] = "bytes=%i-%i" % (start, end - 1)
+        logger.debug(str(url))
+        r = await self.session.get(self.fs.encode_url(url), headers=headers, **kwargs)
+        async with r:
+            if r.status == 416:
+                # range request outside file
+                return b""
+            r.raise_for_status()
+            if r.status == 206:
+                # partial content, as expected
+                out = await r.read()
+            elif int(r.headers.get("Content-Length", 0)) <= end - start:
+                out = await r.read()
+            else:
+                cl = 0
+                out = []
+                while True:
+                    chunk = await r.content.read(2**20)
+                    # data size unknown, let's read until we have enough
+                    if chunk:
+                        out.append(chunk)
+                        cl += len(chunk)
+                        if cl > end - start:
+                            break
+                    else:
+                        break
+                out = b"".join(out)[: end - start]
+            return out
+
+    _fetch_range = sync_wrapper(async_fetch_range)
