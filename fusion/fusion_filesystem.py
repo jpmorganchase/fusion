@@ -507,19 +507,22 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         size=None,
         **kwargs,
     ):
-        """Make a file-like object
+        """
+        Make a file-like object.
 
-        Parameters
-        ----------
-        path: str
-            Full URL with protocol
-        mode: string
-            must be "rb"
-        block_size: int or None
-            Bytes to download in one request; use instance value if None. If
+        Args:
+            path (str): Full URL with protocol
+            mode (str): must be "rb"
+            block_size (int): Bytes to download in one request; use instance value if None. If
             zero, will return a streaming Requests file-like instance.
-        kwargs: key-value
-            Any other parameters, passed to requests calls
+            autocommit (bool):
+            cache_type ():
+            cache_options ():
+            size ():
+            **kwargs ():
+
+        Returns:
+
         """
         if mode != "rb":
             raise NotImplementedError
@@ -550,10 +553,11 @@ class FusionFile(HTTPFile):
     """Fusion File."""
 
     def __init__(self, *args, **kwargs):
+        """Init."""
         super().__init__(*args, **kwargs)
 
     async def async_fetch_range(self, start, end):
-        """Download a block of data
+        """Download a block of data.
 
         The expectation is that the server returns only the requested bytes,
         with HTTP code 206. If this is not the case, we first check the headers,
@@ -564,7 +568,6 @@ class FusionFile(HTTPFile):
         kwargs = self.kwargs.copy()
         headers = kwargs.pop("headers", {}).copy()
         url = self.url + f"/operationType/download?downloadRange=bytes={start}-{end-1}"
-        # headers["Range"] = "bytes=%i-%i" % (start, end - 1)
         logger.debug(str(url))
         r = await self.session.get(self.fs.encode_url(url), headers=headers, **kwargs)
         async with r:
