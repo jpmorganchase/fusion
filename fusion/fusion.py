@@ -1135,7 +1135,10 @@ class Fusion:
             kwargs["headers"] = {
                 "authorization": f"bearer {self.credentials.bearer_token}",
             }
-
+        if "http" in self.credentials.proxies.keys():
+            kwargs["proxy"] = self.credentials.proxies["http"]
+        elif "https" in self.credentials.proxies.keys():
+            kwargs["proxy"] = self.credentials.proxies["https"]
         th = threading.Thread(target=asyncio.run, args=(async_events(),), daemon=True)
         th.start()
         return None
