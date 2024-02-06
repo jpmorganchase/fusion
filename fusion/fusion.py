@@ -1099,7 +1099,7 @@ class Fusion:
         if last_event_id:
             kwargs = {"headers": {"Last-Event-ID": last_event_id}}
 
-        async def async_events(headers):
+        async def async_events():
             """Events sync function.
 
             Returns:
@@ -1110,7 +1110,6 @@ class Fusion:
             async with sse_client.EventSource(
                 f"{url}catalogs/{catalog}/notifications/subscribe",
                 session=session,
-                headers=headers,
                 **kwargs,
             ) as messages:
                 try:
@@ -1128,14 +1127,16 @@ class Fusion:
                     raise Exception(e)
 
         _ = self.list_catalogs()  # refresh token
-        headers = (
-            {
+        if "headers" in kwargs:
+            kwargs["headers"].update(
+                {"authorization": f"bearer {self.credentials.bearer_token}"}
+            )
+        else:
+            kwargs["headers"] = {
                 "authorization": f"bearer {self.credentials.bearer_token}",
-            },
-        )
-        th = threading.Thread(
-            target=asyncio.run, args=(async_events(headers),), daemon=True
-        )
+            }
+
+        th = threading.Thread(target=asyncio.run, args=(async_events(),), daemon=True)
         th.start()
         return None
 
