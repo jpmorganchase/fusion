@@ -21,7 +21,7 @@ jobs:
 
     strategy:
       matrix:
-        python-versions: [3.9]
+        python-versions: [ 3.9 ]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -37,7 +37,7 @@ jobs:
         with:
           path: main_repo
           fetch-depth: 0
-          token: ${{ secrets.PERSONAL_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get Changelog Entry
         id: changelog_reader
@@ -69,8 +69,8 @@ jobs:
           poetry run mike set-default --branch fusion_release --deploy-prefix docs --push latest
         working-directory: main_repo
         env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
-          
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build wheels and source tarball
         run: |
           poetry build
@@ -84,7 +84,7 @@ jobs:
           files: main_repo/dist/*.whl
           draft: false
           prerelease: false
-          token: ${{ secrets.PERSONAL_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
