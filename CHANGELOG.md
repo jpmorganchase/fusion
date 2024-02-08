@@ -5,11 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.15] - 2024-02-08
+
+* fix get_events
+* support for bytes-range requests in fusion filesystem
+* support for per column downloads via pyarrow parquet dataset
+
 ## [1.0.14] - 2023-12-13
+
 * progress bar fix
 * upload error propagation
 
 ## [1.0.13] - 2023-12-13
+
 * polars integration
 * file size in fs.info function
 * progress bar improvement to capture exceptions
@@ -17,14 +25,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * server events functionality
 
 ## [1.0.12] - 2023-06-12
+
 * minor bug fixes
 
 ## [1.0.11] - 2023-05-10
+
 * support bearer token authentication
 * fix proxy support to aiohttp
 * fix filtering support for csv and json
 
 ## [1.0.10] - 2023-03-23
+
 * md5 to sha256 convention change
 * fsync continuous updates bug fix
 * to_table function addition
@@ -70,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.2] - 2022-05-12
 
-* Integrate build with docs 
+* Integrate build with docs
 
 ## [1.0.1] - 2022-05-12
 
