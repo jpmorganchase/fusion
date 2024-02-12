@@ -867,6 +867,8 @@ def upload_files(
     multipart: bool = True,
     chunk_size: int = 5 * 2**20,
     show_progress: bool = True,
+    from_date = None,
+    to_date = None,
 ):
     """Upload file into Fusion.
 
@@ -879,6 +881,8 @@ def upload_files(
         multipart (bool): Is multipart upload.
         chunk_size (int): Maximum chunk size.
         show_progress (bool): Show progress bar
+        from_date (str, optional): earliest date of data contained in distribution.
+        to_date (str, optional): latest date of data contained in distribution.
 
     Returns: List of update statuses.
 
@@ -890,7 +894,7 @@ def upload_files(
             mp = multipart and fs_local.size(row["path"]) > chunk_size
             with fs_local.open(row["path"], "rb") as file_local:
                 fs_fusion.put(
-                    file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp
+                    file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp, from_date = from_date, to_date = to_date
                 )
             return True, row["path"], None
         except Exception as ex:

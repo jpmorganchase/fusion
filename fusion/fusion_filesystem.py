@@ -372,12 +372,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 )
 
     @staticmethod
-    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2**20, multipart=False):
+    def _construct_headers(file_local, dt_from, dt_to, dt_created, chunk_size=5 * 2**20, multipart=False):
         headers = {
             "Content-Type": "application/octet-stream",
-            "x-jpmc-distribution-created-date": dt_iso,
-            "x-jpmc-distribution-from-date": dt_iso,
-            "x-jpmc-distribution-to-date": dt_iso,
+            "x-jpmc-distribution-created-date": dt_created,
+            "x-jpmc-distribution-from-date": dt_from,
+            "x-jpmc-distribution-to-date": dt_to,
             "Digest": "",  # to be changed to x-jpmc-digest
         }
         headers["Content-Type"] = (
@@ -417,6 +417,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         callback=_DEFAULT_CALLBACK,
         method="put",
         multipart=False,
+        from_date = None,
+        to_date = None,
         **kwargs,
     ):
         """Copy file(s) from local.
@@ -428,15 +430,25 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             callback: Callback function.
             method: Method: put/post.
             multipart: Flag which indicated whether it's a multipart uplaod.
+            from_date: earliest date of data in upload file
+            to_date: latest date of data in upload file
             **kwargs: Kwargs.
 
         Returns:
 
         """
 
-        dt_iso = pd.Timestamp(rpath.split("/")[-3]).strftime("%Y-%m-%d")
+        if from_date == None or to_date == None:
+            dt_from = pd.Timestamp(rpath.split("/")[-3]).strftime("%Y-%m-%d")
+            dt_to = dt_from
+        else:
+            ft_from = pd.Timestamp(from_date).strftime("%Y-%m-%d")
+            dt_to = pd.Timestamp(to_date).strftime("%Y-%m-%d")
+
+        dt_created = pd.Timestamp.now().strftime("%Y-%m-%d")
+
         headers, chunk_headers_lst = self._construct_headers(
-            lpath, dt_iso, chunk_size, multipart
+            lpath, dt_from, dt_to, dt_created, chunk_size, multipart
         )
         rpath = self._decorate_url(rpath)
         kwargs.update({"headers": headers})

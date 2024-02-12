@@ -4,6 +4,7 @@ import logging
 import sys
 import warnings
 from pathlib import Path
+from io import BytesIO
 from typing import Dict, List, Union
 from zipfile import ZipFile
 import json as js
@@ -14,7 +15,6 @@ from tabulate import tabulate
 from tqdm import tqdm
 import pyarrow as pa
 import re
-
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
@@ -61,6 +61,23 @@ class Fusion:
         table = response.json()["resources"]
         df = pd.DataFrame(table).reset_index(drop=True)
         return df
+    
+    @staticmethod
+    def _call_for_bytes_object(url: str, session: requests.Session) -> BytesIO:
+        """Private function that calls an API endpoint and returns the data as a bytes object in memory.
+
+        Args:
+            url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
+            session (requests.Session): Specify a proxy if required to access the authentication server. Defaults to {}.
+
+        Returns:
+            io.BytesIO: in memory file content
+        """
+    
+        response = session.get(url)
+        response.raise_for_status()
+
+        return BytesIO(response.content)
 
     def __init__(
         self,
@@ -308,6 +325,7 @@ class Fusion:
         output: bool = False,
         max_results: int = -1,
         display_all_columns: bool = False,
+        status: str = None,
     ) -> pd.DataFrame:
         """Get the datasets contained in a catalog.
 
@@ -325,6 +343,7 @@ class Fusion:
                 Defaults to -1 which returns all results.
             display_all_columns (bool, optional): If True displays all columns returned by the API,
                 otherwise only the key columns are displayed
+            status (str, optional): filter the datasets by status, default is to show all results.
 
         Returns:
             class:`pandas.DataFrame`: a dataframe with a row for each dataset.
@@ -370,9 +389,13 @@ class Fusion:
                 "coverageStartDate",
                 "coverageEndDate",
                 "description",
+                "status",
             ]
             cols = [c for c in cols if c in df.columns]
             df = df[cols]
+
+        if not status is None:
+            df = df[df['status']==status]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
@@ -856,6 +879,29 @@ class Fusion:
                 df = pl.concat(dataframes, how="diagonal")
 
         return df
+    
+    def to_bytes(
+            self,
+            dataset: str,
+            series_member: str,
+            dataset_format: str = 'parquet',
+            catalog: str = None,
+    ) -> BytesIO:
+        
+        """Returns an instance of dataset (the distribution) as a bytes object
+        
+        Args:
+            dataset (str): A dataset identifier
+            dt_str (str,): A dataset series member identifier
+            dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+        """
+
+        catalog = self.__use_catalog(catalog)
+
+        url = distribution_to_url(self.root_url, dataset, series_member, dataset_format, catalog)
+
+        return Fusion._call_for_bytes_object(url, self.session)
 
     def to_table(
         self,
@@ -973,6 +1019,8 @@ class Fusion:
         return_paths: bool = False,
         multipart=True,
         chunk_size=5 * 2**20,
+        from_date = None,
+        to_date = None,
     ):
         """Uploads the requested files/files to Fusion.
 
@@ -988,8 +1036,10 @@ class Fusion:
                 Defaults to all cpus available.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
-            multipart (bool): Is multipart upload.
-            chunk_size (int): Maximum chunk size.
+            multipart (bool, optional): Is multipart upload.
+            chunk_size (int, optional): Maximum chunk size.
+            from_date (str, optional): start of the data date range contained in the distribution, defaults to upoad date
+            to_date (str, optional): end of the data date range contained in the distribution, defaults to upload date.
 
         Returns:
 
@@ -1023,12 +1073,15 @@ class Fusion:
                     path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)
                 ]
             else:
-                dt_str = (
-                    dt_str
-                    if dt_str != "latest"
-                    else pd.Timestamp("today").date().strftime("%Y%m%d")
-                )
-                dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
+                date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
+                if date_identifier.match(dt_str):
+                    dt_str = (
+                        dt_str
+                        if dt_str != "latest"
+                        else pd.Timestamp("today").date().strftime("%Y%m%d")
+                    )
+                    dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
+
                 if catalog not in fs_fusion.ls("") or dataset not in [
                     i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
                 ]:
@@ -1060,6 +1113,8 @@ class Fusion:
             multipart=multipart,
             chunk_size=chunk_size,
             show_progress=show_progress,
+            from_date = from_date,
+            to_date = to_date,
         )
 
         if not all(r[0] for r in res):
