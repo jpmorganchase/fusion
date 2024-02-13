@@ -439,10 +439,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         """
 
         if from_date == None or to_date == None:
-            dt_from = pd.Timestamp(rpath.split("/")[-3]).strftime("%Y-%m-%d")
-            dt_to = dt_from
+            dt_from = pd.Timestamp.now().strftime("%Y-%m-%d")
+            dt_to = "2199-12-31"
         else:
-            ft_from = pd.Timestamp(from_date).strftime("%Y-%m-%d")
+            dt_from = pd.Timestamp(from_date).strftime("%Y-%m-%d")
             dt_to = pd.Timestamp(to_date).strftime("%Y-%m-%d")
 
         dt_created = pd.Timestamp.now().strftime("%Y-%m-%d")
