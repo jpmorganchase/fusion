@@ -1124,6 +1124,70 @@ class Fusion:
             warnings.warn(msg)
 
         return res if return_paths else None
+    
+
+    def from_bytes(
+        self,
+        data: BytesIO,
+        dataset: str = None,
+        series_member: str = "latest",
+        catalog: str = None,
+        distribution: str = "parquet",
+        show_progress: bool = True,
+        return_paths: bool = False,
+        chunk_size=5 * 2**20,
+        from_date = None,
+        to_date = None,
+    ):
+        """Uploads data from an object in memory.
+
+        Args:
+            data (str): an object in memory to upload
+            dataset (str, optional): Dataset name to which the file will be uplaoded (for single file only).
+                                    If not provided the dataset will be implied from file's name.
+            series_member (str, optional): A single date or label. Defaults to 'latest' which will return the most recent.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            distribution (str, optional): A distribution type, e.g. a file format or raw
+            show_progress (bool, optional): Display a progress bar during data download Defaults to True.
+            return_paths (bool, optional): Return paths and success statuses of the downloaded files.
+            chunk_size (int, optional): Maximum chunk size.
+            from_date (str, optional): start of the data date range contained in the distribution, defaults to upoad date
+            to_date (str, optional): end of the data date range contained in the distribution, defaults to upload date.
+
+        Returns:
+
+
+        """
+        catalog = self.__use_catalog(catalog)
+
+        fs_fusion = self.get_fusion_filesystem()
+        
+        is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
+        local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)
+
+        df = pd.DataFrame(["", local_url_eqiv]).T
+        df.columns = ["path", "url"]
+
+        res = upload_files(
+            fs_fusion,
+            data,
+            df,
+            parallel=False,
+            n_par=1,
+            multipart=False,
+            chunk_size=chunk_size,
+            show_progress=show_progress,
+            from_date = from_date,
+            to_date = to_date,
+        )
+
+        if not all(r[0] for r in res):
+            failed_res = [r for r in res if not r[0]]
+            msg = f"Not all uploads were successfully completed. The following failed:\n{failed_res}"
+            logger.warning(msg)
+            warnings.warn(msg)
+
+        return res if return_paths else None
 
     def listen_to_events(
         self,

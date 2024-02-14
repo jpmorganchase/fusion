@@ -349,6 +349,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         if not multipart:
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
+            if isinstance(lpath, io.BytesIO):
+                lpath.seek(0)
             async with meth(rpath, data=lpath.read(), **kw) as resp:
                 await self._async_raise_not_found_for_status(resp, rpath)
         else:
@@ -387,6 +389,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         headers_chunk_lst = []
         hash_sha256 = hashlib.sha256()
+        if isinstance(file_local, io.BytesIO):
+            file_local.seek(0)
         for chunk in iter(lambda: file_local.read(chunk_size), b""):
             hash_sha256_chunk = hashlib.sha256()
             hash_sha256_chunk.update(chunk)

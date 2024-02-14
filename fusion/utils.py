@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Union
 from urllib.parse import urlparse, urlunparse
+from io import BytesIO
 
 import aiohttp
 import json as js
@@ -892,6 +893,11 @@ def upload_files(
         p_url = row["url"]
         try:
             mp = multipart and fs_local.size(row["path"]) > chunk_size
+
+            if isinstance(fs_local, BytesIO):
+                fs_fusion.put(
+                    file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp, from_date = from_date, to_date = to_date
+                )  
             with fs_local.open(row["path"], "rb") as file_local:
                 fs_fusion.put(
                     file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp, from_date = from_date, to_date = to_date
