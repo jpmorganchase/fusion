@@ -896,12 +896,13 @@ def upload_files(
 
             if isinstance(fs_local, BytesIO):
                 fs_fusion.put(
-                    file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp, from_date = from_date, to_date = to_date
+                    fs_local, p_url, chunk_size=chunk_size, method="put", multipart=mp, from_date = from_date, to_date = to_date
                 )  
-            with fs_local.open(row["path"], "rb") as file_local:
-                fs_fusion.put(
-                    file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp, from_date = from_date, to_date = to_date
-                )
+            else:
+                with fs_local.open(row["path"], "rb") as file_local:
+                    fs_fusion.put(
+                        file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp, from_date = from_date, to_date = to_date
+                    )
             return True, row["path"], None
         except Exception as ex:
             logger.log(
