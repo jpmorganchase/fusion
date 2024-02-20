@@ -176,17 +176,17 @@ def _get_local_state(
         if not fs_local.exists(local_dir):
             fs_local.mkdir(local_dir, exist_ok=True, create_parents=True)
 
-        local_files = fs_local.find(local_dir)
-        local_rel_path = [i[i.find(local_dir) :] for i in local_files]
+        local_files_temp = fs_local.find(local_dir)
+        local_rel_path = [i[i.find(local_dir) :] for i in local_files_temp]
         local_file_validation = validate_file_names(local_rel_path, fs_fusion)
         local_files += [
-            f for flag, f in zip(local_file_validation, local_files) if flag
+            f for flag, f in zip(local_file_validation, local_files_temp) if flag
         ]
         local_files_rel += [
             os.path.join(local_dir, relpath(i, local_dir))
             .replace("\\", "/")
             .replace(local_path, "")
-            for i in local_files
+            for i in local_files_temp
         ]
 
     local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
