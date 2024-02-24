@@ -61,7 +61,7 @@ class Fusion:
         table = response.json()["resources"]
         df = pd.DataFrame(table).reset_index(drop=True)
         return df
-    
+
     @staticmethod
     def _call_for_bytes_object(url: str, session: requests.Session) -> BytesIO:
         """Private function that calls an API endpoint and returns the data as a bytes object in memory.
@@ -73,7 +73,7 @@ class Fusion:
         Returns:
             io.BytesIO: in memory file content
         """
-    
+
         response = session.get(url)
         response.raise_for_status()
 
@@ -394,8 +394,8 @@ class Fusion:
             cols = [c for c in cols if c in df.columns]
             df = df[cols]
 
-        if not status is None:
-            df = df[df['status']==status]
+        if status is not None:
+            df = df[df["status"] == status]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
@@ -879,27 +879,28 @@ class Fusion:
                 df = pl.concat(dataframes, how="diagonal")
 
         return df
-    
+
     def to_bytes(
-            self,
-            dataset: str,
-            series_member: str,
-            dataset_format: str = 'parquet',
-            catalog: str = None,
+        self,
+        dataset: str,
+        series_member: str,
+        dataset_format: str = "parquet",
+        catalog: str = None,
     ) -> BytesIO:
-        
-        """Returns an instance of dataset (the distribution) as a bytes object
-        
+        """Returns an instance of dataset (the distribution) as a bytes object.
+
         Args:
             dataset (str): A dataset identifier
-            dt_str (str,): A dataset series member identifier
+            series_member (str,): A dataset series member identifier
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
         """
 
         catalog = self.__use_catalog(catalog)
 
-        url = distribution_to_url(self.root_url, dataset, series_member, dataset_format, catalog)
+        url = distribution_to_url(
+            self.root_url, dataset, series_member, dataset_format, catalog
+        )
 
         return Fusion._call_for_bytes_object(url, self.session)
 
@@ -1019,8 +1020,8 @@ class Fusion:
         return_paths: bool = False,
         multipart=True,
         chunk_size=5 * 2**20,
-        from_date = None,
-        to_date = None,
+        from_date=None,
+        to_date=None,
     ):
         """Uploads the requested files/files to Fusion.
 
@@ -1103,7 +1104,7 @@ class Fusion:
         df.columns = ["path", "url"]
 
         n_par = cpu_count(n_par)
-        parallel = True if len(df) > 1 else False
+        parallel = len(df) > 1
         res = upload_files(
             fs_fusion,
             self.fs,
@@ -1113,8 +1114,8 @@ class Fusion:
             multipart=multipart,
             chunk_size=chunk_size,
             show_progress=show_progress,
-            from_date = from_date,
-            to_date = to_date,
+            from_date=from_date,
+            to_date=to_date,
         )
 
         if not all(r[0] for r in res):
@@ -1124,7 +1125,6 @@ class Fusion:
             warnings.warn(msg)
 
         return res if return_paths else None
-    
 
     def from_bytes(
         self,
@@ -1136,14 +1136,14 @@ class Fusion:
         show_progress: bool = True,
         return_paths: bool = False,
         chunk_size=5 * 2**20,
-        from_date = None,
-        to_date = None,
+        from_date=None,
+        to_date=None,
     ):
         """Uploads data from an object in memory.
 
         Args:
             data (str): an object in memory to upload
-            dataset (str, optional): Dataset name to which the file will be uplaoded (for single file only).
+            dataset (str, optional): Dataset name to which the file will be uploaded (for single file only).
                                     If not provided the dataset will be implied from file's name.
             series_member (str, optional): A single date or label. Defaults to 'latest' which will return the most recent.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
@@ -1151,7 +1151,7 @@ class Fusion:
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
             chunk_size (int, optional): Maximum chunk size.
-            from_date (str, optional): start of the data date range contained in the distribution, defaults to upoad date
+            from_date (str, optional): start of the data date range contained in the distribution, defaults to upload date
             to_date (str, optional): end of the data date range contained in the distribution, defaults to upload date.
 
         Returns:
@@ -1161,9 +1161,11 @@ class Fusion:
         catalog = self.__use_catalog(catalog)
 
         fs_fusion = self.get_fusion_filesystem()
-        
+
         is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
-        local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)
+        local_url_eqiv = path_to_url(
+            f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw
+        )
 
         df = pd.DataFrame(["", local_url_eqiv]).T
         df.columns = ["path", "url"]
@@ -1177,8 +1179,8 @@ class Fusion:
             multipart=False,
             chunk_size=chunk_size,
             show_progress=show_progress,
-            from_date = from_date,
-            to_date = to_date,
+            from_date=from_date,
+            to_date=to_date,
         )
 
         if not all(r[0] for r in res):

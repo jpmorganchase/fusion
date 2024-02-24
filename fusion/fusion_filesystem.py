@@ -374,7 +374,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 )
 
     @staticmethod
-    def _construct_headers(file_local, dt_from, dt_to, dt_created, chunk_size=5 * 2**20, multipart=False):
+    def _construct_headers(
+        file_local, dt_from, dt_to, dt_created, chunk_size=5 * 2**20, multipart=False
+    ):
         headers = {
             "Content-Type": "application/octet-stream",
             "x-jpmc-distribution-created-date": dt_created,
@@ -421,8 +423,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         callback=_DEFAULT_CALLBACK,
         method="put",
         multipart=False,
-        from_date = None,
-        to_date = None,
+        from_date=None,
+        to_date=None,
         **kwargs,
     ):
         """Copy file(s) from local.
@@ -442,7 +444,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         """
 
-        if from_date == None or to_date == None:
+        if from_date is None or to_date is None:
             dt_from = pd.Timestamp.now().strftime("%Y-%m-%d")
             dt_to = "2199-12-31"
         else:
