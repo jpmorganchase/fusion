@@ -2,26 +2,26 @@
 
 import contextlib
 import datetime
-from datetime import timedelta
+import json as js
 import logging
 import os
 import re
 import sys
+from datetime import timedelta
+from io import BytesIO
 from pathlib import Path
 from typing import Union
 from urllib.parse import urlparse, urlunparse
-from io import BytesIO
 
 import aiohttp
-import json as js
+import joblib
 import pandas as pd
 import pyarrow.parquet as pq
 import requests
-import joblib
-from tqdm import tqdm
 from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
+from tqdm import tqdm
 
 from . import __version__ as version
 
@@ -50,7 +50,7 @@ import multiprocessing as mp
 import fsspec
 from urllib3.util.retry import Retry
 
-from .authentication import FusionCredentials, FusionOAuthAdapter, FusionAiohttpSession
+from .authentication import FusionAiohttpSession, FusionCredentials, FusionOAuthAdapter
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25

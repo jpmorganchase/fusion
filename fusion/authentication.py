@@ -4,20 +4,20 @@ import datetime
 import json
 import logging
 import os
-import aiohttp
 from datetime import timedelta
 from pathlib import Path
 from typing import Dict, Union
 from urllib.parse import urlparse
 
+import aiohttp
 import fsspec
-import requests
 import pandas as pd
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .exceptions import CredentialError
 from . import __version__ as version
+from .exceptions import CredentialError
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25

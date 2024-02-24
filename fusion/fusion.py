@@ -1,41 +1,43 @@
 """Main Fusion module."""
 
+import json as js
 import logging
+import re
 import sys
 import warnings
-from pathlib import Path
 from io import BytesIO
+from pathlib import Path
 from typing import Dict, List, Union
 from zipfile import ZipFile
-import json as js
+
 import pandas as pd
+import pyarrow as pa
 import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
-import pyarrow as pa
-import re
+
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     cpu_count,
+    csv_to_table,
     distribution_to_filename,
     distribution_to_url,
     get_session,
+    is_dataset_raw,
+    json_to_table,
     normalise_dt_param_str,
+    parquet_to_table,
     path_to_url,
     read_csv,
     read_json,
     read_parquet,
-    parquet_to_table,
-    csv_to_table,
-    json_to_table,
     stream_single_file_new_session,
+    tqdm_joblib,
     upload_files,
     validate_file_names,
-    is_dataset_raw,
-    tqdm_joblib,
 )
 
 logger = logging.getLogger(__name__)
@@ -110,9 +112,7 @@ class Fusion:
 
         if logger.hasHandlers():
             logger.handlers.clear()
-        file_handler = logging.FileHandler(
-            filename="{0}/{1}".format(log_path, "fusion_sdk.log")
-        )
+        file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
         logging.addLevelName(VERBOSE_LVL, "VERBOSE")
         stdout_handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
@@ -197,8 +197,8 @@ class Fusion:
         """
         if catalog is None:
             return self.default_catalog
-        else:
-            return catalog
+
+        return catalog
 
     def get_fusion_filesystem(self):
         """Creates Fusion Filesystem.
@@ -279,7 +279,7 @@ class Fusion:
         catalog = self.__use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/products"
-        df = Fusion._call_for_dataframe(url, self.session)
+        df: pd.DataFrame = Fusion._call_for_dataframe(url, self.session)
 
         if contains:
             if isinstance(contains, list):
@@ -1209,11 +1209,12 @@ class Fusion:
         """
 
         catalog = self.__use_catalog(catalog)
-        import json
-
-        import threading
         import asyncio
+        import json
+        import threading
+
         from aiohttp_sse_client import client as sse_client
+
         from .utils import get_client
 
         kwargs = {}

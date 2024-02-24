@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 
 import pandas as pd
 from fsspec.callbacks import _DEFAULT_CALLBACK
-from fsspec.implementations.http import HTTPFileSystem, sync, HTTPFile, sync_wrapper
+from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
 
 from .authentication import FusionCredentials
