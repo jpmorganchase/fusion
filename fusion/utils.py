@@ -868,8 +868,8 @@ def upload_files(
     multipart: bool = True,
     chunk_size: int = 5 * 2**20,
     show_progress: bool = True,
-    from_date = None,
-    to_date = None,
+    from_date: str = None,
+    to_date: str = None,
 ):
     """Upload file into Fusion.
 
@@ -896,12 +896,24 @@ def upload_files(
 
             if isinstance(fs_local, BytesIO):
                 fs_fusion.put(
-                    fs_local, p_url, chunk_size=chunk_size, method="put", multipart=mp, from_date = from_date, to_date = to_date
-                )  
+                    fs_local,
+                    p_url,
+                    chunk_size=chunk_size,
+                    method="put",
+                    multipart=mp,
+                    from_date=from_date,
+                    to_date=to_date,
+                )
             else:
                 with fs_local.open(row["path"], "rb") as file_local:
                     fs_fusion.put(
-                        file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp, from_date = from_date, to_date = to_date
+                        file_local,
+                        p_url,
+                        chunk_size=chunk_size,
+                        method="put",
+                        multipart=mp,
+                        from_date=from_date,
+                        to_date=to_date,
                     )
             return True, row["path"], None
         except Exception as ex:

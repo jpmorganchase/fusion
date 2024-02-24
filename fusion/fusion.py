@@ -688,9 +688,9 @@ class Fusion:
                 for i, series in enumerate(required_series)
             ]
 
-        for download_folder in download_folders:
-            if not self.fs.exists(download_folder):
-                self.fs.mkdir(download_folder, create_parents=True)
+        for d in download_folders:
+            if not self.fs.exists(d):
+                self.fs.mkdir(d, create_parents=True)
         download_spec = [
             {
                 "credentials": self.credentials,
@@ -896,10 +896,10 @@ class Fusion:
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
         """
 
-        catalog = self.__use_catalog(catalog)
+        catalog: str = self.__use_catalog(catalog)
 
         url = distribution_to_url(
-            self.root_url, dataset, series_member, dataset_format, catalog
+            self.root_url, dataset, series_member, dataset_format, catalog  # type: ignore
         )
 
         return Fusion._call_for_bytes_object(url, self.session)
@@ -965,7 +965,7 @@ class Fusion:
 
         if not all(res[0] for res in download_res):
             failed_res = [res for res in download_res if not res[0]]
-            raise Exception(
+            raise RuntimeError(
                 f"Not all downloads were successfully completed. "
                 f"Re-run to collect missing files. The following failed:\n{failed_res}"
             )
@@ -992,7 +992,7 @@ class Fusion:
         reader = read_fn_map.get(dataset_format)
         read_kwargs = read_default_kwargs.get(dataset_format, {})
         if not reader:
-            raise Exception(f"No function to read file in format {dataset_format}")
+            raise AssertionError(f"No function to read file in format {dataset_format}")
 
         read_kwargs.update(kwargs)
 
@@ -1243,8 +1243,8 @@ class Fusion:
                             self.events = pd.concat(
                                 [self.events, pd.DataFrame(event)], ignore_index=True
                             )
-                except TimeoutError:
-                    raise TimeoutError
+                except TimeoutError as ex:
+                    raise ex
                 except Exception as e:
                     raise Exception(e)
 
