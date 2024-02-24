@@ -896,7 +896,7 @@ class Fusion:
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
         """
 
-        catalog: str = self.__use_catalog(catalog)
+        catalog = self.__use_catalog(catalog)
 
         url = distribution_to_url(
             self.root_url, dataset, series_member, dataset_format, catalog  # type: ignore
