@@ -5,7 +5,7 @@ import hashlib
 import io
 import logging
 from copy import deepcopy
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 import pandas as pd
 from fsspec.callbacks import _DEFAULT_CALLBACK
@@ -189,7 +189,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             res = super().info(path, **kwargs)
             if path.split("/")[-2] == "datasets":
                 target = path.split("/")[-1]
-                args = ["/".join(path.split("/")[:-1]) + f"/changes?datasets={target}"]
+                args = [
+                    "/".join(path.split("/")[:-1])
+                    + f"/changes?datasets={quote(target)}"
+                ]
                 res["changes"] = sync(super().loop, self._changes, *args)
         split_path = path.split("/")
         if len(split_path) > 1 and split_path[-2] == "distributions":
