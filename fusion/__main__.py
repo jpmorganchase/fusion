@@ -1,8 +1,8 @@
 """Command line environment for fusion."""
 import argparse
 import inspect
-from fusion import Fusion
 
+from fusion import Fusion
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fusion command line environment")

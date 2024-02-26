@@ -4,10 +4,10 @@ import base64
 import hashlib
 import json
 import logging
-import warnings
 import os
 import sys
 import time
+import warnings
 from os.path import relpath
 from pathlib import Path
 
@@ -19,11 +19,11 @@ from tqdm import tqdm
 from .utils import (
     cpu_count,
     distribution_to_filename,
+    is_dataset_raw,
     path_to_url,
+    tqdm_joblib,
     upload_files,
     validate_file_names,
-    is_dataset_raw,
-    tqdm_joblib,
 )
 
 logger = logging.getLogger(__name__)

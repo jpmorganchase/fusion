@@ -1,41 +1,43 @@
 """Main Fusion module."""
 
+import json as js
 import logging
+import re
 import sys
 import warnings
+from io import BytesIO
 from pathlib import Path
 from typing import Dict, List, Union
 from zipfile import ZipFile
-import json as js
+
 import pandas as pd
+import pyarrow as pa
 import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
 from tqdm import tqdm
-import pyarrow as pa
-import re
 
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     cpu_count,
+    csv_to_table,
     distribution_to_filename,
     distribution_to_url,
     get_session,
+    is_dataset_raw,
+    json_to_table,
     normalise_dt_param_str,
+    parquet_to_table,
     path_to_url,
     read_csv,
     read_json,
     read_parquet,
-    parquet_to_table,
-    csv_to_table,
-    json_to_table,
     stream_single_file_new_session,
+    tqdm_joblib,
     upload_files,
     validate_file_names,
-    is_dataset_raw,
-    tqdm_joblib,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,6 +63,23 @@ class Fusion:
         table = response.json()["resources"]
         df = pd.DataFrame(table).reset_index(drop=True)
         return df
+
+    @staticmethod
+    def _call_for_bytes_object(url: str, session: requests.Session) -> BytesIO:
+        """Private function that calls an API endpoint and returns the data as a bytes object in memory.
+
+        Args:
+            url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
+            session (requests.Session): Specify a proxy if required to access the authentication server. Defaults to {}.
+
+        Returns:
+            io.BytesIO: in memory file content
+        """
+
+        response = session.get(url)
+        response.raise_for_status()
+
+        return BytesIO(response.content)
 
     def __init__(
         self,
@@ -93,9 +112,7 @@ class Fusion:
 
         if logger.hasHandlers():
             logger.handlers.clear()
-        file_handler = logging.FileHandler(
-            filename="{0}/{1}".format(log_path, "fusion_sdk.log")
-        )
+        file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
         logging.addLevelName(VERBOSE_LVL, "VERBOSE")
         stdout_handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
@@ -180,8 +197,8 @@ class Fusion:
         """
         if catalog is None:
             return self.default_catalog
-        else:
-            return catalog
+
+        return catalog
 
     def get_fusion_filesystem(self):
         """Creates Fusion Filesystem.
@@ -262,7 +279,7 @@ class Fusion:
         catalog = self.__use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/products"
-        df = Fusion._call_for_dataframe(url, self.session)
+        df: pd.DataFrame = Fusion._call_for_dataframe(url, self.session)
 
         if contains:
             if isinstance(contains, list):
@@ -308,6 +325,7 @@ class Fusion:
         output: bool = False,
         max_results: int = -1,
         display_all_columns: bool = False,
+        status: str = None,
     ) -> pd.DataFrame:
         """Get the datasets contained in a catalog.
 
@@ -325,6 +343,7 @@ class Fusion:
                 Defaults to -1 which returns all results.
             display_all_columns (bool, optional): If True displays all columns returned by the API,
                 otherwise only the key columns are displayed
+            status (str, optional): filter the datasets by status, default is to show all results.
 
         Returns:
             class:`pandas.DataFrame`: a dataframe with a row for each dataset.
@@ -370,9 +389,13 @@ class Fusion:
                 "coverageStartDate",
                 "coverageEndDate",
                 "description",
+                "status",
             ]
             cols = [c for c in cols if c in df.columns]
             df = df[cols]
+
+        if status is not None:
+            df = df[df["status"] == status]
 
         if output:
             print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
@@ -665,9 +688,9 @@ class Fusion:
                 for i, series in enumerate(required_series)
             ]
 
-        for download_folder in download_folders:
-            if not self.fs.exists(download_folder):
-                self.fs.mkdir(download_folder, create_parents=True)
+        for d in download_folders:
+            if not self.fs.exists(d):
+                self.fs.mkdir(d, create_parents=True)
         download_spec = [
             {
                 "credentials": self.credentials,
@@ -857,6 +880,30 @@ class Fusion:
 
         return df
 
+    def to_bytes(
+        self,
+        dataset: str,
+        series_member: str,
+        dataset_format: str = "parquet",
+        catalog: str = None,
+    ) -> BytesIO:
+        """Returns an instance of dataset (the distribution) as a bytes object.
+
+        Args:
+            dataset (str): A dataset identifier
+            series_member (str,): A dataset series member identifier
+            dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+        """
+
+        catalog = self.__use_catalog(catalog)
+
+        url = distribution_to_url(
+            self.root_url, dataset, series_member, dataset_format, catalog  # type: ignore
+        )
+
+        return Fusion._call_for_bytes_object(url, self.session)
+
     def to_table(
         self,
         dataset: str,
@@ -918,7 +965,7 @@ class Fusion:
 
         if not all(res[0] for res in download_res):
             failed_res = [res for res in download_res if not res[0]]
-            raise Exception(
+            raise RuntimeError(
                 f"Not all downloads were successfully completed. "
                 f"Re-run to collect missing files. The following failed:\n{failed_res}"
             )
@@ -945,7 +992,7 @@ class Fusion:
         reader = read_fn_map.get(dataset_format)
         read_kwargs = read_default_kwargs.get(dataset_format, {})
         if not reader:
-            raise Exception(f"No function to read file in format {dataset_format}")
+            raise AssertionError(f"No function to read file in format {dataset_format}")
 
         read_kwargs.update(kwargs)
 
@@ -973,6 +1020,8 @@ class Fusion:
         return_paths: bool = False,
         multipart=True,
         chunk_size=5 * 2**20,
+        from_date=None,
+        to_date=None,
     ):
         """Uploads the requested files/files to Fusion.
 
@@ -988,8 +1037,10 @@ class Fusion:
                 Defaults to all cpus available.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
-            multipart (bool): Is multipart upload.
-            chunk_size (int): Maximum chunk size.
+            multipart (bool, optional): Is multipart upload.
+            chunk_size (int, optional): Maximum chunk size.
+            from_date (str, optional): start of the data date range contained in the distribution, defaults to upoad date
+            to_date (str, optional): end of the data date range contained in the distribution, defaults to upload date.
 
         Returns:
 
@@ -1023,12 +1074,15 @@ class Fusion:
                     path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)
                 ]
             else:
-                dt_str = (
-                    dt_str
-                    if dt_str != "latest"
-                    else pd.Timestamp("today").date().strftime("%Y%m%d")
-                )
-                dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
+                date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
+                if date_identifier.match(dt_str):
+                    dt_str = (
+                        dt_str
+                        if dt_str != "latest"
+                        else pd.Timestamp("today").date().strftime("%Y%m%d")
+                    )
+                    dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
+
                 if catalog not in fs_fusion.ls("") or dataset not in [
                     i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
                 ]:
@@ -1050,7 +1104,7 @@ class Fusion:
         df.columns = ["path", "url"]
 
         n_par = cpu_count(n_par)
-        parallel = True if len(df) > 1 else False
+        parallel = len(df) > 1
         res = upload_files(
             fs_fusion,
             self.fs,
@@ -1060,6 +1114,73 @@ class Fusion:
             multipart=multipart,
             chunk_size=chunk_size,
             show_progress=show_progress,
+            from_date=from_date,
+            to_date=to_date,
+        )
+
+        if not all(r[0] for r in res):
+            failed_res = [r for r in res if not r[0]]
+            msg = f"Not all uploads were successfully completed. The following failed:\n{failed_res}"
+            logger.warning(msg)
+            warnings.warn(msg)
+
+        return res if return_paths else None
+
+    def from_bytes(
+        self,
+        data: BytesIO,
+        dataset: str = None,
+        series_member: str = "latest",
+        catalog: str = None,
+        distribution: str = "parquet",
+        show_progress: bool = True,
+        return_paths: bool = False,
+        chunk_size=5 * 2**20,
+        from_date=None,
+        to_date=None,
+    ):
+        """Uploads data from an object in memory.
+
+        Args:
+            data (str): an object in memory to upload
+            dataset (str, optional): Dataset name to which the file will be uploaded (for single file only).
+                                    If not provided the dataset will be implied from file's name.
+            series_member (str, optional): A single date or label. Defaults to 'latest' which will return the most recent.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            distribution (str, optional): A distribution type, e.g. a file format or raw
+            show_progress (bool, optional): Display a progress bar during data download Defaults to True.
+            return_paths (bool, optional): Return paths and success statuses of the downloaded files.
+            chunk_size (int, optional): Maximum chunk size.
+            from_date (str, optional): start of the data date range contained in the distribution, defaults to upload date
+            to_date (str, optional): end of the data date range contained in the distribution, defaults to upload date.
+
+        Returns:
+
+
+        """
+        catalog = self.__use_catalog(catalog)
+
+        fs_fusion = self.get_fusion_filesystem()
+
+        is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
+        local_url_eqiv = path_to_url(
+            f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw
+        )
+
+        df = pd.DataFrame(["", local_url_eqiv]).T
+        df.columns = ["path", "url"]
+
+        res = upload_files(
+            fs_fusion,
+            data,
+            df,
+            parallel=False,
+            n_par=1,
+            multipart=False,
+            chunk_size=chunk_size,
+            show_progress=show_progress,
+            from_date=from_date,
+            to_date=to_date,
         )
 
         if not all(r[0] for r in res):
@@ -1088,11 +1209,12 @@ class Fusion:
         """
 
         catalog = self.__use_catalog(catalog)
-        import json
-
-        import threading
         import asyncio
+        import json
+        import threading
+
         from aiohttp_sse_client import client as sse_client
+
         from .utils import get_client
 
         kwargs = {}
@@ -1121,8 +1243,8 @@ class Fusion:
                             self.events = pd.concat(
                                 [self.events, pd.DataFrame(event)], ignore_index=True
                             )
-                except TimeoutError:
-                    raise TimeoutError
+                except TimeoutError as ex:
+                    raise ex
                 except Exception as e:
                     raise Exception(e)
 

@@ -5,11 +5,11 @@ import hashlib
 import io
 import logging
 from copy import deepcopy
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 import pandas as pd
 from fsspec.callbacks import _DEFAULT_CALLBACK
-from fsspec.implementations.http import HTTPFileSystem, sync, HTTPFile, sync_wrapper
+from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
 
 from .authentication import FusionCredentials
@@ -189,7 +189,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             res = super().info(path, **kwargs)
             if path.split("/")[-2] == "datasets":
                 target = path.split("/")[-1]
-                args = ["/".join(path.split("/")[:-1]) + f"/changes?datasets={target}"]
+                args = [
+                    "/".join(path.split("/")[:-1])
+                    + f"/changes?datasets={quote(target)}"
+                ]
                 res["changes"] = sync(super().loop, self._changes, *args)
         split_path = path.split("/")
         if len(split_path) > 1 and split_path[-2] == "distributions":
@@ -349,6 +352,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         if not multipart:
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
+            if isinstance(lpath, io.BytesIO):
+                lpath.seek(0)
             async with meth(rpath, data=lpath.read(), **kw) as resp:
                 await self._async_raise_not_found_for_status(resp, rpath)
         else:
@@ -372,12 +377,14 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 )
 
     @staticmethod
-    def _construct_headers(file_local, dt_iso, chunk_size=5 * 2**20, multipart=False):
+    def _construct_headers(
+        file_local, dt_from, dt_to, dt_created, chunk_size=5 * 2**20, multipart=False
+    ):
         headers = {
             "Content-Type": "application/octet-stream",
-            "x-jpmc-distribution-created-date": dt_iso,
-            "x-jpmc-distribution-from-date": dt_iso,
-            "x-jpmc-distribution-to-date": dt_iso,
+            "x-jpmc-distribution-created-date": dt_created,
+            "x-jpmc-distribution-from-date": dt_from,
+            "x-jpmc-distribution-to-date": dt_to,
             "Digest": "",  # to be changed to x-jpmc-digest
         }
         headers["Content-Type"] = (
@@ -387,6 +394,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         headers_chunk_lst = []
         hash_sha256 = hashlib.sha256()
+        if isinstance(file_local, io.BytesIO):
+            file_local.seek(0)
         for chunk in iter(lambda: file_local.read(chunk_size), b""):
             hash_sha256_chunk = hashlib.sha256()
             hash_sha256_chunk.update(chunk)
@@ -417,6 +426,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         callback=_DEFAULT_CALLBACK,
         method="put",
         multipart=False,
+        from_date=None,
+        to_date=None,
         **kwargs,
     ):
         """Copy file(s) from local.
@@ -428,15 +439,25 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             callback: Callback function.
             method: Method: put/post.
             multipart: Flag which indicated whether it's a multipart uplaod.
+            from_date: earliest date of data in upload file
+            to_date: latest date of data in upload file
             **kwargs: Kwargs.
 
         Returns:
 
         """
 
-        dt_iso = pd.Timestamp(rpath.split("/")[-3]).strftime("%Y-%m-%d")
+        if from_date is None or to_date is None:
+            dt_from = pd.Timestamp.now().strftime("%Y-%m-%d")
+            dt_to = "2199-12-31"
+        else:
+            dt_from = pd.Timestamp(from_date).strftime("%Y-%m-%d")
+            dt_to = pd.Timestamp(to_date).strftime("%Y-%m-%d")
+
+        dt_created = pd.Timestamp.now().strftime("%Y-%m-%d")
+
         headers, chunk_headers_lst = self._construct_headers(
-            lpath, dt_iso, chunk_size, multipart
+            lpath, dt_from, dt_to, dt_created, chunk_size, multipart
         )
         rpath = self._decorate_url(rpath)
         kwargs.update({"headers": headers})

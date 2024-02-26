@@ -2,25 +2,26 @@
 
 import contextlib
 import datetime
-from datetime import timedelta
+import json as js
 import logging
 import os
 import re
 import sys
+from datetime import timedelta
+from io import BytesIO
 from pathlib import Path
 from typing import Union
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
-import json as js
+import joblib
 import pandas as pd
 import pyarrow.parquet as pq
 import requests
-import joblib
-from tqdm import tqdm
 from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
+from tqdm import tqdm
 
 from . import __version__ as version
 
@@ -49,7 +50,7 @@ import multiprocessing as mp
 import fsspec
 from urllib3.util.retry import Retry
 
-from .authentication import FusionCredentials, FusionOAuthAdapter, FusionAiohttpSession
+from .authentication import FusionAiohttpSession, FusionCredentials, FusionOAuthAdapter
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -867,6 +868,8 @@ def upload_files(
     multipart: bool = True,
     chunk_size: int = 5 * 2**20,
     show_progress: bool = True,
+    from_date: str = None,
+    to_date: str = None,
 ):
     """Upload file into Fusion.
 
@@ -879,6 +882,8 @@ def upload_files(
         multipart (bool): Is multipart upload.
         chunk_size (int): Maximum chunk size.
         show_progress (bool): Show progress bar
+        from_date (str, optional): earliest date of data contained in distribution.
+        to_date (str, optional): latest date of data contained in distribution.
 
     Returns: List of update statuses.
 
@@ -888,10 +893,28 @@ def upload_files(
         p_url = row["url"]
         try:
             mp = multipart and fs_local.size(row["path"]) > chunk_size
-            with fs_local.open(row["path"], "rb") as file_local:
+
+            if isinstance(fs_local, BytesIO):
                 fs_fusion.put(
-                    file_local, p_url, chunk_size=chunk_size, method="put", multipart=mp
+                    fs_local,
+                    p_url,
+                    chunk_size=chunk_size,
+                    method="put",
+                    multipart=mp,
+                    from_date=from_date,
+                    to_date=to_date,
                 )
+            else:
+                with fs_local.open(row["path"], "rb") as file_local:
+                    fs_fusion.put(
+                        file_local,
+                        p_url,
+                        chunk_size=chunk_size,
+                        method="put",
+                        multipart=mp,
+                        from_date=from_date,
+                        to_date=to_date,
+                    )
             return True, row["path"], None
         except Exception as ex:
             logger.log(
