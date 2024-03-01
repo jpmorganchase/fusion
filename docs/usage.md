@@ -1,9 +1,12 @@
-# PyFusion #
+# Usage
 
-PyFusion is the Python SDK for the Fusion platform API. 
 
-## Installation
+## Import Fusion
 
-```bash
-pip install pyfusion
+```
+from fusion import Fusion
+```
+## Fusion Object 
+```
+fusion = Fusion()
 ```
