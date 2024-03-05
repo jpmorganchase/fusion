@@ -431,7 +431,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         dt_created=None,
     ):
         async def _get_operation_id(session) -> dict:
-            async with session.post(rpath + "/operationType/upload") as r:
+            async with session.post(
+                rpath + "/operationType/upload", **self.kwargs
+            ) as r:
                 await self._async_raise_not_found_for_status(
                     r, rpath + "/operationType/upload"
                 )
@@ -439,7 +441,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         async def _finish_operation(session, operation_id, kw):
             async with session.post(
-                rpath + f"/operations/upload?operationId={operation_id}",
+                url=rpath + f"/operations/upload?operationId={operation_id}",
                 json={"parts": resps},
                 **kw,
             ) as r:
