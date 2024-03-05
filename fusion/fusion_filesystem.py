@@ -475,7 +475,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 kw.update({"headers": headers_chunks})
                 url = (
                     rpath
-                    + f"/operations/upload?operationId={operation_id}&pattNumber={i+1}"
+                    + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
                 )
                 yield sync(self.loop, _meth, session, url, kw)
                 i += 1
