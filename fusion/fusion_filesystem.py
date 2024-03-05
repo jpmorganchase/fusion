@@ -8,6 +8,7 @@ from copy import deepcopy
 from urllib.parse import quote, urljoin
 
 import pandas as pd
+from async_retrying import retry
 from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
@@ -418,6 +419,96 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         return headers, headers_chunk_lst
 
+    def _cloud_copy(
+        self,
+        lpath,
+        rpath,
+        chunk_size=5 * 2**20,
+        callback=_DEFAULT_CALLBACK,
+        method="put",
+        dt_from=None,
+        dt_to=None,
+        dt_created=None,
+    ):
+        async def _get_operation_id(session) -> dict:
+            async with session.post(rpath + "/operationType/upload") as r:
+                await self._async_raise_not_found_for_status(
+                    r, rpath + "/operationType/upload"
+                )
+                return await r.json()
+
+        async def _finish_operation(session, operation_id, kw):
+            async with session.post(
+                rpath + f"/operations/upload?operationId={operation_id}",
+                json={"parts": resps},
+                **kw,
+            ) as r:
+                await self._async_raise_not_found_for_status(
+                    r, rpath + f"/operations/upload?operationId={operation_id}"
+                )
+
+        def put_data(session):
+            @retry(attempts=100)
+            async def _meth(session, url, kw):
+                meth = getattr(session, method)
+                async with meth(url=url, data=chunk, **kw) as resp:
+                    await self._async_raise_not_found_for_status(resp, url)
+                    return await resp.json()
+
+            context = nullcontext(lpath)
+
+            with context as f:
+                callback.get_size(getattr(f, "size", None))
+
+            chunk = f.read(chunk_size)
+            i = 0
+            headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
+            while chunk:
+                hash_sha256_chunk = hashlib.sha256()
+                hash_sha256_chunk.update(chunk)
+                hash_sha256_lst[0].update(hash_sha256_chunk.digest())
+                headers_chunks = deepcopy(headers_chunks)
+                headers_chunks["Digest"] = (
+                    "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
+                )
+                kw = self.kwargs.copy()
+                kw.update({"headers": headers_chunks})
+                url = (
+                    rpath
+                    + f"/operations/upload?operationId={operation_id}&pattNumber={i+1}"
+                )
+                yield sync(self.loop, _meth, session, url, kw)
+                i += 1
+                callback.relative_update(len(chunk))
+                chunk = f.read(chunk_size)
+
+        session = sync(self.loop, self.set_session)
+        method = method.lower()
+        if method not in ("put", "post"):
+            raise ValueError(f"method has to be either 'post' or 'put', not {method!r}")
+        hash_sha256 = hashlib.sha256()
+        hash_sha256_lst = [hash_sha256]
+        headers = {
+            "Content-Type": "application/json",
+            "x-jpmc-distribution-created-date": dt_created,
+            "x-jpmc-distribution-from-date": dt_from,
+            "x-jpmc-distribution-to-date": dt_to,
+            "Digest": "",  # to be changed to x-jpmc-digest
+        }
+        lpath.seek(0)
+        kw = self.kwargs.copy()
+        kw.update({"headers": headers})
+        operation_id = sync(self.loop, _get_operation_id, session)["operationId"]
+        resps = []
+        for resp in put_data(session):
+            resps.append(resp)
+
+        hash_sha256 = hash_sha256_lst[0]
+        headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
+        kw = self.kwargs.copy()
+        kw.update({"headers": headers})
+        sync(self.loop, _finish_operation, session, operation_id, kw)
+
     def put(
         self,
         lpath,
@@ -455,7 +546,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             dt_to = pd.Timestamp(to_date).strftime("%Y-%m-%d")
 
         dt_created = pd.Timestamp.now().strftime("%Y-%m-%d")
-
+        if type(lpath).__name__ in ["S3File"]:
+            return self._cloud_copy(
+                lpath, rpath, chunk_size, callback, method, dt_from, dt_to, dt_created
+            )
         headers, chunk_headers_lst = self._construct_headers(
             lpath, dt_from, dt_to, dt_created, chunk_size, multipart
         )
