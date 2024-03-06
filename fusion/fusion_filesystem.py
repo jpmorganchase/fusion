@@ -450,7 +450,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 )
 
         def put_data(session):
-            @retry(attempts=100)
+            @retry(attempts=3)
             async def _meth(session, url, kw):
                 meth = getattr(session, method)
                 async with meth(url=url, data=chunk, **kw) as resp:
