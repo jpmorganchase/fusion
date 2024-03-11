@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "PyFusion"
-version = "1.0.17"
+version = "1.0.18"
 
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
@@ -37,6 +37,7 @@ tqdm = ">=4.64.0"
 pyarrow = ">=11.0"
 fsspec = ">=2021.6.1"
 aiohttp = ">=3.7.1"
+async-retrying = "^0.2"
 
 polars = { version = ">=0.12", optional = true }
 markupsafe = { version = ">=2.0.1", optional = true }
