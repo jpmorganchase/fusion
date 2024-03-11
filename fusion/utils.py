@@ -663,7 +663,7 @@ async def get_client(credentials, **kwargs):
     if "timeout" in kwargs:
         timeout = aiohttp.ClientTimeout(total=kwargs["timeout"])
     else:
-        timeout = aiohttp.ClientTimeout(total=30 * 60)  # default 30min timeout
+        timeout = aiohttp.ClientTimeout(total=60 * 60)  # default 60min timeout
     session = FusionAiohttpSession(
         trace_configs=[trace_config], trust_env=True, timeout=timeout
     )
