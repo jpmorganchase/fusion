@@ -8,7 +8,6 @@ from copy import deepcopy
 from urllib.parse import quote, urljoin
 
 import pandas as pd
-from async_retrying import retry
 from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
@@ -450,12 +449,21 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 )
 
         def put_data(session):
-            @retry(attempts=3)
             async def _meth(session, url, kw):
                 meth = getattr(session, method)
-                async with meth(url=url, data=chunk, **kw) as resp:
-                    await self._async_raise_not_found_for_status(resp, url)
-                    return await resp.json()
+                retry_num = 3
+                ex_code = None
+                ex_cnt = 0
+                while ex_cnt < retry_num:
+                    async with meth(url=url, data=chunk, **kw) as resp:
+                        try:
+                            await self._async_raise_not_found_for_status(resp, url)
+                            return await resp.json()
+                        except Exception as ex:
+                            ex_cnt += 1
+                            ex_code = ex
+
+                raise ex_code
 
             context = nullcontext(lpath)
 
