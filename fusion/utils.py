@@ -748,6 +748,8 @@ def stream_single_file_new_session_chunks(
         start (int): Start byte.
         end(int): End byte.
         lock (Threading.Lock): Lock.
+        results (list): Results list.
+        idx (int): Results list index.
         overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
         fs (fsspec.filesystem): Filesystem.
 
@@ -791,7 +793,7 @@ def download_single_file_threading(
     chunk_size: int = 5 * 2**20,
     fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
 ):
-    """
+    """Download single file using range requests.
 
     Args:
         credentials (FusionCredentials): Valid user credentials to provide an access token
