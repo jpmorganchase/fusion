@@ -714,7 +714,8 @@ class Fusion:
                     ),
                     fs=self.fs,
                 )
-                pbar.update(1)
+                if (len(res) > 0) and all((r[0] for r in res)):
+                    pbar.update(1)
 
         else:
             download_spec = [
