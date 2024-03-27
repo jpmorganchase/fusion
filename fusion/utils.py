@@ -769,14 +769,13 @@ def stream_single_file_new_session_chunks(
         url = url + f"?downloadRange=bytes={start}-{end-1}"
         with get_session(credentials, url).get(url, stream=False) as r:
             r.raise_for_status()
-            byte_cnt = 0
             with lock:
                 output_file.seek(start)
                 output_file.write(r.content)
 
         logger.log(
             VERBOSE_LVL,
-            f"Wrote {byte_cnt:,} bytes to {output_file}",
+            f"Wrote {start} - {end} bytes to {output_file}",
         )
         results[idx] = (True, output_file, None)
         return 0
