@@ -694,7 +694,7 @@ class Fusion:
                 self.fs.mkdir(d, create_parents=True)
 
         if len(required_series) == 1:
-            with tqdm(total=1) as _:
+            with tqdm(total=1) as pbar:
                 res = download_single_file_threading(
                     self.credentials,
                     distribution_to_url(
@@ -714,6 +714,7 @@ class Fusion:
                     ),
                     fs=self.fs,
                 )
+                pbar.update(1)
 
         else:
             download_spec = [
