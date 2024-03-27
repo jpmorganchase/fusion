@@ -25,6 +25,7 @@ from .utils import (
     csv_to_table,
     distribution_to_filename,
     distribution_to_url,
+    download_single_file_threading,
     get_session,
     is_dataset_raw,
     json_to_table,
@@ -691,41 +692,65 @@ class Fusion:
         for d in download_folders:
             if not self.fs.exists(d):
                 self.fs.mkdir(d, create_parents=True)
-        download_spec = [
-            {
-                "credentials": self.credentials,
-                "url": distribution_to_url(
-                    self.root_url, series[1], series[2], series[3], series[0]
-                ),
-                "output_file": distribution_to_filename(
-                    download_folders[i],
-                    series[1],
-                    series[2],
-                    series[3],
-                    series[0],
-                    partitioning=partitioning,
-                ),
-                "overwrite": force_download,
-                "fs": self.fs,
-            }
-            for i, series in enumerate(required_series)
-        ]
 
-        logger.log(
-            VERBOSE_LVL,
-            f"Beginning {len(download_spec)} downloads in batches of {n_par}",
-        )
-        if show_progress:
-            with tqdm_joblib(tqdm(total=len(download_spec))) as _:
+        if len(required_series) == 1:
+            with tqdm(total=1) as _:
+                res = download_single_file_threading(
+                    self.credentials,
+                    distribution_to_url(
+                        self.root_url,
+                        required_series[0][1],
+                        required_series[0][2],
+                        required_series[0][3],
+                        required_series[0][0],
+                    ),
+                    distribution_to_filename(
+                        download_folders[0],
+                        required_series[0][1],
+                        required_series[0][2],
+                        required_series[0][3],
+                        required_series[0][0],
+                        partitioning=partitioning,
+                    ),
+                    fs=self.fs,
+                )
+
+        else:
+            download_spec = [
+                {
+                    "credentials": self.credentials,
+                    "url": distribution_to_url(
+                        self.root_url, series[1], series[2], series[3], series[0]
+                    ),
+                    "output_file": distribution_to_filename(
+                        download_folders[i],
+                        series[1],
+                        series[2],
+                        series[3],
+                        series[0],
+                        partitioning=partitioning,
+                    ),
+                    "overwrite": force_download,
+                    "fs": self.fs,
+                }
+                for i, series in enumerate(required_series)
+            ]
+
+            logger.log(
+                VERBOSE_LVL,
+                f"Beginning {len(download_spec)} downloads in batches of {n_par}",
+            )
+            if show_progress:
+                with tqdm_joblib(tqdm(total=len(download_spec))) as _:
+                    res = Parallel(n_jobs=n_par)(
+                        delayed(stream_single_file_new_session)(**spec)
+                        for spec in download_spec
+                    )
+            else:
                 res = Parallel(n_jobs=n_par)(
                     delayed(stream_single_file_new_session)(**spec)
                     for spec in download_spec
                 )
-        else:
-            res = Parallel(n_jobs=n_par)(
-                delayed(stream_single_file_new_session)(**spec)
-                for spec in download_spec
-            )
 
         if (len(res) > 0) and (not all((r[0] for r in res))):
             for r in res:
