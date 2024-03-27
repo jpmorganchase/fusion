@@ -733,7 +733,7 @@ def _stream_single_file_new_session_dry_run(credentials, url: str, output_file: 
 def stream_single_file_new_session_chunks(
     credentials,
     url: str,
-    output_file: str,
+    output_file,
     start: int,
     end: int,
     lock,
@@ -741,13 +741,13 @@ def stream_single_file_new_session_chunks(
     idx: int,
     overwrite: bool = True,
     fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
-) -> tuple:
+) -> int:
     """Function to stream a single file from the API to a file on disk.
 
     Args:
         credentials (FusionCredentials): Valid user credentials to provide an acces token
         url (str): The URL to call.
-        output_file (str): The file handle for the target write file.
+        output_file: The file handle for the target write file.
         start (int): Start byte.
         end(int): End byte.
         lock (Threading.Lock): Lock.
@@ -757,12 +757,13 @@ def stream_single_file_new_session_chunks(
         fs (fsspec.filesystem): Filesystem.
 
     Returns:
-        tuple: A tuple
+        int: Exit status
 
     """
 
     if not overwrite and fs.exists(output_file):
-        return True, output_file, None
+        results[idx] = True, output_file, None
+        return 0
 
     try:
         url = url + f"?downloadRange=bytes={start}-{end-1}"
@@ -770,9 +771,6 @@ def stream_single_file_new_session_chunks(
             r.raise_for_status()
             byte_cnt = 0
             with lock:
-                # with fs.open(output_file, "wb") as outfile:
-                # outfile.seek(start)
-                # outfile.write(r.content)
                 output_file.seek(start)
                 output_file.write(r.content)
 
@@ -781,12 +779,14 @@ def stream_single_file_new_session_chunks(
             f"Wrote {byte_cnt:,} bytes to {output_file}",
         )
         results[idx] = (True, output_file, None)
+        return 0
     except Exception as ex:
         logger.log(
             VERBOSE_LVL,
             f"Failed to write to {output_file}. ex - {ex}",
         )
         results[idx] = (False, output_file, ex)
+        return 1
 
 
 def download_single_file_threading(
