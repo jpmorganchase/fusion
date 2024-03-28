@@ -695,6 +695,14 @@ class Fusion:
 
         if len(required_series) == 1:
             with tqdm(total=1) as pbar:
+                output_file = distribution_to_filename(
+                    download_folders[0],
+                    required_series[0][1],
+                    required_series[0][2],
+                    required_series[0][3],
+                    required_series[0][0],
+                    partitioning=partitioning,
+                )
                 res = download_single_file_threading(
                     self.credentials,
                     distribution_to_url(
@@ -704,18 +712,12 @@ class Fusion:
                         required_series[0][3],
                         required_series[0][0],
                     ),
-                    distribution_to_filename(
-                        download_folders[0],
-                        required_series[0][1],
-                        required_series[0][2],
-                        required_series[0][3],
-                        required_series[0][0],
-                        partitioning=partitioning,
-                    ),
+                    output_file,
                     fs=self.fs,
                 )
                 if (len(res) > 0) and all((r[0] for r in res)):
                     pbar.update(1)
+                    res = [(res[0][0], output_file, res[0][2])]
 
         else:
             download_spec = [
