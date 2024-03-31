@@ -16,30 +16,58 @@ on:
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   # This workflow contains a single job called "test"
-  test:
-    # The type of runner that the job will run on
+  linux:
+    runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
         python-versions: [3.9]
-        os: [ubuntu-20.04]
-    runs-on: ${{ matrix.os }}
+        platform:
+          - runner: ubuntu-latest
+            target: x86_64
+          - runner: ubuntu-latest
+            target: x86
+          - runner: ubuntu-latest
+            target: aarch64
+          - runner: ubuntu-latest
+            target: armv7
+          - runner: ubuntu-latest
+            target: s390x
+          - runner: ubuntu-latest
+            target: ppc64le
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 #          token: ${{ secrets.PERSONAL_TOKEN }}
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-versions }}
 
-      - name: Install dependencies
+      - name: Set up rye
+        uses: atu4403/setup-rye-multiOS@v1
+
+      - name: Use uv instead of pip
+        run: rye config --set-bool behavior.use-uv=true
+
+      - name: Sync dependencies using rye
         run: |
-          python -m pip install --upgrade pip
-          pip install poetry tox tox-gh-actions
+          rye pin ${{ matrix.python-versions }}
+          rye sync
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist -i python3.9
+          sccache: 'false'
+          manylinux: auto
+  
+      - name: list dist files
+        run: ls -l dist/
 
       - name: Setup doc deploy git user # required for tox testing on mike
         run: |
@@ -48,7 +76,113 @@ jobs:
 
       - name: test with tox
         run:
-          tox
+          rye run tox
 
-      - name: list files
-        run: ls -l .
+  windows:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        python-versions: [3.9]
+        platform:
+          - runner: windows-latest
+            target: x64
+          - runner: windows-latest
+            target: x86
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+#          token: ${{ secrets.PERSONAL_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-versions }}
+
+      - name: Set up rye
+        uses: atu4403/setup-rye-multiOS@v1
+
+      - name: Use uv instead of pip
+        run: rye config --set-bool behavior.use-uv=true
+
+      - name: Sync dependencies using rye
+        run: |
+          rye pin ${{ matrix.python-versions }}
+          rye sync
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist -i python3.9
+          sccache: 'false'
+          manylinux: auto
+  
+      - name: list dist files
+        run: ls -l dist/
+
+      - name: Setup doc deploy git user # required for tox testing on mike
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: test with tox
+        run:
+          rye run tox
+
+  macos:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      matrix:
+        python-versions: [3.9]
+        platform:
+          - runner: macos-latest
+            target: x86_64
+          - runner: macos-l4
+            target: aarch64
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+#          token: ${{ secrets.PERSONAL_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-versions }}
+
+      - name: Set up rye
+        uses: atu4403/setup-rye-multiOS@v1
+
+      - name: Use uv instead of pip
+        run: rye config --set-bool behavior.use-uv=true
+
+      - name: Sync dependencies using rye
+        run: |
+          rye pin ${{ matrix.python-versions }}
+          rye sync
+
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: --release --out dist -i python3.9
+          sccache: 'false'
+          manylinux: auto
+  
+      - name: list dist files
+        run: ls -l dist/
+
+      - name: Setup doc deploy git user # required for tox testing on mike
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: test with tox
+        run:
+          rye run tox
+        

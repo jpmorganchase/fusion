@@ -4,17 +4,16 @@ import contextlib
 import datetime
 import json as js
 import logging
+import math
 import os
 import re
 import sys
 from datetime import timedelta
 from io import BytesIO
-import math
 from pathlib import Path
+from threading import Lock, Thread
 from typing import Union
 from urllib.parse import urlparse, urlunparse
-from threading import Thread
-from threading import Lock
 
 import aiohttp
 import joblib
@@ -164,9 +163,7 @@ def json_to_table(path: str, fs=None, columns: list = None, filters: list = None
         return tbl
 
 
-def parquet_to_table(
-    path: Union[str, list], fs=None, columns: list = None, filters: list = None
-):
+def parquet_to_table(path: Union[str, list], fs=None, columns: list = None, filters: list = None):
     """Reads parquet data to pyarrow table.
 
     Args:
@@ -254,8 +251,7 @@ def read_csv(
     except Exception as err:
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. "
-            f"Trying with pandas csv reader. {err}",
+            f"Could not parse {path} properly. " f"Trying with pandas csv reader. {err}",
         )
         try:
             with fs.open(path) if fs else nullcontext(path) as f:
@@ -271,8 +267,7 @@ def read_csv(
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
-                f"Could not parse {path} properly. "
-                f"Trying with pandas csv reader pandas engine. {err}",
+                f"Could not parse {path} properly. " f"Trying with pandas csv reader pandas engine. {err}",
             )
             with fs.open(path) if fs else nullcontext(path) as f:
                 if dataframe_type == "pandas":
@@ -329,8 +324,7 @@ def read_json(
     except Exception as err:
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. "
-            f"Trying with pandas json reader. {err}",
+            f"Could not parse {path} properly. " f"Trying with pandas json reader. {err}",
         )
         try:
             with fs.open(path) if fs else nullcontext(path) as f:
@@ -436,9 +430,7 @@ def normalise_dt_param_str(dt: str) -> tuple:
     if not date_parts or len(date_parts) > 2:
         raise ValueError(f"Unable to parse {dt} as either a date or an interval")
 
-    return tuple(
-        (_normalise_dt_param(dt_part) if dt_part else dt_part for dt_part in date_parts)
-    )
+    return tuple((_normalise_dt_param(dt_part) if dt_part else dt_part for dt_part in date_parts))
 
 
 def distribution_to_filename(
@@ -513,9 +505,7 @@ def distribution_to_url(
         datasetseries = datasetseries[0:-1]
 
     if datasetseries == "sample":
-        return (
-            f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
-        )
+        return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
 
     return (
         f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
@@ -569,9 +559,7 @@ async def get_client(credentials, **kwargs):
             )
             async with aiohttp.ClientSession(trust_env=True) as session:
                 if credentials.proxies:
-                    response = await session.post(
-                        credentials.auth_url, data=payload, proxy=http_proxy
-                    )
+                    response = await session.post(credentials.auth_url, data=payload, proxy=http_proxy)
                 else:
                     response = await session.post(credentials.auth_url, data=payload)
                 response_data = await response.json()
@@ -580,18 +568,11 @@ async def get_client(credentials, **kwargs):
             expiry = response_data["expires_in"]
             return access_token, expiry
 
-        token_expires_in = (
-            session.credentials.bearer_token_expiry - datetime.datetime.now()
-        ).total_seconds()
-        if (
-            session.credentials.is_bearer_token_expirable
-            and token_expires_in < session.refresh_within_seconds
-        ):
+        token_expires_in = (session.credentials.bearer_token_expiry - datetime.datetime.now()).total_seconds()
+        if session.credentials.is_bearer_token_expirable and token_expires_in < session.refresh_within_seconds:
             token, expiry = await _refresh_token_data()
             session.credentials.bearer_token = token
-            session.credentials.bearer_token_expiry = (
-                datetime.datetime.now() + datetime.timedelta(seconds=int(expiry))
-            )
+            session.credentials.bearer_token_expiry = datetime.datetime.now() + datetime.timedelta(seconds=int(expiry))
             session.number_token_refreshes += 1
 
         params.headers.update(
@@ -604,10 +585,7 @@ async def get_client(credentials, **kwargs):
     async def on_request_start_fusion_token(session, trace_config_ctx, params):
         async def _refresh_fusion_token_data():
             full_url_lst = str(params.url).split("/")
-            url = (
-                "/".join(full_url_lst[: full_url_lst.index("datasets") + 2])
-                + "/authorize/token"
-            )
+            url = "/".join(full_url_lst[: full_url_lst.index("datasets") + 2]) + "/authorize/token"
             if credentials.proxies:
                 async with session.get(url, proxy=http_proxy) as response:
                     response_data = await response.json()
@@ -627,16 +605,13 @@ async def get_client(credentials, **kwargs):
             if fusion_token_key not in session.fusion_token_dict.keys():
                 fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
                 session.fusion_token_dict[fusion_token_key] = fusion_token
-                session.fusion_token_expiry_dict[
-                    fusion_token_key
-                ] = datetime.datetime.now() + timedelta(
+                session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
                     seconds=int(fusion_token_expiry)
                 )
                 logger.log(VERBOSE_LVL, "Refreshed fusion token")
             else:
                 fusion_token_expires_in = (
-                    session.fusion_token_expiry_dict[fusion_token_key]
-                    - datetime.datetime.now()
+                    session.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
                 ).total_seconds()
                 if fusion_token_expires_in < session.refresh_within_seconds:
                     (
@@ -644,18 +619,12 @@ async def get_client(credentials, **kwargs):
                         fusion_token_expiry,
                     ) = await _refresh_fusion_token_data()
                     session.fusion_token_dict[fusion_token_key] = fusion_token
-                    session.fusion_token_expiry_dict[
-                        fusion_token_key
-                    ] = datetime.datetime.now() + timedelta(
+                    session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
                         seconds=int(fusion_token_expiry)
                     )
                     logger.log(VERBOSE_LVL, "Refreshed fusion token")
 
-            params.headers.update(
-                {
-                    "Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"
-                }
-            )
+            params.headers.update({"Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"})
 
     if credentials.proxies:
         if "http" in credentials.proxies.keys():
@@ -670,9 +639,7 @@ async def get_client(credentials, **kwargs):
         timeout = aiohttp.ClientTimeout(total=kwargs["timeout"])
     else:
         timeout = aiohttp.ClientTimeout(total=60 * 60)  # default 60min timeout
-    session = FusionAiohttpSession(
-        trace_configs=[trace_config], trust_env=True, timeout=timeout
-    )
+    session = FusionAiohttpSession(trace_configs=[trace_config], trust_env=True, timeout=timeout)
     session.post_init(credentials=credentials)
     return session
 
@@ -691,9 +658,7 @@ def get_session(
 
     """
     if not get_retries:
-        get_retries = Retry(
-            total=5, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504]
-        )
+        get_retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504])
     else:
         get_retries = Retry.from_int(get_retries)
     session = requests.Session()
@@ -703,9 +668,7 @@ def get_session(
         mount_url = _get_canonical_root_url(root_url)
     except Exception:
         mount_url = "https://"
-    auth_handler = FusionOAuthAdapter(
-        credentials, max_retries=get_retries, mount_url=mount_url
-    )
+    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url)
     session.mount(mount_url, auth_handler)
     return session
 
@@ -905,9 +868,7 @@ def validate_file_names(paths, fs_fusion):
                 validation.append(False)
             else:
                 if tmp[1] not in all_datasets.keys():
-                    all_datasets[tmp[1]] = [
-                        i.split("/")[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")
-                    ]
+                    all_datasets[tmp[1]] = [i.split("/")[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
 
                 val = tmp[0] in all_datasets[tmp[1]]
                 validation.append(val)
@@ -943,9 +904,7 @@ def is_dataset_raw(paths, fs_fusion):
     for i, f_n in enumerate(file_names):
         tmp = f_n.split("__")
         if tmp[0] not in is_raw.keys():
-            is_raw[tmp[0]] = js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))[
-                "isRawData"
-            ]
+            is_raw[tmp[0]] = js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))["isRawData"]
         ret.append(is_raw[tmp[0]])
 
     return ret
@@ -1033,13 +992,9 @@ def upload_files(
     if parallel:
         if show_progress:
             with tqdm_joblib(tqdm(total=len(loop))) as _:
-                res = Parallel(n_jobs=n_par)(
-                    delayed(_upload)(row) for index, row in loop.iterrows()
-                )
+                res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop.iterrows())
         else:
-            res = Parallel(n_jobs=n_par)(
-                delayed(_upload)(row) for index, row in loop.iterrows()
-            )
+            res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop.iterrows())
     else:
         res = [None] * len(loop)
         if show_progress:

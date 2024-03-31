@@ -37,7 +37,7 @@ theme:
     - navigation.tracking
 markdown_extensions:
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
   - pymdownx.critic
   - pymdownx.caret
@@ -62,8 +62,13 @@ plugins:
   - mkdocs-jupyter
   - include-markdown
   - mkdocstrings:
-      watch:
-        - fusion
+      enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
+      # custom_templates: templates
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_source: false
   - search:
       lang: en
 
