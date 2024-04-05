@@ -100,11 +100,12 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def cpu_count(thread_pool_size: int = None) -> int:
+def cpu_count(thread_pool_size: int = None, is_threading=False) -> int:
     """Determine the number of cpus/threads for parallelization.
 
     Args:
-        thread_pool_size: override argument for number of cpus/threads.
+        thread_pool_size (int): override argument for number of cpus/threads.
+        is_threading: use threads instead of CPUs
 
     Returns: number of cpus/threads to use.
 
@@ -113,6 +114,8 @@ def cpu_count(thread_pool_size: int = None) -> int:
         return int(os.environ["NUM_THREADS"])
     if thread_pool_size:
         return thread_pool_size
+    elif is_threading:
+        return 10
     else:
         if mp.cpu_count():
             thread_pool_size = mp.cpu_count()
@@ -820,11 +823,6 @@ def download_single_file_threading(
     Returns: List[Tuple]
 
     """
-
-    if max_threads is None:
-        max_threads = 10
-    else:
-        max_threads = min(10, max(1, max_threads))
 
     header = get_session(credentials, url).head(url).headers
     content_length = int(header["Content-Length"])

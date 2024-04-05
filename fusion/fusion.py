@@ -692,6 +692,7 @@ class Fusion:
                 self.fs.mkdir(d, create_parents=True)
 
         if len(required_series) == 1:
+            n_par = cpu_count(n_par, is_threading=True)
             with tqdm(total=1) as pbar:
                 output_file = distribution_to_filename(
                     download_folders[0],
