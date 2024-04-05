@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import sys
+import threading
 from datetime import timedelta
 from io import BytesIO
 import math
@@ -15,6 +16,7 @@ from typing import Union
 from urllib.parse import urlparse, urlunparse
 from threading import Thread
 from threading import Lock
+from queue import Queue
 
 import aiohttp
 import joblib
@@ -788,12 +790,22 @@ def stream_single_file_new_session_chunks(
         return 1
 
 
+def _worker(queue, credentials, url, output_file, lock, results):
+    while True:
+        idx, start, end = queue.get()
+        if idx is None:
+            break
+        stream_single_file_new_session_chunks(credentials, url, output_file, start, end, lock, results, idx)
+        queue.task_done()
+
+
 def download_single_file_threading(
     credentials,
     url: str,
     output_file,
     chunk_size: int = 5 * 2**20,
     fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
+    max_threads: int = 10
 ):
     """Download single file using range requests.
 
@@ -803,10 +815,17 @@ def download_single_file_threading(
         output_file (str): The filename that the data will be saved into.
         chunk_size (int): Chunk size for parallelization.
         fs (fsspec.filesystem): Filesystem.
+        max_threads (int, optional): Number of threads to use. Defaults to 10.
 
     Returns: List[Tuple]
 
     """
+
+    if max_threads is None:
+        max_threads = 10
+    else:
+        max_threads = min(10, max(1, max_threads))
+
     header = get_session(credentials, url).head(url).headers
     content_length = int(header["Content-Length"])
     n_chunks = int(math.ceil(content_length / chunk_size))
@@ -815,18 +834,24 @@ def download_single_file_threading(
     lock = Lock()
     output_file = fs.open(output_file, "wb")
     results = [None] * n_chunks
-    threads = [
-        Thread(
-            target=stream_single_file_new_session_chunks,
-            args=(credentials, url, output_file, start, end, lock, results, idx),
-        )
-        for idx, (start, end) in enumerate(zip(starts, ends))
-    ]
-    for thread in threads:
-        thread.start()
+    queue = Queue(max_threads)
+    threads = []
+    for _ in range(max_threads):
+        t = Thread(target=_worker,
+            args=(queue, credentials, url, output_file, lock, results))
+        t.start()
+        threads.append(t)
 
-    for thread in threads:
-        thread.join()
+    for idx, (start, end) in enumerate(zip(starts, ends)):
+        queue.put((idx, start, end))
+
+    queue.join()
+
+    for _ in range(max_threads):
+        queue.put((None, None, None))
+    for t in threads:
+        t.join()
+
     output_file.close()
     return results
 
