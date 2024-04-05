@@ -7,7 +7,6 @@ import logging
 import os
 import re
 import sys
-import threading
 from datetime import timedelta
 from io import BytesIO
 import math
