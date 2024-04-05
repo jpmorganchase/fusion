@@ -736,7 +736,7 @@ def _stream_single_file_new_session_dry_run(credentials, url: str, output_file: 
 
 
 def stream_single_file_new_session_chunks(
-    credentials,
+    session,
     url: str,
     output_file,
     start: int,
@@ -750,7 +750,7 @@ def stream_single_file_new_session_chunks(
     """Function to stream a single file from the API to a file on disk.
 
     Args:
-        credentials (FusionCredentials): Valid user credentials to provide an acces token
+        session (class `requests.Session`): HTTP session.
         url (str): The URL to call.
         output_file: The file handle for the target write file.
         start (int): Start byte.
@@ -772,7 +772,7 @@ def stream_single_file_new_session_chunks(
 
     try:
         url = url + f"?downloadRange=bytes={start}-{end-1}"
-        with get_session(credentials, url).get(url, stream=False) as r:
+        with session.get(url, stream=False) as r:
             r.raise_for_status()
             with lock:
                 output_file.seek(start)
@@ -793,12 +793,12 @@ def stream_single_file_new_session_chunks(
         return 1
 
 
-def _worker(queue, credentials, url, output_file, lock, results):
+def _worker(queue, session, url, output_file, lock, results):
     while True:
         idx, start, end = queue.get()
         if idx is None:
             break
-        stream_single_file_new_session_chunks(credentials, url, output_file, start, end, lock, results, idx)
+        stream_single_file_new_session_chunks(session, url, output_file, start, end, lock, results, idx)
         queue.task_done()
 
 
@@ -824,7 +824,8 @@ def download_single_file_threading(
 
     """
 
-    header = get_session(credentials, url).head(url).headers
+    session = get_session(credentials, url)
+    header = session.head(url).headers
     content_length = int(header["Content-Length"])
     n_chunks = int(math.ceil(content_length / chunk_size))
     starts = [i * chunk_size for i in range(n_chunks)]
@@ -836,7 +837,7 @@ def download_single_file_threading(
     threads = []
     for _ in range(max_threads):
         t = Thread(target=_worker,
-            args=(queue, credentials, url, output_file, lock, results))
+            args=(queue, session, url, output_file, lock, results))
         t.start()
         threads.append(t)
 
