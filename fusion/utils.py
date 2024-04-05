@@ -833,7 +833,7 @@ def download_single_file_threading(
     lock = Lock()
     output_file = fs.open(output_file, "wb")
     results = [None] * n_chunks
-    queue = Queue(max_threads)
+    queue: Queue = Queue(max_threads)
     threads = []
     for _ in range(max_threads):
         t = Thread(
