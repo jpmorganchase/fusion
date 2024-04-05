@@ -4,18 +4,17 @@ import contextlib
 import datetime
 import json as js
 import logging
+import math
 import os
 import re
 import sys
 from datetime import timedelta
 from io import BytesIO
-import math
 from pathlib import Path
+from queue import Queue
+from threading import Lock, Thread
 from typing import Union
 from urllib.parse import urlparse, urlunparse
-from threading import Thread
-from threading import Lock
-from queue import Queue
 
 import aiohttp
 import joblib
@@ -113,13 +112,13 @@ def cpu_count(thread_pool_size: int = None, is_threading=False) -> int:
         return int(os.environ["NUM_THREADS"])
     if thread_pool_size:
         return thread_pool_size
-    elif is_threading:
+    if is_threading:
         return 10
+
+    if mp.cpu_count():
+        thread_pool_size = mp.cpu_count()
     else:
-        if mp.cpu_count():
-            thread_pool_size = mp.cpu_count()
-        else:
-            thread_pool_size = DEFAULT_THREAD_POOL_SIZE
+        thread_pool_size = DEFAULT_THREAD_POOL_SIZE
     return thread_pool_size
 
 
@@ -797,7 +796,9 @@ def _worker(queue, session, url, output_file, lock, results):
         idx, start, end = queue.get()
         if idx is None:
             break
-        stream_single_file_new_session_chunks(session, url, output_file, start, end, lock, results, idx)
+        stream_single_file_new_session_chunks(
+            session, url, output_file, start, end, lock, results, idx
+        )
         queue.task_done()
 
 
@@ -807,7 +808,7 @@ def download_single_file_threading(
     output_file,
     chunk_size: int = 5 * 2**20,
     fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
-    max_threads: int = 10
+    max_threads: int = 10,
 ):
     """Download single file using range requests.
 
@@ -835,8 +836,9 @@ def download_single_file_threading(
     queue = Queue(max_threads)
     threads = []
     for _ in range(max_threads):
-        t = Thread(target=_worker,
-            args=(queue, session, url, output_file, lock, results))
+        t = Thread(
+            target=_worker, args=(queue, session, url, output_file, lock, results)
+        )
         t.start()
         threads.append(t)
 

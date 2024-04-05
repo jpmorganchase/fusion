@@ -1,4 +1,5 @@
 """Command line environment for fusion."""
+
 import argparse
 import inspect
 

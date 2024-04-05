@@ -713,7 +713,7 @@ class Fusion:
                     ),
                     output_file,
                     fs=self.fs,
-                    max_threads=n_par
+                    max_threads=n_par,
                 )
                 if (len(res) > 0) and all((r[0] for r in res)):
                     pbar.update(1)
