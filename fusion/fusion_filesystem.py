@@ -155,9 +155,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                     {
                         "name": u,
                         "size": None,
-                        "type": "directory"
-                        if not (u.endswith("csv") or u.endswith("parquet"))
-                        else "file",
+                        "type": (
+                            "directory"
+                            if not (u.endswith("csv") or u.endswith("parquet"))
+                            else "file"
+                        ),
                     }
                     for u in out
                 ]

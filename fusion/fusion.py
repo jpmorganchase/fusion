@@ -661,8 +661,6 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-        n_par = cpu_count(n_par)
-
         valid_date_range = re.compile(
             r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$"
         )
@@ -694,6 +692,7 @@ class Fusion:
                 self.fs.mkdir(d, create_parents=True)
 
         if len(required_series) == 1:
+            n_par = cpu_count(n_par, is_threading=True)
             with tqdm(total=1) as pbar:
                 output_file = distribution_to_filename(
                     download_folders[0],
@@ -714,12 +713,14 @@ class Fusion:
                     ),
                     output_file,
                     fs=self.fs,
+                    max_threads=n_par,
                 )
                 if (len(res) > 0) and all((r[0] for r in res)):
                     pbar.update(1)
                     res = [(res[0][0], output_file, res[0][2])]
 
         else:
+            n_par = cpu_count(n_par)
             download_spec = [
                 {
                     "credentials": self.credentials,
@@ -813,7 +814,6 @@ class Fusion:
         if dt_str == "sample":
             dataset_format = "csv"
 
-        n_par = cpu_count(n_par)
         if not download_folder:
             download_folder = self.download_folder
         download_res = self.download(

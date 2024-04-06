@@ -4,17 +4,17 @@ import contextlib
 import datetime
 import json as js
 import logging
+import math
 import os
 import re
 import sys
 from datetime import timedelta
 from io import BytesIO
-import math
 from pathlib import Path
+from queue import Queue
+from threading import Lock, Thread
 from typing import Union
 from urllib.parse import urlparse, urlunparse
-from threading import Thread
-from threading import Lock
 
 import aiohttp
 import joblib
@@ -98,11 +98,12 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def cpu_count(thread_pool_size: int = None) -> int:
+def cpu_count(thread_pool_size: int = None, is_threading=False) -> int:
     """Determine the number of cpus/threads for parallelization.
 
     Args:
-        thread_pool_size: override argument for number of cpus/threads.
+        thread_pool_size (int): override argument for number of cpus/threads.
+        is_threading: use threads instead of CPUs
 
     Returns: number of cpus/threads to use.
 
@@ -111,11 +112,13 @@ def cpu_count(thread_pool_size: int = None) -> int:
         return int(os.environ["NUM_THREADS"])
     if thread_pool_size:
         return thread_pool_size
+    if is_threading:
+        return 10
+
+    if mp.cpu_count():
+        thread_pool_size = mp.cpu_count()
     else:
-        if mp.cpu_count():
-            thread_pool_size = mp.cpu_count()
-        else:
-            thread_pool_size = DEFAULT_THREAD_POOL_SIZE
+        thread_pool_size = DEFAULT_THREAD_POOL_SIZE
     return thread_pool_size
 
 
@@ -731,7 +734,7 @@ def _stream_single_file_new_session_dry_run(credentials, url: str, output_file: 
 
 
 def stream_single_file_new_session_chunks(
-    credentials,
+    session,
     url: str,
     output_file,
     start: int,
@@ -745,7 +748,7 @@ def stream_single_file_new_session_chunks(
     """Function to stream a single file from the API to a file on disk.
 
     Args:
-        credentials (FusionCredentials): Valid user credentials to provide an acces token
+        session (class `requests.Session`): HTTP session.
         url (str): The URL to call.
         output_file: The file handle for the target write file.
         start (int): Start byte.
@@ -767,7 +770,7 @@ def stream_single_file_new_session_chunks(
 
     try:
         url = url + f"?downloadRange=bytes={start}-{end-1}"
-        with get_session(credentials, url).get(url, stream=False) as r:
+        with session.get(url, stream=False) as r:
             r.raise_for_status()
             with lock:
                 output_file.seek(start)
@@ -788,12 +791,24 @@ def stream_single_file_new_session_chunks(
         return 1
 
 
+def _worker(queue, session, url, output_file, lock, results):
+    while True:
+        idx, start, end = queue.get()
+        if idx is None:
+            break
+        stream_single_file_new_session_chunks(
+            session, url, output_file, start, end, lock, results, idx
+        )
+        queue.task_done()
+
+
 def download_single_file_threading(
     credentials,
     url: str,
     output_file,
     chunk_size: int = 5 * 2**20,
     fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
+    max_threads: int = 10,
 ):
     """Download single file using range requests.
 
@@ -803,11 +818,14 @@ def download_single_file_threading(
         output_file (str): The filename that the data will be saved into.
         chunk_size (int): Chunk size for parallelization.
         fs (fsspec.filesystem): Filesystem.
+        max_threads (int, optional): Number of threads to use. Defaults to 10.
 
     Returns: List[Tuple]
 
     """
-    header = get_session(credentials, url).head(url).headers
+
+    session = get_session(credentials, url)
+    header = session.head(url).headers
     content_length = int(header["Content-Length"])
     n_chunks = int(math.ceil(content_length / chunk_size))
     starts = [i * chunk_size for i in range(n_chunks)]
@@ -815,18 +833,25 @@ def download_single_file_threading(
     lock = Lock()
     output_file = fs.open(output_file, "wb")
     results = [None] * n_chunks
-    threads = [
-        Thread(
-            target=stream_single_file_new_session_chunks,
-            args=(credentials, url, output_file, start, end, lock, results, idx),
+    queue: Queue = Queue(max_threads)
+    threads = []
+    for _ in range(max_threads):
+        t = Thread(
+            target=_worker, args=(queue, session, url, output_file, lock, results)
         )
-        for idx, (start, end) in enumerate(zip(starts, ends))
-    ]
-    for thread in threads:
-        thread.start()
+        t.start()
+        threads.append(t)
 
-    for thread in threads:
-        thread.join()
+    for idx, (start, end) in enumerate(zip(starts, ends)):
+        queue.put((idx, start, end))
+
+    queue.join()
+
+    for _ in range(max_threads):
+        queue.put((None, None, None))
+    for t in threads:
+        t.join()
+
     output_file.close()
     return results
 

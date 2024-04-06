@@ -131,9 +131,11 @@ def _get_fusion_df(
             urls = [catalog + "/datasets/" + k for k in keys]
             urls = [i.replace("distribution", "distributions") for i in urls]
             urls = [
-                "/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:])
-                if "datasetseries" not in i
-                else i
+                (
+                    "/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:])
+                    if "datasetseries" not in i
+                    else i
+                )
                 for i in urls
             ]
             # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
