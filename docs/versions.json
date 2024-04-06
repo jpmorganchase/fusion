@@ -3,16 +3,21 @@
     "version": "${{",
     "title": "${{",
     "aliases": [
-      "}}",
-      "steps.tag_name.outputs.current_version"
+      "steps.tag_name.outputs.current_version",
+      "}}"
+    ]
+  },
+  {
+    "version": "1.0.22",
+    "title": "1.0.22",
+    "aliases": [
+      "latest"
     ]
   },
   {
     "version": "1.0.21",
     "title": "1.0.21",
-    "aliases": [
-      "latest"
-    ]
+    "aliases": []
   },
   {
     "version": "1.0.20",
