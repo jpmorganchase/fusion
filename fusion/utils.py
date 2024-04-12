@@ -499,7 +499,7 @@ def distribution_to_url(
     datasetseries: str,
     file_format: str,
     catalog: str = "common",
-    is_download: bool = False
+    is_download: bool = False,
 ) -> str:
     """Returns the API URL to download a dataset distribution.
 
@@ -527,9 +527,10 @@ def distribution_to_url(
             f"{datasetseries}/distributions/{file_format}/operationType/download"
         )
     return (
-            f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-            f"{datasetseries}/distributions/{file_format}"
-        )
+        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+        f"{datasetseries}/distributions/{file_format}"
+    )
+
 
 def _get_canonical_root_url(any_url: str) -> str:
     """Get the full URL for the API endpoint.
@@ -994,7 +995,9 @@ def path_to_url(x, is_raw=False, is_download=False):
     """
     catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
     ext = "raw" if is_raw else ext
-    return "/".join(distribution_to_url("", dataset, date, ext, catalog, is_download).split("/")[1:])
+    return "/".join(
+        distribution_to_url("", dataset, date, ext, catalog, is_download).split("/")[1:]
+    )
 
 
 def upload_files(
