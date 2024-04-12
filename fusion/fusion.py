@@ -710,6 +710,7 @@ class Fusion:
                         required_series[0][2],
                         required_series[0][3],
                         required_series[0][0],
+                        is_download=True,
                     ),
                     output_file,
                     fs=self.fs,
@@ -725,7 +726,12 @@ class Fusion:
                 {
                     "credentials": self.credentials,
                     "url": distribution_to_url(
-                        self.root_url, series[1], series[2], series[3], series[0]
+                        self.root_url,
+                        series[1],
+                        series[2],
+                        series[3],
+                        series[0],
+                        is_download=True,
                     ),
                     "output_file": distribution_to_filename(
                         download_folders[i],

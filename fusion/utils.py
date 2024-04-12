@@ -499,6 +499,7 @@ def distribution_to_url(
     datasetseries: str,
     file_format: str,
     catalog: str = "common",
+    is_download: bool = False
 ) -> str:
     """Returns the API URL to download a dataset distribution.
 
@@ -508,6 +509,7 @@ def distribution_to_url(
         datasetseries (str): The datasetseries instance identifier.
         file_format (str): The file type, e.g. CSV or Parquet
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
+        is_download (bool, optional): Is url for download
 
     Returns:
         str: A URL for the API distribution endpoint.
@@ -519,12 +521,15 @@ def distribution_to_url(
         return (
             f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
         )
-
+    if is_download:
+        return (
+            f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+            f"{datasetseries}/distributions/{file_format}/operationType/download"
+        )
     return (
-        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-        f"{datasetseries}/distributions/{file_format}/operationType/download"
-    )
-
+            f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+            f"{datasetseries}/distributions/{file_format}"
+        )
 
 def _get_canonical_root_url(any_url: str) -> str:
     """Get the full URL for the API endpoint.
@@ -976,19 +981,20 @@ def is_dataset_raw(paths, fs_fusion):
     return ret
 
 
-def path_to_url(x, is_raw=False):
+def path_to_url(x, is_raw=False, is_download=False):
     """Convert file name to fusion url.
 
     Args:
         x (str): File path.
         is_raw(bool, optional): Is the dataset raw.
+        is_download(bool, optional): Is the url for download.
 
     Returns (str): Fusion url string.
 
     """
     catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
     ext = "raw" if is_raw else ext
-    return "/".join(distribution_to_url("", dataset, date, ext, catalog).split("/")[1:])
+    return "/".join(distribution_to_url("", dataset, date, ext, catalog, is_download).split("/")[1:])
 
 
 def upload_files(
