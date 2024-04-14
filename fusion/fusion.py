@@ -7,7 +7,7 @@ import sys
 import warnings
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Optional, Union
 from zipfile import ZipFile
 
 import pandas as pd
@@ -32,6 +32,7 @@ from .utils import (
     normalise_dt_param_str,
     parquet_to_table,
     path_to_url,
+    proxy_print,
     read_csv,
     read_json,
     read_parquet,
@@ -181,7 +182,7 @@ class Fusion:
         """
         self._default_catalog = catalog
 
-    def __use_catalog(self, catalog):
+    def __use_catalog(self, catalog: Optional[str]) -> str:
         """Determine which catalog to use in an API call.
 
         Args:
@@ -195,7 +196,7 @@ class Fusion:
 
         return catalog
 
-    def get_fusion_filesystem(self):
+    def get_fusion_filesystem(self) -> FusionHTTPFileSystem:
         """Creates Fusion Filesystem.
 
         Returns: Fusion Filesystem
@@ -216,11 +217,11 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            proxy_print(tabulate(df, headers="keys", tablefmt="psql"))
 
         return df
 
-    def catalog_resources(self, catalog: str = None, output: bool = False) -> pd.DataFrame:
+    def catalog_resources(self, catalog: Optional[str] = None, output: bool = False) -> pd.DataFrame:
         """List the resources contained within the catalog, for example products and datasets.
 
         Args:
@@ -236,15 +237,15 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
+            proxy_print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
 
         return df
 
     def list_products(
         self,
-        contains: Union[str, list] = None,
+        contains: Optional[Union[str, list]] = None,
         id_contains: bool = False,
-        catalog: str = None,
+        catalog: Optional[str] = None,
         output: bool = False,
         max_results: int = -1,
         display_all_columns: bool = False,
@@ -303,20 +304,20 @@ class Fusion:
             df = df[0:max_results]
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
+            proxy_print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
 
         return df
 
-    def list_datasets(
+    def list_datasets(  # noqa: PLR0913
         self,
-        contains: Union[str, list] = None,
+        contains: Optional[Union[str, list]] = None,
         id_contains: bool = False,
-        product: Union[str, list] = None,
-        catalog: str = None,
+        product: Optional[Union[str, list]] = None,
+        catalog: Optional[str] = None,
         output: bool = False,
         max_results: int = -1,
         display_all_columns: bool = False,
-        status: str = None,
+        status: Optional[str] = None,
     ) -> pd.DataFrame:
         """Get the datasets contained in a catalog.
 
@@ -389,11 +390,11 @@ class Fusion:
             df = df[df["status"] == status]
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
+            proxy_print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
 
         return df
 
-    def dataset_resources(self, dataset: str, catalog: str = None, output: bool = False) -> pd.DataFrame:
+    def dataset_resources(self, dataset: str, catalog: Optional[str] = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
 
         Args:
@@ -410,14 +411,14 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            proxy_print(tabulate(df, headers="keys", tablefmt="psql"))
 
         return df
 
     def list_dataset_attributes(
         self,
         dataset: str,
-        catalog: str = None,
+        catalog: Optional[str] = None,
         output: bool = False,
         display_all_columns: bool = False,
     ) -> pd.DataFrame:
@@ -453,14 +454,14 @@ class Fusion:
             ]
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
+            proxy_print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
 
         return df
 
     def list_datasetmembers(
         self,
         dataset: str,
-        catalog: str = None,
+        catalog: Optional[str] = None,
         output: bool = False,
         max_results: int = -1,
     ) -> pd.DataFrame:
@@ -485,12 +486,12 @@ class Fusion:
             df = df[0:max_results]
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            proxy_print(tabulate(df, headers="keys", tablefmt="psql"))
 
         return df
 
     def datasetmember_resources(
-        self, dataset: str, series: str, catalog: str = None, output: bool = False
+        self, dataset: str, series: str, catalog: Optional[str] = None, output: bool = False
     ) -> pd.DataFrame:
         """List the available resources for a datasetseries member.
 
@@ -510,11 +511,13 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            proxy_print(tabulate(df, headers="keys", tablefmt="psql"))
 
         return df
 
-    def list_distributions(self, dataset: str, series: str, catalog: str = None, output: bool = False) -> pd.DataFrame:
+    def list_distributions(
+        self, dataset: str, series: str, catalog: Optional[str] = None, output: bool = False
+    ) -> pd.DataFrame:
         """List the available distributions (downloadable instances of the dataset with a format type).
 
         Args:
@@ -532,7 +535,7 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            proxy_print(tabulate(df, headers="keys", tablefmt="psql"))
 
         return df
 
@@ -541,7 +544,7 @@ class Fusion:
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: str = None,
+        catalog: Optional[str] = None,
     ):
         """Resolve distribution tuples given specification params.
 
@@ -596,18 +599,18 @@ class Fusion:
 
         return tups
 
-    def download(
+    def download(  # noqa: PLR0913, PLR0912
         self,
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: str = None,
-        n_par: int = None,
+        catalog: Optional[str] = None,
+        n_par: Optional[int] = None,
         show_progress: bool = True,
         force_download: bool = False,
-        download_folder: str = None,
+        download_folder: Optional[str] = None,
         return_paths: bool = False,
-        partitioning: str = None,
+        partitioning: Optional[str] = None,
     ):
         """Downloads the requested distributions of a dataset to disk.
 
@@ -683,7 +686,7 @@ class Fusion:
                     output_file,
                     fs=self.fs,
                 )
-                if (len(res) > 0) and all((r[0] for r in res)):
+                if (len(res) > 0) and all(r[0] for r in res):
                     pbar.update(1)
                     res = [(res[0][0], output_file, res[0][2])]
 
@@ -718,24 +721,24 @@ class Fusion:
             else:
                 res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(**spec) for spec in download_spec)
 
-        if (len(res) > 0) and (not all((r[0] for r in res))):
+        if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
                 if not r[0]:
-                    warnings.warn(f"The download of {r[1]} was not successful")
+                    warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
         return res if return_paths else None
 
-    def to_df(
+    def to_df(  # noqa: PLR0913
         self,
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: str = None,
-        n_par: int = None,
+        catalog: Optional[str] = None,
+        n_par: Optional[int] = None,
         show_progress: bool = True,
-        columns: List = None,
-        filters: List = None,
+        columns: Optional[list] = None,
+        filters: Optional[list] = None,
         force_download: bool = False,
-        download_folder: str = None,
+        download_folder: Optional[str] = None,
         dataframe_type: str = "pandas",
         **kwargs,
     ) -> pd.DataFrame:
@@ -807,7 +810,7 @@ class Fusion:
             "raw": read_csv,
         }
 
-        pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
+        pd_read_default_kwargs: dict[str, dict[str, object]] = {
             "csv": {
                 "columns": columns,
                 "filters": filters,
@@ -853,11 +856,11 @@ class Fusion:
         elif dataset_format == "raw":
             dataframes = (
                 pd.concat(
-                    [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()],
-                    ignore_index=True,  # type: ignore
-                )  # type: ignore
+                    [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()],  # type: ignore
+                    ignore_index=True,
+                )
                 for f in files
-            )  # type: ignore
+            )
             df = pd.concat(dataframes, ignore_index=True)
         else:
             dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)  # type: ignore
@@ -875,7 +878,7 @@ class Fusion:
         dataset: str,
         series_member: str,
         dataset_format: str = "parquet",
-        catalog: str = None,
+        catalog: Optional[str] = None,
     ) -> BytesIO:
         """Returns an instance of dataset (the distribution) as a bytes object.
 
@@ -898,18 +901,18 @@ class Fusion:
 
         return Fusion._call_for_bytes_object(url, self.session)
 
-    def to_table(
+    def to_table(  # noqa: PLR0913
         self,
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: str = None,
-        n_par: int = None,
+        catalog: Optional[str] = None,
+        n_par: Optional[int] = None,
         show_progress: bool = True,
-        columns: List = None,
-        filters: List = None,
+        columns: Optional[list] = None,
+        filters: Optional[list] = None,
         force_download: bool = False,
-        download_folder: str = None,
+        download_folder: Optional[str] = None,
         **kwargs,
     ) -> pd.DataFrame:
         """Gets distributions for a specified date or date range and returns the data as an arrow table.
@@ -974,7 +977,7 @@ class Fusion:
             "raw": csv_to_table,
         }
 
-        read_default_kwargs: Dict[str, Dict[str, object]] = {
+        read_default_kwargs: dict[str, dict[str, object]] = {
             "csv": {"columns": columns, "filters": filters, "fs": self.fs},
             "parquet": {"columns": columns, "filters": filters, "fs": self.fs},
             "json": {"columns": columns, "filters": filters, "fs": self.fs},
@@ -1003,13 +1006,13 @@ class Fusion:
 
         return tbl
 
-    def upload(
+    def upload(  # noqa: PLR0913
         self,
         path: str,
-        dataset: str = None,
+        dataset: Optional[str] = None,
         dt_str: str = "latest",
-        catalog: str = None,
-        n_par: int = None,
+        catalog: Optional[str] = None,
+        n_par: Optional[int] = None,
         show_progress: bool = True,
         return_paths: bool = False,
         multipart=True,
@@ -1072,7 +1075,7 @@ class Fusion:
                         f"File file has not been uploaded, one of the catalog: {catalog} "
                         f"or dataset: {dataset} does not exit."
                     )
-                    warnings.warn(msg)
+                    warnings.warn(msg, stacklevel=2)
                     return [(False, path, Exception(msg))]
                 is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
                 file_format = path.split(".")[-1]
@@ -1100,16 +1103,16 @@ class Fusion:
             failed_res = [r for r in res if not r[0]]
             msg = f"Not all uploads were successfully completed. The following failed:\n{failed_res}"
             logger.warning(msg)
-            warnings.warn(msg)
+            warnings.warn(msg, stacklevel=2)
 
         return res if return_paths else None
 
-    def from_bytes(
+    def from_bytes(  # noqa: PLR0913
         self,
         data: BytesIO,
-        dataset: str = None,
+        dataset: Optional[str] = None,
         series_member: str = "latest",
-        catalog: str = None,
+        catalog: Optional[str] = None,
         distribution: str = "parquet",
         show_progress: bool = True,
         return_paths: bool = False,
@@ -1163,14 +1166,14 @@ class Fusion:
             failed_res = [r for r in res if not r[0]]
             msg = f"Not all uploads were successfully completed. The following failed:\n{failed_res}"
             logger.warning(msg)
-            warnings.warn(msg)
+            warnings.warn(msg, stacklevel=2)
 
         return res if return_paths else None
 
     def listen_to_events(
         self,
-        last_event_id: str = None,
-        catalog: str = None,
+        last_event_id: Optional[str] = None,
+        catalog: Optional[str] = None,
         url: str = "https://fusion.jpmorgan.com/api/v1/",
     ) -> Union[None, pd.DataFrame]:
         """Run server sent event listener in the background. Retrieve results by running get_events.
@@ -1218,9 +1221,9 @@ class Fusion:
                         else:
                             self.events = pd.concat([self.events, pd.DataFrame(event)], ignore_index=True)
                 except TimeoutError as ex:
-                    raise ex
+                    raise ex from None
                 except Exception as e:
-                    raise Exception(e)
+                    raise Exception(e) from None
 
         _ = self.list_catalogs()  # refresh token
         if "headers" in kwargs:
@@ -1229,9 +1232,9 @@ class Fusion:
             kwargs["headers"] = {
                 "authorization": f"bearer {self.credentials.bearer_token}",
             }
-        if "http" in self.credentials.proxies.keys():
+        if "http" in self.credentials.proxies:
             kwargs["proxy"] = self.credentials.proxies["http"]
-        elif "https" in self.credentials.proxies.keys():
+        elif "https" in self.credentials.proxies:
             kwargs["proxy"] = self.credentials.proxies["https"]
         th = threading.Thread(target=asyncio.run, args=(async_events(),), daemon=True)
         th.start()
@@ -1239,8 +1242,8 @@ class Fusion:
 
     def get_events(
         self,
-        last_event_id: str = None,
-        catalog: str = None,
+        last_event_id: Optional[str] = None,
+        catalog: Optional[str] = None,
         in_background: bool = True,
         url: str = "https://fusion.jpmorgan.com/api/v1/",
     ) -> Union[None, pd.DataFrame]:
@@ -1273,14 +1276,14 @@ class Fusion:
             try:
                 for msg in messages:
                     event = js.loads(msg.data)
-                    print(event)
+                    proxy_print(event)
                     if event["type"] != "HeartBeatNotification":
                         lst.append(event)
             except KeyboardInterrupt:
                 return pd.DataFrame(lst)
             except Exception as e:
-                raise Exception(e)
-            finally:
-                return None
+                raise e
         else:
             return self.events
+
+        return None

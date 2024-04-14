@@ -4,12 +4,12 @@ import base64
 import hashlib
 import json
 import logging
-import os
 import sys
 import time
 import warnings
 from os.path import relpath
 from pathlib import Path
+from typing import Optional
 
 import fsspec
 import pandas as pd
@@ -82,7 +82,7 @@ def _download(fs_fusion, fs_local, df, n_par, show_progress=True, local_path="")
 def _upload(fs_fusion, fs_local, df, n_par, show_progress=True, local_path=""):
     df.rename(columns={"path_local": "path"}, inplace=True)
     df["path"] = local_path + df["path"]
-    parallel = True if len(df) > 1 else False
+    parallel = len(df) > 1
     res = upload_files(
         fs_fusion,
         fs_local,
@@ -126,7 +126,6 @@ def _get_fusion_df(fs_fusion, datasets_lst, catalog, flatten=False, dataset_form
                 ("/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:]) if "datasetseries" not in i else i)
                 for i in urls
             ]
-            # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
             sz = [int(i["values"][1]) for i in changes]
             md = [i["values"][2].split("SHA-256=")[-1][:44] for i in changes]
             keys = [_url_to_path(i) for i in urls]
@@ -167,8 +166,8 @@ def _get_local_state(
         local_file_validation = validate_file_names(local_rel_path, fs_fusion)
         local_files += [f for flag, f in zip(local_file_validation, local_files_temp) if flag]
         local_files_rel += [
-            os.path.join(local_dir, relpath(i, local_dir)).replace("\\", "/").replace(local_path, "")
-            for i in local_files_temp
+            Path(local_dir, relpath(loc_file, local_dir).replace("\\", "/").replace(local_path, ""))
+            for loc_file in local_files_temp
         ]
 
     local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
@@ -193,15 +192,15 @@ def _get_local_state(
     return df_local
 
 
-def _synchronize(
+def _synchronize(  # noqa: PLR0913
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
     df_local: pd.DataFrame,
     df_fusion: pd.DataFrame,
     direction: str = "upload",
-    n_par: int = None,
+    n_par: Optional[int] = None,
     show_progress: bool = True,
-    local_path="",
+    local_path: str = "",
 ):
     """Synchronize two filesystems."""
 
@@ -210,7 +209,7 @@ def _synchronize(
         if len(df_local) == 0:
             msg = "No dataset members available for upload for your dataset selection."
             logger.warning(msg)
-            warnings.warn(msg)
+            warnings.warn(msg, stacklevel=2)
             res = []
         else:
             join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="left")
@@ -227,7 +226,7 @@ def _synchronize(
         if len(df_fusion) == 0:
             msg = "No dataset members available for download for your dataset selection."
             logger.warning(msg)
-            warnings.warn(msg)
+            warnings.warn(msg, stacklevel=2)
             res = []
         else:
             join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="right")
@@ -245,19 +244,19 @@ def _synchronize(
     return res
 
 
-def fsync(
+def fsync(  # noqa: PLR0913
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
-    products: list = None,
-    datasets: list = None,
-    catalog: str = None,
+    products: Optional[list] = None,
+    datasets: Optional[list] = None,
+    catalog: Optional[str] = None,
     direction: str = "upload",
-    flatten=False,
-    dataset_format=None,
-    n_par=None,
-    show_progress=True,
-    local_path="",
-    log_level=logging.ERROR,
+    flatten: bool = False,
+    dataset_format: Optional[str] = None,
+    n_par: Optional[int] = None,
+    show_progress: bool = True,
+    local_path: str = "",
+    log_level: int = logging.ERROR,
     log_path: str = ".",
 ):
     """Synchronisation between the local filesystem and Fusion.
@@ -283,7 +282,7 @@ def fsync(
 
     if logger.hasHandlers():
         logger.handlers.clear()
-    file_handler = logging.FileHandler(filename="{0}/{1}".format(log_path, "fusion_fsync.log"))
+    file_handler = logging.FileHandler(filename=f"{log_path}/fusion_fsync.log")
     logging.addLevelName(VERBOSE_LVL, "VERBOSE")
     stdout_handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter(
@@ -295,9 +294,9 @@ def fsync(
     logger.addHandler(file_handler)
     logger.setLevel(log_level)
 
-    catalog = "common" if not catalog else catalog
-    datasets = [] if not datasets else datasets
-    products = [] if not products else products
+    catalog = catalog if catalog else "common"
+    datasets = datasets if datasets else []
+    products = products if products else []
 
     assert len(products) > 0 or len(datasets) > 0, "At least one list products or datasets should be non-empty."
     assert direction in [
@@ -339,7 +338,7 @@ def fsync(
                     show_progress,
                     local_path,
                 )
-                if len(res) == 0 or all((i[0] for i in res)):
+                if len(res) == 0 or all(i[0] for i in res):
                     local_state = local_state_temp
                     fusion_state = fusion_state_temp
 
@@ -349,13 +348,13 @@ def fsync(
                     errs = [r for r in res if not r[2]]
                     logger.warning(msg)
                     logger.warning(errs)
-                    warnings.warn(msg)
+                    warnings.warn(msg, stacklevel=2)
 
             else:
                 logger.info("All synced, sleeping")
                 time.sleep(10)
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:  # noqa: PERF203
             if input("Type exit to exit: ") != "exit":
                 continue
             break

@@ -99,6 +99,7 @@ dev-dependencies = [
     "types-requests >=2.27.0",
     "types-tabulate >= 0.8.8",
     "virtualenv",
+    "pytest-random-order>=1.1.1",
 ]
 
 
@@ -114,3 +115,37 @@ packages = [
 line-length = 120
 indent-width = 4
 target-version = "py39"
+
+[tool.ruff.lint]
+extend-select = [
+    'Q',
+    'B',
+    'UP',
+    'I',
+    'F',
+    'PTH',
+    'PIE',
+    'TID',
+    'ERA',
+    'ARG',
+    'PL',
+    #'ANN',
+    'SIM',
+    'PERF',
+    'T20',
+]
+extend-ignore = ["S101", "FA100", "F541"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["fusion"]
+
+[tool.ruff.lint.pylint]
+max-args = 7
+
+[tool.pytest.ini_options]
+addopts = "--cov fusion --cov-report html:.reports/html --cov-report term --random-order -p no:warnings -v"
+minversion = "8.0"
+testpaths = "tests"
+pythonfiles = "test_*.py"
+
+

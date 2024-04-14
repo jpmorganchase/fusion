@@ -27,7 +27,7 @@ def test_FusionCredentials_empty_pxy(example_creds_dict_empty_pxy):
     FusionCredentials.from_dict(example_creds_dict_empty_pxy)
 
 
-def test_FusionCredentials_from_empty(example_client_id, example_client_secret, example_http_proxy):
+def test_FusionCredentials_from_empty(example_client_id, example_client_secret):
     from fusion.authentication import FusionCredentials
 
     creds = FusionCredentials.generate_credentials_file(
@@ -126,11 +126,11 @@ def test_date_parsing():
 
     from fusion.utils import _normalise_dt_param
 
-    assert "2020-12-12" == _normalise_dt_param(20201212)
-    assert "2020-12-12" == _normalise_dt_param("20201212")
-    assert "2020-12-12" == _normalise_dt_param("2020-12-12")
-    assert "2020-12-12" == _normalise_dt_param(datetime.date(2020, 12, 12))
-    assert "2020-12-12" == _normalise_dt_param(datetime.datetime(2020, 12, 12, 23, 55, 59, 342380))
+    assert _normalise_dt_param(20201212) == "2020-12-12"
+    assert _normalise_dt_param("20201212") == "2020-12-12"
+    assert _normalise_dt_param("2020-12-12") == "2020-12-12"
+    assert _normalise_dt_param(datetime.date(2020, 12, 12)) == "2020-12-12"
+    assert _normalise_dt_param(datetime.datetime(2020, 12, 12, 23, 55, 59, 342380)) == "2020-12-12"
 
 
 @pytest.mark.parametrize("ref_int", [-1, 0, 1, 2])

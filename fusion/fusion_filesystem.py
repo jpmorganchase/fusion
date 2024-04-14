@@ -8,6 +8,7 @@ from copy import deepcopy
 from urllib.parse import quote, urljoin
 
 import pandas as pd
+import requests
 from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
@@ -47,9 +48,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             self.credentials = kwargs["client_kwargs"]["credentials"]
 
         if self.credentials.proxies:
-            if "http" in self.credentials.proxies.keys():
+            if "http" in self.credentials.proxies:
                 kwargs["proxy"] = self.credentials.proxies["http"]
-            elif "https" in self.credentials.proxies.keys():
+            elif "https" in self.credentials.proxies:
                 kwargs["proxy"] = self.credentials.proxies["https"]
 
         if "headers" not in kwargs:
@@ -59,7 +60,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
     async def _async_raise_not_found_for_status(self, response, url):
         """Raises FileNotFoundError for 404s, otherwise uses raise_for_status."""
-        if response.status == 404:
+        if response.status == requests.codes.not_found:
             self._raise_not_found_for_status(response, url)
         else:
             real_reason = ""
@@ -101,7 +102,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             return out
         except Exception as ex:
             logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
-            raise Exception(ex)
+            raise ex
 
     async def _ls_real(self, url, detail=True, **kwargs):
         # ignoring URL-encoded arguments
@@ -110,7 +111,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             url = f'{self.client_kwargs["root_url"]}catalogs/' + url
         kw = self.kwargs.copy()
         kw.update(kwargs)
-        # logger.debug(url)
         session = await self.set_session()
         is_file = False
         size = None
@@ -131,7 +131,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 out = await r.json()
 
         if not is_file:
-            out = [urljoin(clean_url + "/", x["identifier"]) for x in out["resources"]]
+            out = [urljoin(clean_url + "/", x["identifier"]) for x in out["resources"]]  # type: ignore
 
         if detail:
             if not is_file:
@@ -139,7 +139,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                     {
                         "name": u,
                         "size": None,
-                        "type": ("directory" if not (u.endswith("csv") or u.endswith("parquet")) else "file"),
+                        "type": ("directory" if not u.endswith(("csv", "parquet")) else "file"),
                     }
                     for u in out
                 ]
@@ -202,13 +202,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 for k in ret:
                     k["name"] = k["name"].split(f'{self.client_kwargs["root_url"]}catalogs/')[-1]
 
-        else:
-            if not keep_protocol:
-                return [x.split(f'{self.client_kwargs["root_url"]}catalogs/')[-1] for x in ret]
+        elif not keep_protocol:
+            return [x.split(f'{self.client_kwargs["root_url"]}catalogs/')[-1] for x in ret]
 
         return ret
 
-    def exists(self, url, detail=True, **kwargs):
+    def exists(self, url, _=True, **kwargs):
         """Check existence.
 
         Args:
@@ -263,7 +262,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         """
         rpath = self._decorate_url(rpath)
-        return super().get(rpath, lpath, chunk_size=chunk_size, callback=_DEFAULT_CALLBACK, **kwargs)
+        return super().get(rpath, lpath, chunk_size=chunk_size, callback=callback, **kwargs)
 
     async def _put_file(
         self,
@@ -282,7 +281,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 context = nullcontext(lpath)
                 use_seek = False  # might not support seeking
             else:
-                context = open(lpath, "rb")
+                context = open(lpath, "rb")  # noqa: PTH123, SIM115
                 use_seek = True
 
             with context as f:
@@ -327,9 +326,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 operation_id = await resp.json()
 
             operation_id = operation_id["operationId"]
-            resps = []
-            async for resp in put_data():
-                resps.append(resp)
+            resps = [resp async for resp in put_data()]
+
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
             async with session.post(
@@ -371,7 +369,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         return headers, headers_chunk_lst
 
-    def _cloud_copy(
+    def _cloud_copy(  # noqa: PLR0913, PLR0915
         self,
         lpath,
         rpath,
@@ -412,7 +410,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                             ex_cnt += 1
                             ex_code = ex
 
-                raise ex_code
+                raise Exception(f"Error {ex_code}, cnt {ex_cnt}")
 
             context = nullcontext(lpath)
 
@@ -453,9 +451,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
         operation_id = sync(self.loop, _get_operation_id, session)["operationId"]
-        resps = []
-        for resp in put_data(session):
-            resps.append(resp)
+        resps = [resp for resp in put_data(session)]
 
         hash_sha256 = hash_sha256_lst[0]
         headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
@@ -463,7 +459,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         kw.update({"headers": headers})
         sync(self.loop, _finish_operation, session, operation_id, kw)
 
-    def put(
+    def put(  # noqa: PLR0913
         self,
         lpath,
         rpath,
@@ -566,7 +562,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         path,
         mode="rb",
         block_size=None,
-        autocommit=None,  # XXX: This differs from the base class.
+        _=None,  # XXX: This differs from the base class.
         cache_type=None,
         cache_options=None,
         size=None,
@@ -628,6 +624,7 @@ class FusionFile(HTTPFile):
         and then stream the output - if the data size is bigger than we
         requested, an exception is raised.
         """
+
         logger.debug(f"Fetch range for {self}: {start}-{end}")
         kwargs = self.kwargs.copy()
         headers = kwargs.pop("headers", {}).copy()
@@ -635,11 +632,11 @@ class FusionFile(HTTPFile):
         logger.debug(str(url))
         r = await self.session.get(self.fs.encode_url(url), headers=headers, **kwargs)
         async with r:
-            if r.status == 416:
+            if r.status == requests.codes.range_not_satisfiable:
                 # range request outside file
                 return b""
             r.raise_for_status()
-            if r.status == 206:
+            if r.status == requests.codes.partial_content:
                 # partial content, as expected
                 out = await r.read()
             elif int(r.headers.get("Content-Length", 0)) <= end - start:

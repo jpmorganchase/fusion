@@ -5,53 +5,29 @@ import datetime
 import json as js
 import logging
 import math
+import multiprocessing as mp
 import os
 import re
-import sys
+from contextlib import nullcontext
 from datetime import timedelta
 from io import BytesIO
 from pathlib import Path
 from threading import Lock, Thread
-from typing import Union
+from typing import Any, Optional, TextIO, Union
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
+import fsspec
 import joblib
 import pandas as pd
-import pyarrow.parquet as pq
+import pyarrow as pa
 import requests
 from joblib import Parallel, delayed
-from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
 from tqdm import tqdm
-
-from . import __version__ as version
-
-if sys.version_info >= (3, 7):
-    from contextlib import nullcontext
-else:
-
-    class nullcontext(object):
-        """Class for Python 3.6 compatibility."""
-
-        def __init__(self, dummy_resource=None):
-            """Constructor."""
-            self.dummy_resource = dummy_resource
-
-        def __enter__(self):
-            """Enter."""
-            return self.dummy_resource
-
-        def __exit__(self, *args):
-            """Exit."""
-            pass
-
-
-import multiprocessing as mp
-
-import fsspec
 from urllib3.util.retry import Retry
 
+from . import __version__ as version
 from .authentication import FusionAiohttpSession, FusionCredentials, FusionOAuthAdapter
 
 logger = logging.getLogger(__name__)
@@ -83,7 +59,7 @@ def tqdm_joblib(tqdm_object):
                 try:
                     if i[0] is True:
                         n += 1
-                except Exception as _:  # noqa: F841, pylint disable=D417
+                except Exception as _:  # noqa: PERF203
                     n += 1
             tqdm_object.update(n=n)
             return super().__call__(*args, **kwargs)
@@ -97,7 +73,7 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def cpu_count(thread_pool_size: int = None) -> int:
+def cpu_count(thread_pool_size: Optional[int] = None) -> int:
     """Determine the number of cpus/threads for parallelization.
 
     Args:
@@ -110,15 +86,14 @@ def cpu_count(thread_pool_size: int = None) -> int:
         return int(os.environ["NUM_THREADS"])
     if thread_pool_size:
         return thread_pool_size
+    elif mp.cpu_count():
+        thread_pool_size = mp.cpu_count()
     else:
-        if mp.cpu_count():
-            thread_pool_size = mp.cpu_count()
-        else:
-            thread_pool_size = DEFAULT_THREAD_POOL_SIZE
+        thread_pool_size = DEFAULT_THREAD_POOL_SIZE
     return thread_pool_size
 
 
-def csv_to_table(path: str, fs=None, columns: list = None, filters: list = None):
+def csv_to_table(path: str, fs=None, columns: Optional[list] = None, filters: Optional[list] = None):
     """Reads csv data to pyarrow table.
 
     Args:
@@ -130,10 +105,9 @@ def csv_to_table(path: str, fs=None, columns: list = None, filters: list = None)
     Returns:
         class:`pyarrow.Table` pyarrow table with the data.
     """
-    # parse_options = csv.ParseOptions(delimiter=delimiter)
     filters = filters_to_expression(filters) if filters else filters
     with fs.open(path) if fs else nullcontext(path) as f:
-        tbl = csv.read_csv(f)
+        tbl = pa.csv.read_csv(f)
         if filters is not None:
             tbl = tbl.filter(filters)
         if columns is not None:
@@ -141,7 +115,7 @@ def csv_to_table(path: str, fs=None, columns: list = None, filters: list = None)
         return tbl
 
 
-def json_to_table(path: str, fs=None, columns: list = None, filters: list = None):
+def json_to_table(path: str, fs=None, columns: Optional[list] = None, filters: Optional[list] = None):
     """Reads json data to pyarrow table.
 
     Args:
@@ -155,7 +129,7 @@ def json_to_table(path: str, fs=None, columns: list = None, filters: list = None
     """
     filters = filters_to_expression(filters) if filters else filters
     with fs.open(path) if fs else nullcontext(path) as f:
-        tbl = json.read_json(f)
+        tbl = pa.json.read_json(f)
         if filters is not None:
             tbl = tbl.filter(filters)
         if columns is not None:
@@ -163,7 +137,7 @@ def json_to_table(path: str, fs=None, columns: list = None, filters: list = None
         return tbl
 
 
-def parquet_to_table(path: Union[str, list], fs=None, columns: list = None, filters: list = None):
+def parquet_to_table(path: Union[str, list], fs=None, columns: Optional[list] = None, filters: Optional[list] = None):
     """Reads parquet data to pyarrow table.
 
     Args:
@@ -178,7 +152,7 @@ def parquet_to_table(path: Union[str, list], fs=None, columns: list = None, filt
 
     if isinstance(path, list):
         schemas = [
-            pq.ParquetDataset(
+            pa.parquet.ParquetDataset(
                 p,
                 use_legacy_dataset=False,
                 filters=filters,
@@ -189,7 +163,7 @@ def parquet_to_table(path: Union[str, list], fs=None, columns: list = None, filt
         ]
     else:
         schemas = [
-            pq.ParquetDataset(
+            pa.parquet.ParquetDataset(
                 path,
                 use_legacy_dataset=False,
                 filters=filters,
@@ -198,8 +172,8 @@ def parquet_to_table(path: Union[str, list], fs=None, columns: list = None, filt
             ).schema
         ]
 
-    schema = unify_schemas(schemas)
-    return pq.ParquetDataset(
+    schema = pa.unify_schemas(schemas)
+    return pa.parquet.ParquetDataset(
         path,
         use_legacy_dataset=False,
         filters=filters,
@@ -211,8 +185,8 @@ def parquet_to_table(path: Union[str, list], fs=None, columns: list = None, filt
 
 def read_csv(
     path: str,
-    columns: list = None,
-    filters: list = None,
+    columns: Optional[list] = None,
+    filters: Optional[list] = None,
     fs=None,
     dataframe_type="pandas",
 ):
@@ -246,7 +220,7 @@ def read_csv(
                 VERBOSE_LVL,
                 f"Failed to read {path}, with comma delimiter. {err}",
             )
-            raise Exception
+            raise Exception from err
 
     except Exception as err:
         logger.log(
@@ -279,14 +253,14 @@ def read_csv(
                         delimiter=None,
                     )
                 else:
-                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}") from None
     return res
 
 
 def read_json(
     path: str,
-    columns: list = None,
-    filters: list = None,
+    columns: Optional[list] = None,
+    filters: Optional[list] = None,
     fs=None,
     dataframe_type="pandas",
 ):
@@ -319,7 +293,7 @@ def read_json(
                 VERBOSE_LVL,
                 f"Failed to read {path}, with arrow reader. {err}",
             )
-            raise Exception
+            raise err
 
     except Exception as err:
         logger.log(
@@ -342,14 +316,14 @@ def read_json(
                 VERBOSE_LVL,
                 f"Could not parse {path} properly. " f"{err}",
             )
-            raise Exception(err)
+            raise err
     return res
 
 
 def read_parquet(
     path: Union[list, str],
-    columns: list = None,
-    filters: list = None,
+    columns: Optional[list] = None,
+    filters: Optional[list] = None,
     fs=None,
     dataframe_type="pandas",
 ):
@@ -426,11 +400,11 @@ def normalise_dt_param_str(dt: str) -> tuple:
         tuple: A tuple of dates.
     """
     date_parts = dt.split(":")
-
-    if not date_parts or len(date_parts) > 2:
+    std_date_seg_cnt = 2
+    if not date_parts or len(date_parts) > std_date_seg_cnt:
         raise ValueError(f"Unable to parse {dt} as either a date or an interval")
 
-    return tuple((_normalise_dt_param(dt_part) if dt_part else dt_part for dt_part in date_parts))
+    return tuple(_normalise_dt_param(dt_part) if dt_part else dt_part for dt_part in date_parts)
 
 
 def distribution_to_filename(
@@ -439,7 +413,7 @@ def distribution_to_filename(
     datasetseries: str,
     file_format: str,
     catalog: str = "common",
-    partitioning: str = None,
+    partitioning: Optional[str] = None,
 ) -> str:
     """Returns a filename representing a dataset distribution.
 
@@ -528,7 +502,7 @@ def _get_canonical_root_url(any_url: str) -> str:
     return root_url
 
 
-async def get_client(credentials, **kwargs):
+async def get_client(credentials, **kwargs):  # noqa: PLR0915
     """Gets session for async.
 
     Args:
@@ -539,7 +513,7 @@ async def get_client(credentials, **kwargs):
 
     """
 
-    async def on_request_start_token(session, trace_config_ctx, params):
+    async def on_request_start_token(session, trace_config_ctx, params):  # noqa: ARG001
         async def _refresh_token_data():
             payload = (
                 {
@@ -582,7 +556,7 @@ async def get_client(credentials, **kwargs):
             }
         )
 
-    async def on_request_start_fusion_token(session, trace_config_ctx, params):
+    async def on_request_start_fusion_token(session, trace_config_ctx, params):  # noqa: ARG001
         async def _refresh_fusion_token_data():
             full_url_lst = str(params.url).split("/")
             url = "/".join(full_url_lst[: full_url_lst.index("datasets") + 2]) + "/authorize/token"
@@ -602,7 +576,7 @@ async def get_client(credentials, **kwargs):
             catalog = url_lst[url_lst.index("catalogs") + 1]
             dataset = url_lst[url_lst.index("datasets") + 1]
             fusion_token_key = catalog + "_" + dataset
-            if fusion_token_key not in session.fusion_token_dict.keys():
+            if fusion_token_key not in session.fusion_token_dict:
                 fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
                 session.fusion_token_dict[fusion_token_key] = fusion_token
                 session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
@@ -627,9 +601,9 @@ async def get_client(credentials, **kwargs):
             params.headers.update({"Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"})
 
     if credentials.proxies:
-        if "http" in credentials.proxies.keys():
+        if "http" in credentials.proxies:
             http_proxy = credentials.proxies["http"]
-        elif "https" in credentials.proxies.keys():
+        elif "https" in credentials.proxies:
             http_proxy = credentials.proxies["https"]
 
     trace_config = aiohttp.TraceConfig()
@@ -645,7 +619,7 @@ async def get_client(credentials, **kwargs):
 
 
 def get_session(
-    credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None
+    credentials: FusionCredentials, root_url: str, get_retries: Optional[Union[int, Retry]] = None
 ) -> requests.Session:
     """Create a new http session and set parameters.
 
@@ -693,7 +667,7 @@ def _stream_single_file_new_session_dry_run(credentials, url: str, output_file: 
         return False, output_file, ex
 
 
-def stream_single_file_new_session_chunks(
+def stream_single_file_new_session_chunks(  # noqa: PLR0913
     credentials,
     url: str,
     output_file,
@@ -703,7 +677,7 @@ def stream_single_file_new_session_chunks(
     results: list,
     idx: int,
     overwrite: bool = True,
-    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
+    fs: Optional[fsspec.AbstractFileSystem] = None,
 ) -> int:
     """Function to stream a single file from the API to a file on disk.
 
@@ -723,7 +697,8 @@ def stream_single_file_new_session_chunks(
         int: Exit status
 
     """
-
+    if not fs:
+        fs = fsspec.filesystem("file")
     if not overwrite and fs.exists(output_file):
         results[idx] = True, output_file, None
         return 0
@@ -756,7 +731,7 @@ def download_single_file_threading(
     url: str,
     output_file,
     chunk_size: int = 5 * 2**20,
-    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
+    fs: Optional[fsspec.AbstractFileSystem] = None,
 ):
     """Download single file using range requests.
 
@@ -770,6 +745,8 @@ def download_single_file_threading(
     Returns: List[Tuple]
 
     """
+    if not fs:
+        fs = fsspec.filesystem("file")
     header = get_session(credentials, url).head(url).headers
     content_length = int(header["Content-Length"])
     n_chunks = int(math.ceil(content_length / chunk_size))
@@ -801,7 +778,7 @@ def stream_single_file_new_session(
     overwrite: bool = True,
     block_size=DEFAULT_CHUNK_SIZE,
     dry_run: bool = False,
-    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
+    fs: Optional[fsspec.AbstractFileSystem] = None,
 ) -> tuple:
     """Function to stream a single file from the API to a file on disk.
 
@@ -819,6 +796,8 @@ def stream_single_file_new_session(
         tuple: A tuple
 
     """
+    if not fs:
+        fs = fsspec.filesystem("file")
     if dry_run:
         return _stream_single_file_new_session_dry_run(credentials, url, output_file)
 
@@ -860,26 +839,27 @@ def validate_file_names(paths, fs_fusion):
     validation = []
     all_catalogs = fs_fusion.ls("")
     all_datasets = {}
+    file_seg_cnt = 3
     for i, f_n in enumerate(file_names):
         tmp = f_n.split("__")
-        if len(tmp) == 3:
+        if len(tmp) == file_seg_cnt:
             val = tmp[1] in all_catalogs
             if not val:
                 validation.append(False)
             else:
-                if tmp[1] not in all_datasets.keys():
+                if tmp[1] not in all_datasets:
                     all_datasets[tmp[1]] = [i.split("/")[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
 
                 val = tmp[0] in all_datasets[tmp[1]]
                 validation.append(val)
         else:
             validation.append(False)
-        if not validation and len(tmp) == 3:
+        if not validation and len(tmp) == file_seg_cnt:
             logger.warning(
                 f"You might not have access to the catalog {tmp[1]} or dataset {tmp[0]}."
                 "Please check you permission on the platform."
             )
-        if not validation and len(tmp) != 3:
+        if not validation and len(tmp) != file_seg_cnt:
             logger.warning(
                 f"The file in {paths[i]} has a non-compliant name and will not be processed. "
                 f"Please rename the file to dataset__catalog__yyyymmdd.format"
@@ -901,9 +881,9 @@ def is_dataset_raw(paths, fs_fusion):
     file_names = [i.split("/")[-1].split(".")[0] for i in paths]
     ret = []
     is_raw = {}
-    for i, f_n in enumerate(file_names):
+    for f_n in file_names:
         tmp = f_n.split("__")
-        if tmp[0] not in is_raw.keys():
+        if tmp[0] not in is_raw:
             is_raw[tmp[0]] = js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))["isRawData"]
         ret.append(is_raw[tmp[0]])
 
@@ -925,7 +905,7 @@ def path_to_url(x, is_raw=False):
     return "/".join(distribution_to_url("", dataset, date, ext, catalog).split("/")[1:])
 
 
-def upload_files(
+def upload_files(  # noqa: PLR0913
     fs_fusion,
     fs_local,
     loop,
@@ -934,8 +914,8 @@ def upload_files(
     multipart: bool = True,
     chunk_size: int = 5 * 2**20,
     show_progress: bool = True,
-    from_date: str = None,
-    to_date: str = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
 ):
     """Upload file into Fusion.
 
@@ -1008,3 +988,13 @@ def upload_files(
             res = [_upload(row) for index, row in loop.iterrows()]
 
     return res
+
+
+def proxy_print(
+    *values: Any,
+    sep: Optional[str] = " ",
+    end: Optional[str] = "\n",
+    file: Optional[TextIO] = None,
+    flush: bool = False,
+) -> None:
+    print(*values, sep=sep, end=end, file=file, flush=flush)
