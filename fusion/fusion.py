@@ -7,7 +7,7 @@ import sys
 import warnings
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Union
 from zipfile import ZipFile
 
 import pandas as pd
@@ -142,19 +142,13 @@ class Fusion:
                     [
                         method_name
                         for method_name in dir(Fusion)
-                        if callable(getattr(Fusion, method_name))
-                        and not method_name.startswith("_")
+                        if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
                     ]
-                    + [
-                        p
-                        for p in dir(Fusion)
-                        if isinstance(getattr(Fusion, p), property)
-                    ],
+                    + [p for p in dir(Fusion) if isinstance(getattr(Fusion, p), property)],
                     [
                         getattr(Fusion, method_name).__doc__.split("\n")[0]
                         for method_name in dir(Fusion)
-                        if callable(getattr(Fusion, method_name))
-                        and not method_name.startswith("_")
+                        if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
                     ]
                     + [
                         getattr(Fusion, p).__doc__.split("\n")[0]
@@ -207,9 +201,7 @@ class Fusion:
         Returns: Fusion Filesystem
 
         """
-        return FusionHTTPFileSystem(
-            client_kwargs={"root_url": self.root_url, "credentials": self.credentials}
-        )
+        return FusionHTTPFileSystem(client_kwargs={"root_url": self.root_url, "credentials": self.credentials})
 
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
@@ -224,13 +216,11 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            pass
 
         return df
 
-    def catalog_resources(
-        self, catalog: str = None, output: bool = False
-    ) -> pd.DataFrame:
+    def catalog_resources(self, catalog: str = None, output: bool = False) -> pd.DataFrame:
         """List the resources contained within the catalog, for example products and datasets.
 
         Args:
@@ -246,7 +236,7 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
+            pass
 
         return df
 
@@ -313,11 +303,11 @@ class Fusion:
             df = df[0:max_results]
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
+            pass
 
         return df
 
-    def list_datasets(
+    def list_datasets(  # noqa: PLR0913
         self,
         contains: Union[str, list] = None,
         id_contains: bool = False,
@@ -399,13 +389,11 @@ class Fusion:
             df = df[df["status"] == status]
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
+            pass
 
         return df
 
-    def dataset_resources(
-        self, dataset: str, catalog: str = None, output: bool = False
-    ) -> pd.DataFrame:
+    def dataset_resources(self, dataset: str, catalog: str = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
 
         Args:
@@ -422,7 +410,7 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            pass
 
         return df
 
@@ -448,11 +436,7 @@ class Fusion:
         catalog = self.__use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
-        df = (
-            Fusion._call_for_dataframe(url, self.session)
-            .sort_values(by="index")
-            .reset_index(drop=True)
-        )
+        df = Fusion._call_for_dataframe(url, self.session).sort_values(by="index").reset_index(drop=True)
 
         if not display_all_columns:
             df = df[
@@ -469,7 +453,7 @@ class Fusion:
             ]
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql", maxcolwidths=30))
+            pass
 
         return df
 
@@ -501,7 +485,7 @@ class Fusion:
             df = df[0:max_results]
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            pass
 
         return df
 
@@ -526,13 +510,11 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            pass
 
         return df
 
-    def list_distributions(
-        self, dataset: str, series: str, catalog: str = None, output: bool = False
-    ) -> pd.DataFrame:
+    def list_distributions(self, dataset: str, series: str, catalog: str = None, output: bool = False) -> pd.DataFrame:
         """List the available distributions (downloadable instances of the dataset with a format type).
 
         Args:
@@ -550,7 +532,7 @@ class Fusion:
         df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
-            print(tabulate(df, headers="keys", tablefmt="psql"))
+            pass
 
         return df
 
@@ -582,9 +564,7 @@ class Fusion:
 
         datasetseries_list = self.list_datasetmembers(dataset, catalog)
         if len(datasetseries_list) == 0:
-            raise AssertionError(
-                f"There are no dataset members for dataset {dataset} in catalog {catalog}"
-            )
+            raise AssertionError(f"There are no dataset members for dataset {dataset} in catalog {catalog}")
 
         if datasetseries_list.empty:
             raise APIResponseError(
@@ -593,23 +573,17 @@ class Fusion:
             )
 
         if dt_str == "latest":
-            dt_str = datasetseries_list.iloc[
-                datasetseries_list["createdDate"].values.argmax()
-            ]["identifier"]
+            dt_str = datasetseries_list.iloc[datasetseries_list["createdDate"].values.argmax()]["identifier"]
 
         parsed_dates = normalise_dt_param_str(dt_str)
         if len(parsed_dates) == 1:
             parsed_dates = (parsed_dates[0], parsed_dates[0])
 
         if parsed_dates[0]:
-            datasetseries_list = datasetseries_list[
-                pd.to_datetime(datasetseries_list["identifier"]) >= parsed_dates[0]
-            ]
+            datasetseries_list = datasetseries_list[pd.to_datetime(datasetseries_list["identifier"]) >= parsed_dates[0]]
 
         if parsed_dates[1]:
-            datasetseries_list = datasetseries_list[
-                pd.to_datetime(datasetseries_list["identifier"]) <= parsed_dates[1]
-            ]
+            datasetseries_list = datasetseries_list[pd.to_datetime(datasetseries_list["identifier"]) <= parsed_dates[1]]
 
         if len(datasetseries_list) == 0:
             raise APIResponseError(
@@ -618,13 +592,11 @@ class Fusion:
             )
 
         required_series = list(datasetseries_list["@id"])
-        tups = [
-            (catalog, dataset, series, dataset_format) for series in required_series
-        ]
+        tups = [(catalog, dataset, series, dataset_format) for series in required_series]
 
         return tups
 
-    def download(
+    def download(  # noqa: PLR0912, PLR0913
         self,
         dataset: str,
         dt_str: str = "latest",
@@ -661,14 +633,10 @@ class Fusion:
         """
         catalog = self.__use_catalog(catalog)
 
-        valid_date_range = re.compile(
-            r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$"
-        )
+        valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
 
         if valid_date_range.match(dt_str) or dt_str == "latest":
-            required_series = self._resolve_distro_tuples(
-                dataset, dt_str, dataset_format, catalog
-            )
+            required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
         else:
             # sample data is limited to csv
             if dt_str == "sample":
@@ -716,7 +684,7 @@ class Fusion:
                     fs=self.fs,
                     max_threads=n_par,
                 )
-                if (len(res) > 0) and all((r[0] for r in res)):
+                if (len(res) > 0) and all(r[0] for r in res):
                     pbar.update(1)
                     res = [(res[0][0], output_file, res[0][2])]
 
@@ -754,22 +722,18 @@ class Fusion:
             if show_progress:
                 with tqdm_joblib(tqdm(total=len(download_spec))) as _:
                     res = Parallel(n_jobs=n_par)(
-                        delayed(stream_single_file_new_session)(**spec)
-                        for spec in download_spec
+                        delayed(stream_single_file_new_session)(**spec) for spec in download_spec
                     )
             else:
-                res = Parallel(n_jobs=n_par)(
-                    delayed(stream_single_file_new_session)(**spec)
-                    for spec in download_spec
-                )
+                res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(**spec) for spec in download_spec)
 
-        if (len(res) > 0) and (not all((r[0] for r in res))):
+        if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
                 if not r[0]:
-                    warnings.warn(f"The download of {r[1]} was not successful")
+                    warnings.warn(f"The download of {r[1]} was not successful")  # noqa: B028
         return res if return_paths else None
 
-    def to_df(
+    def to_df(  # noqa: PLR0913
         self,
         dataset: str,
         dt_str: str = "latest",
@@ -777,8 +741,8 @@ class Fusion:
         catalog: str = None,
         n_par: int = None,
         show_progress: bool = True,
-        columns: List = None,
-        filters: List = None,
+        columns: list = None,
+        filters: list = None,
         force_download: bool = False,
         download_folder: str = None,
         dataframe_type: str = "pandas",
@@ -851,7 +815,7 @@ class Fusion:
             "raw": read_csv,
         }
 
-        pd_read_default_kwargs: Dict[str, Dict[str, object]] = {
+        pd_read_default_kwargs: dict[str, dict[str, object]] = {
             "csv": {
                 "columns": columns,
                 "filters": filters,
@@ -883,9 +847,7 @@ class Fusion:
         pd_reader = pd_read_fn_map.get(dataset_format)
         pd_read_kwargs = pd_read_default_kwargs.get(dataset_format, {})
         if not pd_reader:
-            raise Exception(
-                f"No pandas function to read file in format {dataset_format}"
-            )
+            raise Exception(f"No pandas function to read file in format {dataset_format}")
 
         pd_read_kwargs.update(kwargs)
 
@@ -899,7 +861,8 @@ class Fusion:
         elif dataset_format == "raw":
             dataframes = (
                 pd.concat(
-                    [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()], ignore_index=True  # type: ignore
+                    [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()],
+                    ignore_index=True,  # type: ignore
                 )  # type: ignore
                 for f in files
             )  # type: ignore
@@ -934,12 +897,16 @@ class Fusion:
         catalog = self.__use_catalog(catalog)
 
         url = distribution_to_url(
-            self.root_url, dataset, series_member, dataset_format, catalog  # type: ignore
+            self.root_url,
+            dataset,
+            series_member,
+            dataset_format,
+            catalog,  # type: ignore
         )
 
         return Fusion._call_for_bytes_object(url, self.session)
 
-    def to_table(
+    def to_table(  # noqa: PLR0913
         self,
         dataset: str,
         dt_str: str = "latest",
@@ -947,8 +914,8 @@ class Fusion:
         catalog: str = None,
         n_par: int = None,
         show_progress: bool = True,
-        columns: List = None,
-        filters: List = None,
+        columns: list = None,
+        filters: list = None,
         force_download: bool = False,
         download_folder: str = None,
         **kwargs,
@@ -1015,7 +982,7 @@ class Fusion:
             "raw": csv_to_table,
         }
 
-        read_default_kwargs: Dict[str, Dict[str, object]] = {
+        read_default_kwargs: dict[str, dict[str, object]] = {
             "csv": {"columns": columns, "filters": filters, "fs": self.fs},
             "parquet": {"columns": columns, "filters": filters, "fs": self.fs},
             "json": {"columns": columns, "filters": filters, "fs": self.fs},
@@ -1044,7 +1011,7 @@ class Fusion:
 
         return tbl
 
-    def upload(
+    def upload(  # noqa: PLR0913
         self,
         path: str,
         dataset: str = None,
@@ -1090,32 +1057,20 @@ class Fusion:
         if self.fs.info(path)["type"] == "directory":
             file_path_lst = self.fs.find(path)
             local_file_validation = validate_file_names(file_path_lst, fs_fusion)
-            file_path_lst = [
-                f for flag, f in zip(local_file_validation, file_path_lst) if flag
-            ]
+            file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
             is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
-            local_url_eqiv = [
-                path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)
-            ]
+            local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
         else:
             file_path_lst = [path]
             if not catalog or not dataset:
                 local_file_validation = validate_file_names(file_path_lst, fs_fusion)
-                file_path_lst = [
-                    f for flag, f in zip(local_file_validation, file_path_lst) if flag
-                ]
+                file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
                 is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
-                local_url_eqiv = [
-                    path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)
-                ]
+                local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
             else:
                 date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
                 if date_identifier.match(dt_str):
-                    dt_str = (
-                        dt_str
-                        if dt_str != "latest"
-                        else pd.Timestamp("today").date().strftime("%Y%m%d")
-                    )
+                    dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
                     dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
 
                 if catalog not in fs_fusion.ls("") or dataset not in [
@@ -1125,15 +1080,11 @@ class Fusion:
                         f"File file has not been uploaded, one of the catalog: {catalog} "
                         f"or dataset: {dataset} does not exit."
                     )
-                    warnings.warn(msg)
+                    warnings.warn(msg)  # noqa: B028
                     return [(False, path, Exception(msg))]
-                is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))[
-                    "isRawData"
-                ]
+                is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
                 file_format = path.split(".")[-1]
-                local_url_eqiv = [
-                    path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}", is_raw)
-                ]
+                local_url_eqiv = [path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}", is_raw)]
 
         df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
         df.columns = ["path", "url"]
@@ -1157,11 +1108,11 @@ class Fusion:
             failed_res = [r for r in res if not r[0]]
             msg = f"Not all uploads were successfully completed. The following failed:\n{failed_res}"
             logger.warning(msg)
-            warnings.warn(msg)
+            warnings.warn(msg)  # noqa: B028
 
         return res if return_paths else None
 
-    def from_bytes(
+    def from_bytes(  # noqa: PLR0913
         self,
         data: BytesIO,
         dataset: str = None,
@@ -1198,9 +1149,7 @@ class Fusion:
         fs_fusion = self.get_fusion_filesystem()
 
         is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
-        local_url_eqiv = path_to_url(
-            f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw
-        )
+        local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)
 
         df = pd.DataFrame(["", local_url_eqiv]).T
         df.columns = ["path", "url"]
@@ -1222,7 +1171,7 @@ class Fusion:
             failed_res = [r for r in res if not r[0]]
             msg = f"Not all uploads were successfully completed. The following failed:\n{failed_res}"
             logger.warning(msg)
-            warnings.warn(msg)
+            warnings.warn(msg)  # noqa: B028
 
         return res if return_paths else None
 
@@ -1275,26 +1224,22 @@ class Fusion:
                         if self.events is None:
                             self.events = pd.DataFrame([event])
                         else:
-                            self.events = pd.concat(
-                                [self.events, pd.DataFrame(event)], ignore_index=True
-                            )
+                            self.events = pd.concat([self.events, pd.DataFrame(event)], ignore_index=True)
                 except TimeoutError as ex:
                     raise ex
                 except Exception as e:
-                    raise Exception(e)
+                    raise Exception(e)  # noqa: B904
 
         _ = self.list_catalogs()  # refresh token
         if "headers" in kwargs:
-            kwargs["headers"].update(
-                {"authorization": f"bearer {self.credentials.bearer_token}"}
-            )
+            kwargs["headers"].update({"authorization": f"bearer {self.credentials.bearer_token}"})
         else:
             kwargs["headers"] = {
                 "authorization": f"bearer {self.credentials.bearer_token}",
             }
-        if "http" in self.credentials.proxies.keys():
+        if "http" in self.credentials.proxies:
             kwargs["proxy"] = self.credentials.proxies["http"]
-        elif "https" in self.credentials.proxies.keys():
+        elif "https" in self.credentials.proxies:
             kwargs["proxy"] = self.credentials.proxies["https"]
         th = threading.Thread(target=asyncio.run, args=(async_events(),), daemon=True)
         th.start()
@@ -1336,14 +1281,13 @@ class Fusion:
             try:
                 for msg in messages:
                     event = js.loads(msg.data)
-                    print(event)
                     if event["type"] != "HeartBeatNotification":
                         lst.append(event)
             except KeyboardInterrupt:
                 return pd.DataFrame(lst)
             except Exception as e:
-                raise Exception(e)
+                raise Exception(e)  # noqa: B904
             finally:
-                return None
+                return None  # noqa: B012, SIM107
         else:
             return self.events

@@ -5,9 +5,10 @@ import datetime
 import json as js
 import logging
 import math
+import multiprocessing as mp
 import os
 import re
-import sys
+from contextlib import nullcontext
 from datetime import timedelta
 from io import BytesIO
 from pathlib import Path
@@ -17,6 +18,7 @@ from typing import Union
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
+import fsspec
 import joblib
 import pandas as pd
 import pyarrow.parquet as pq
@@ -25,34 +27,9 @@ from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
 from tqdm import tqdm
-
-from . import __version__ as version
-
-if sys.version_info >= (3, 7):
-    from contextlib import nullcontext
-else:
-
-    class nullcontext(object):
-        """Class for Python 3.6 compatibility."""
-
-        def __init__(self, dummy_resource=None):
-            """Constructor."""
-            self.dummy_resource = dummy_resource
-
-        def __enter__(self):
-            """Enter."""
-            return self.dummy_resource
-
-        def __exit__(self, *args):
-            """Exit."""
-            pass
-
-
-import multiprocessing as mp
-
-import fsspec
 from urllib3.util.retry import Retry
 
+from . import __version__ as version
 from .authentication import FusionAiohttpSession, FusionCredentials, FusionOAuthAdapter
 
 logger = logging.getLogger(__name__)
@@ -84,7 +61,7 @@ def tqdm_joblib(tqdm_object):
                 try:
                     if i[0] is True:
                         n += 1
-                except Exception as _:  # noqa: F841, pylint disable=D417
+                except Exception as _:  # noqa: F841, PERF203
                     n += 1
             tqdm_object.update(n=n)
             return super().__call__(*args, **kwargs)
@@ -115,10 +92,7 @@ def cpu_count(thread_pool_size: int = None, is_threading=False) -> int:
     if is_threading:
         return 10
 
-    if mp.cpu_count():
-        thread_pool_size = mp.cpu_count()
-    else:
-        thread_pool_size = DEFAULT_THREAD_POOL_SIZE
+    thread_pool_size = mp.cpu_count() if mp.cpu_count() else DEFAULT_THREAD_POOL_SIZE
     return thread_pool_size
 
 
@@ -134,7 +108,7 @@ def csv_to_table(path: str, fs=None, columns: list = None, filters: list = None)
     Returns:
         class:`pyarrow.Table` pyarrow table with the data.
     """
-    # parse_options = csv.ParseOptions(delimiter=delimiter)
+    # parse_options = csv.ParseOptions(delimiter=delimiter)  # noqa: ERA001
     filters = filters_to_expression(filters) if filters else filters
     with fs.open(path) if fs else nullcontext(path) as f:
         tbl = csv.read_csv(f)
@@ -167,9 +141,7 @@ def json_to_table(path: str, fs=None, columns: list = None, filters: list = None
         return tbl
 
 
-def parquet_to_table(
-    path: Union[str, list], fs=None, columns: list = None, filters: list = None
-):
+def parquet_to_table(path: Union[str, list], fs=None, columns: list = None, filters: list = None):
     """Reads parquet data to pyarrow table.
 
     Args:
@@ -252,13 +224,12 @@ def read_csv(
                 VERBOSE_LVL,
                 f"Failed to read {path}, with comma delimiter. {err}",
             )
-            raise Exception
+            raise Exception  # noqa: B904
 
     except Exception as err:
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. "
-            f"Trying with pandas csv reader. {err}",
+            f"Could not parse {path} properly. " f"Trying with pandas csv reader. {err}",
         )
         try:
             with fs.open(path) if fs else nullcontext(path) as f:
@@ -274,8 +245,7 @@ def read_csv(
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
-                f"Could not parse {path} properly. "
-                f"Trying with pandas csv reader pandas engine. {err}",
+                f"Could not parse {path} properly. " f"Trying with pandas csv reader pandas engine. {err}",
             )
             with fs.open(path) if fs else nullcontext(path) as f:
                 if dataframe_type == "pandas":
@@ -287,7 +257,7 @@ def read_csv(
                         delimiter=None,
                     )
                 else:
-                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")  # noqa: B904
     return res
 
 
@@ -327,13 +297,12 @@ def read_json(
                 VERBOSE_LVL,
                 f"Failed to read {path}, with arrow reader. {err}",
             )
-            raise Exception
+            raise Exception  # noqa: B904
 
     except Exception as err:
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. "
-            f"Trying with pandas json reader. {err}",
+            f"Could not parse {path} properly. " f"Trying with pandas json reader. {err}",
         )
         try:
             with fs.open(path) if fs else nullcontext(path) as f:
@@ -351,7 +320,7 @@ def read_json(
                 VERBOSE_LVL,
                 f"Could not parse {path} properly. " f"{err}",
             )
-            raise Exception(err)
+            raise Exception(err)  # noqa: B904
     return res
 
 
@@ -436,12 +405,10 @@ def normalise_dt_param_str(dt: str) -> tuple:
     """
     date_parts = dt.split(":")
 
-    if not date_parts or len(date_parts) > 2:
+    if not date_parts or len(date_parts) > 2:  # noqa: PLR2004
         raise ValueError(f"Unable to parse {dt} as either a date or an interval")
 
-    return tuple(
-        (_normalise_dt_param(dt_part) if dt_part else dt_part for dt_part in date_parts)
-    )
+    return tuple(_normalise_dt_param(dt_part) if dt_part else dt_part for dt_part in date_parts)
 
 
 def distribution_to_filename(
@@ -518,17 +485,14 @@ def distribution_to_url(
         datasetseries = datasetseries[0:-1]
 
     if datasetseries == "sample":
-        return (
-            f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
-        )
+        return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
     if is_download:
         return (
             f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
             f"{datasetseries}/distributions/{file_format}/operationType/download"
         )
     return (
-        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-        f"{datasetseries}/distributions/{file_format}"
+        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/" f"{datasetseries}/distributions/{file_format}"
     )
 
 
@@ -547,7 +511,7 @@ def _get_canonical_root_url(any_url: str) -> str:
     return root_url
 
 
-async def get_client(credentials, **kwargs):
+async def get_client(credentials, **kwargs):  # noqa: PLR0915
     """Gets session for async.
 
     Args:
@@ -558,7 +522,7 @@ async def get_client(credentials, **kwargs):
 
     """
 
-    async def on_request_start_token(session, trace_config_ctx, params):
+    async def on_request_start_token(session, trace_config_ctx, params):  # noqa: ARG001
         async def _refresh_token_data():
             payload = (
                 {
@@ -578,9 +542,7 @@ async def get_client(credentials, **kwargs):
             )
             async with aiohttp.ClientSession(trust_env=True) as session:
                 if credentials.proxies:
-                    response = await session.post(
-                        credentials.auth_url, data=payload, proxy=http_proxy
-                    )
+                    response = await session.post(credentials.auth_url, data=payload, proxy=http_proxy)
                 else:
                     response = await session.post(credentials.auth_url, data=payload)
                 response_data = await response.json()
@@ -589,18 +551,11 @@ async def get_client(credentials, **kwargs):
             expiry = response_data["expires_in"]
             return access_token, expiry
 
-        token_expires_in = (
-            session.credentials.bearer_token_expiry - datetime.datetime.now()
-        ).total_seconds()
-        if (
-            session.credentials.is_bearer_token_expirable
-            and token_expires_in < session.refresh_within_seconds
-        ):
+        token_expires_in = (session.credentials.bearer_token_expiry - datetime.datetime.now()).total_seconds()
+        if session.credentials.is_bearer_token_expirable and token_expires_in < session.refresh_within_seconds:
             token, expiry = await _refresh_token_data()
             session.credentials.bearer_token = token
-            session.credentials.bearer_token_expiry = (
-                datetime.datetime.now() + datetime.timedelta(seconds=int(expiry))
-            )
+            session.credentials.bearer_token_expiry = datetime.datetime.now() + datetime.timedelta(seconds=int(expiry))
             session.number_token_refreshes += 1
 
         params.headers.update(
@@ -610,13 +565,10 @@ async def get_client(credentials, **kwargs):
             }
         )
 
-    async def on_request_start_fusion_token(session, trace_config_ctx, params):
+    async def on_request_start_fusion_token(session, trace_config_ctx, params):  # noqa: ARG001
         async def _refresh_fusion_token_data():
             full_url_lst = str(params.url).split("/")
-            url = (
-                "/".join(full_url_lst[: full_url_lst.index("datasets") + 2])
-                + "/authorize/token"
-            )
+            url = "/".join(full_url_lst[: full_url_lst.index("datasets") + 2]) + "/authorize/token"
             if credentials.proxies:
                 async with session.get(url, proxy=http_proxy) as response:
                     response_data = await response.json()
@@ -633,19 +585,16 @@ async def get_client(credentials, **kwargs):
             catalog = url_lst[url_lst.index("catalogs") + 1]
             dataset = url_lst[url_lst.index("datasets") + 1]
             fusion_token_key = catalog + "_" + dataset
-            if fusion_token_key not in session.fusion_token_dict.keys():
+            if fusion_token_key not in session.fusion_token_dict:
                 fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
                 session.fusion_token_dict[fusion_token_key] = fusion_token
-                session.fusion_token_expiry_dict[
-                    fusion_token_key
-                ] = datetime.datetime.now() + timedelta(
+                session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
                     seconds=int(fusion_token_expiry)
                 )
                 logger.log(VERBOSE_LVL, "Refreshed fusion token")
             else:
                 fusion_token_expires_in = (
-                    session.fusion_token_expiry_dict[fusion_token_key]
-                    - datetime.datetime.now()
+                    session.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
                 ).total_seconds()
                 if fusion_token_expires_in < session.refresh_within_seconds:
                     (
@@ -653,23 +602,17 @@ async def get_client(credentials, **kwargs):
                         fusion_token_expiry,
                     ) = await _refresh_fusion_token_data()
                     session.fusion_token_dict[fusion_token_key] = fusion_token
-                    session.fusion_token_expiry_dict[
-                        fusion_token_key
-                    ] = datetime.datetime.now() + timedelta(
+                    session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
                         seconds=int(fusion_token_expiry)
                     )
                     logger.log(VERBOSE_LVL, "Refreshed fusion token")
 
-            params.headers.update(
-                {
-                    "Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"
-                }
-            )
+            params.headers.update({"Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"})
 
     if credentials.proxies:
-        if "http" in credentials.proxies.keys():
+        if "http" in credentials.proxies:
             http_proxy = credentials.proxies["http"]
-        elif "https" in credentials.proxies.keys():
+        elif "https" in credentials.proxies:
             http_proxy = credentials.proxies["https"]
 
     trace_config = aiohttp.TraceConfig()
@@ -679,9 +622,7 @@ async def get_client(credentials, **kwargs):
         timeout = aiohttp.ClientTimeout(total=kwargs["timeout"])
     else:
         timeout = aiohttp.ClientTimeout(total=60 * 60)  # default 60min timeout
-    session = FusionAiohttpSession(
-        trace_configs=[trace_config], trust_env=True, timeout=timeout
-    )
+    session = FusionAiohttpSession(trace_configs=[trace_config], trust_env=True, timeout=timeout)
     session.post_init(credentials=credentials)
     return session
 
@@ -700,9 +641,7 @@ def get_session(
 
     """
     if not get_retries:
-        get_retries = Retry(
-            total=5, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504]
-        )
+        get_retries = Retry(total=5, backoff_factor=0.1, status_forcelist=[429, 500, 502, 503, 504])
     else:
         get_retries = Retry.from_int(get_retries)
     session = requests.Session()
@@ -712,9 +651,7 @@ def get_session(
         mount_url = _get_canonical_root_url(root_url)
     except Exception:
         mount_url = "https://"
-    auth_handler = FusionOAuthAdapter(
-        credentials, max_retries=get_retries, mount_url=mount_url
-    )
+    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url)
     session.mount(mount_url, auth_handler)
     return session
 
@@ -739,7 +676,7 @@ def _stream_single_file_new_session_dry_run(credentials, url: str, output_file: 
         return False, output_file, ex
 
 
-def stream_single_file_new_session_chunks(
+def stream_single_file_new_session_chunks(  # noqa: PLR0913
     session,
     url: str,
     output_file,
@@ -749,7 +686,7 @@ def stream_single_file_new_session_chunks(
     results: list,
     idx: int,
     overwrite: bool = True,
-    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
+    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),  # noqa: B008
 ) -> int:
     """Function to stream a single file from the API to a file on disk.
 
@@ -802,9 +739,7 @@ def _worker(queue, session, url, output_file, lock, results):
         idx, start, end = queue.get()
         if idx is None:
             break
-        stream_single_file_new_session_chunks(
-            session, url, output_file, start, end, lock, results, idx
-        )
+        stream_single_file_new_session_chunks(session, url, output_file, start, end, lock, results, idx)
         queue.task_done()
 
 
@@ -813,7 +748,7 @@ def download_single_file_threading(
     url: str,
     output_file,
     chunk_size: int = 5 * 2**20,
-    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
+    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),  # noqa: B008
     max_threads: int = 10,
 ):
     """Download single file using range requests.
@@ -842,9 +777,7 @@ def download_single_file_threading(
     queue: Queue = Queue(max_threads)
     threads = []
     for _ in range(max_threads):
-        t = Thread(
-            target=_worker, args=(queue, session, url, output_file, lock, results)
-        )
+        t = Thread(target=_worker, args=(queue, session, url, output_file, lock, results))
         t.start()
         threads.append(t)
 
@@ -869,7 +802,7 @@ def stream_single_file_new_session(
     overwrite: bool = True,
     block_size=DEFAULT_CHUNK_SIZE,
     dry_run: bool = False,
-    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),
+    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),  # noqa: B008
 ) -> tuple:
     """Function to stream a single file from the API to a file on disk.
 
@@ -930,26 +863,24 @@ def validate_file_names(paths, fs_fusion):
     all_datasets = {}
     for i, f_n in enumerate(file_names):
         tmp = f_n.split("__")
-        if len(tmp) == 3:
+        if len(tmp) == 3:  # noqa: PLR2004
             val = tmp[1] in all_catalogs
             if not val:
                 validation.append(False)
             else:
-                if tmp[1] not in all_datasets.keys():
-                    all_datasets[tmp[1]] = [
-                        i.split("/")[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")
-                    ]
+                if tmp[1] not in all_datasets:
+                    all_datasets[tmp[1]] = [i.split("/")[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
 
                 val = tmp[0] in all_datasets[tmp[1]]
                 validation.append(val)
         else:
             validation.append(False)
-        if not validation and len(tmp) == 3:
+        if not validation and len(tmp) == 3:  # noqa: PLR2004
             logger.warning(
                 f"You might not have access to the catalog {tmp[1]} or dataset {tmp[0]}."
                 "Please check you permission on the platform."
             )
-        if not validation and len(tmp) != 3:
+        if not validation and len(tmp) != 3:  # noqa: PLR2004
             logger.warning(
                 f"The file in {paths[i]} has a non-compliant name and will not be processed. "
                 f"Please rename the file to dataset__catalog__yyyymmdd.format"
@@ -971,12 +902,10 @@ def is_dataset_raw(paths, fs_fusion):
     file_names = [i.split("/")[-1].split(".")[0] for i in paths]
     ret = []
     is_raw = {}
-    for i, f_n in enumerate(file_names):
+    for _i, f_n in enumerate(file_names):
         tmp = f_n.split("__")
-        if tmp[0] not in is_raw.keys():
-            is_raw[tmp[0]] = js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))[
-                "isRawData"
-            ]
+        if tmp[0] not in is_raw:
+            is_raw[tmp[0]] = js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))["isRawData"]
         ret.append(is_raw[tmp[0]])
 
     return ret
@@ -995,12 +924,10 @@ def path_to_url(x, is_raw=False, is_download=False):
     """
     catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
     ext = "raw" if is_raw else ext
-    return "/".join(
-        distribution_to_url("", dataset, date, ext, catalog, is_download).split("/")[1:]
-    )
+    return "/".join(distribution_to_url("", dataset, date, ext, catalog, is_download).split("/")[1:])
 
 
-def upload_files(
+def upload_files(  # noqa: PLR0913
     fs_fusion,
     fs_local,
     loop,
@@ -1067,13 +994,9 @@ def upload_files(
     if parallel:
         if show_progress:
             with tqdm_joblib(tqdm(total=len(loop))) as _:
-                res = Parallel(n_jobs=n_par)(
-                    delayed(_upload)(row) for index, row in loop.iterrows()
-                )
+                res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop.iterrows())
         else:
-            res = Parallel(n_jobs=n_par)(
-                delayed(_upload)(row) for index, row in loop.iterrows()
-            )
+            res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop.iterrows())
     else:
         res = [None] * len(loop)
         if show_progress:
