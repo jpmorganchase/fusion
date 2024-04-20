@@ -36,9 +36,7 @@ if __name__ == "__main__":
     if vars(args)["method"] is not None:
         method = getattr(client, vars(args)["method"])
         kw_m = {}
-        args_m = {
-            param.name for param in inspect.signature(method).parameters.values()
-        }.difference({"self"})
+        args_m = {param.name for param in inspect.signature(method).parameters.values()}.difference({"self"})
         for k in args_m:
             if vars(args)[k] is not None:
                 v = vars(args)[k]
