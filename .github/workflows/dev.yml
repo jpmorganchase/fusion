@@ -15,40 +15,280 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "test"
-  test:
-    # The type of runner that the job will run on
+  tests:
     strategy:
+      fail-fast: false
       matrix:
-        python-versions: [3.9]
-        os: [ubuntu-20.04]
-    runs-on: ${{ matrix.os }}
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+        python-versions: ["3.9"]
+    name: Run tests
+    runs-on: ubuntu-latest
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-#          token: ${{ secrets.PERSONAL_TOKEN }}
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-versions }}
 
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-versions }}
+    - name: Set up rye
+      run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install poetry tox tox-gh-actions
+    - name: Add Rye to PATH
+      run: |
+        echo "$HOME/.rye/env" >> $GITHUB_PATH
+        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+      shell: bash
 
-      - name: Setup doc deploy git user # required for tox testing on mike
-        run: |
+    - name: Set output
+      run: echo "status=success" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Use uv instead of pip
+      run: rye config --set-bool behavior.use-uv=true
+
+    - name: Verify Rye Installation
+      run: rye --version
+      shell: bash
+
+    - name: Sync dependencies using rye
+      run: |
+        rye pin ${{ matrix.python-versions }}
+        rye sync
+    - name: Setup doc deploy git user # required for tox testing on mike
+      run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
+  
+    - name: Sync dependencies using rye
+      run: |
+        rye run tox
+  
+  linux-manylinux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-versions: ["3.8", "3.9", "3.10", "3.11"]
+        target: [
+          "x86_64-unknown-linux-gnu",
+          "i686-unknown-linux-gnu",
+          "aarch64-unknown-linux-gnu",
+          "armv7-unknown-linux-gnueabihf",
+          # "powerpc64le-unknown-linux-gnu",
+        ]
 
-      - name: test with tox
-        run:
-          tox
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: list files
-        run: ls -l .
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-versions }}
+
+    - name: Set up rye
+      run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+
+    - name: Add Rye to PATH
+      run: |
+        echo "$HOME/.rye/env" >> $GITHUB_PATH
+        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+      shell: bash
+
+    - name: Set output
+      run: echo "status=success" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Use uv instead of pip
+      run: rye config --set-bool behavior.use-uv=true
+
+    - name: Verify Rye Installation
+      run: rye --version
+      shell: bash
+
+    - name: Sync dependencies using rye
+      run: |
+        rye pin ${{ matrix.python-versions }}
+        rye sync
+
+    - name: Build Wheels - manylinux
+      uses: PyO3/maturin-action@main
+      with:
+        target: ${{ matrix.target }}
+        before-script-linux: rustup target add ${{ matrix.target }}
+        manylinux: auto
+        args: --release -j $(nproc) -i python${{ matrix.python-versions }}
+        sccache: 'true'
+  
+
+    - name: list dist files
+      run: ls -l target/wheels
+
+  linux-musllinux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-versions: ["3.8", "3.9", "3.10", "3.11"]
+        target: [
+          "x86_64-unknown-linux-musl",
+          "i686-unknown-linux-musl",
+          "aarch64-unknown-linux-musl",
+          "armv7-unknown-linux-musleabihf",
+          # "powerpc64le-unknown-linux-musl",
+        ]
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-versions }}
+
+    - name: Set up rye
+      run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+
+    - name: Add Rye to PATH
+      run: |
+        echo "$HOME/.rye/env" >> $GITHUB_PATH
+        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+      shell: bash
+
+    - name: Set output
+      run: echo "status=success" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Use uv instead of pip
+      run: rye config --set-bool behavior.use-uv=true
+
+    - name: Verify Rye Installation
+      run: rye --version
+      shell: bash
+
+    - name: Sync dependencies using rye
+      run: |
+        rye pin ${{ matrix.python-versions }}
+        rye sync
+        
+    - name: Build Wheels - musllinux
+      uses: PyO3/maturin-action@main
+      with:
+        target: ${{ matrix.target }}
+        before-script-linux: rustup target add ${{ matrix.target }}
+        manylinux: musllinux_1_1
+        args: --release -j $(nproc) -i python${{ matrix.python-versions }}
+        sccache: 'false'
+
+    - name: list dist files
+      run: ls -l target/wheels
+    
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-versions: ["3.8", "3.9", "3.10", "3.11"]
+        target: ["x64", "x86"]
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-versions }}
+
+    - name: Set up rye
+      run: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        cargo install --git https://github.com/mitsuhiko/rye rye
+      shell: bash
+
+    - name: Add Rye to PATH
+      run: |
+        echo "$HOME/.rye/env" >> $GITHUB_PATH
+        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+      shell: bash
+
+    - name: Use uv instead of pip
+      run: rye config --set-bool behavior.use-uv=true
+
+    - name: Verify Rye Installation
+      run: rye --version
+      shell: bash
+
+    - name: Set output
+      run: echo "status=success" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Sync dependencies using rye
+      run: |
+        rye pin ${{ matrix.python-versions }}
+        rye sync
+
+    - name: Build wheels
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        args: --release -j 10 -i ${{ matrix.python-versions }}
+        sccache: 'false'
+
+    - name: list dist files
+      run: ls -l target/wheels
+      
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-versions: ["3.8", "3.9", "3.10", "3.11"]
+        target: ["x86_64"]
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-versions }}
+
+    - name: Set up rye
+      run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+
+    - name: Add Rye to PATH
+      run: |
+        echo "$HOME/.rye/env" >> $GITHUB_PATH
+        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+      shell: bash
+
+    - name: Use uv instead of pip
+      run: rye config --set-bool behavior.use-uv=true
+
+    - name: Verify Rye Installation
+      run: rye --version
+      shell: bash
+
+    - name: Set output
+      run: echo "status=success" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Sync dependencies using rye
+      run: |
+        rye pin ${{ matrix.python-versions }}
+        rye sync
+
+    - name: Build wheels
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        args: --release -j 10 -i ${{ matrix.python-versions }}
+        sccache: 'false'
+        manylinux: auto
+
+    - name: list dist files
+      run: ls -l target/wheels

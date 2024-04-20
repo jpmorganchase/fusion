@@ -32,9 +32,7 @@ DEFAULT_CHUNK_SIZE = 2**16
 
 
 def _url_to_path(x):
-    file_name = distribution_to_filename(
-        "", x.split("/")[2], x.split("/")[4], x.split("/")[6], x.split("/")[0]
-    )
+    file_name = distribution_to_filename("", x.split("/")[2], x.split("/")[4], x.split("/")[6], x.split("/")[0])
     return f"{x.split('/')[0]}/{x.split('/')[2]}/{x.split('/')[4]}/{file_name}"
 
 
@@ -61,13 +59,9 @@ def _download(fs_fusion, fs_local, df, n_par, show_progress=True, local_path="")
     if n_par > 1 and len(df) > 0:
         if show_progress:
             with tqdm_joblib(tqdm(total=len(df))) as _:
-                res = Parallel(n_jobs=n_par)(
-                    delayed(_download_files)(row) for index, row in df.iterrows()
-                )
+                res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for index, row in df.iterrows())
         else:
-            res = Parallel(n_jobs=n_par)(
-                delayed(_download_files)(row) for index, row in df.iterrows()
-            )
+            res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for index, row in df.iterrows())
     elif len(df) > 0:
         if show_progress:
             res = [None] * len(df)
@@ -88,7 +82,7 @@ def _download(fs_fusion, fs_local, df, n_par, show_progress=True, local_path="")
 def _upload(fs_fusion, fs_local, df, n_par, show_progress=True, local_path=""):
     df.rename(columns={"path_local": "path"}, inplace=True)
     df["path"] = local_path + df["path"]
-    parallel = True if len(df) > 1 else False
+    parallel = len(df) > 1
     res = upload_files(
         fs_fusion,
         fs_local,
@@ -118,9 +112,7 @@ def _generate_sha256_token(path, fs, chunk_size=5 * 2**20):
         return base64.b64encode(hash_sha256_chunk.digest()).decode()
 
 
-def _get_fusion_df(
-    fs_fusion, datasets_lst, catalog, flatten=False, dataset_format=None
-):
+def _get_fusion_df(fs_fusion, datasets_lst, catalog, flatten=False, dataset_format=None):
     df_lst = []
     for dataset in datasets_lst:
         changes = fs_fusion.info(f"{catalog}/datasets/{dataset}")["changes"]["datasets"]
@@ -131,14 +123,10 @@ def _get_fusion_df(
             urls = [catalog + "/datasets/" + k for k in keys]
             urls = [i.replace("distribution", "distributions") for i in urls]
             urls = [
-                (
-                    "/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:])
-                    if "datasetseries" not in i
-                    else i
-                )
+                ("/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:]) if "datasetseries" not in i else i)
                 for i in urls
             ]
-            # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]
+            # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]  # noqa: ERA001
             sz = [int(i["values"][1]) for i in changes]
             md = [i["values"][2].split("SHA-256=")[-1][:44] for i in changes]
             keys = [_url_to_path(i) for i in urls]
@@ -168,11 +156,7 @@ def _get_local_state(
 ):
     local_files = []
     local_files_rel = []
-    local_dirs = (
-        [f"{local_path}{catalog}/{i}" for i in datasets]
-        if len(datasets) > 0
-        else [local_path + catalog]
-    )
+    local_dirs = [f"{local_path}{catalog}/{i}" for i in datasets] if len(datasets) > 0 else [local_path + catalog]
 
     for local_dir in local_dirs:
         if not fs_local.exists(local_dir):
@@ -181,31 +165,22 @@ def _get_local_state(
         local_files_temp = fs_local.find(local_dir)
         local_rel_path = [i[i.find(local_dir) :] for i in local_files_temp]
         local_file_validation = validate_file_names(local_rel_path, fs_fusion)
-        local_files += [
-            f for flag, f in zip(local_file_validation, local_files_temp) if flag
-        ]
+        local_files += [f for flag, f in zip(local_file_validation, local_files_temp) if flag]
         local_files_rel += [
-            os.path.join(local_dir, relpath(i, local_dir))
-            .replace("\\", "/")
-            .replace(local_path, "")
+            os.path.join(local_dir, relpath(i, local_dir)).replace("\\", "/").replace(local_path, "")  # noqa: PTH118
             for i in local_files_temp
         ]
 
     local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
     is_raw_lst = is_dataset_raw(local_files, fs_fusion)
     local_url_eqiv = [path_to_url(i, r) for i, r in zip(local_files, is_raw_lst)]
-    df_local = pd.DataFrame(
-        [local_files_rel, local_url_eqiv, local_mtime, local_files]
-    ).T
+    df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_mtime, local_files]).T
     df_local.columns = ["path", "url", "mtime", "local_path"]
 
     if local_state is not None and len(local_state) > 0:
-        df_join = df_local.merge(
-            local_state, on="path", how="left", suffixes=("", "_prev")
-        )
+        df_join = df_local.merge(local_state, on="path", how="left", suffixes=("", "_prev"))
         df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "sha256"] = [
-            _generate_sha256_token(x, fs_local)
-            for x in df_join[df_join["mtime"] != df_join["mtime_prev"]].local_path
+            _generate_sha256_token(x, fs_local) for x in df_join[df_join["mtime"] != df_join["mtime_prev"]].local_path
         ]
         df_local = df_join[["path", "url", "mtime", "sha256"]]
     else:
@@ -218,7 +193,7 @@ def _get_local_state(
     return df_local
 
 
-def _synchronize(
+def _synchronize(  # noqa: PLR0913
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
     df_local: pd.DataFrame,
@@ -235,12 +210,10 @@ def _synchronize(
         if len(df_local) == 0:
             msg = "No dataset members available for upload for your dataset selection."
             logger.warning(msg)
-            warnings.warn(msg)
+            warnings.warn(msg)  # noqa: B028
             res = []
         else:
-            join_df = df_local.merge(
-                df_fusion, on="url", suffixes=("_local", "_fusion"), how="left"
-            )
+            join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="left")
             join_df = join_df[join_df["sha256_local"] != join_df["sha256_fusion"]]
             res = _upload(
                 fs_fusion,
@@ -252,16 +225,12 @@ def _synchronize(
             )
     elif direction == "download":
         if len(df_fusion) == 0:
-            msg = (
-                "No dataset members available for download for your dataset selection."
-            )
+            msg = "No dataset members available for download for your dataset selection."
             logger.warning(msg)
-            warnings.warn(msg)
+            warnings.warn(msg)  # noqa: B028
             res = []
         else:
-            join_df = df_local.merge(
-                df_fusion, on="url", suffixes=("_local", "_fusion"), how="right"
-            )
+            join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="right")
             join_df = join_df[join_df["sha256_local"] != join_df["sha256_fusion"]]
             res = _download(
                 fs_fusion,
@@ -276,7 +245,7 @@ def _synchronize(
     return res
 
 
-def fsync(
+def fsync(  # noqa: PLR0913
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
     products: list = None,
@@ -314,9 +283,7 @@ def fsync(
 
     if logger.hasHandlers():
         logger.handlers.clear()
-    file_handler = logging.FileHandler(
-        filename="{0}/{1}".format(log_path, "fusion_fsync.log")
-    )
+    file_handler = logging.FileHandler(filename="{}/{}".format(log_path, "fusion_fsync.log"))
     logging.addLevelName(VERBOSE_LVL, "VERBOSE")
     stdout_handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter(
@@ -328,13 +295,11 @@ def fsync(
     logger.addHandler(file_handler)
     logger.setLevel(log_level)
 
-    catalog = "common" if not catalog else catalog
-    datasets = [] if not datasets else datasets
-    products = [] if not products else products
+    catalog = catalog if catalog else "common"
+    datasets = datasets if datasets else []
+    products = products if products else []
 
-    assert (
-        len(products) > 0 or len(datasets) > 0
-    ), "At least one list products or datasets should be non-empty."
+    assert len(products) > 0 or len(datasets) > 0, "At least one list products or datasets should be non-empty."
     assert direction in [
         "upload",
         "download",
@@ -362,12 +327,8 @@ def fsync(
                 local_state,
                 local_path,
             )
-            fusion_state_temp = _get_fusion_df(
-                fs_fusion, datasets, catalog, flatten, dataset_format
-            )
-            if not local_state_temp.equals(local_state) or not fusion_state_temp.equals(
-                fusion_state
-            ):
+            fusion_state_temp = _get_fusion_df(fs_fusion, datasets, catalog, flatten, dataset_format)
+            if not local_state_temp.equals(local_state) or not fusion_state_temp.equals(fusion_state):
                 res = _synchronize(
                     fs_fusion,
                     fs_local,
@@ -378,7 +339,7 @@ def fsync(
                     show_progress,
                     local_path,
                 )
-                if len(res) == 0 or all((i[0] for i in res)):
+                if len(res) == 0 or all(i[0] for i in res):
                     local_state = local_state_temp
                     fusion_state = fusion_state_temp
 
@@ -388,13 +349,13 @@ def fsync(
                     errs = [r for r in res if not r[2]]
                     logger.warning(msg)
                     logger.warning(errs)
-                    warnings.warn(msg)
+                    warnings.warn(msg)  # noqa: B028
 
             else:
                 logger.info("All synced, sleeping")
                 time.sleep(10)
 
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:  # noqa: PERF203
             if input("Type exit to exit: ") != "exit":
                 continue
             break
