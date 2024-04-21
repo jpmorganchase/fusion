@@ -7,9 +7,10 @@ import sys
 import warnings
 from io import BytesIO
 from pathlib import Path
-from typing import Optional, Union
+from typing import Any, Optional, Union
 from zipfile import ZipFile
 
+import fsspec
 import pandas as pd
 import pyarrow as pa
 import requests
@@ -84,17 +85,17 @@ class Fusion:
 
     def __init__(
         self,
-        credentials: Union[str, dict] = "config/client_credentials.json",
+        credentials: Union[str, dict, FusionCredentials] = "config/client_credentials.json",
         root_url: str = "https://fusion-api.jpmorgan.com/fusion/v1/",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
-        fs=None,
+        fs: fsspec.filesystem = None,
         log_path: str = ".",
     ) -> None:
         """Constructor to instantiate a new Fusion object.
 
         Args:
-            credentials (Union[str, dict], optional): A path to a credentials file or
+            credentials (Union[str, dict, FusionCredentials]): A path to a credentials file or
                 a dictionary containing the required keys.
                 Defaults to 'config/client_credentials.json'.
             root_url (_type_, optional): The API root URL.
@@ -127,17 +128,21 @@ class Fusion:
 
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
-        else:
+        if isinstance(credentials, (str, dict)):
             self.credentials = FusionCredentials.from_object(credentials)
+        else:
+            raise ValueError(
+                "credentials must be a path to a credentials file or a dictionary containing the required keys"
+            )
 
         self.session = get_session(self.credentials, self.root_url)
         self.fs = fs if fs else get_default_fs()
-        self.events = None
+        self.events: Optional[pd.DataFrame] = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Object representation to list all available methods."""
         return "Fusion object \nAvailable methods:\n" + tabulate(
-            pd.DataFrame(
+            pd.DataFrame(  # type: ignore
                 [
                     [
                         method_name
@@ -170,7 +175,7 @@ class Fusion:
         return self._default_catalog
 
     @default_catalog.setter
-    def default_catalog(self, catalog) -> None:
+    def default_catalog(self, catalog: str) -> None:
         """Allow the default catalog, which is "common" to be overridden.
 
         Args:
@@ -181,7 +186,7 @@ class Fusion:
         """
         self._default_catalog = catalog
 
-    def __use_catalog(self, catalog) -> str:
+    def __use_catalog(self, catalog: Optional[str]) -> str:
         """Determine which catalog to use in an API call.
 
         Args:
@@ -195,7 +200,7 @@ class Fusion:
 
         return catalog
 
-    def get_fusion_filesystem(self):
+    def get_fusion_filesystem(self) -> FusionHTTPFileSystem:
         """Creates Fusion Filesystem.
 
         Returns: Fusion Filesystem
@@ -544,7 +549,7 @@ class Fusion:
         dt_str: str = "latest",
         dataset_format: str = "parquet",
         catalog: Optional[str] = None,
-    ):
+    ) -> list[tuple[str, str, str, str]]:
         """Resolve distribution tuples given specification params.
 
         A private utility function to generate a list of distribution tuples.
@@ -610,7 +615,7 @@ class Fusion:
         download_folder: Optional[str] = None,
         return_paths: bool = False,
         partitioning: Optional[str] = None,
-    ):
+    ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Downloads the requested distributions of a dataset to disk.
 
         Args:
@@ -748,7 +753,7 @@ class Fusion:
         force_download: bool = False,
         download_folder: Optional[str] = None,
         dataframe_type: str = "pandas",
-        **kwargs,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """Gets distributions for a specified date or date range and returns the data as a dataframe.
 
@@ -799,6 +804,9 @@ class Fusion:
             download_folder,
             return_paths=True,
         )
+
+        if not download_res:
+            raise ValueError("Must specify 'return_paths=True' in download call to use this function")
 
         if not all(res[0] for res in download_res):
             failed_res = [res for res in download_res if not res[0]]
@@ -920,7 +928,7 @@ class Fusion:
         filters: Optional[list] = None,
         force_download: bool = False,
         download_folder: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> pd.DataFrame:
         """Gets distributions for a specified date or date range and returns the data as an arrow table.
 
@@ -966,6 +974,9 @@ class Fusion:
             download_folder,
             return_paths=True,
         )
+
+        if not download_res:
+            raise ValueError("Must specify 'return_paths=True' in download call to use this function")
 
         if not all(res[0] for res in download_res):
             failed_res = [res for res in download_res if not res[0]]
@@ -1022,11 +1033,11 @@ class Fusion:
         n_par: Optional[int] = None,
         show_progress: bool = True,
         return_paths: bool = False,
-        multipart=True,
-        chunk_size=5 * 2**20,
-        from_date=None,
-        to_date=None,
-    ):
+        multipart: bool = True,
+        chunk_size: int = 5 * 2**20,
+        from_date: Optional[str] = None,
+        to_date: Optional[str] = None,
+    ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Uploads the requested files/files to Fusion.
 
         Args:
@@ -1083,7 +1094,7 @@ class Fusion:
                         f"or dataset: {dataset} does not exit."
                     )
                     warnings.warn(msg, stacklevel=2)
-                    return [(False, path, Exception(msg))]
+                    return [(False, path, msg)]
                 is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
                 file_format = path.split(".")[-1]
                 local_url_eqiv = [path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}", is_raw)]
@@ -1123,10 +1134,10 @@ class Fusion:
         distribution: str = "parquet",
         show_progress: bool = True,
         return_paths: bool = False,
-        chunk_size=5 * 2**20,
-        from_date=None,
-        to_date=None,
-    ):
+        chunk_size: int = 5 * 2**20,
+        from_date: Optional[str] = None,
+        to_date: Optional[str] = None,
+    ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Uploads data from an object in memory.
 
         Args:
@@ -1207,7 +1218,7 @@ class Fusion:
         if last_event_id:
             kwargs = {"headers": {"Last-Event-ID": last_event_id}}
 
-        async def async_events():
+        async def async_events() -> None:
             """Events sync function.
 
             Returns:
@@ -1224,7 +1235,7 @@ class Fusion:
                     async for msg in messages:
                         event = json.loads(msg.data)
                         if self.events is None:
-                            self.events = pd.DataFrame([event])
+                            self.events = pd.DataFrame()
                         else:
                             self.events = pd.concat([self.events, pd.DataFrame(event)], ignore_index=True)
                 except TimeoutError as ex:

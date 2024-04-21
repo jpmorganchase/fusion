@@ -90,6 +90,7 @@ dev-dependencies = [
     "auditwheel>=6.0.0; sys_platform=='linux'",
     "bump2version",
     "cffi>=1.16.0; sys_platform=='darwin'",
+    "ipython",
     "maturin>=1.2,<2.0",
     "mypy",
     "patchelf>=0.17.2.1; sys_platform=='linux'",
