@@ -1,4 +1,23 @@
+import os
+from contextlib import contextmanager
+from pathlib import Path
+
 import pytest
+
+from fusion.authentication import FusionCredentials, FusionOAuthAdapter
+
+
+@contextmanager
+def change_dir(destination):
+    try:
+        # Save the current working directory
+        cwd = Path.cwd()
+        # Change the working directory
+        os.chdir(destination)
+        yield
+    finally:
+        # Change back to the original directory
+        os.chdir(cwd)
 
 
 @pytest.fixture
@@ -67,6 +86,20 @@ def example_creds_dict(example_client_id, example_client_secret):
 
 
 @pytest.fixture
+def example_creds_dict_https_pxy(example_client_id, example_client_secret):
+    # Mocked creds info
+    return {
+        "client_id": example_client_id,
+        "client_secret": example_client_secret,
+        "resource": "JPMC:URI:RS-97834-Fusion-PROD",
+        "auth_url": "https://authe.mysite.com/as/token.oauth2",
+        "proxies": {
+            "https": "http://myproxy.com:8081",
+        },
+    }
+
+
+@pytest.fixture
 def example_creds_dict_no_pxy(example_creds_dict):
     example_creds_dict.pop("proxies")
     return example_creds_dict
@@ -88,7 +121,8 @@ def good_json():
         "auth_url": "https://authe.mysite.com/as/token.oauth2",
         "proxies": {
             "http": "http://myproxy.com:8080",
-            "https": "http://myproxy.com:8081",
+            "https": "http://myproxy.com:8081"
+            }
         }"""
 
 
@@ -129,3 +163,22 @@ def bad_json3():
             "http": "http://myproxy.com:8080",
             "https": "http://myproxy.com:8081",
         }"""
+
+
+@pytest.fixture
+def credentials(example_creds_dict):
+    return FusionCredentials.from_dict(example_creds_dict)
+
+
+@pytest.fixture
+def fusion_oauth_adapter(credentials):
+    return FusionOAuthAdapter(credentials)
+
+
+@pytest.fixture
+def fusion_oauth_adapter_from_obj(example_creds_dict):
+    proxies = {
+        "http": "http://myproxy.com:8080",
+        "https": "http://myproxy.com:8081",
+    }
+    return FusionOAuthAdapter(example_creds_dict, auth_retries=5, proxies=proxies)

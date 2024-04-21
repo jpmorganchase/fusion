@@ -154,7 +154,7 @@ def _get_fusion_df(
                 keys = ["/".join(k.split("/")[:2] + k.split("/")[-1:]) for k in keys]
 
             df = pd.DataFrame([keys, urls, sz, md]).T
-            df = df[["path", "url", "size", "sha256"]]
+            df.columns = pd.Index(["path", "url", "size", "sha256"])
             if dataset_format and len(df) > 0:
                 df = df[df.url.str.split("/").str[-1] == dataset_format]
             df_lst.append(df)
@@ -201,7 +201,7 @@ def _get_local_state(
         df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "sha256"] = [
             _generate_sha256_token(x, fs_local) for x in df_join[df_join["mtime"] != df_join["mtime_prev"]].local_path
         ]
-        df_local = df_join[["path", "url", "mtime", "sha256"]]
+        df_local.columns = pd.Index(["path", "url", "mtime", "sha256"])
     else:
         df_local["sha256"] = [_generate_sha256_token(x, fs_local) for x in local_files]
 

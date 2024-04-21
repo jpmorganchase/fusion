@@ -88,19 +88,25 @@ events = [
 [tool.rye]
 managed = true
 dev-dependencies = [
+    "aioresponses>=0.7.6",
     "auditwheel>=6.0.0; sys_platform=='linux'",
     "bump2version",
     "cffi>=1.16.0; sys_platform=='darwin'",
+    "freezegun>=1.4.0",
     "ipython",
     "maturin>=1.2,<2.0",
+    "moto[s3]>=5.0.5",
     "mypy",
     "patchelf>=0.17.2.1; sys_platform=='linux'",
+    "pandas >= 1.1",
     "pandas-stubs>1.1",
     "pip",
-    "pre-commit",
+    "polars",
     "pytest",
-    "pytest-random-order>=1.1.1",
+    "pytest-asyncio>=0.23.6",
     "pytest-cov",
+    "pytest-mock>=3.14.0",
+    "pytest-random-order>=1.1.1",
     "requests-mock>=1.12.1",
     "ruff",
     "toml",
@@ -109,9 +115,10 @@ dev-dependencies = [
     "twine",
     "types-requests >=2",
     "types-tabulate >= 0.8.8",
+    "types-tqdm>=4",
     "virtualenv",
     "ziglang>=0.11.0; sys_platform=='linux'",
-    "types-tqdm>=4",
+    "pytest-aiohttp>=1.0.5",
 ]
 
 

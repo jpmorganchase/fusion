@@ -1,20 +1,42 @@
+import io
 import multiprocessing as mp
-from unittest.mock import MagicMock
+import tempfile
+import threading
+from pathlib import Path
+from queue import Queue
+from unittest.mock import MagicMock, Mock, patch
 
+import fsspec
+import joblib
 import pandas as pd
 import polars as pl
 import pytest
+import requests
+from tqdm import tqdm
 
+from fusion import Fusion
+from fusion.authentication import FusionOAuthAdapter
 from fusion.utils import (
     _filename_to_distribution,
+    _stream_single_file_new_session_dry_run,
+    _worker,
     cpu_count,
     csv_to_table,
+    distribution_to_url,
+    download_single_file_threading,
+    get_session,
+    is_dataset_raw,
     json_to_table,
-    normalise_dt_param_str,  # Added import for the new function
+    normalise_dt_param_str,
     parquet_to_table,
     path_to_url,
     read_csv,
     read_json,
+    stream_single_file_new_session,
+    stream_single_file_new_session_chunks,
+    tqdm_joblib,
+    upload_files,
+    validate_file_names,
 )
 
 
@@ -45,6 +67,24 @@ def sample_parquet_path(tmp_path):
     # Generate sample parquet file using your preferred method
     generate_sample_parquet_file(parquet_path)
     return parquet_path
+
+
+@pytest.fixture
+def sample_parquet_paths(tmp_path):
+    parquet_paths = []
+    for i in range(3):
+        parquet_path = tmp_path / f"sample_{i}.parquet"
+
+        # Generate sample parquet file using your preferred method
+        def generate_sample_parquet_file(parquet_path):
+            data = {"col1": ["value1"], "col2": ["value2"]}
+            df = pd.DataFrame(data)
+            df.to_parquet(parquet_path)
+
+        # Generate sample parquet file using your preferred method
+        generate_sample_parquet_file(parquet_path)
+        parquet_paths.append(parquet_path)
+    return parquet_paths
 
 
 def test_cpu_count():
@@ -104,6 +144,12 @@ def test_parquet_to_table(sample_parquet_path):
     table_filtered_selected = parquet_to_table(sample_parquet_path, columns=["col1"])
     assert len(table_filtered_selected) == 1
     assert table_filtered_selected.column_names == ["col1"]
+
+
+def test_parquet_to_table_with_multiple_files(sample_parquet_paths):
+    tables = parquet_to_table(sample_parquet_paths)
+    num_rows_in_fixture = 3
+    assert len(tables) == num_rows_in_fixture
 
 
 def test_read_csv(sample_csv_path):
@@ -341,9 +387,11 @@ def test_read_csv_with_polars_dataframe_type(sample_csv_path):
     assert list(dataframe.columns) == ["col1", "col2"]
 
 
-def test_read_csv_with_unknown_dataframe_type(sample_csv_path):
+def test_read_xxx_with_unknown_dataframe_type(sample_csv_path, sample_json_path):
     with pytest.raises(ValueError):
         read_csv(sample_csv_path, dataframe_type="unknown")
+    with pytest.raises(Exception):  # noqa: B017
+        read_json(sample_json_path, dataframe_type="unknown")
 
 
 def test_read_json_with_pandas_dataframe_type(sample_json_path):
@@ -449,3 +497,530 @@ def test_filename_to_distribution():
     assert dataset == "anotherdataset"
     assert datasetseries == "anotherdatasetseries"
     assert file_format == "parquet"
+
+
+def test_distribution_to_url():
+    from fusion.utils import distribution_to_url
+
+    root_url = "https://api.fusion.jpmc.com/"
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    bad_series_chs = ["/", "\\"]
+    exp_res = (
+        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/" f"{datasetseries}/distributions/{file_format}"
+    )
+    for ch in bad_series_chs:
+        datasetseries = f"2020-04-04{ch}"
+        result = distribution_to_url(root_url, dataset, datasetseries, file_format, catalog)
+        assert result == exp_res
+
+    # Test is_download
+    datasetseries = "2020-04-04"
+    exp_res = (
+        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+        f"{datasetseries}/distributions/{file_format}/operationType/download"
+    )
+    for ch in bad_series_chs:
+        datasetseries_mod = f"2020-04-04{ch}"
+        result = distribution_to_url(root_url, dataset, datasetseries_mod, file_format, catalog, is_download=True)
+        assert result == exp_res
+
+    # Test samples
+    exp_res = f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
+    datasetseries = "sample"
+    assert distribution_to_url(root_url, dataset, datasetseries, file_format, catalog) == exp_res
+
+
+def test_distribution_to_filename():
+    from fusion.utils import distribution_to_filename
+
+    root_dir = "/tmp"
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    exp_res = f"{root_dir}/{dataset}__{catalog}__{datasetseries}.{file_format}"
+    bad_series_chs = ["/", "\\"]
+    for ch in bad_series_chs:
+        datasetseries_mod = f"2020-04-04{ch}"
+        res = distribution_to_filename(root_dir, dataset, datasetseries_mod, file_format, catalog)
+        assert res == exp_res
+
+    # Test hive partitioning
+    exp_res = f"{root_dir}/{dataset}.{file_format}"
+    for ch in bad_series_chs:
+        datasetseries_mod = f"2020-04-04{ch}"
+        res = distribution_to_filename(root_dir, dataset, datasetseries_mod, file_format, catalog, partitioning="hive")
+        assert res == exp_res
+
+    root_dir = "c:\\tmp"
+    exp_res = f"{root_dir}\\{dataset}__{catalog}__{datasetseries}.{file_format}"
+    res = distribution_to_filename(root_dir, dataset, datasetseries, file_format, catalog)
+    assert res == exp_res
+
+
+@pytest.mark.parametrize(
+    "overwrite, exists, expected_result",
+    [
+        (True, True, 0),  # Overwrite enabled, file exists
+        (False, True, 0),  # Overwrite disabled, file exists
+        (True, False, 0),  # Overwrite enabled, file does not exist
+        (False, False, 0),  # Overwrite disabled, file does not exist
+    ],
+)
+def test_stream_file(overwrite, exists, expected_result):
+    session = Mock(spec=requests.Session)
+    url = "http://example.com/data"
+    output_file = Mock(spec=fsspec.spec.AbstractBufferedFile)
+    start, end = 0, 10
+    lock = threading.Lock()
+    results = [None] * 1  # single element list
+    idx = 0
+    fs = Mock(spec=fsspec.AbstractFileSystem)
+    fs.exists.return_value = exists
+
+    with (
+        patch("fsspec.filesystem", return_value=fs),
+        patch.object(session, "get", wraps=requests.Session().get) as mock_get,
+    ):
+        # Your code here
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.content = b"0123456789"
+        mock_get.return_value.__enter__.return_value = mock_response
+
+        result = stream_single_file_new_session_chunks(
+            session, url, output_file, start, end, lock, results, idx, overwrite=overwrite, fs=fs
+        )
+
+        assert result == expected_result
+        if not overwrite and exists:
+            fs.exists.assert_called_once_with(output_file)
+            assert results[idx] == (True, output_file, None)
+        else:
+            output_file.seek.assert_called_once_with(start)
+            output_file.write.assert_called_once_with(b"0123456789")
+            assert results[idx] == (True, output_file, None)
+
+
+def test_stream_single_file_new_session_dry_run(credentials, requests_mock):
+    fusion_obj = Fusion()
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    out_f = "/tmp/tmp.tmp"
+    url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
+    requests_mock.head(url)
+    assert (True, out_f, None) == _stream_single_file_new_session_dry_run(credentials, url, "/tmp/tmp.tmp")
+
+    requests_mock.head(url, status_code=500)
+    res = _stream_single_file_new_session_dry_run(credentials, url, "/tmp/tmp.tmp")
+    assert not res[0]
+    assert res[1] == out_f
+
+
+def test_stream_file_exception():
+    session = Mock(spec=requests.Session)
+    url = "http://example.com/data"
+    output_file = Mock(spec=fsspec.spec.AbstractBufferedFile)
+    start, end = 0, 10
+    lock = threading.Lock()
+    results = [None] * 1  # single element list
+    idx = 0
+    fs = Mock(spec=fsspec.AbstractFileSystem)
+
+    with (
+        patch("fsspec.filesystem", return_value=fs),
+        patch.object(session, "get", side_effect=requests.HTTPError("Error")),
+    ):
+        result = stream_single_file_new_session_chunks(  # noqa: F821
+            session, url, output_file, start, end, lock, results, idx, overwrite=True, fs=fs
+        )
+
+        assert result == 1
+        assert results[idx] == (False, output_file, "Error")
+
+
+@pytest.fixture
+def temp_fs():
+    with (
+        tempfile.TemporaryDirectory() as tmpdirname,
+        patch(
+            "fsspec.filesystem", return_value=fsspec.filesystem("file", auto_mkdir=True, root_path=tmpdirname)
+        ) as mock_fs,
+    ):
+        yield mock_fs, tmpdirname
+
+
+def test_stream_file_with_temp_fs(temp_fs, requests_mock):
+    mock_fs, tmpdirname = temp_fs
+
+    output_file_path = Path(tmpdirname) / "output.dat"
+    output_file = fsspec.open(output_file_path, mode="wb").open()  # Open a writable file for test
+
+    start, end = 0, 10
+    lock = threading.Lock()
+    results = [None]
+    idx = 0
+
+    fusion_obj = Fusion()
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    url = distribution_to_url(fusion_obj.root_url, catalog, dataset, datasetseries, file_format)
+
+    requests_mock.get(url, content=b"0123456789")
+
+    try:
+        result = stream_single_file_new_session_chunks(
+            requests.Session(),
+            url,
+            output_file,
+            start,
+            end,
+            lock,
+            results,
+            idx,
+            overwrite=True,
+            fs=None,  # Pass None to simulate the condition you want to test
+        )
+        output_file.flush()
+        # Read back what was written to ensure correctness
+        with output_file_path.open("rb") as f:
+            file_contents = f.read()
+        assert file_contents == b"0123456789"
+        assert result == 0, "Function should return 0 on success"
+        assert results[idx] == (True, output_file, None), "Results should be updated correctly"
+    finally:
+        output_file.close()
+
+
+def gen_binary_data(n: int, pad_len: int):
+    return [bin(i)[2:].zfill(pad_len).encode() for i in range(n)]
+
+
+def test_worker(requests_mock, temp_fs):
+    fusion_obj = Fusion()
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
+    splits = 10
+    chunk_sz = 10
+    bin_data = gen_binary_data(splits, chunk_sz)
+    mock_fs, tmpdirname = temp_fs
+
+    output_file_path = Path(tmpdirname) / "output.dat"
+    output_file = fsspec.open(output_file_path, mode="wb").open()  # Open a writable file for test
+
+    # generate all the get mocks
+    for i in range(splits):
+        start = i * chunk_sz
+        end = start + chunk_sz - 1
+        requests_mock.get(f"{url}?downloadRange=bytes={start}-{end-1}", content=bin_data[i])
+
+    max_threads = 5
+    results = [None] * splits
+    queue: Queue = Queue(max_threads)
+    lock = threading.Lock()
+
+    threads = []
+    for _ in range(max_threads):
+        t = threading.Thread(target=_worker, args=(queue, requests.Session(), url, output_file, lock, results))
+        t.start()
+        threads.append(t)
+
+    for i in range(splits):
+        queue.put((i, i * chunk_sz, i * chunk_sz + chunk_sz - 1))
+    queue.join()
+
+    for _ in range(max_threads):
+        queue.put((None, None, None))
+    for t in threads:
+        t.join()
+
+    output_file.close()
+
+    with output_file_path.open("rb") as f:
+        file_contents = f.read()
+    for ix, line in enumerate(bin_data):
+        assert line == file_contents[ix * chunk_sz : (ix + 1) * chunk_sz]
+
+
+def test_progress_update():
+    num_inputs = 100
+    inputs = list(range(num_inputs))
+
+    def true_if_even(x):
+        return (x % 2 == 0, x)
+
+    with tqdm_joblib(tqdm(total=num_inputs)):
+        res = joblib.Parallel(n_jobs=10)(joblib.delayed(true_if_even)(i) for i in inputs)
+
+    assert len(res) == num_inputs
+
+
+@pytest.fixture
+def mock_fs_fusion():
+    fs = MagicMock()
+    fs.ls.side_effect = lambda path: {
+        "": ["catalog1", "catalog2"],
+        "catalog1/datasets": ["dataset1", "dataset2"],
+        "catalog2/datasets": ["dataset3"],
+    }.get(path, [])
+    return fs
+
+
+def test_validate_correct_file_names(mock_fs_fusion):
+    paths = ["path/to/dataset1__catalog1__20230101.csv"]
+    expected = [True]
+    assert validate_file_names(paths, mock_fs_fusion) == expected
+
+
+def test_validate_incorrect_format_file_names(mock_fs_fusion):
+    paths = ["path/to/incorrectformatfile.csv"]
+    expected = [False]
+    assert validate_file_names(paths, mock_fs_fusion) == expected
+
+
+def test_validate_non_existing_catalog(mock_fs_fusion):
+    paths = ["path/to/dataset1__catalog3__20230101.csv"]
+    expected = [False]
+    assert validate_file_names(paths, mock_fs_fusion) == expected
+
+
+def test_validate_non_existing_dataset(mock_fs_fusion):
+    paths = ["path/to/dataset4__catalog1__20230101.csv"]
+    expected = [False]
+    assert validate_file_names(paths, mock_fs_fusion) == expected
+
+
+def test_validate_error_paths(mock_fs_fusion):
+    paths = ["path/to/catalog1__20230101.csv"]
+    expected = [False]
+    assert validate_file_names(paths, mock_fs_fusion) == expected
+
+
+def test_empty_input_list(mock_fs_fusion):
+    paths = []
+    expected = []
+    assert validate_file_names(paths, mock_fs_fusion) == expected
+
+
+def test_filesystem_exceptions(mock_fs_fusion):
+    mock_fs_fusion.ls.side_effect = Exception("Failed to list directories")
+    paths = ["path/to/dataset1__catalog1__20230101.csv"]
+    with pytest.raises(Exception):  # noqa: B017
+        validate_file_names(paths, mock_fs_fusion)
+
+
+def test_get_session(credentials, mocker):
+    fusion_obj = Fusion()
+    session = get_session(credentials, fusion_obj.root_url)
+    assert session
+    session = get_session(credentials, fusion_obj.root_url, get_retries=3)
+    assert session
+
+    # Mock out the request to raise an exception
+    mocker.patch("fusion.utils._get_canonical_root_url", side_effect=Exception("Failed to get canonical root url"))
+    session = get_session(credentials, fusion_obj.root_url)
+    for mnt, adapter_obj in session.adapters.items():
+        if isinstance(adapter_obj, FusionOAuthAdapter):
+            assert mnt == "https://"
+
+
+def test_download_single_file_threading(temp_fs, requests_mock, credentials):
+    fusion_obj = Fusion()
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
+    splits = 10
+    chunk_sz = 10
+    bin_data = gen_binary_data(splits, chunk_sz)
+    mock_fs, tmpdirname = temp_fs
+
+    output_file_path = Path(tmpdirname) / "output.dat"
+    output_file = fsspec.open(output_file_path, mode="wb").open()  # Open a writable file for test
+    # generate all the get mocks
+    requests_mock.head(url, headers={"Content-Length": str(splits * chunk_sz)})
+    for i in range(splits):
+        start = i * chunk_sz
+        end = start + chunk_sz - 1
+        mock_url = f"{url}?downloadRange=bytes={start}-{end}"
+        mock_data = bin_data[i]
+        requests_mock.get(mock_url, content=mock_data)
+
+    download_single_file_threading(credentials=credentials, url=url, output_file=output_file, chunk_size=chunk_sz)
+
+    with output_file_path.open("rb") as f:
+        file_contents = f.read()
+    for ix, line in enumerate(bin_data):
+        assert line == file_contents[ix * chunk_sz : (ix + 1) * chunk_sz]
+
+
+def test_stream_single_file_new_session(temp_fs, requests_mock, credentials):
+    fusion_obj = Fusion()
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
+    splits = 10
+    chunk_sz = 10
+    bin_data = gen_binary_data(splits, chunk_sz)
+    mock_fs, tmpdirname = temp_fs
+
+    output_file_path = Path(tmpdirname) / "output.dat"
+    output_file = fsspec.open(output_file_path, mode="wb").open()  # Open a writable file for test
+    # generate all the get mocks
+    requests_mock.head(url, headers={"Content-Length": str(splits * chunk_sz)})
+    requests_mock.get(url, content=b"".join(bin_data))
+
+    stream_single_file_new_session(credentials=credentials, url=url, output_file=output_file)
+
+    with output_file_path.open("rb") as f:
+        file_contents = f.read()
+    for ix, line in enumerate(bin_data):
+        assert line == file_contents[ix * chunk_sz : (ix + 1) * chunk_sz]
+
+
+def test_stream_single_file_new_session_dry_run_from_parent(temp_fs, requests_mock, credentials):
+    fusion_obj = Fusion()
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
+    splits = 10
+    chunk_sz = 10
+    mock_fs, tmpdirname = temp_fs
+
+    output_file_path = Path(tmpdirname) / "output.dat"
+    output_file = fsspec.open(output_file_path, mode="wb").open()  # Open a writable file for test
+    # generate all the get mocks
+    requests_mock.head(url, headers={"Content-Length": str(splits * chunk_sz)})
+    stream_single_file_new_session(credentials=credentials, url=url, output_file=output_file, dry_run=True)
+
+
+def test_stream_single_file_new_session_file_exists(temp_fs, credentials):
+    fusion_obj = Fusion()
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
+    splits = 10
+    chunk_sz = 10
+    mock_fs, tmpdirname = temp_fs
+
+    output_file_path = Path(tmpdirname) / "output.dat"
+    output_file = fsspec.open(output_file_path, mode="wb").open()  # Open a writable file for test
+    output_file.write(b"0" * (splits * chunk_sz))
+    # generate all the get mocks
+    stream_single_file_new_session(credentials=credentials, url=url, output_file=output_file, overwrite=False)
+
+
+def test_stream_single_file_new_session_with_exception(temp_fs, mocker, credentials):
+    fusion_obj = Fusion()
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
+    mock_fs, tmpdirname = temp_fs
+
+    output_file_path = Path(tmpdirname) / "output.dat"
+    output_file = fsspec.open(output_file_path, mode="wb").open()  # Open a writable file for test
+    mocker.patch("fusion.utils.get_session", side_effect=Exception("Failed to get session"))
+    res = stream_single_file_new_session(credentials=credentials, url=url, output_file=output_file)
+    assert not res[0]
+    assert res[1] == output_file
+
+
+@pytest.fixture
+def mock_fs_fusion_w_cat():
+    fs = MagicMock()
+    # Mock the 'cat' method to return JSON strings as bytes
+    fs.cat.side_effect = lambda path: {
+        "catalog1/datasets/dataset1": b'{"isRawData": true}',
+        "catalog1/datasets/dataset2": b'{"isRawData": false}',
+    }.get(path, b"{}")  # Default empty JSON if path not found
+    return fs
+
+
+def test_is_dataset_raw(mock_fs_fusion_w_cat):
+    paths = ["path/to/dataset1__catalog1.csv"]
+    expected = [True]
+    assert is_dataset_raw(paths, mock_fs_fusion_w_cat) == expected
+
+
+def test_is_dataset_raw_fail(mock_fs_fusion_w_cat):
+    paths = ["path/to/dataset2__catalog1.csv"]
+    expected = [False]
+    assert is_dataset_raw(paths, mock_fs_fusion_w_cat) == expected
+
+
+def test_is_dataset_raw_empty_input_list(mock_fs_fusion_w_cat):
+    paths = []
+    expected = []
+    assert is_dataset_raw(paths, mock_fs_fusion_w_cat) == expected
+
+
+def test_is_dataset_raw_filesystem_exceptions(mock_fs_fusion_w_cat):
+    # Let's assume that the file not found results in an empty JSON, thus False
+    mock_fs_fusion_w_cat.cat.side_effect = Exception("File not found")
+    paths = ["path/to/dataset1__catalog1.csv"]
+    with pytest.raises(Exception):  # noqa: B017
+        is_dataset_raw(paths, mock_fs_fusion_w_cat)
+
+
+def test_is_dataset_raw_caching_of_results(mock_fs_fusion_w_cat):
+    paths = ["path/to/dataset1__catalog1.csv", "path/to/dataset1__catalog1.csv"]
+    # The filesystem's `cat` method should only be called once due to caching
+    is_dataset_raw(paths, mock_fs_fusion_w_cat)
+    mock_fs_fusion_w_cat.cat.assert_called_once()
+
+
+@pytest.fixture
+def setup_fs():
+    fs_fusion = MagicMock(spec=fsspec.AbstractFileSystem)
+    fs_local = MagicMock(spec=fsspec.AbstractFileSystem)
+    fs_local.size.return_value = 4 * 2**20  # Less than chunk_size to test single-part upload
+    fs_fusion.put.return_value = None
+    return fs_fusion, fs_local
+
+
+@pytest.fixture
+def upload_row():
+    return pd.Series({"url": "http://example.com/file", "path": "localfile/path/file.txt"})
+
+
+@pytest.fixture
+def upload_rows():
+    return pd.DataFrame(
+        {
+            "url": ["http://example.com/file1", "http://example.com/file2", "http://example.com/file3"],
+            "path": ["localfile/path/file1.txt", "localfile/path/file2.txt", "localfile/path/file3.txt"],
+        }
+    )
+
+
+def test_upload_public(setup_fs, upload_rows):
+    fs_fusion, fs_local = setup_fs
+
+    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=True, parallel=False)
+    assert res
+    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=False)
+    assert res
+
+    fs_local.size.return_value = 5 * 2**20
+    fs_local = io.BytesIO(b"some data to simulate file content")
+    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=False)
+    assert res
