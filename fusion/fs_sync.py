@@ -4,12 +4,12 @@ import base64
 import hashlib
 import json
 import logging
-import os
 import sys
 import time
 import warnings
 from os.path import relpath
 from pathlib import Path
+from typing import Optional
 
 import fsspec
 import pandas as pd
@@ -126,7 +126,6 @@ def _get_fusion_df(fs_fusion, datasets_lst, catalog, flatten=False, dataset_form
                 ("/".join(i.split("/")[:3] + ["datasetseries"] + i.split("/")[3:]) if "datasetseries" not in i else i)
                 for i in urls
             ]
-            # ts = [pd.Timestamp(i["values"][0]).timestamp() for i in changes]  # noqa: ERA001
             sz = [int(i["values"][1]) for i in changes]
             md = [i["values"][2].split("SHA-256=")[-1][:44] for i in changes]
             keys = [_url_to_path(i) for i in urls]
@@ -167,8 +166,8 @@ def _get_local_state(
         local_file_validation = validate_file_names(local_rel_path, fs_fusion)
         local_files += [f for flag, f in zip(local_file_validation, local_files_temp) if flag]
         local_files_rel += [
-            os.path.join(local_dir, relpath(i, local_dir)).replace("\\", "/").replace(local_path, "")  # noqa: PTH118
-            for i in local_files_temp
+            Path(local_dir, relpath(loc_file, local_dir).replace("\\", "/").replace(local_path, ""))
+            for loc_file in local_files_temp
         ]
 
     local_mtime = [fs_local.info(x)["mtime"] for x in local_files]
@@ -199,7 +198,7 @@ def _synchronize(  # noqa: PLR0913
     df_local: pd.DataFrame,
     df_fusion: pd.DataFrame,
     direction: str = "upload",
-    n_par: int = None,
+    n_par: Optional[int] = None,
     show_progress: bool = True,
     local_path="",
 ):
@@ -210,7 +209,7 @@ def _synchronize(  # noqa: PLR0913
         if len(df_local) == 0:
             msg = "No dataset members available for upload for your dataset selection."
             logger.warning(msg)
-            warnings.warn(msg)  # noqa: B028
+            warnings.warn(msg, stacklevel=2)
             res = []
         else:
             join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="left")
@@ -227,7 +226,7 @@ def _synchronize(  # noqa: PLR0913
         if len(df_fusion) == 0:
             msg = "No dataset members available for download for your dataset selection."
             logger.warning(msg)
-            warnings.warn(msg)  # noqa: B028
+            warnings.warn(msg, stacklevel=2)
             res = []
         else:
             join_df = df_local.merge(df_fusion, on="url", suffixes=("_local", "_fusion"), how="right")
@@ -248,16 +247,16 @@ def _synchronize(  # noqa: PLR0913
 def fsync(  # noqa: PLR0913
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
-    products: list = None,
-    datasets: list = None,
-    catalog: str = None,
+    products: Optional[list] = None,
+    datasets: Optional[list] = None,
+    catalog: Optional[str] = None,
     direction: str = "upload",
-    flatten=False,
-    dataset_format=None,
-    n_par=None,
-    show_progress=True,
-    local_path="",
-    log_level=logging.ERROR,
+    flatten: bool = False,
+    dataset_format: Optional[str] = None,
+    n_par: Optional[int] = None,
+    show_progress: bool = True,
+    local_path: str = "",
+    log_level: int = logging.ERROR,
     log_path: str = ".",
 ):
     """Synchronisation between the local filesystem and Fusion.
@@ -272,10 +271,10 @@ def fsync(  # noqa: PLR0913
         flatten (bool): Flatten the folder structure.
         dataset_format (str): Dataset format for upload/download.
         n_par (int, optional): Specify how many distributions to download in parallel. Defaults to all.
-        show_progress (bool, optional): Display a progress bar during data download Defaults to True.
-        local_path (str, optional): path to files in the local filesystem, e.g., "s3a://my_bucket/"
-        log_level: Logging level. Error level by default.
-        log_path (str, optional): The folder path where the log is stored.
+        show_progress (bool): Display a progress bar during data download Defaults to True.
+        local_path (str): path to files in the local filesystem, e.g., "s3a://my_bucket/"
+        log_level (int): Logging level. Error level by default.
+        log_path (str): The folder path where the log is stored. Defaults to ".".
 
     Returns:
 
@@ -349,7 +348,7 @@ def fsync(  # noqa: PLR0913
                     errs = [r for r in res if not r[2]]
                     logger.warning(msg)
                     logger.warning(errs)
-                    warnings.warn(msg)  # noqa: B028
+                    warnings.warn(msg, stacklevel=2)
 
             else:
                 logger.info("All synced, sleeping")

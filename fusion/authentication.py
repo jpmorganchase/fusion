@@ -6,7 +6,7 @@ import logging
 import os
 from datetime import timedelta
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 from urllib.parse import urlparse
 
 import aiohttp
@@ -93,14 +93,14 @@ class FusionCredentials:
 
     def __init__(  # noqa: PLR0913
         self,
-        client_id: str = None,
-        client_secret: str = None,
-        username: str = None,
-        password: str = None,
-        resource: str = None,
-        auth_url: str = None,
-        bearer_token: str = None,
-        bearer_token_expiry: datetime.datetime = None,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        resource: Optional[str] = None,
+        auth_url: Optional[str] = None,
+        bearer_token: Optional[str] = None,
+        bearer_token_expiry: Optional[datetime.datetime] = None,
         is_bearer_token_expirable=None,
         proxies=None,
         grant_type: str = "client_credentials",
@@ -138,7 +138,7 @@ class FusionCredentials:
     @staticmethod
     def add_proxies(
         http_proxy: str,
-        https_proxy: str = None,
+        https_proxy: Optional[str] = None,
         credentials_file: str = "config/client_credentials.json",
     ) -> None:
         """A function to add proxies to an existing credentials files.
@@ -173,17 +173,17 @@ class FusionCredentials:
             }
         )
         json_data = json.dumps(data, indent=4)
-        with open(credentials_file, "w") as credentialsfile:  # noqa: PTH123
+        with Path(credentials_file).open("w") as credentialsfile:
             credentialsfile.write(json_data)
 
     @staticmethod
     def generate_credentials_file(
         credentials_file: str = "config/client_credentials.json",
-        client_id: str = None,
-        client_secret: str = None,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
         resource: str = "JPMC:URI:RS-93742-Fusion-PROD",
         auth_url: str = "https://authe.jpmorgan.com/as/token.oauth2",
-        proxies: Union[str, dict] = None,
+        proxies: Optional[Union[str, dict]] = None,
     ):
         """Utility function to generate credentials file that can be used for authentication.
 
@@ -251,7 +251,7 @@ class FusionCredentials:
         data["proxies"] = proxies_resolved
         json_data = json.dumps(data, indent=4)
         Path(credentials_file).parent.mkdir(parents=True, exist_ok=True)
-        with open(credentials_file, "w") as credentialsfile:  # noqa: PTH123
+        with Path(credentials_file).open("w") as credentialsfile:
             credentialsfile.write(json_data)
 
         credentials = FusionCredentials.from_file(file_path=credentials_file)
@@ -290,7 +290,7 @@ class FusionCredentials:
             password = None
             bearer_token = credentials["bearer_token"]
             bearer_token_expiry = (
-                pd.to_datetime(credentials.get("bearer_token_expiry"))
+                pd.to_datetime(credentials.get("bearer_token_expiry"))  # type: ignore
                 if credentials.get("bearer_token_expiry")
                 else None
             )
@@ -343,29 +343,29 @@ class FusionCredentials:
             FusionCredentials: a credentials object that can be used for authentication.
         """
         fs = fs if fs else get_default_fs()
-        to_use_file_path = None
+        to_use_file_path: Optional[Path] = None
 
         if fs.exists(file_path):  # absolute path case
             logger.log(VERBOSE_LVL, f"Found credentials file at {file_path}")
-            to_use_file_path = file_path
-        elif fs.exists(os.path.join(fs.info("")["name"], file_path)):  # relative path case  # noqa: PTH118
-            to_use_file_path = os.path.join(fs.info("")["name"], file_path)  # noqa: PTH118
+            to_use_file_path = Path(file_path)
+        elif Path(Path(fs.info("")["name"]) / file_path).exists():  # relative path case
+            to_use_file_path = Path(fs.info("")["name"]) / file_path
             logger.log(VERBOSE_LVL, f"Found credentials file at {to_use_file_path}")
         else:
             for p in [s.__str__() for s in Path(fs.info("")["name"]).parents]:
-                if fs.exists(os.path.join(p, file_path)):  # noqa: PTH118
-                    to_use_file_path = os.path.join(p, file_path)  # noqa: PTH118
+                if Path(p, file_path).exists():
+                    to_use_file_path = Path(p, file_path)
                     logger.log(VERBOSE_LVL, f"Found credentials file at {to_use_file_path}")
                     break
         if fs.size(to_use_file_path) > 0:
             try:
-                with fs.open(to_use_file_path, "r") as credentials:
-                    data = json.load(credentials)
+                with fs.open(to_use_file_path, "r") as creds_f:
+                    data = json.load(creds_f)
                     credentials = FusionCredentials.from_dict(data)  # noqa: PLW2901
                     return credentials
             except Exception as e:
                 logger.error(e)
-                raise Exception(e)  # noqa: B904
+                raise Exception(e) from e
         else:
             msg = f"{to_use_file_path} is an empty file, make sure to add your credentials to it."
             logger.error(msg)
@@ -401,9 +401,9 @@ class FusionOAuthAdapter(HTTPAdapter):
     def __init__(
         self,
         credentials: Union[FusionCredentials, Union[str, dict]],
-        proxies: dict = None,
+        proxies: Optional[dict] = None,
         refresh_within_seconds: int = 5,
-        auth_retries: Union[int, Retry] = None,
+        auth_retries: Optional[Union[int, Retry]] = None,
         mount_url="",
         *args,
         **kwargs,
@@ -487,7 +487,7 @@ class FusionOAuthAdapter(HTTPAdapter):
                 expiry = response_data["expires_in"]
                 return access_token, expiry
             except Exception as ex:
-                raise Exception(f"Failed to authenticate against OAuth server {ex}")  # noqa: B904
+                raise Exception(f"Failed to authenticate against OAuth server") from ex
 
         def _refresh_fusion_token_data():
             full_url_lst = request.url.split("/")

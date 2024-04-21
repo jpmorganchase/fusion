@@ -14,7 +14,7 @@ from io import BytesIO
 from pathlib import Path
 from queue import Queue
 from threading import Lock, Thread
-from typing import Union
+from typing import Optional, Union
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
@@ -75,7 +75,7 @@ def tqdm_joblib(tqdm_object):
         tqdm_object.close()
 
 
-def cpu_count(thread_pool_size: int = None, is_threading=False) -> int:
+def cpu_count(thread_pool_size: Optional[int] = None, is_threading=False) -> int:
     """Determine the number of cpus/threads for parallelization.
 
     Args:
@@ -96,7 +96,7 @@ def cpu_count(thread_pool_size: int = None, is_threading=False) -> int:
     return thread_pool_size
 
 
-def csv_to_table(path: str, fs=None, columns: list = None, filters: list = None):
+def csv_to_table(path: str, fs=None, columns: Optional[list] = None, filters: Optional[list] = None):
     """Reads csv data to pyarrow table.
 
     Args:
@@ -108,7 +108,6 @@ def csv_to_table(path: str, fs=None, columns: list = None, filters: list = None)
     Returns:
         class:`pyarrow.Table` pyarrow table with the data.
     """
-    # parse_options = csv.ParseOptions(delimiter=delimiter)  # noqa: ERA001
     filters = filters_to_expression(filters) if filters else filters
     with fs.open(path) if fs else nullcontext(path) as f:
         tbl = csv.read_csv(f)
@@ -119,7 +118,7 @@ def csv_to_table(path: str, fs=None, columns: list = None, filters: list = None)
         return tbl
 
 
-def json_to_table(path: str, fs=None, columns: list = None, filters: list = None):
+def json_to_table(path: str, fs=None, columns: Optional[list] = None, filters: Optional[list] = None):
     """Reads json data to pyarrow table.
 
     Args:
@@ -141,7 +140,7 @@ def json_to_table(path: str, fs=None, columns: list = None, filters: list = None
         return tbl
 
 
-def parquet_to_table(path: Union[str, list], fs=None, columns: list = None, filters: list = None):
+def parquet_to_table(path: Union[str, list], fs=None, columns: Optional[list] = None, filters: Optional[list] = None):
     """Reads parquet data to pyarrow table.
 
     Args:
@@ -189,8 +188,8 @@ def parquet_to_table(path: Union[str, list], fs=None, columns: list = None, filt
 
 def read_csv(
     path: str,
-    columns: list = None,
-    filters: list = None,
+    columns: Optional[list] = None,
+    filters: Optional[list] = None,
     fs=None,
     dataframe_type="pandas",
 ):
@@ -224,7 +223,7 @@ def read_csv(
                 VERBOSE_LVL,
                 f"Failed to read {path}, with comma delimiter. {err}",
             )
-            raise Exception  # noqa: B904
+            raise Exception from err
 
     except Exception as err:
         logger.log(
@@ -257,14 +256,14 @@ def read_csv(
                         delimiter=None,
                     )
                 else:
-                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")  # noqa: B904
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}") from err
     return res
 
 
 def read_json(
     path: str,
-    columns: list = None,
-    filters: list = None,
+    columns: Optional[list] = None,
+    filters: Optional[list] = None,
     fs=None,
     dataframe_type="pandas",
 ):
@@ -297,7 +296,7 @@ def read_json(
                 VERBOSE_LVL,
                 f"Failed to read {path}, with arrow reader. {err}",
             )
-            raise Exception  # noqa: B904
+            raise err
 
     except Exception as err:
         logger.log(
@@ -320,14 +319,14 @@ def read_json(
                 VERBOSE_LVL,
                 f"Could not parse {path} properly. " f"{err}",
             )
-            raise Exception(err)  # noqa: B904
+            raise err
     return res
 
 
 def read_parquet(
     path: Union[list, str],
-    columns: list = None,
-    filters: list = None,
+    columns: Optional[list] = None,
+    filters: Optional[list] = None,
     fs=None,
     dataframe_type="pandas",
 ):
@@ -404,8 +403,8 @@ def normalise_dt_param_str(dt: str) -> tuple:
         tuple: A tuple of dates.
     """
     date_parts = dt.split(":")
-
-    if not date_parts or len(date_parts) > 2:  # noqa: PLR2004
+    max_date_seg_cnt = 2
+    if not date_parts or len(date_parts) > max_date_seg_cnt:
         raise ValueError(f"Unable to parse {dt} as either a date or an interval")
 
     return tuple(_normalise_dt_param(dt_part) if dt_part else dt_part for dt_part in date_parts)
@@ -417,7 +416,7 @@ def distribution_to_filename(
     datasetseries: str,
     file_format: str,
     catalog: str = "common",
-    partitioning: str = None,
+    partitioning: Optional[str] = None,
 ) -> str:
     """Returns a filename representing a dataset distribution.
 
@@ -628,7 +627,7 @@ async def get_client(credentials, **kwargs):  # noqa: PLR0915
 
 
 def get_session(
-    credentials: FusionCredentials, root_url: str, get_retries: Union[int, Retry] = None
+    credentials: FusionCredentials, root_url: str, get_retries: Optional[Union[int, Retry]] = None
 ) -> requests.Session:
     """Create a new http session and set parameters.
 
@@ -686,7 +685,7 @@ def stream_single_file_new_session_chunks(  # noqa: PLR0913
     results: list,
     idx: int,
     overwrite: bool = True,
-    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),  # noqa: B008
+    fs: Optional[fsspec.AbstractFileSystem] = None,
 ) -> int:
     """Function to stream a single file from the API to a file on disk.
 
@@ -706,7 +705,8 @@ def stream_single_file_new_session_chunks(  # noqa: PLR0913
         int: Exit status
 
     """
-
+    if fs is None:
+        fs = fsspec.filesystem("file")
     if not overwrite and fs.exists(output_file):
         results[idx] = True, output_file, None
         return 0
@@ -748,7 +748,7 @@ def download_single_file_threading(
     url: str,
     output_file,
     chunk_size: int = 5 * 2**20,
-    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),  # noqa: B008
+    fs: Optional[fsspec.AbstractFileSystem] = None,
     max_threads: int = 10,
 ):
     """Download single file using range requests.
@@ -764,7 +764,8 @@ def download_single_file_threading(
     Returns: List[Tuple]
 
     """
-
+    if fs is None:
+        fs = fsspec.filesystem("file")
     session = get_session(credentials, url)
     header = session.head(url).headers
     content_length = int(header["Content-Length"])
@@ -802,7 +803,7 @@ def stream_single_file_new_session(
     overwrite: bool = True,
     block_size=DEFAULT_CHUNK_SIZE,
     dry_run: bool = False,
-    fs: fsspec.AbstractFileSystem = fsspec.filesystem("file"),  # noqa: B008
+    fs: Optional[fsspec.AbstractFileSystem] = None,
 ) -> tuple:
     """Function to stream a single file from the API to a file on disk.
 
@@ -820,6 +821,8 @@ def stream_single_file_new_session(
         tuple: A tuple
 
     """
+    if fs is None:
+        fs = fsspec.filesystem("file")
     if dry_run:
         return _stream_single_file_new_session_dry_run(credentials, url, output_file)
 
@@ -861,9 +864,10 @@ def validate_file_names(paths, fs_fusion):
     validation = []
     all_catalogs = fs_fusion.ls("")
     all_datasets = {}
+    file_seg_cnt = 3
     for i, f_n in enumerate(file_names):
         tmp = f_n.split("__")
-        if len(tmp) == 3:  # noqa: PLR2004
+        if len(tmp) == file_seg_cnt:
             val = tmp[1] in all_catalogs
             if not val:
                 validation.append(False)
@@ -875,12 +879,12 @@ def validate_file_names(paths, fs_fusion):
                 validation.append(val)
         else:
             validation.append(False)
-        if not validation and len(tmp) == 3:  # noqa: PLR2004
+        if not validation and len(tmp) == file_seg_cnt:
             logger.warning(
                 f"You might not have access to the catalog {tmp[1]} or dataset {tmp[0]}."
                 "Please check you permission on the platform."
             )
-        if not validation and len(tmp) != 3:  # noqa: PLR2004
+        if not validation and len(tmp) != file_seg_cnt:
             logger.warning(
                 f"The file in {paths[i]} has a non-compliant name and will not be processed. "
                 f"Please rename the file to dataset__catalog__yyyymmdd.format"
@@ -936,8 +940,8 @@ def upload_files(  # noqa: PLR0913
     multipart: bool = True,
     chunk_size: int = 5 * 2**20,
     show_progress: bool = True,
-    from_date: str = None,
-    to_date: str = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
 ):
     """Upload file into Fusion.
 
