@@ -37,6 +37,8 @@ arrow==1.3.0
     # via isoduration
 asttokens==2.4.1
     # via stack-data
+async-timeout==4.0.3
+    # via aiohttp
 attrs==23.2.0
     # via aiohttp
     # via aiohttp-sse-client
@@ -96,6 +98,9 @@ docutils==0.21.1
     # via pyfusion
 entrypoints==0.4
     # via jupyter-client
+exceptiongroup==1.2.1
+    # via anyio
+    # via ipython
 executing==2.0.1
     # via stack-data
 fastjsonschema==2.19.1
@@ -148,14 +153,18 @@ idna==3.7
     # via requests
     # via yarl
 importlib-metadata==7.1.0
+    # via markdown
     # via mike
+    # via mkdocs
+    # via mkdocstrings
+    # via nbconvert
 importlib-resources==6.4.0
     # via mike
 ipykernel==6.29.4
     # via mkdocs-jupyter
     # via nbclassic
     # via notebook
-ipython==8.23.0
+ipython==8.18.1
     # via ipykernel
 ipython-genutils==0.2.0
     # via jupyter-contrib-nbextensions
@@ -522,14 +531,17 @@ traitlets==5.14.3
 types-python-dateutil==2.9.0.20240316
     # via arrow
 typing-extensions==4.11.0
+    # via aioitertools
+    # via anyio
     # via azure-core
     # via azure-storage-blob
     # via ipython
+    # via mkdocstrings
 tzdata==2024.1
     # via pandas
 uri-template==1.3.0
     # via jsonschema
-urllib3==2.2.1
+urllib3==1.26.18
     # via botocore
     # via requests
 verspec==0.1.0
@@ -554,3 +566,4 @@ yarl==1.9.4
     # via aiohttp-sse-client
 zipp==3.18.1
     # via importlib-metadata
+    # via importlib-resources

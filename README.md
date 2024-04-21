@@ -1,3 +1,7 @@
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![PyPI version](https://badge.fury.io/py/PyFusion.svg)](https://badge.fury.io/py/PyFusion)
+[![Python Versions](https://img.shields.io/pypi/pyversions/PyFusion)](https://pypi.org/project/PyFusion/)
+[![dev workflow](https://github.com/jpmorganchase/fusion/actions/workflows/dev.yml/badge.svg?branch=master)](https://github.com/jpmorganchase/fusion/actions/workflows/dev.yml)
 # PyFusion #
 
 PyFusion is the Python SDK for the Fusion platform API. 

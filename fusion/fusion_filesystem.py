@@ -8,6 +8,7 @@ from copy import deepcopy
 from urllib.parse import quote, urljoin
 
 import pandas as pd
+import requests
 from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
@@ -59,7 +60,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
     async def _async_raise_not_found_for_status(self, response, url):
         """Raises FileNotFoundError for 404s, otherwise uses raise_for_status."""
-        if response.status == 404:  # noqa: PLR2004
+        if response.status == requests.codes.not_found:  # noqa: PLR2004
             self._raise_not_found_for_status(response, url)
         else:
             real_reason = ""
@@ -101,7 +102,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             return out
         except Exception as ex:
             logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
-            raise Exception(ex)  # noqa: B904
+            raise ex
 
     async def _ls_real(self, url, detail=True, **kwargs):
         # ignoring URL-encoded arguments
@@ -110,7 +111,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             url = f'{self.client_kwargs["root_url"]}catalogs/' + url
         kw = self.kwargs.copy()
         kw.update(kwargs)
-        # logger.debug(url)  # noqa: ERA001
         session = await self.set_session()
         is_file = False
         size = None
@@ -326,9 +326,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                 operation_id = await resp.json()
 
             operation_id = operation_id["operationId"]
-            resps = []
-            async for resp in put_data():
-                resps.append(resp)  # noqa: PERF402
+            resps = [resp async for resp in put_data()]
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
             async with session.post(
@@ -452,9 +450,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
         operation_id = sync(self.loop, _get_operation_id, session)["operationId"]
-        resps = []
-        for resp in put_data(session):
-            resps.append(resp)  # noqa: PERF402
+        resps = [resp for resp in put_data(session)]
 
         hash_sha256 = hash_sha256_lst[0]
         headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
@@ -634,11 +630,11 @@ class FusionFile(HTTPFile):
         logger.debug(str(url))
         r = await self.session.get(self.fs.encode_url(url), headers=headers, **kwargs)
         async with r:
-            if r.status == 416:  # noqa: PLR2004
+            if r.status == requests.codes.range_not_satisfiable:  # noqa: PLR2004
                 # range request outside file
                 return b""
             r.raise_for_status()
-            if r.status == 206:  # noqa: PLR2004
+            if r.status == requests.codes.partial_content:  # noqa: PLR2004
                 # partial content, as expected
                 out = await r.read()
             elif int(r.headers.get("Content-Length", 0)) <= end - start:

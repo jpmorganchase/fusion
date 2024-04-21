@@ -98,6 +98,7 @@ dev-dependencies = [
     "pytest",
     "pytest-random-order>=1.1.1",
     "pytest-cov",
+    "requests-mock>=1.12.1",
     "ruff",
     "toml",
     "tox",
@@ -107,6 +108,8 @@ dev-dependencies = [
     "types-tabulate >= 0.8.8",
     "virtualenv",
     "ziglang>=0.11.0; sys_platform=='linux'",
+    "types-tqdm>=4.66.0.20240417",
+    "pandas-stubs>=2.2.1.240316",
 ]
 
 
@@ -155,5 +158,8 @@ minversion = "8.0"
 pythonpath = ["src", "py_tests"]
 testpaths = "py_tests"
 pythonfiles = "test_*.py"
+
+[tool.mypy]
+ignore_missing_imports = true
 
 
