@@ -93,6 +93,7 @@ dev-dependencies = [
     "maturin>=1.2,<2.0",
     "mypy",
     "patchelf>=0.17.2.1; sys_platform=='linux'",
+    "pandas-stubs>1.1",
     "pip",
     "pre-commit",
     "pytest",
@@ -104,12 +105,11 @@ dev-dependencies = [
     "tox",
     "tox-gh-actions",
     "twine",
-    "types-requests >=2.27.0",
+    "types-requests >=2",
     "types-tabulate >= 0.8.8",
     "virtualenv",
     "ziglang>=0.11.0; sys_platform=='linux'",
-    "types-tqdm>=4.66.0.20240417",
-    "pandas-stubs>=2.2.1.240316",
+    "types-tqdm>=4",
 ]
 
 
