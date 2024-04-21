@@ -31,13 +31,20 @@ VERBOSE_LVL = 25
 DEFAULT_CHUNK_SIZE = 2**16
 
 
-def _url_to_path(x):
+def _url_to_path(x: str) -> str:
     file_name = distribution_to_filename("", x.split("/")[2], x.split("/")[4], x.split("/")[6], x.split("/")[0])
     return f"{x.split('/')[0]}/{x.split('/')[2]}/{x.split('/')[4]}/{file_name}"
 
 
-def _download(fs_fusion, fs_local, df, n_par, show_progress=True, local_path=""):
-    def _download_files(row):
+def _download(
+    fs_fusion: fsspec.filesystem,
+    fs_local: fsspec.filesystem,
+    df: pd.DataFrame,
+    n_par: int,
+    show_progress: bool = True,
+    local_path: str = "",
+) -> list[tuple[bool, str, Optional[str]]]:
+    def _download_files(row: pd.Series) -> tuple[bool, str, Optional[str]]:
         p_path = local_path + row["path_fusion"]
         if not fs_local.exists(p_path):
             try:
@@ -46,7 +53,7 @@ def _download(fs_fusion, fs_local, df, n_par, show_progress=True, local_path="")
                 logger.info(f"Path {p_path} exists already", ex)
         try:
             fs_fusion.get(row["url"], p_path, chunk_size=DEFAULT_CHUNK_SIZE)
-            return True, p_path, None
+            return (True, p_path, None)
         except Exception as ex:
             logger.log(
                 VERBOSE_LVL,
@@ -54,14 +61,14 @@ def _download(fs_fusion, fs_local, df, n_par, show_progress=True, local_path="")
             )
             msg = str(ex)
 
-            return False, p_path, msg
+            return (False, p_path, msg)
 
     if n_par > 1 and len(df) > 0:
         if show_progress:
             with tqdm_joblib(tqdm(total=len(df))) as _:
-                res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for index, row in df.iterrows())
+                res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for _, row in df.iterrows())
         else:
-            res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for index, row in df.iterrows())
+            res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for _, row in df.iterrows())
     elif len(df) > 0:
         if show_progress:
             res = [None] * len(df)
@@ -72,14 +79,21 @@ def _download(fs_fusion, fs_local, df, n_par, show_progress=True, local_path="")
                     if r[0] is True:
                         p.update(1)
         else:
-            res = [_download_files(row) for index, row in df]
+            res = [_download_files(row) for _, row in df.iterrows()]
     else:
         return []
 
     return res
 
 
-def _upload(fs_fusion, fs_local, df, n_par, show_progress=True, local_path=""):
+def _upload(
+    fs_fusion: fsspec.filesystem,
+    fs_local: fsspec.filesystem,
+    df: pd.DataFrame,
+    n_par: int,
+    show_progress: bool = True,
+    local_path: str = "",
+) -> list[tuple[bool, str, Optional[str]]]:
     df.rename(columns={"path_local": "path"}, inplace=True)
     df["path"] = local_path + df["path"]
     parallel = len(df) > 1
@@ -96,7 +110,7 @@ def _upload(fs_fusion, fs_local, df, n_par, show_progress=True, local_path=""):
     return res
 
 
-def _generate_sha256_token(path, fs, chunk_size=5 * 2**20):
+def _generate_sha256_token(path: str, fs: fsspec.filesystem, chunk_size: int = 5 * 2**20) -> str:
     hash_sha256 = hashlib.sha256()
     chunk_count = 0
     with fs.open(path, "rb") as file:
@@ -112,7 +126,13 @@ def _generate_sha256_token(path, fs, chunk_size=5 * 2**20):
         return base64.b64encode(hash_sha256_chunk.digest()).decode()
 
 
-def _get_fusion_df(fs_fusion, datasets_lst, catalog, flatten=False, dataset_format=None):
+def _get_fusion_df(
+    fs_fusion: fsspec.filesystem,
+    datasets_lst: list[str],
+    catalog: str,
+    flatten: bool = False,
+    dataset_format: Optional[str] = None,
+) -> pd.DataFrame:
     df_lst = []
     for dataset in datasets_lst:
         changes = fs_fusion.info(f"{catalog}/datasets/{dataset}")["changes"]["datasets"]
@@ -134,7 +154,7 @@ def _get_fusion_df(fs_fusion, datasets_lst, catalog, flatten=False, dataset_form
                 keys = ["/".join(k.split("/")[:2] + k.split("/")[-1:]) for k in keys]
 
             df = pd.DataFrame([keys, urls, sz, md]).T
-            df.columns = ["path", "url", "size", "sha256"]
+            df = df[["path", "url", "size", "sha256"]]
             if dataset_format and len(df) > 0:
                 df = df[df.url.str.split("/").str[-1] == dataset_format]
             df_lst.append(df)
@@ -145,14 +165,14 @@ def _get_fusion_df(fs_fusion, datasets_lst, catalog, flatten=False, dataset_form
 
 
 def _get_local_state(
-    fs_local,
-    fs_fusion,
-    datasets,
-    catalog,
-    dataset_format=None,
-    local_state=None,
-    local_path="",
-):
+    fs_local: fsspec.filesystem,
+    fs_fusion: fsspec.filesystem,
+    datasets: list[str],
+    catalog: str,
+    dataset_format: Optional[str] = None,
+    local_state: Optional[pd.DataFrame] = None,
+    local_path: str = "",
+) -> pd.DataFrame:
     local_files = []
     local_files_rel = []
     local_dirs = [f"{local_path}{catalog}/{i}" for i in datasets] if len(datasets) > 0 else [local_path + catalog]
@@ -174,7 +194,7 @@ def _get_local_state(
     is_raw_lst = is_dataset_raw(local_files, fs_fusion)
     local_url_eqiv = [path_to_url(i, r) for i, r in zip(local_files, is_raw_lst)]
     df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_mtime, local_files]).T
-    df_local.columns = ["path", "url", "mtime", "local_path"]
+    df_local = df_local[["path", "url", "mtime", "local_path"]]
 
     if local_state is not None and len(local_state) > 0:
         df_join = df_local.merge(local_state, on="path", how="left", suffixes=("", "_prev"))
@@ -200,8 +220,8 @@ def _synchronize(  # noqa: PLR0913
     direction: str = "upload",
     n_par: Optional[int] = None,
     show_progress: bool = True,
-    local_path="",
-):
+    local_path: str = "",
+) -> list[tuple[bool, str, Optional[str]]]:
     """Synchronize two filesystems."""
 
     n_par = cpu_count(n_par)
@@ -258,7 +278,7 @@ def fsync(  # noqa: PLR0913
     local_path: str = "",
     log_level: int = logging.ERROR,
     log_path: str = ".",
-):
+) -> None:
     """Synchronisation between the local filesystem and Fusion.
 
     Args:
