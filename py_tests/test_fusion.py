@@ -1,4 +1,8 @@
+import pandas as pd
 import pytest
+import requests
+
+from fusion.fusion import Fusion
 
 
 def test_rust_ok():
@@ -33,7 +37,7 @@ def test_FusionCredentials_empty_pxy(example_creds_dict_empty_pxy):
     FusionCredentials.from_dict(example_creds_dict_empty_pxy)
 
 
-def test_FusionCredentials_from_empty(example_client_id, example_client_secret, example_http_proxy):  # noqa: ARG001
+def test_FusionCredentials_from_empty(example_client_id, example_client_secret):
     from fusion.authentication import FusionCredentials
 
     creds = FusionCredentials.generate_credentials_file(
@@ -173,3 +177,96 @@ def test_is_json_negative3(bad_json3):
     from fusion.authentication import _is_json
 
     _is_json(bad_json3)
+
+
+def test_fusion_class():
+    from fusion.fusion import Fusion
+
+    fusion_obj = Fusion()
+    assert fusion_obj
+    assert repr(fusion_obj)
+    assert fusion_obj.default_catalog == "common"
+    fusion_obj.default_catalog = "other"
+    assert fusion_obj.default_catalog == "other"
+
+
+def test_get_fusion_filesystem():
+    fusion_obj = Fusion()
+    filesystem = fusion_obj.get_fusion_filesystem()
+    assert filesystem is not None
+
+
+def test__call_for_dataframe_success(requests_mock):
+    # Mock the response from the API endpoint
+    url = "https://fusion-api.jpmorgan.com/fusion/v1/a_given_resource"
+    expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
+    requests_mock.get(url, json=expected_data)
+
+    # Create a mock session
+    session = requests.Session()
+
+    # Call the _call_for_dataframe function
+    df = Fusion._call_for_dataframe(url, session)
+
+    # Check if the dataframe is created correctly
+    expected_df = pd.DataFrame(expected_data["resources"])
+    pd.testing.assert_frame_equal(df, expected_df)
+
+
+def test__call_for_dataframe_error(requests_mock):
+    # Mock the response from the API endpoint with an error status code
+    url = "https://fusion-api.jpmorgan.com/fusion/v1/a_given_resource"
+    requests_mock.get(url, status_code=500)
+
+    # Create a mock session
+    session = requests.Session()
+
+    # Call the _call_for_dataframe function and expect an exception to be raised
+    with pytest.raises(requests.exceptions.HTTPError):
+        Fusion._call_for_dataframe(url, session)
+
+
+def test__call_for_bytes_object_success(requests_mock):
+    # Mock the response from the API endpoint
+    url = "https://fusion-api.jpmorgan.com/fusion/v1/a_given_resource"
+    expected_data = b"some binary data"
+    requests_mock.get(url, content=expected_data)
+
+    # Create a mock session
+    session = requests.Session()
+
+    # Call the _call_for_bytes_object function
+    data = Fusion._call_for_bytes_object(url, session)
+
+    # Check if the data is returned correctly
+    assert data.getbuffer() == expected_data
+
+
+def test__call_for_bytes_object_fail(requests_mock):
+    # Mock the response from the API endpoint with an error status code
+    url = "https://fusion-api.jpmorgan.com/fusion/v1/a_given_resource"
+    requests_mock.get(url, status_code=500)
+
+    # Create a mock session
+    session = requests.Session()
+
+    # Call the _call_for_dataframe function and expect an exception to be raised
+    with pytest.raises(requests.exceptions.HTTPError):
+        Fusion._call_for_bytes_object(url, session)
+
+
+def test_list_catalogs_success(requests_mock):
+    # Mock the response from the API endpoint
+    url = "https://fusion-api.jpmorgan.com/fusion/v1/catalogs/"
+    expected_data = {"resources": [{"id": 1, "name": "Catalog 1"}, {"id": 2, "name": "Catalog 2"}]}
+    requests_mock.get(url, json=expected_data)
+
+    # Create a mock Fusion object
+    fusion_obj = Fusion()
+
+    # Call the list_catalogs method
+    df = fusion_obj.list_catalogs()
+
+    # Check if the dataframe is created correctly
+    expected_df = pd.DataFrame(expected_data["resources"])
+    pd.testing.assert_frame_equal(df, expected_df)

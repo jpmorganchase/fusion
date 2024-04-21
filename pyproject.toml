@@ -93,20 +93,23 @@ dev-dependencies = [
     "maturin>=1.2,<2.0",
     "mypy",
     "patchelf>=0.17.2.1; sys_platform=='linux'",
+    "pandas-stubs>1.1",
     "pip",
     "pre-commit",
     "pytest",
     "pytest-random-order>=1.1.1",
     "pytest-cov",
+    "requests-mock>=1.12.1",
     "ruff",
     "toml",
     "tox",
     "tox-gh-actions",
     "twine",
-    "types-requests >=2.27.0",
+    "types-requests >=2",
     "types-tabulate >= 0.8.8",
     "virtualenv",
     "ziglang>=0.11.0; sys_platform=='linux'",
+    "types-tqdm>=4",
 ]
 
 
@@ -155,5 +158,8 @@ minversion = "8.0"
 pythonpath = ["src", "py_tests"]
 testpaths = "py_tests"
 pythonfiles = "test_*.py"
+
+[tool.mypy]
+ignore_missing_imports = true
 
 
