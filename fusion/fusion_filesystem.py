@@ -90,7 +90,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         try:
             ret = await self._info(path)
             return ret["type"] == "directory"
-        except Exception as ex:
+        except Exception as ex:  # pragma: no cover
             logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
             return False
 
