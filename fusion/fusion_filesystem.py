@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 
 
-class FusionHTTPFileSystem(HTTPFileSystem):
+class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
     """Fusion HTTP filesystem."""
 
     def __init__(
@@ -88,20 +88,20 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     async def _isdir(self, path: str) -> bool:
         path = self._decorate_url(path)
         try:
-            ret = await self._info(path)
+            ret: dict[str, str] = await self._info(path)
             return ret["type"] == "directory"
         except Exception as ex:  # pragma: no cover
             logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
             return False
 
-    async def _changes(self, url: str) -> dict:
+    async def _changes(self, url: str) -> dict[Any, Any]:
         url = self._decorate_url(url)
         try:
             session = await self.set_session()
             async with session.get(url, **self.kwargs) as r:
                 self._raise_not_found_for_status(r, url)
                 try:
-                    out = await r.json()
+                    out: dict[Any, Any] = await r.json()
                 except Exception as ex:
                     logger.log(VERBOSE_LVL, f"{url} cannot be parsed to json, {ex}")
                     out = {}
@@ -160,7 +160,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         else:
             return out
 
-    def info(self, path: str, **kwargs: Any) -> dict:
+    def info(self, path: str, **kwargs: Any) -> Any:
         """Return info.
 
         Args:
@@ -185,11 +185,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         return res
 
-    async def _ls(self, url: str, detail: bool = True, **kwargs: Any) -> list:
+    async def _ls(self, url: str, detail: bool = True, **kwargs: Any) -> Any:
         url = await self._decorate_url_a(url)
         return await super()._ls(url, detail, **kwargs)
 
-    def ls(self, url: str, detail: bool = False, **kwargs: Any) -> list:
+    def ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
         """List resources.
 
         Args:
@@ -213,7 +213,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         return ret
 
-    def exists(self, url: str, detail: bool = True, **kwargs: Any) -> bool:
+    def exists(self, url: str, detail: bool = True, **kwargs: Any) -> Any:
         """Check existence.
 
         Args:
@@ -227,7 +227,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         url = self._decorate_url(url)
         return super().exists(url, detail, **kwargs)
 
-    def isfile(self, path: str) -> bool:
+    def isfile(self, path: str) -> Union[bool, Any]:
         """Is path a file.
 
         Args:
@@ -261,7 +261,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         chunk_size: int = 5 * 2**20,
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         **kwargs: Any,
-    ) -> None:
+    ) -> Any:
         """Copy file(s) to local.
 
         Args:
@@ -287,7 +287,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         multipart: bool = False,
         **kwargs: Any,
     ) -> None:
-        async def put_data() -> AsyncGenerator[dict, None]:
+        async def put_data() -> AsyncGenerator[dict[Any, Any], None]:
             # Support passing arbitrary file-like objects
             # and use them instead of streams.
             if isinstance(lpath, io.IOBase):
@@ -352,7 +352,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
     @staticmethod
     def _construct_headers(
         file_local: Any, dt_from: str, dt_to: str, dt_created: str, chunk_size: int = 5 * 2**20, multipart: bool = False
-    ) -> tuple[dict, list[dict]]:
+    ) -> tuple[dict[str, str], list[dict[str, str]]]:
         headers = {
             "Content-Type": "application/octet-stream",
             "x-jpmc-distribution-created-date": dt_created,
@@ -394,10 +394,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         method: str = "put",
     ) -> None:
-        async def _get_operation_id(session: Any) -> dict:
+        async def _get_operation_id(session: Any) -> dict[str, Any]:
             async with session.post(rpath + "/operationType/upload", **self.kwargs) as r:
                 await self._async_raise_not_found_for_status(r, rpath + "/operationType/upload")
-                return await r.json()
+                res: dict[str, Any] = await r.json()
+                return res
 
         async def _finish_operation(session: Any, operation_id: Any, kw: Any) -> None:
             async with session.post(
@@ -409,7 +410,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                     r, rpath + f"/operations/upload?operationId={operation_id}"
                 )
 
-        def put_data(session: Any) -> Generator[dict, None, None]:
+        def put_data(session: Any) -> Generator[dict[str, Any], None, None]:
             async def _meth(session: Any, url: Any, kw: Any) -> None:
                 meth = getattr(session, method)
                 retry_num = 3
@@ -419,7 +420,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
                     async with meth(url=url, data=chunk, **kw) as resp:
                         try:
                             await self._async_raise_not_found_for_status(resp, url)
-                            return await resp.json()
+                            return await resp.json()  # type: ignore
                         except Exception as ex:
                             ex_cnt += 1
                             last_ex = ex
@@ -484,7 +485,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
         **kwargs: Any,
-    ) -> None:
+    ) -> Any:
         """Copy file(s) from local.
 
         Args:
@@ -523,7 +524,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
 
         return sync(super().loop, self._put_file, *args, **kwargs)
 
-    def find(self, path: str, maxdepth: Optional[int] = None, withdirs: bool = False, **kwargs: Any) -> list:
+    def find(self, path: str, maxdepth: Optional[int] = None, withdirs: bool = False, **kwargs: Any) -> Any:
         """Find all file in a folder.
 
         Args:
@@ -538,7 +539,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
         path = self._decorate_url(path)
         return super().find(path, maxdepth=maxdepth, withdirs=withdirs, **kwargs)
 
-    def glob(self, path: str, **kwargs: Any) -> list:
+    def glob(self, path: str, **kwargs: Any) -> Any:
         """Glob.
 
         Args:
@@ -623,7 +624,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):
             raise NotImplementedError
 
 
-class FusionFile(HTTPFile):
+class FusionFile(HTTPFile):  # type: ignore
     """Fusion File."""
 
     def __init__(self, *args: Any, **kwargs: Any):
@@ -651,23 +652,23 @@ class FusionFile(HTTPFile):
             r.raise_for_status()
             if r.status == requests.codes.partial_content:  # noqa: PLR2004
                 # partial content, as expected
-                out = await r.read()
+                out: bytes = await r.read()
             elif int(r.headers.get("Content-Length", 0)) <= end - start:
                 out = await r.read()
             else:
                 cl = 0
-                out = []
+                out_arr = []
                 while True:
                     chunk = await r.content.read(2**20)
                     # data size unknown, let's read until we have enough
                     if chunk:
-                        out.append(chunk)
+                        out_arr.append(chunk)
                         cl += len(chunk)
                         if cl > end - start:
                             break
                     else:
                         break
-                out = b"".join(out)[: end - start]
+                out = b"".join(out_arr)[: end - start]
             return out
 
     _fetch_range = sync_wrapper(async_fetch_range)

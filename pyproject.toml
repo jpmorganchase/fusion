@@ -119,6 +119,7 @@ dev-dependencies = [
     "virtualenv",
     "ziglang>=0.11.0; sys_platform=='linux'",
     "pytest-aiohttp>=1.0.5",
+    "tox-uv>=1.7.0",
 ]
 
 
@@ -170,5 +171,12 @@ pythonfiles = "test_*.py"
 
 [tool.mypy]
 ignore_missing_imports = true
+show_error_codes = true
+strict = true
+disallow_untyped_defs = true
 
-
+[tool.coverage]
+html.show_contexts = true
+html.skip_covered = false
+report.fail_under = 60
+run.parallel = true

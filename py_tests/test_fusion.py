@@ -5,7 +5,9 @@ import polars as pl
 import pytest
 import requests
 
+from fusion.authentication import FusionCredentials
 from fusion.fusion import Fusion
+from fusion.utils import distribution_to_url
 
 
 def test_rust_ok():
@@ -23,14 +25,10 @@ def test__get_canonical_root_url():
 
 
 def test_FusionCredentials(example_creds_dict):
-    from fusion.authentication import FusionCredentials
-
     FusionCredentials.from_dict(example_creds_dict)
 
 
 def test_Fusion_init(example_creds_dict):
-    from fusion.authentication import FusionCredentials
-
     creds = FusionCredentials.from_dict(example_creds_dict)
     fusion = Fusion(credentials=creds)
     assert fusion
@@ -40,31 +38,33 @@ def test_Fusion_init(example_creds_dict):
 
 
 def test_FusionCredentials_no_pxy(example_creds_dict_no_pxy):
-    from fusion.authentication import FusionCredentials
-
     FusionCredentials.from_dict(example_creds_dict_no_pxy)
 
 
 def test_FusionCredentials_empty_pxy(example_creds_dict_empty_pxy):
-    from fusion.fusion import FusionCredentials
-
     FusionCredentials.from_dict(example_creds_dict_empty_pxy)
 
 
-def test_FusionCredentials_from_empty(example_client_id, example_client_secret):
-    from fusion.authentication import FusionCredentials
+def test_FusionCredentials_from_empty(example_client_id, example_client_secret, tmp_path):
+    # Create an existing credentials file
+    credentials_file = tmp_path / "client_credentials.json"
 
     creds = FusionCredentials.generate_credentials_file(
-        client_id=example_client_id, client_secret=example_client_secret, proxies={}
+        credentials_file=str(credentials_file),
+        client_id=example_client_id,
+        client_secret=example_client_secret,
+        proxies={},
     )
 
     assert creds.proxies == {}
 
 
-def test_FusionCredentials_from_str(example_client_id, example_client_secret, example_http_proxy):
-    from fusion.authentication import FusionCredentials
+def test_FusionCredentials_from_str(example_client_id, example_client_secret, example_http_proxy, tmp_path):
+    # Create an existing credentials file
+    credentials_file = tmp_path / "client_credentials.json"
 
     creds = FusionCredentials.generate_credentials_file(
+        credentials_file=str(credentials_file),
         client_id=example_client_id,
         client_secret=example_client_secret,
         proxies=example_http_proxy,
@@ -74,14 +74,13 @@ def test_FusionCredentials_from_str(example_client_id, example_client_secret, ex
 
 
 def test_FusionCredentials_from_http_dict(
-    example_client_id,
-    example_client_secret,
-    example_proxy_http_dict,
-    example_http_proxy,
+    example_client_id, example_client_secret, example_proxy_http_dict, example_http_proxy, tmp_path
 ):
-    from fusion.authentication import FusionCredentials
+    # Create an existing credentials file
+    credentials_file = tmp_path / "client_credentials.json"
 
     creds = FusionCredentials.generate_credentials_file(
+        credentials_file=str(credentials_file),
         client_id=example_client_id,
         client_secret=example_client_secret,
         proxies=example_proxy_http_dict,
@@ -91,14 +90,13 @@ def test_FusionCredentials_from_http_dict(
 
 
 def test_FusionCredentials_from_https_dict(
-    example_client_id,
-    example_client_secret,
-    example_proxy_https_dict,
-    example_https_proxy,
+    example_client_id, example_client_secret, example_proxy_https_dict, example_https_proxy, tmp_path
 ):
-    from fusion.authentication import FusionCredentials
+    # Create an existing credentials file
+    credentials_file = tmp_path / "client_credentials.json"
 
     creds = FusionCredentials.generate_credentials_file(
+        credentials_file=str(credentials_file),
         client_id=example_client_id,
         client_secret=example_client_secret,
         proxies=example_proxy_https_dict,
@@ -108,15 +106,12 @@ def test_FusionCredentials_from_https_dict(
 
 
 def test_FusionCredentials_from_both_dict(
-    example_client_id,
-    example_client_secret,
-    example_proxy_both_dict,
-    example_https_proxy,
-    example_http_proxy,
+    example_client_id, example_client_secret, example_proxy_both_dict, example_https_proxy, example_http_proxy, tmp_path
 ):
-    from fusion.authentication import FusionCredentials
-
+    # Create an existing credentials file
+    credentials_file = tmp_path / "client_credentials.json"
     creds = FusionCredentials.generate_credentials_file(
+        credentials_file=str(credentials_file),
         client_id=example_client_id,
         client_secret=example_client_secret,
         proxies=example_proxy_both_dict,
@@ -132,10 +127,12 @@ def test_FusionCredentials_from_both_alt_dict(
     example_proxy_both_alt_dict,
     example_https_proxy,
     example_http_proxy,
+    tmp_path,
 ):
-    from fusion.authentication import FusionCredentials
-
+    # Create an existing credentials file
+    credentials_file = tmp_path / "client_credentials.json"
     creds = FusionCredentials.generate_credentials_file(
+        credentials_file=str(credentials_file),
         client_id=example_client_id,
         client_secret=example_client_secret,
         proxies=example_proxy_both_alt_dict,
@@ -218,10 +215,7 @@ def test_is_url():
     assert not _is_url(3.141)
 
 
-def test_fusion_class():
-    from fusion.fusion import Fusion
-
-    fusion_obj = Fusion()
+def test_fusion_class(fusion_obj):
     assert fusion_obj
     assert repr(fusion_obj)
     assert fusion_obj.default_catalog == "common"
@@ -229,8 +223,7 @@ def test_fusion_class():
     assert fusion_obj.default_catalog == "other"
 
 
-def test_get_fusion_filesystem():
-    fusion_obj = Fusion()
+def test_get_fusion_filesystem(fusion_obj):
     filesystem = fusion_obj.get_fusion_filesystem()
     assert filesystem is not None
 
@@ -294,14 +287,11 @@ def test__call_for_bytes_object_fail(requests_mock):
         Fusion._call_for_bytes_object(url, session)
 
 
-def test_list_catalogs_success(requests_mock):
+def test_list_catalogs_success(requests_mock, fusion_obj):
     # Mock the response from the API endpoint
     url = "https://fusion-api.jpmorgan.com/fusion/v1/catalogs/"
     expected_data = {"resources": [{"id": 1, "name": "Catalog 1"}, {"id": 2, "name": "Catalog 2"}]}
     requests_mock.get(url, json=expected_data)
-
-    # Create a mock Fusion object
-    fusion_obj = Fusion()
 
     # Call the list_catalogs method
     df = fusion_obj.list_catalogs()
@@ -311,24 +301,19 @@ def test_list_catalogs_success(requests_mock):
     pd.testing.assert_frame_equal(df, expected_df)
 
 
-def test_list_catalogs_fail(requests_mock):
+def test_list_catalogs_fail(requests_mock, fusion_obj):
     # Mock the response from the API endpoint with an error status code
     url = "https://fusion-api.jpmorgan.com/fusion/v1/catalogs/"
     requests_mock.get(url, status_code=500)
-
-    # Create a mock Fusion object
-    fusion_obj = Fusion()
 
     # Call the list_catalogs method and expect an exception to be raised
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_catalogs()
 
 
-def test_catalog_resources_success(requests_mock):
+def test_catalog_resources_success(requests_mock, fusion_obj):
     # Mock the response from the API endpoint
 
-    # Create a mock Fusion object
-    fusion_obj = Fusion()
     new_catalog = "catalog_id"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}"
     expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
@@ -342,8 +327,7 @@ def test_catalog_resources_success(requests_mock):
     pd.testing.assert_frame_equal(df, expected_df)
 
 
-def test_list_products_success(requests_mock):
-    fusion_obj = Fusion()
+def test_list_products_success(requests_mock, fusion_obj):
     new_catalog = "catalog_id"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/products"
     server_mock_data = {
@@ -360,8 +344,7 @@ def test_list_products_success(requests_mock):
     pd.testing.assert_frame_equal(df, expected_df)
 
 
-def test_list_products_contains_success(requests_mock):
-    fusion_obj = Fusion()
+def test_list_products_contains_success(requests_mock, fusion_obj):
     new_catalog = "catalog_id"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/products"
     server_mock_data = {
@@ -393,8 +376,7 @@ def test_list_products_contains_success(requests_mock):
     pd.testing.assert_frame_equal(df, expected_df)
 
 
-def test_list_datasets_success(requests_mock):
-    fusion_obj = Fusion()
+def test_list_datasets_success(requests_mock, fusion_obj):
     new_catalog = "catalog_id"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
     server_mock_data = {
@@ -411,8 +393,7 @@ def test_list_datasets_success(requests_mock):
     pd.testing.assert_frame_equal(df, expected_df)
 
 
-def test_list_datasets_contains_success(requests_mock):
-    fusion_obj = Fusion()
+def test_list_datasets_contains_success(requests_mock, fusion_obj):
     new_catalog = "catalog_id"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
     server_mock_data = {
@@ -469,11 +450,7 @@ def test_list_datasets_contains_success(requests_mock):
     pd.testing.assert_frame_equal(df, expected_df)
 
 
-def test_dataset_resources_success(requests_mock):
-    # Mock the response from the API endpoint
-
-    # Create a mock Fusion object
-    fusion_obj = Fusion()
+def test_dataset_resources_success(requests_mock, fusion_obj):
     new_catalog = "catalog_id"
     dataset = "my_dataset"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}"
@@ -488,8 +465,7 @@ def test_dataset_resources_success(requests_mock):
     pd.testing.assert_frame_equal(df, expected_df)
 
 
-def test_list_dataset_attributes(requests_mock):
-    fusion_obj = Fusion()
+def test_list_dataset_attributes(requests_mock, fusion_obj):
     new_catalog = "catalog_id"
     dataset = "my_dataset"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/attributes"
@@ -577,11 +553,7 @@ def test_list_dataset_attributes(requests_mock):
     pd.testing.assert_frame_equal(df, ext_expected_df)
 
 
-def test_list_datasetmembers_success(requests_mock):
-    # Mock the response from the API endpoint
-
-    # Create a mock Fusion object
-    fusion_obj = Fusion()
+def test_list_datasetmembers_success(requests_mock, fusion_obj):
     new_catalog = "catalog_id"
     dataset = "my_dataset"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/datasetseries"
@@ -596,11 +568,7 @@ def test_list_datasetmembers_success(requests_mock):
     pd.testing.assert_frame_equal(df, expected_df)
 
 
-def test_datasetmember_resources_success(requests_mock):
-    # Mock the response from the API endpoint
-
-    # Create a mock Fusion object
-    fusion_obj = Fusion()
+def test_datasetmember_resources_success(requests_mock, fusion_obj):
     new_catalog = "catalog_id"
     dataset = "my_dataset"
     series = "2022-02-02"
@@ -616,11 +584,7 @@ def test_datasetmember_resources_success(requests_mock):
     pd.testing.assert_frame_equal(df, expected_df)
 
 
-def test_list_distributions_success(requests_mock):
-    # Mock the response from the API endpoint
-
-    # Create a mock Fusion object
-    fusion_obj = Fusion()
+def test_list_distributions_success(requests_mock, fusion_obj):
     new_catalog = "catalog_id"
     dataset = "my_dataset"
     series = "2022-02-02"
@@ -636,8 +600,7 @@ def test_list_distributions_success(requests_mock):
     pd.testing.assert_frame_equal(df, expected_df)
 
 
-def test__resolve_distro_tuples(mocker):
-    fusion_obj = Fusion()
+def test__resolve_distro_tuples(mocker, fusion_obj):
     catalog = "my_catalog"
     with (
         pytest.raises(AssertionError),
@@ -678,10 +641,7 @@ def test__resolve_distro_tuples(mocker):
         assert res == [exp_tuples[-1]]
 
 
-def test_to_bytes(requests_mock):
-    from fusion.utils import distribution_to_url
-
-    fusion_obj = Fusion()
+def test_to_bytes(requests_mock, fusion_obj):
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -696,9 +656,7 @@ def test_to_bytes(requests_mock):
     assert data.getbuffer() == expected_data
 
 
-def test_download_main(mocker, tmp_path):
-    fusion_obj = Fusion(download_folder=str(tmp_path))
-
+def test_download_main(mocker, fusion_obj):
     catalog = "my_catalog"
     dataset = "my_dataset"
     dt_str = "20200101:20200103"
@@ -713,7 +671,9 @@ def test_download_main(mocker, tmp_path):
         return_value=patch_res,
     )
 
-    dwn_load_res = [(True, f"{fusion_obj.download_folder}/{dataset}__{catalog}__{dt}.{file_format}", None) for dt in dates]
+    dwn_load_res = [
+        (True, f"{fusion_obj.download_folder}/{dataset}__{catalog}__{dt}.{file_format}", None) for dt in dates
+    ]
     mocker.patch(
         "fusion.fusion.download_single_file_threading",
         return_value=dwn_load_res,
@@ -798,8 +758,7 @@ def data_table_as_json(data_table):
     return data_table.write_json(None)
 
 
-def test_to_df(mocker, tmp_path, data_table_as_csv):
-    fusion_obj = Fusion(download_folder=str(tmp_path))
+def test_to_df(mocker, tmp_path, fusion_obj, data_table_as_csv):
     catalog = "my_catalog"
     dataset = "my_dataset"
     dates = ["2020-01-01", "2020-01-02", "2020-01-03"]
@@ -821,13 +780,13 @@ def test_to_df(mocker, tmp_path, data_table_as_csv):
     assert len(res) > 0
 
 
-def test_to_table(mocker, tmp_path, data_table_as_csv):
-    fusion_obj = Fusion(download_folder=str(tmp_path))
+def test_to_table(mocker, tmp_path, data_table_as_csv, fusion_obj):
     catalog = "my_catalog"
     dataset = "my_dataset"
     dates = ["2020-01-01", "2020-01-02", "2020-01-03"]
+    format = "csv"
 
-    files = [f"{tmp_path}/{dataset}__{catalog}__{dt}.csv" for dt in dates]
+    files = [f"{tmp_path}/{dataset}__{catalog}__{dt}.{format}" for dt in dates]
     for f in files:
         with Path(f).open("w") as f_h:
             f_h.write(data_table_as_csv)
@@ -840,5 +799,5 @@ def test_to_table(mocker, tmp_path, data_table_as_csv):
         return_value=patch_res,
     )
 
-    res = fusion_obj.to_table(dataset, f"{dates[0]}:{dates[-1]}", "csv", catalog=catalog)
+    res = fusion_obj.to_table(dataset, f"{dates[0]}:{dates[-1]}", format, catalog=catalog)
     assert len(res) > 0

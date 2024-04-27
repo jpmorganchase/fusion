@@ -92,36 +92,42 @@ def test_creds_from_dict():
         FusionCredentials.from_dict(credentials)
 
 
-def test_add_proxies():
-    # Mock the FusionCredentials.from_file method
-    with patch("fusion.authentication.FusionCredentials.from_file") as mock_from_file:
-        # Create a mock credentials object
-        credentials = FusionCredentials(
-            client_id="my_client_id",
-            client_secret="my_client_secret",
-            resource="my_resource",
-            auth_url="my_auth_url",
-            proxies={},
-        )
-        # Set the return value of the mock method
-        mock_from_file.return_value = credentials
+def test_add_proxies(tmp_path):
+    credentials_file = str(tmp_path / "client_credentials.json")
+    client_id = "my_client_id"
+    client_secret = "my_client_secret"
+    resource = "my_resource"
+    auth_url = "my_auth_url"
+    proxies = {
+        "http": "http://proxy.example.com",
+        "https": "https://proxy.example.com",
+    }
 
-        # Define the input parameters
-        http_proxy = "http://proxy.example.com"
-        https_proxy = "https://proxy.example.com"
-        credentials_file = "config/client_credentials.json"
+    # Call the generate_credentials_file function
+    credentials = FusionCredentials.generate_credentials_file(
+        credentials_file=credentials_file,
+        client_id=client_id,
+        client_secret=client_secret,
+        resource=resource,
+        auth_url=auth_url,
+        proxies=proxies,
+    )
 
-        # Call the add_proxies function
-        credentials.add_proxies(http_proxy, https_proxy, credentials_file)
+    # Verify that the credentials file was created
+    assert Path(credentials_file).exists()
 
-        # Verify that the FusionCredentials.from_file method was called with the correct arguments
-        mock_from_file.assert_called_once_with(credentials_file)
+    # Define the input parameters
+    http_proxy = "http://proxy.example.com"
+    https_proxy = "https://proxy.example.com"
 
-        # Verify that the proxies were added to the credentials object
-        assert credentials.proxies["http"] == http_proxy
-        assert credentials.proxies["https"] == https_proxy
+    # Call the add_proxies function
+    credentials.add_proxies(http_proxy, https_proxy, credentials_file)
 
-        credentials.add_proxies(http_proxy, None, credentials_file)
+    # Verify that the proxies were added to the credentials object
+    assert credentials.proxies["http"] == http_proxy
+    assert credentials.proxies["https"] == https_proxy
+
+    credentials.add_proxies(http_proxy, None, credentials_file)
 
 
 def test_generate_credentials_file(tmp_path):
@@ -488,8 +494,11 @@ def test_refresh_token_data_no_auth_url_failure(fusion_oauth_adapter, requests_m
         fusion_oauth_adapter._refresh_token_data()
 
 
-def test_refresh_fusion_token_data(fusion_oauth_adapter, fusion_oauth_adapter_from_obj, requests_mock):
-    fusion_obj = Fusion()
+def test_refresh_fusion_token_data(
+    fusion_oauth_adapter, fusion_oauth_adapter_from_obj, requests_mock, example_creds_dict
+):
+    creds = FusionCredentials.from_dict(example_creds_dict)
+    fusion_obj = Fusion(credentials=creds)
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -509,8 +518,9 @@ def test_refresh_fusion_token_data(fusion_oauth_adapter, fusion_oauth_adapter_fr
     fusion_oauth_adapter_from_obj._refresh_fusion_token_data(prep_req)
 
 
-def test_refresh_fusion_token_data_refresh(fusion_oauth_adapter, requests_mock):
-    fusion_obj = Fusion()
+def test_refresh_fusion_token_data_refresh(fusion_oauth_adapter, requests_mock, example_creds_dict):
+    creds = FusionCredentials.from_dict(example_creds_dict)
+    fusion_obj = Fusion(credentials=creds)
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -534,8 +544,9 @@ def test_refresh_fusion_token_data_refresh(fusion_oauth_adapter, requests_mock):
     fusion_oauth_adapter.send(prep_req)
 
 
-def test_fusion_oauth_adapter_send(fusion_oauth_adapter, requests_mock):
-    fusion_obj = Fusion()
+def test_fusion_oauth_adapter_send(fusion_oauth_adapter, requests_mock, example_creds_dict):
+    creds = FusionCredentials.from_dict(example_creds_dict)
+    fusion_obj = Fusion(credentials=creds)
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"

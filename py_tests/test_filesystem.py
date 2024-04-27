@@ -9,14 +9,13 @@ from fusion.fusion_filesystem import FusionHTTPFileSystem
 
 
 @pytest.fixture(scope="function")
-def http_fs_instance():
+def http_fs_instance(example_creds_dict):
     """Fixture to create a new instance for each test."""
-    return FusionHTTPFileSystem()
+    creds = FusionCredentials.from_dict(example_creds_dict)
+    return FusionHTTPFileSystem(credentials=creds)
 
 
 def test_filesystem(example_creds_dict, example_creds_dict_https_pxy):
-    assert FusionHTTPFileSystem()
-
     creds = FusionCredentials.from_dict(example_creds_dict)
     assert FusionHTTPFileSystem(creds)
 
@@ -45,14 +44,14 @@ async def test_not_found_status(http_fs_instance):
 
 
 @pytest.mark.asyncio
-async def test_other_error_status():
+async def test_other_error_status(example_creds_dict):
     # Create a mock response object
     response = mock.MagicMock(spec=ClientResponse)
     response.status = 500  # Some error status
     response.text = mock.AsyncMock(return_value="Internal server error")
 
     # Instance of your class
-    instance = FusionHTTPFileSystem()
+    instance = FusionHTTPFileSystem(FusionCredentials.from_dict(example_creds_dict))
 
     # Patching the internal method to just throw an Exception for testing
     with mock.patch.object(instance, "_raise_not_found_for_status", side_effect=Exception("Custom error")):
