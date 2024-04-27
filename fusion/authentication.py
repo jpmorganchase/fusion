@@ -103,7 +103,7 @@ class FusionCredentials:
         bearer_token: Optional[str] = None,
         bearer_token_expiry: Optional[datetime.datetime] = None,
         is_bearer_token_expirable: Optional[bool] = None,
-        proxies: Optional[dict] = None,
+        proxies: Optional[dict[str, str]] = None,
         grant_type: str = "client_credentials",
     ) -> None:
         """Constructor for the FusionCredentials authentication management class.
@@ -164,13 +164,13 @@ class FusionCredentials:
 
         credentials.proxies["https"] = https_proxy
 
-        data: dict[str, Union[str, dict]] = dict(
+        data: dict[str, Any] = dict(
             {
-                "client_id": credentials.client_id,  # type: ignore
-                "client_secret": credentials.client_secret,  # type: ignore
-                "resource": credentials.resource,  # type: ignore
-                "auth_url": credentials.auth_url,  # type: ignore
-                "proxies": credentials.proxies,  # type: ignore
+                "client_id": credentials.client_id,
+                "client_secret": credentials.client_secret,
+                "resource": credentials.resource,
+                "auth_url": credentials.auth_url,
+                "proxies": credentials.proxies,
             }
         )
         json_data = json.dumps(data, indent=4)
@@ -184,7 +184,7 @@ class FusionCredentials:
         client_secret: Optional[str] = None,
         resource: str = "JPMC:URI:RS-93742-Fusion-PROD",
         auth_url: str = "https://authe.jpmorgan.com/as/token.oauth2",
-        proxies: Optional[Union[str, dict]] = None,
+        proxies: Optional[Union[str, dict[str, str]]] = None,
     ) -> "FusionCredentials":
         """Utility function to generate credentials file that can be used for authentication.
 
@@ -211,7 +211,7 @@ class FusionCredentials:
         if not client_secret:
             raise CredentialError("A valid client secret is required")
 
-        data: dict[str, Union[str, dict]] = dict(
+        data: dict[str, Any] = dict(
             {
                 "client_id": client_id,
                 "client_secret": client_secret,
@@ -261,7 +261,7 @@ class FusionCredentials:
         return credentials
 
     @staticmethod
-    def from_dict(credentials: dict) -> "FusionCredentials":
+    def from_dict(credentials: dict[str, Any]) -> "FusionCredentials":
         """Create a credentials object from a dictionary.
 
             This is the only FusionCredentials creation method that supports the password grant type
@@ -379,7 +379,7 @@ class FusionCredentials:
             raise OSError(msg)
 
     @staticmethod
-    def from_object(credentials_source: Union[str, dict, "FusionCredentials"]) -> "FusionCredentials":
+    def from_object(credentials_source: Union[str, dict[str, Any], "FusionCredentials"]) -> "FusionCredentials":
         """Utility function that will determine how to create a credentials object based on data passed.
 
         Args:
@@ -428,7 +428,7 @@ class FusionOAuthAdapter(HTTPAdapter):
             s = requests.Session()
             if self.proxies:
                 # mypy does not recognise session.proxies as a dict so fails this line, we'll ignore this chk
-                s.proxies.update(self.proxies)  # type:ignore
+                s.proxies.update(self.proxies)
             s.mount("http://", HTTPAdapter(max_retries=self.auth_retries))
             if not self.credentials.auth_url:
                 raise CredentialError("A valid auth_url is required")
@@ -454,8 +454,8 @@ class FusionOAuthAdapter(HTTPAdapter):
 
     def __init__(
         self,
-        credentials: Union[FusionCredentials, Union[str, dict]],
-        proxies: Optional[dict] = None,
+        credentials: Union[FusionCredentials, str, dict[str, Any]],
+        proxies: Optional[dict[str, str]] = None,
         refresh_within_seconds: int = 5,
         auth_retries: Optional[Union[int, Retry]] = None,
         mount_url: str = "",
