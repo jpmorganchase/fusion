@@ -45,7 +45,7 @@ DEFAULT_THREAD_POOL_SIZE = 5
 
 
 @contextlib.contextmanager
-def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:
+def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # pragma: no cover
     """Progress bar sensitive to exceptions during the batch processing.
 
     Args:
@@ -245,7 +245,7 @@ def read_csv(
             VERBOSE_LVL,
             f"Could not parse {path} properly. " f"Trying with pandas csv reader. {err}",
         )
-        try:
+        try:  # pragma: no cover
             with fs.open(path) if fs else nullcontext(path) as f:
                 if dataframe_type == "pandas":
                     res = pd.read_csv(f, usecols=columns, index_col=False)
@@ -263,7 +263,7 @@ def read_csv(
             )
             with fs.open(path) if fs else nullcontext(path) as f:
                 if dataframe_type == "pandas":
-                    res = pd.read_table(
+                    res = pd.read_table(  # pragma: no cover
                         f,
                         usecols=columns,
                         index_col=False,
@@ -318,7 +318,7 @@ def read_json(
             VERBOSE_LVL,
             f"Could not parse {path} properly. " f"Trying with pandas json reader. {err}",
         )
-        try:
+        try:  # pragma: no cover
             with fs.open(path) if fs else nullcontext(path) as f:
                 if dataframe_type == "pandas":
                     res = pd.read_json(f)
@@ -334,7 +334,7 @@ def read_json(
                 VERBOSE_LVL,
                 f"Could not parse {path} properly. " f"{err}",
             )
-            raise err
+            raise err  # pragma: no cover
     return res
 
 
@@ -635,6 +635,7 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
     trace_config = aiohttp.TraceConfig()
     trace_config.on_request_start.append(on_request_start_token)
     trace_config.on_request_start.append(on_request_start_fusion_token)
+
     if "timeout" in kwargs:
         timeout = aiohttp.ClientTimeout(total=kwargs["timeout"])
     else:
@@ -906,12 +907,12 @@ def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) 
                 validation.append(val)
         else:
             validation.append(False)
-        if not validation and len(tmp) == file_seg_cnt:
+        if not validation[-1] and len(tmp) == file_seg_cnt:
             logger.warning(
                 f"You might not have access to the catalog {tmp[1]} or dataset {tmp[0]}."
                 "Please check you permission on the platform."
             )
-        if not validation and len(tmp) != file_seg_cnt:
+        if not validation[-1] and len(tmp) != file_seg_cnt:
             logger.warning(
                 f"The file in {paths[i]} has a non-compliant name and will not be processed. "
                 f"Please rename the file to dataset__catalog__yyyymmdd.format"

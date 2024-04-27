@@ -128,7 +128,7 @@ class Fusion:
 
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
-        if isinstance(credentials, (str, dict)):
+        elif isinstance(credentials, (str, dict)):
             self.credentials = FusionCredentials.from_object(credentials)
         else:
             raise ValueError(
@@ -186,7 +186,7 @@ class Fusion:
         """
         self._default_catalog = catalog
 
-    def __use_catalog(self, catalog: Optional[str]) -> str:
+    def _use_catalog(self, catalog: Optional[str]) -> str:
         """Determine which catalog to use in an API call.
 
         Args:
@@ -235,7 +235,7 @@ class Fusion:
         Returns:
            class:`pandas.DataFrame`: A dataframe with a row for each resource within the catalog
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}"
         df = Fusion._call_for_dataframe(url, self.session)
@@ -272,7 +272,7 @@ class Fusion:
         Returns:
             class:`pandas.DataFrame`: a dataframe with a row for each product
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/products"
         df: pd.DataFrame = Fusion._call_for_dataframe(url, self.session)
@@ -344,7 +344,7 @@ class Fusion:
         Returns:
             class:`pandas.DataFrame`: a dataframe with a row for each dataset.
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets"
         df = Fusion._call_for_dataframe(url, self.session)
@@ -409,7 +409,7 @@ class Fusion:
         Returns:
             class:`pandas.DataFrame`: A dataframe with a row for each resource
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}"
         df = Fusion._call_for_dataframe(url, self.session)
@@ -438,7 +438,7 @@ class Fusion:
         Returns:
             class:`pandas.DataFrame`: A dataframe with a row for each attribute
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
         df = Fusion._call_for_dataframe(url, self.session).sort_values(by="index").reset_index(drop=True)
@@ -481,7 +481,7 @@ class Fusion:
         Returns:
             class:`pandas.DataFrame`: a dataframe with a row for each dataset member.
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
         df = Fusion._call_for_dataframe(url, self.session)
@@ -509,7 +509,7 @@ class Fusion:
             class:`pandas.DataFrame`: A dataframe with a row for each datasetseries member resource.
                 Currently, this will always be distributions.
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}"
         df = Fusion._call_for_dataframe(url, self.session)
@@ -533,7 +533,7 @@ class Fusion:
         Returns:
             class:`pandas.DataFrame`: A dataframe with a row for each distribution.
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}/distributions"
         df = Fusion._call_for_dataframe(url, self.session)
@@ -567,14 +567,14 @@ class Fusion:
         Returns:
             list: a list of tuples, one for each distribution
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         datasetseries_list = self.list_datasetmembers(dataset, catalog)
         if len(datasetseries_list) == 0:
             raise AssertionError(f"There are no dataset members for dataset {dataset} in catalog {catalog}")
 
         if datasetseries_list.empty:
-            raise APIResponseError(
+            raise APIResponseError(  # pragma: no cover
                 f"No data available for dataset {dataset}. "
                 f"Check that a valid dataset identifier and date/date range has been set."
             )
@@ -593,7 +593,7 @@ class Fusion:
             datasetseries_list = datasetseries_list[pd.to_datetime(datasetseries_list["identifier"]) <= parsed_dates[1]]
 
         if len(datasetseries_list) == 0:
-            raise APIResponseError(
+            raise APIResponseError(  # pragma: no cover
                 f"No data available for dataset {dataset} in catalog {catalog}.\n"
                 f"Check that a valid dataset identifier and date/date range has been set."
             )
@@ -638,7 +638,7 @@ class Fusion:
         Returns:
 
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
 
@@ -785,7 +785,7 @@ class Fusion:
             class:`pandas.DataFrame`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         # sample data is limited to csv
         if dt_str == "sample":
@@ -904,7 +904,7 @@ class Fusion:
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
         """
 
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         url = distribution_to_url(
             self.root_url,
@@ -959,7 +959,7 @@ class Fusion:
             class:`pandas.DataFrame`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
         n_par = cpu_count(n_par)
         if not download_folder:
             download_folder = self.download_folder
@@ -1061,7 +1061,7 @@ class Fusion:
 
 
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
@@ -1157,7 +1157,7 @@ class Fusion:
 
 
         """
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
 
         fs_fusion = self.get_fusion_filesystem()
 
@@ -1205,7 +1205,7 @@ class Fusion:
                 If in_background is set to False then pandas DataFrame is output upon keyboard termination.
         """
 
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
         import asyncio
         import json
         import threading
@@ -1277,7 +1277,7 @@ class Fusion:
                 If in_background is set to False then pandas DataFrame is output upon keyboard termination.
         """
 
-        catalog = self.__use_catalog(catalog)
+        catalog = self._use_catalog(catalog)
         if not in_background:
             from sseclient import SSEClient
 
