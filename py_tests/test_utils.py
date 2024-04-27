@@ -14,7 +14,6 @@ import pytest
 import requests
 from tqdm import tqdm
 
-from fusion import Fusion
 from fusion.authentication import FusionOAuthAdapter
 from fusion.utils import (
     _filename_to_distribution,
@@ -605,8 +604,7 @@ def test_stream_file(overwrite, exists, expected_result):
             assert results[idx] == (True, output_file, None)
 
 
-def test_stream_single_file_new_session_dry_run(credentials, requests_mock):
-    fusion_obj = Fusion()
+def test_stream_single_file_new_session_dry_run(credentials, requests_mock, fusion_obj):
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -655,7 +653,7 @@ def temp_fs():
         yield mock_fs, tmpdirname
 
 
-def test_stream_file_with_temp_fs(temp_fs, requests_mock):
+def test_stream_file_with_temp_fs(temp_fs, requests_mock, fusion_obj):
     mock_fs, tmpdirname = temp_fs
 
     output_file_path = Path(tmpdirname) / "output.dat"
@@ -666,7 +664,6 @@ def test_stream_file_with_temp_fs(temp_fs, requests_mock):
     results = [None]
     idx = 0
 
-    fusion_obj = Fusion()
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -703,8 +700,7 @@ def gen_binary_data(n: int, pad_len: int):
     return [bin(i)[2:].zfill(pad_len).encode() for i in range(n)]
 
 
-def test_worker(requests_mock, temp_fs):
-    fusion_obj = Fusion()
+def test_worker(requests_mock, temp_fs, fusion_obj):
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -740,7 +736,7 @@ def test_worker(requests_mock, temp_fs):
     queue.join()
 
     for _ in range(max_threads):
-        queue.put((None, None, None))
+        queue.put((-1, -1, -1))
     for t in threads:
         t.join()
 
@@ -819,8 +815,7 @@ def test_filesystem_exceptions(mock_fs_fusion):
         validate_file_names(paths, mock_fs_fusion)
 
 
-def test_get_session(credentials, mocker):
-    fusion_obj = Fusion()
+def test_get_session(credentials, mocker, fusion_obj):
     session = get_session(credentials, fusion_obj.root_url)
     assert session
     session = get_session(credentials, fusion_obj.root_url, get_retries=3)
@@ -834,8 +829,7 @@ def test_get_session(credentials, mocker):
             assert mnt == "https://"
 
 
-def test_download_single_file_threading(temp_fs, requests_mock, credentials):
-    fusion_obj = Fusion()
+def test_download_single_file_threading(temp_fs, requests_mock, credentials, fusion_obj):
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -865,8 +859,7 @@ def test_download_single_file_threading(temp_fs, requests_mock, credentials):
         assert line == file_contents[ix * chunk_sz : (ix + 1) * chunk_sz]
 
 
-def test_stream_single_file_new_session(temp_fs, requests_mock, credentials):
-    fusion_obj = Fusion()
+def test_stream_single_file_new_session(temp_fs, requests_mock, credentials, fusion_obj):
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -891,8 +884,7 @@ def test_stream_single_file_new_session(temp_fs, requests_mock, credentials):
         assert line == file_contents[ix * chunk_sz : (ix + 1) * chunk_sz]
 
 
-def test_stream_single_file_new_session_dry_run_from_parent(temp_fs, requests_mock, credentials):
-    fusion_obj = Fusion()
+def test_stream_single_file_new_session_dry_run_from_parent(temp_fs, requests_mock, credentials, fusion_obj):
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -909,8 +901,7 @@ def test_stream_single_file_new_session_dry_run_from_parent(temp_fs, requests_mo
     stream_single_file_new_session(credentials=credentials, url=url, output_file=output_file, dry_run=True)
 
 
-def test_stream_single_file_new_session_file_exists(temp_fs, credentials):
-    fusion_obj = Fusion()
+def test_stream_single_file_new_session_file_exists(temp_fs, credentials, fusion_obj):
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -927,8 +918,7 @@ def test_stream_single_file_new_session_file_exists(temp_fs, credentials):
     stream_single_file_new_session(credentials=credentials, url=url, output_file=output_file, overwrite=False)
 
 
-def test_stream_single_file_new_session_with_exception(temp_fs, mocker, credentials):
-    fusion_obj = Fusion()
+def test_stream_single_file_new_session_with_exception(temp_fs, mocker, credentials, fusion_obj):
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"

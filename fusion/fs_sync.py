@@ -9,7 +9,7 @@ import time
 import warnings
 from os.path import relpath
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import fsspec
 import pandas as pd
@@ -44,7 +44,7 @@ def _download(
     show_progress: bool = True,
     local_path: str = "",
 ) -> list[tuple[bool, str, Optional[str]]]:
-    def _download_files(row: pd.Series) -> tuple[bool, str, Optional[str]]:
+    def _download_files(row: pd.Series[Any]) -> tuple[bool, str, Optional[str]]:
         p_path = local_path + row["path_fusion"]
         if not fs_local.exists(p_path):
             try:
@@ -83,7 +83,7 @@ def _download(
     else:
         return []
 
-    return res
+    return  # type: ignore
 
 
 def _upload(
@@ -267,8 +267,8 @@ def _synchronize(  # noqa: PLR0913
 def fsync(  # noqa: PLR0913
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
-    products: Optional[list] = None,
-    datasets: Optional[list] = None,
+    products: Optional[list[str]] = None,
+    datasets: Optional[list[str]] = None,
     catalog: Optional[str] = None,
     direction: str = "upload",
     flatten: bool = False,

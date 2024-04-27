@@ -21,6 +21,7 @@ from tqdm import tqdm
 from .authentication import FusionCredentials, get_default_fs
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
+from .types import PyArrowFilterT
 from .utils import (
     cpu_count,
     csv_to_table,
@@ -85,7 +86,7 @@ class Fusion:
 
     def __init__(
         self,
-        credentials: Union[str, dict, FusionCredentials] = "config/client_credentials.json",
+        credentials: Union[str, dict[str, Any], FusionCredentials] = "config/client_credentials.json",
         root_url: str = "https://fusion-api.jpmorgan.com/fusion/v1/",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
@@ -247,7 +248,7 @@ class Fusion:
 
     def list_products(
         self,
-        contains: Optional[Union[str, list]] = None,
+        contains: Optional[Union[str, list[str]]] = None,
         id_contains: bool = False,
         catalog: Optional[str] = None,
         output: bool = False,
@@ -314,9 +315,9 @@ class Fusion:
 
     def list_datasets(  # noqa: PLR0913
         self,
-        contains: Optional[Union[str, list]] = None,
+        contains: Optional[Union[str, list[str]]] = None,
         id_contains: bool = False,
-        product: Optional[Union[str, list]] = None,
+        product: Optional[Union[str, list[str]]] = None,
         catalog: Optional[str] = None,
         output: bool = False,
         max_results: int = -1,
@@ -748,8 +749,8 @@ class Fusion:
         catalog: Optional[str] = None,
         n_par: Optional[int] = None,
         show_progress: bool = True,
-        columns: Optional[list] = None,
-        filters: Optional[list] = None,
+        columns: Optional[list[str]] = None,
+        filters: Optional[PyArrowFilterT] = None,
         force_download: bool = False,
         download_folder: Optional[str] = None,
         dataframe_type: str = "pandas",
@@ -911,7 +912,7 @@ class Fusion:
             dataset,
             series_member,
             dataset_format,
-            catalog,  # type: ignore
+            catalog,
         )
 
         return Fusion._call_for_bytes_object(url, self.session)
@@ -924,12 +925,12 @@ class Fusion:
         catalog: Optional[str] = None,
         n_par: Optional[int] = None,
         show_progress: bool = True,
-        columns: Optional[list] = None,
-        filters: Optional[list] = None,
+        columns: Optional[list[str]] = None,
+        filters: Optional[PyArrowFilterT] = None,
         force_download: bool = False,
         download_folder: Optional[str] = None,
         **kwargs: Any,
-    ) -> pd.DataFrame:
+    ) -> pa.Table:
         """Gets distributions for a specified date or date range and returns the data as an arrow table.
 
         Args:
@@ -956,7 +957,7 @@ class Fusion:
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
         Returns:
-            class:`pandas.DataFrame`: a dataframe containing the requested data.
+            class:`pyarrow.Table`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
         """
         catalog = self._use_catalog(catalog)
@@ -1214,7 +1215,7 @@ class Fusion:
 
         from .utils import get_client
 
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         if last_event_id:
             kwargs = {"headers": {"Last-Event-ID": last_event_id}}
 

@@ -34,6 +34,7 @@ from urllib3.util.retry import Retry
 
 from . import __version__ as version
 from .authentication import FusionAiohttpSession, FusionCredentials, FusionOAuthAdapter
+from .types import PyArrowFilterT, WorkerQueueT
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -45,7 +46,8 @@ DEFAULT_THREAD_POOL_SIZE = 5
 
 
 @contextlib.contextmanager
-def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # pragma: no cover
+def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # type: ignore
+    # pragma: no cover
     """Progress bar sensitive to exceptions during the batch processing.
 
     Args:
@@ -55,10 +57,10 @@ def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # pragma: no
 
     """
 
-    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
+    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):  # type: ignore
         """Tqdm execution wrapper."""
 
-        def __call__(self, *args: Any, **kwargs: Any) -> None:
+        def __call__(self, *args: Any, **kwargs: Any) -> Any:
             n = 0
             for i in args[0]._result:
                 try:
@@ -69,7 +71,7 @@ def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # pragma: no
             tqdm_object.update(n=n)
             return super().__call__(*args, **kwargs)
 
-    old_batch_callback = joblib.parallel.BatchCompletionCallBack
+    old_batch_callback: type[joblib.parallel.BatchCompletionCallBack] = joblib.parallel.BatchCompletionCallBack
     joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
     try:
         yield tqdm_object
@@ -103,7 +105,7 @@ def csv_to_table(
     path: str,
     fs: Optional[fsspec.filesystem] = None,
     columns: Optional[list[str]] = None,
-    filters: Optional[list] = None,
+    filters: Optional[PyArrowFilterT] = None,
 ) -> pa.Table:
     """Reads csv data to pyarrow table.
 
@@ -127,7 +129,10 @@ def csv_to_table(
 
 
 def json_to_table(
-    path: str, fs: Optional[fsspec.filesystem] = None, columns: Optional[list] = None, filters: Optional[list] = None
+    path: str,
+    fs: Optional[fsspec.filesystem] = None,
+    columns: Optional[list[str]] = None,
+    filters: Optional[PyArrowFilterT] = None,
 ) -> pa.Table:
     """Reads json data to pyarrow table.
 
@@ -150,11 +155,14 @@ def json_to_table(
         return tbl
 
 
+PathLikeT = Union[str, Path]
+
+
 def parquet_to_table(
-    path: Union[str, list],
+    path: Union[PathLikeT, list[PathLikeT]],
     fs: Optional[fsspec.filesystem] = None,
-    columns: Optional[list] = None,
-    filters: Optional[list] = None,
+    columns: Optional[list[str]] = None,
+    filters: Optional[PyArrowFilterT] = None,
 ) -> pa.Table:
     """Reads parquet data to pyarrow table.
 
@@ -203,8 +211,8 @@ def parquet_to_table(
 
 def read_csv(
     path: str,
-    columns: Optional[list] = None,
-    filters: Optional[list] = None,
+    columns: Optional[list[str]] = None,
+    filters: Optional[PyArrowFilterT] = None,
     fs: Optional[fsspec.filesystem] = None,
     dataframe_type: str = "pandas",
 ) -> Union[pd.DataFrame, pa.Table]:
@@ -277,8 +285,8 @@ def read_csv(
 
 def read_json(
     path: str,
-    columns: Optional[list] = None,
-    filters: Optional[list] = None,
+    columns: Optional[list[str]] = None,
+    filters: Optional[PyArrowFilterT] = None,
     fs: Optional[fsspec.filesystem] = None,
     dataframe_type: str = "pandas",
 ) -> Union[pd.DataFrame, pa.Table]:
@@ -339,16 +347,16 @@ def read_json(
 
 
 def read_parquet(
-    path: Union[list, str],
-    columns: Optional[list] = None,
-    filters: Optional[list] = None,
+    path: PathLikeT,
+    columns: Optional[list[str]] = None,
+    filters: Optional[PyArrowFilterT] = None,
     fs: Optional[fsspec.filesystem] = None,
     dataframe_type: str = "pandas",
 ) -> Union[pd.DataFrame, pa.Table]:
     """Read parquet files(s) to pandas.
 
     Args:
-        path (Union[list, str]): path or a list of paths to parquet files.
+        path (PathLikeT): path or a list of paths to parquet files.
         columns (list): list of selected fields.
         filters (list): filters.
         fs: filesystem object.
@@ -408,7 +416,7 @@ def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -
     raise ValueError(f"{dt} is not in a recognised data format")
 
 
-def normalise_dt_param_str(dt: str) -> tuple:
+def normalise_dt_param_str(dt: str) -> tuple[str, ...]:
     """Convert a date parameter which may be a single date or a date range into a tuple.
 
     Args:
@@ -460,7 +468,7 @@ def distribution_to_filename(
     return f"{root_folder}{sep}{file_name}"
 
 
-def _filename_to_distribution(file_name: str) -> tuple:
+def _filename_to_distribution(file_name: str) -> tuple[str, str, str, str]:
     """Breaks a filename down into the components that represent a dataset distribution in the catalog.
 
     Args:
@@ -626,7 +634,7 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
             params.headers.update({"Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"})
 
     if credentials.proxies:
-        http_proxy: dict = {}
+        http_proxy: Optional[str] = None
         if "http" in credentials.proxies:
             http_proxy = credentials.proxies["http"]
         elif "https" in credentials.proxies:
@@ -664,7 +672,7 @@ def get_session(
         get_retries = Retry.from_int(get_retries)
     session = requests.Session()
     if credentials.proxies:
-        session.proxies.update(credentials.proxies)  # type:ignore
+        session.proxies.update(credentials.proxies)
     try:
         mount_url = _get_canonical_root_url(root_url)
     except Exception:
@@ -756,7 +764,7 @@ def stream_single_file_new_session_chunks(  # noqa: PLR0913
 
 
 def _worker(
-    queue: Queue,
+    queue: WorkerQueueT,
     session: requests.Session,
     url: str,
     output_file: str,
@@ -765,7 +773,7 @@ def _worker(
 ) -> None:
     while True:
         idx, start, end = queue.get()
-        if idx is None:
+        if idx == -1 and start == -1 and end == -1:
             break
         stream_single_file_new_session_chunks(session, url, output_file, start, end, lock, results, idx)
         queue.task_done()
@@ -803,7 +811,7 @@ def download_single_file_threading(
     lock = Lock()
     output_file_h: fsspec.spec.AbstractBufferedFile = fs.open(output_file, "wb")
     results = [None] * n_chunks
-    queue: Queue = Queue(max_threads)
+    queue: WorkerQueueT = Queue(max_threads)
     threads = []
     for _ in range(max_threads):
         t = Thread(target=_worker, args=(queue, session, url, output_file_h, lock, results))
@@ -816,7 +824,7 @@ def download_single_file_threading(
     queue.join()
 
     for _ in range(max_threads):
-        queue.put((None, None, None))
+        queue.put((-1, -1, -1))
     for t in threads:
         t.join()
 
@@ -989,7 +997,7 @@ def upload_files(  # noqa: PLR0913
 
     """
 
-    def _upload(row: pd.Series) -> tuple[bool, str, Optional[str]]:
+    def _upload(row: pd.Series) -> tuple[bool, str, Optional[str]]:  # type: ignore
         p_url = row["url"]
         try:
             mp = multipart and fs_local.size(row["path"]) > chunk_size
@@ -1041,4 +1049,4 @@ def upload_files(  # noqa: PLR0913
         else:
             res = [_upload(row) for index, row in loop.iterrows()]
 
-    return res
+    return res  # type: ignore

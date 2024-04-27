@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from fusion.authentication import FusionCredentials, FusionOAuthAdapter
+from fusion.fusion import Fusion
 
 
 @contextmanager
@@ -182,3 +183,10 @@ def fusion_oauth_adapter_from_obj(example_creds_dict):
         "https": "http://myproxy.com:8081",
     }
     return FusionOAuthAdapter(example_creds_dict, auth_retries=5, proxies=proxies)
+
+
+@pytest.fixture
+def fusion_obj(example_creds_dict):
+    creds = FusionCredentials.from_dict(example_creds_dict)
+    fusion = Fusion(credentials=creds)
+    return fusion
