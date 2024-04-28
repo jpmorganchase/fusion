@@ -997,10 +997,9 @@ def upload_files(  # noqa: PLR0913
 
     """
 
-    def _upload(row: pd.Series) -> tuple[bool, str, Optional[str]]:  # type: ignore
-        p_url = row["url"]
+    def _upload(p_url: str, path: str) -> tuple[bool, str, Optional[str]]:  # type: ignore
         try:
-            mp = multipart and fs_local.size(row["path"]) > chunk_size
+            mp = multipart and fs_local.size(path) > chunk_size
 
             if isinstance(fs_local, BytesIO):
                 fs_fusion.put(
@@ -1013,7 +1012,7 @@ def upload_files(  # noqa: PLR0913
                     to_date=to_date,
                 )
             else:
-                with fs_local.open(row["path"], "rb") as file_local:
+                with fs_local.open(path, "rb") as file_local:
                     fs_fusion.put(
                         file_local,
                         p_url,
@@ -1023,30 +1022,30 @@ def upload_files(  # noqa: PLR0913
                         from_date=from_date,
                         to_date=to_date,
                     )
-            return (True, row["path"], None)
+            return (True, path, None)
         except Exception as ex:
             logger.log(
                 VERBOSE_LVL,
-                f'Failed to upload {row["path"]}. ex - {ex}',
+                f"Failed to upload {path}. ex - {ex}",
             )
-            return (False, row["path"], str(ex))
+            return (False, path, str(ex))
 
     if parallel:
         if show_progress:
             with tqdm_joblib(tqdm(total=len(loop))) as _:
-                res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop.iterrows())
+                res = Parallel(n_jobs=n_par, backend="threading")(delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows())
         else:
-            res = Parallel(n_jobs=n_par)(delayed(_upload)(row) for index, row in loop.iterrows())
+            res = Parallel(n_jobs=n_par, backend="threading")(delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows())
     else:
         res = [None] * len(loop)
         if show_progress:
             with tqdm(total=len(loop)) as p:
                 for i, row in loop.iterrows():
-                    r = _upload(row)
+                    r = _upload(row["url"], row["path"])
                     res[i] = r
                     if r[0] is True:
                         p.update(1)
         else:
-            res = [_upload(row) for index, row in loop.iterrows()]
+            res = [_upload(row["url"], row["path"]) for _, row in loop.iterrows()]
 
     return res  # type: ignore
