@@ -997,7 +997,7 @@ def upload_files(  # noqa: PLR0913
 
     """
 
-    def _upload(p_url: str, path: str) -> tuple[bool, str, Optional[str]]:  # type: ignore
+    def _upload(p_url: str, path: str) -> tuple[bool, str, Optional[str]]:
         try:
             mp = multipart and fs_local.size(path) > chunk_size
 
