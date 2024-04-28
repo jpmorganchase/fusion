@@ -1011,6 +1011,17 @@ def test_upload_public(setup_fs, upload_rows):
     assert res
 
     fs_local.size.return_value = 5 * 2**20
-    fs_local = io.BytesIO(b"some data to simulate file content")
+    fs_local = io.BytesIO(b"some data to simulate file content" * 100)
     res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=False)
+    assert res
+
+def test_upload_public_parallel(setup_fs, upload_rows):
+    fs_fusion, fs_local = setup_fs
+
+    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=True)
+    assert res
+
+    fs_local.size.return_value = 5 * 2**20
+    fs_local = io.BytesIO(b"some data to simulate file content" * 100)
+    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=True)
     assert res
