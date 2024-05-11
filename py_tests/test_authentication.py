@@ -1,28 +1,32 @@
 import json
 import os
-from datetime import datetime, timedelta
+from collections.abc import Generator
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any, Optional
 from unittest.mock import MagicMock, Mock, patch
 
 import fsspec
 import pytest
 import requests
+import requests_mock
 from freezegun import freeze_time
 
 from fusion.authentication import (
-    CredentialError,
     FusionAiohttpSession,
     FusionCredentials,
+    FusionOAuthAdapter,
     get_default_fs,
 )
+from fusion.exceptions import CredentialError
 from fusion.fusion import Fusion
 from fusion.utils import distribution_to_url
 
 from .conftest import change_dir
 
 
-def test_creds_from_dict():
+def test_creds_from_dict() -> None:
     credentials = {
         "grant_type": "client_credentials",
         "client_id": "my_client_id",
@@ -92,7 +96,7 @@ def test_creds_from_dict():
         FusionCredentials.from_dict(credentials)
 
 
-def test_add_proxies(tmp_path):
+def test_add_proxies(tmp_path: Path) -> None:
     credentials_file = str(tmp_path / "client_credentials.json")
     client_id = "my_client_id"
     client_secret = "my_client_secret"
@@ -130,7 +134,7 @@ def test_add_proxies(tmp_path):
     credentials.add_proxies(http_proxy, None, credentials_file)
 
 
-def test_generate_credentials_file(tmp_path):
+def test_generate_credentials_file(tmp_path: Path) -> None:
     # Define the input parameters
     credentials_file = str(tmp_path / "client_credentials.json")
     client_id = "my_client_id"
@@ -175,7 +179,7 @@ def test_generate_credentials_file(tmp_path):
     assert credentials.proxies["https"] == proxies["https"]
 
 
-def test_generate_credentials_w_json_pxy_file(tmp_path):
+def test_generate_credentials_w_json_pxy_file(tmp_path: Path) -> None:
     # Define the input parameters
     credentials_file = str(tmp_path / "client_credentials.json")
     client_id = "my_client_id"
@@ -221,7 +225,7 @@ def test_generate_credentials_w_json_pxy_file(tmp_path):
     assert credentials.proxies["https"] == proxies_d["https"]
 
 
-def test_generate_credentials_w_bad_pxy_file(tmp_path):
+def test_generate_credentials_w_bad_pxy_file(tmp_path: Path) -> None:
     # Define the input parameters
     credentials_file = str(tmp_path / "client_credentials.json")
     client_id = "my_client_id"
@@ -241,7 +245,7 @@ def test_generate_credentials_w_bad_pxy_file(tmp_path):
             client_secret=client_secret,
             resource=resource,
             auth_url=auth_url,
-            proxies=3.14159,
+            proxies=3.14159,  # type: ignore
         )
     with pytest.raises(CredentialError):
         _ = FusionCredentials.generate_credentials_file(
@@ -254,7 +258,7 @@ def test_generate_credentials_w_bad_pxy_file(tmp_path):
         )
 
 
-def test_generate_credentials_file_missing_client_id(tmp_path):
+def test_generate_credentials_file_missing_client_id(tmp_path: Path) -> None:
     # Define the input parameters with missing client_id
     credentials_file = str(tmp_path / "client_credentials.json")
     client_secret = "my_client_secret"
@@ -276,7 +280,7 @@ def test_generate_credentials_file_missing_client_id(tmp_path):
         )
 
 
-def test_generate_credentials_file_missing_client_secret(tmp_path):
+def test_generate_credentials_file_missing_client_secret(tmp_path: Path) -> None:
     # Define the input parameters with missing client_secret
     credentials_file = str(tmp_path / "client_credentials.json")
     client_id = "my_client_id"
@@ -298,7 +302,7 @@ def test_generate_credentials_file_missing_client_secret(tmp_path):
         )
 
 
-def test_generate_credentials_file_invalid_proxies(tmp_path):
+def test_generate_credentials_file_invalid_proxies(tmp_path: Path) -> None:
     # Define the input parameters with invalid proxies
     credentials_file = str(tmp_path / "client_credentials.json")
     client_id = "my_client_id"
@@ -319,7 +323,7 @@ def test_generate_credentials_file_invalid_proxies(tmp_path):
         )
 
 
-def test_generate_credentials_file_existing_file(tmp_path):
+def test_generate_credentials_file_existing_file(tmp_path: Path) -> None:
     # Create an existing credentials file
     credentials_file = tmp_path / "client_credentials.json"
     credentials_file.write_text("existing file")
@@ -345,7 +349,7 @@ def test_generate_credentials_file_existing_file(tmp_path):
     assert credentials_file.exists()
 
 
-def test_from_file_absolute_path_exists(tmp_path, good_json):
+def test_from_file_absolute_path_exists(tmp_path: Path, good_json: str) -> None:
     # Create a temporary credentials file
     credentials_file = tmp_path / "client_credentials.json"
     credentials_file.write_text(good_json)
@@ -359,7 +363,7 @@ def test_from_file_absolute_path_exists(tmp_path, good_json):
     assert credentials.client_secret
 
 
-def test_from_file_relative_path_exists(tmp_path, good_json):
+def test_from_file_relative_path_exists(tmp_path: Path, good_json: str) -> None:
     # Create a temporary credentials file
     credentials_file = tmp_path / "client_credentials.json"
     credentials_file.write_text(good_json)
@@ -374,7 +378,7 @@ def test_from_file_relative_path_exists(tmp_path, good_json):
         assert credentials.client_secret
 
 
-def test_from_file_relative_path_walkup_exists(tmp_path, good_json):
+def test_from_file_relative_path_walkup_exists(tmp_path: Path, good_json: str) -> None:
     # Create a temporary credentials file
     dir_down_path = Path(tmp_path / "level_1" / "level_2" / "level_3")
     dir_down_path.mkdir(parents=True)
@@ -391,7 +395,7 @@ def test_from_file_relative_path_walkup_exists(tmp_path, good_json):
         assert credentials.client_secret
 
 
-def test_credentials_from_object():
+def test_credentials_from_object() -> None:
     # Create a credentials object
     credentials = FusionCredentials(
         client_id="my_client_id",
@@ -410,53 +414,56 @@ def test_credentials_from_object():
     assert new_credentials.auth_url == credentials.auth_url
 
 
-def test_from_file_file_not_found(tmp_path):
+def test_from_file_file_not_found(tmp_path: Path) -> None:
     # Call the from_file method with a non-existent file
     missing_creds_file = tmp_path / "client_credentials.json"
     with pytest.raises(FileNotFoundError):
-        FusionCredentials.from_file(file_path=missing_creds_file)
+        FusionCredentials.from_file(file_path=str(missing_creds_file))
 
 
-def test_from_file_empty_file(tmp_path):
+def test_from_file_empty_file(tmp_path: Path) -> None:
     # Create an empty credentials file
     credentials_file = tmp_path / "client_credentials.json"
     credentials_file.touch()
 
     # Call the from_file method with an empty file
-    with pytest.raises(OSError):
+    with pytest.raises(OSError, match="is an empty file, make sure to add your credentials to it."):
         FusionCredentials.from_file(file_path=str(credentials_file))
 
 
-def test_from_file_invalid_json(tmp_path):
+def test_from_file_invalid_json(tmp_path: Path) -> None:
     # Create a credentials file with invalid JSON
     credentials_file = tmp_path / "client_credentials.json"
     credentials_file.write_text('{"client_id": "my_client_id"}')
 
     # Call the from_file method with invalid JSON
-    with pytest.raises(Exception):  # noqa: B017
+    with pytest.raises(CredentialError):
         FusionCredentials.from_file(file_path=str(credentials_file))
 
 
 class MockResponse:
-    def __init__(self, status_code=200, json_data=None):
+    def __init__(self, status_code: int = 200, json_data: Optional[dict[str, Any]] = None) -> None:
         self.status_code = status_code
         self.json_data = json_data
 
-    def json(self):
+    def json(self) -> Optional[dict[str, Any]]:
         return self.json_data
 
 
-def test_refresh_token_data_success(fusion_oauth_adapter, requests_mock):
+def test_refresh_token_data_success(
+    fusion_oauth_adapter: FusionOAuthAdapter, requests_mock: requests_mock.Mocker
+) -> None:
     exp_win = 180
     init_token = "token123_1"
     next_token = "token123_2"
 
-    snap_t = datetime.now()
+    snap_t = datetime.now(tz=timezone.utc)
     delta_before_exp = snap_t + timedelta(seconds=60)
     delta_after_exp = snap_t + timedelta(seconds=200)
 
     with freeze_time(snap_t) as frozen_datetime:
         # Initial auth req
+        assert fusion_oauth_adapter.credentials.auth_url
         requests_mock.post(
             fusion_oauth_adapter.credentials.auth_url, json={"access_token": init_token, "expires_in": exp_win}
         )
@@ -481,22 +488,21 @@ def test_refresh_token_data_success(fusion_oauth_adapter, requests_mock):
         assert int(expiry) == exp_win
 
 
-def test_refresh_token_data_failure(fusion_oauth_adapter, requests_mock):
+def test_refresh_token_data_failure(
+    fusion_oauth_adapter: FusionOAuthAdapter, requests_mock: requests_mock.Mocker
+) -> None:
+    assert fusion_oauth_adapter.credentials.auth_url
     requests_mock.post(fusion_oauth_adapter.credentials.auth_url, status_code=500)
-    with pytest.raises(Exception):  # noqa: B017
-        fusion_oauth_adapter._refresh_token_data()
-
-
-def test_refresh_token_data_no_auth_url_failure(fusion_oauth_adapter, requests_mock):
-    requests_mock.post(fusion_oauth_adapter.credentials.auth_url, status_code=500)
-    with pytest.raises(Exception):  # noqa: B017
-        fusion_oauth_adapter.credentials.auth_url = None
+    with pytest.raises(requests.exceptions.HTTPError):
         fusion_oauth_adapter._refresh_token_data()
 
 
 def test_refresh_fusion_token_data(
-    fusion_oauth_adapter, fusion_oauth_adapter_from_obj, requests_mock, example_creds_dict
-):
+    fusion_oauth_adapter: FusionOAuthAdapter,
+    fusion_oauth_adapter_from_obj: FusionOAuthAdapter,
+    requests_mock: requests_mock.Mocker,
+    example_creds_dict: dict[str, Any],
+) -> None:
     creds = FusionCredentials.from_dict(example_creds_dict)
     fusion_obj = Fusion(credentials=creds)
     catalog = "my_catalog"
@@ -511,14 +517,20 @@ def test_refresh_fusion_token_data(
     requests_mock.get(token_auth_url, json={"access_token": "ds_token123", "expires_in": 180})
 
     # Set a fake bearer token exp
-    fusion_oauth_adapter.credentials.bearer_token_expiry = datetime.now() + timedelta(seconds=1800)
+    fusion_oauth_adapter.credentials.bearer_token_expiry = datetime.now(tz=timezone.utc) + timedelta(seconds=1800)
     fusion_oauth_adapter._refresh_fusion_token_data(prep_req)
 
-    fusion_oauth_adapter_from_obj.credentials.bearer_token_expiry = datetime.now() + timedelta(seconds=1800)
+    fusion_oauth_adapter_from_obj.credentials.bearer_token_expiry = datetime.now(tz=timezone.utc) + timedelta(
+        seconds=1800
+    )
     fusion_oauth_adapter_from_obj._refresh_fusion_token_data(prep_req)
 
 
-def test_refresh_fusion_token_data_refresh(fusion_oauth_adapter, requests_mock, example_creds_dict):
+def test_refresh_fusion_token_data_refresh(
+    fusion_oauth_adapter: FusionOAuthAdapter,
+    requests_mock: requests_mock.Mocker,
+    example_creds_dict: dict[str, Any],
+) -> None:
     creds = FusionCredentials.from_dict(example_creds_dict)
     fusion_obj = Fusion(credentials=creds)
     catalog = "my_catalog"
@@ -527,24 +539,29 @@ def test_refresh_fusion_token_data_refresh(fusion_oauth_adapter, requests_mock, 
     file_format = "csv"
     fusion_token_key = catalog + "_" + dataset
     fusion_oauth_adapter.fusion_token_dict[fusion_token_key] = "prev_token"
-    fusion_oauth_adapter.fusion_token_expiry_dict[fusion_token_key] = datetime.now()
+    fusion_oauth_adapter.fusion_token_expiry_dict[fusion_token_key] = datetime.now(tz=timezone.utc)
     url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
     token_auth_url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/authorize/token"
 
     exp_win = 3600
+    assert fusion_oauth_adapter.credentials.auth_url
     requests_mock.post(
         fusion_oauth_adapter.credentials.auth_url, json={"access_token": "token123", "expires_in": exp_win}
     )
 
     # Prep the mock urls
     prep_req = requests.Request("GET", url).prepare()
-    requests_mock.get(prep_req)
+    requests_mock.get(prep_req)  # type: ignore
     requests_mock.get(token_auth_url, json={"access_token": "ds_token123", "expires_in": 180})
 
     fusion_oauth_adapter.send(prep_req)
 
 
-def test_fusion_oauth_adapter_send(fusion_oauth_adapter, requests_mock, example_creds_dict):
+def test_fusion_oauth_adapter_send(
+    fusion_oauth_adapter: FusionOAuthAdapter,
+    requests_mock: requests_mock.Mocker,
+    example_creds_dict: dict[str, Any],
+) -> None:
     creds = FusionCredentials.from_dict(example_creds_dict)
     fusion_obj = Fusion(credentials=creds)
     catalog = "my_catalog"
@@ -557,6 +574,7 @@ def test_fusion_oauth_adapter_send(fusion_oauth_adapter, requests_mock, example_
     token_auth_url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/authorize/token"
 
     exp_win = 3600
+    assert fusion_oauth_adapter.credentials.auth_url
     requests_mock.post(
         fusion_oauth_adapter.credentials.auth_url, json={"access_token": "token123", "expires_in": exp_win}
     )
@@ -568,7 +586,7 @@ def test_fusion_oauth_adapter_send(fusion_oauth_adapter, requests_mock, example_
     init_token = "ds_token123_1"
     next_token = "ds_token123_2"
 
-    snap_t = datetime.now()
+    snap_t = datetime.now(tz=timezone.utc)
     delta_before_exp = snap_t + timedelta(seconds=60)
     delta_after_exp = snap_t + timedelta(seconds=200)
 
@@ -587,14 +605,14 @@ def test_fusion_oauth_adapter_send(fusion_oauth_adapter, requests_mock, example_
         assert fusion_oauth_adapter.fusion_token_dict[fusion_token_key] == next_token
 
 
-def test_fusion_oauth_adapter_send_no_bearer_token_exp(fusion_oauth_adapter):
+def test_fusion_oauth_adapter_send_no_bearer_token_exp(fusion_oauth_adapter: FusionOAuthAdapter) -> None:
+    fusion_oauth_adapter.credentials.bearer_token_expiry = None
     with pytest.raises(CredentialError):
-        fusion_oauth_adapter.credentials.bearer_token_expiry = None
         fusion_oauth_adapter.send(Mock())
 
 
-@pytest.fixture
-def local_fsspec_fs():
+@pytest.fixture()
+def local_fsspec_fs() -> Generator[tuple[fsspec.filesystem, str], None, None]:
     with TemporaryDirectory() as tmp_dir, patch("fsspec.filesystem") as mock_fs:
         # Configure the mock to return a LocalFileSystem that points to our temporary directory
         local_fs = fsspec.filesystem("file", auto_mkdir=True)
@@ -602,7 +620,7 @@ def local_fsspec_fs():
         yield local_fs, tmp_dir
 
 
-def test_default_filesystem():
+def test_default_filesystem() -> None:
     """Test the default filesystem is local file when no env vars are set."""
     with patch.dict(os.environ, {}, clear=True), patch("fsspec.filesystem") as mock_fs:
         mock_fs.return_value = MagicMock()
@@ -611,7 +629,7 @@ def test_default_filesystem():
         assert isinstance(fs, MagicMock), "Should return a filesystem object."
 
 
-def test_s3_filesystem():
+def test_s3_filesystem() -> None:
     """Test that S3 filesystem is used when S3 env vars are set."""
     env_vars = {
         "FS_PROTOCOL": "s3",
@@ -628,7 +646,7 @@ def test_s3_filesystem():
         assert isinstance(fs, MagicMock), "Should return a filesystem object."
 
 
-def test_from_object_with_dict():
+def test_from_object_with_dict() -> None:
     credentials = {
         "grant_type": "client_credentials",
         "client_id": "my_client_id",
@@ -646,7 +664,7 @@ def test_from_object_with_dict():
     assert creds.auth_url == "my_auth_url"
 
 
-def test_from_object_with_json_string():
+def test_from_object_with_json_string() -> None:
     credentials = """{
         "grant_type": "client_credentials",
         "client_id": "my_client_id",
@@ -664,7 +682,7 @@ def test_from_object_with_json_string():
     assert creds.auth_url == "my_auth_url"
 
 
-def test_from_object_with_json_file(tmp_path):
+def test_from_object_with_json_file(tmp_path: Path) -> None:
     credentials_file = tmp_path / "credentials.json"
     credentials = {
         "grant_type": "client_credentials",
@@ -686,14 +704,14 @@ def test_from_object_with_json_file(tmp_path):
     assert creds.auth_url == "my_auth_url"
 
 
-def test_from_object_with_invalid_credentials():
+def test_from_object_with_invalid_credentials() -> None:
     credentials = 12345
 
     with pytest.raises(CredentialError):
-        FusionCredentials.from_object(credentials)
+        FusionCredentials.from_object(credentials)  # type: ignore
 
 
-def test_FusionAiohttpSession():
+def test_async_session() -> None:
     session = FusionAiohttpSession()
     assert session
 

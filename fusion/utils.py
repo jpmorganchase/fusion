@@ -1,7 +1,6 @@
 """Fusion utilities."""
 
 import contextlib
-import datetime
 import json as js
 import logging
 import math
@@ -11,7 +10,7 @@ import re
 import threading
 from collections.abc import Generator
 from contextlib import nullcontext
-from datetime import timedelta
+from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
 from queue import Queue
@@ -66,7 +65,7 @@ def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # type: igno
                 try:
                     if i[0] is True:
                         n += 1
-                except Exception as _:  # noqa: F841, PERF203
+                except Exception as _:  # noqa: F841, PERF203, BLE001
                     n += 1
             tqdm_object.update(n=n)
             return super().__call__(*args, **kwargs)
@@ -244,14 +243,16 @@ def read_csv(
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
-                f"Failed to read {path}, with comma delimiter. {err}",
+                f"Failed to read {path}, with comma delimiter.",
+                exc_info=True,
             )
             raise Exception from err
 
-    except Exception as err:
+    except Exception:  # noqa: BLE001
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. " f"Trying with pandas csv reader. {err}",
+            f"Could not parse {path} properly. Trying with pandas csv reader.",
+            exc_info=True,
         )
         try:  # pragma: no cover
             with fs.open(path) if fs else nullcontext(path) as f:
@@ -264,10 +265,11 @@ def read_csv(
                 else:
                     raise ValueError(f"Unknown DataFrame type {dataframe_type}")
 
-        except Exception as err:
+        except Exception as err:  # noqa: BLE001
             logger.log(
                 VERBOSE_LVL,
-                f"Could not parse {path} properly. " f"Trying with pandas csv reader pandas engine. {err}",
+                f"Could not parse {path} properly. " f"Trying with pandas csv reader pandas engine.",
+                exc_info=True,
             )
             with fs.open(path) if fs else nullcontext(path) as f:
                 if dataframe_type == "pandas":
@@ -321,10 +323,11 @@ def read_json(
             )
             raise err
 
-    except Exception as err:
+    except Exception:  # noqa: BLE001
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. " f"Trying with pandas json reader. {err}",
+            f"Could not parse {path} properly. " f"Trying with pandas json reader.",
+            exc_info=True,
         )
         try:  # pragma: no cover
             with fs.open(path) if fs else nullcontext(path) as f:
@@ -338,10 +341,7 @@ def read_json(
                     raise ValueError(f"Unknown DataFrame type {dataframe_type}")
 
         except Exception as err:
-            logger.error(
-                VERBOSE_LVL,
-                f"Could not parse {path} properly. " f"{err}",
-            )
+            logger.log(VERBOSE_LVL, f"Could not parse {path} properly. ", exc_info=True)
             raise err  # pragma: no cover
     return res
 
@@ -378,16 +378,16 @@ def read_parquet(
         raise ValueError(f"Unknown DataFrame type {dataframe_type}")
 
 
-def _normalise_dt_param(dt: Union[str, int, datetime.datetime, datetime.date]) -> str:
+def _normalise_dt_param(dt: Union[str, int, datetime, date]) -> str:
     """Convert dates into a normalised string representation.
 
     Args:
-        dt (Union[str, int, datetime.datetime, datetime.date]): A date represented in various types.
+        dt (Union[str, int, datetime, date]): A date represented in various types.
 
     Returns:
         str: A normalized date string.
     """
-    if isinstance(dt, (datetime.date, datetime.datetime)):
+    if isinstance(dt, (date, datetime)):
         return dt.strftime("%Y-%m-%d")
 
     if isinstance(dt, int):
@@ -575,11 +575,11 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
             expiry = response_data["expires_in"]
             return access_token, expiry
 
-        token_expires_in = (session.credentials.bearer_token_expiry - datetime.datetime.now()).total_seconds()
+        token_expires_in = (session.credentials.bearer_token_expiry - datetime.now(tz=timezone.utc)).total_seconds()
         if session.credentials.is_bearer_token_expirable and token_expires_in < session.refresh_within_seconds:
             token, expiry = await _refresh_token_data()
             session.credentials.bearer_token = token
-            session.credentials.bearer_token_expiry = datetime.datetime.now() + datetime.timedelta(seconds=int(expiry))
+            session.credentials.bearer_token_expiry = datetime.now(tz=timezone.utc) + timedelta(seconds=int(expiry))
             session.number_token_refreshes += 1
 
         params.headers.update(
@@ -612,13 +612,13 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
             if fusion_token_key not in session.fusion_token_dict:
                 fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
                 session.fusion_token_dict[fusion_token_key] = fusion_token
-                session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
+                session.fusion_token_expiry_dict[fusion_token_key] = datetime.now(tz=timezone.utc) + timedelta(
                     seconds=int(fusion_token_expiry)
                 )
                 logger.log(VERBOSE_LVL, "Refreshed fusion token")
             else:
                 fusion_token_expires_in = (
-                    session.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
+                    session.fusion_token_expiry_dict[fusion_token_key] - datetime.now(tz=timezone.utc)
                 ).total_seconds()
                 if fusion_token_expires_in < session.refresh_within_seconds:
                     (
@@ -626,7 +626,7 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
                         fusion_token_expiry,
                     ) = await _refresh_fusion_token_data()
                     session.fusion_token_dict[fusion_token_key] = fusion_token
-                    session.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
+                    session.fusion_token_expiry_dict[fusion_token_key] = datetime.now(tz=timezone.utc) + timedelta(
                         seconds=int(fusion_token_expiry)
                     )
                     logger.log(VERBOSE_LVL, "Refreshed fusion token")
@@ -675,7 +675,7 @@ def get_session(
         session.proxies.update(credentials.proxies)
     try:
         mount_url = _get_canonical_root_url(root_url)
-    except Exception:
+    except Exception:  # noqa: BLE001
         mount_url = "https://"
     auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url)
     session.mount(mount_url, auth_handler)
@@ -700,7 +700,8 @@ def _stream_single_file_new_session_dry_run(
         resp = get_session(credentials, url).head(url)
         resp.raise_for_status()
         return (True, output_file, None)
-    except Exception as ex:
+    except BaseException as ex:  # noqa: BLE001
+        logger.log(VERBOSE_LVL, f"Failed to download url {url} to {output_file}", exc_info=True)
         return (False, output_file, str(ex))
 
 
@@ -754,10 +755,11 @@ def stream_single_file_new_session_chunks(  # noqa: PLR0913
         )
         results[idx] = (True, output_file, None)
         return 0
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001
         logger.log(
             VERBOSE_LVL,
-            f"Failed to write to {output_file}. ex - {ex}",
+            f"Failed to write to {output_file}.",
+            exc_info=True,
         )
         results[idx] = (False, output_file, str(ex))
         return 1
@@ -878,10 +880,11 @@ def stream_single_file_new_session(
             f"Wrote {byte_cnt:,} bytes to {output_file}",
         )
         return (True, output_file, None)
-    except Exception as ex:
+    except Exception as ex:  # noqa: BLE001
         logger.log(
             VERBOSE_LVL,
-            f"Failed to write to {output_file}. ex - {ex}",
+            f"Failed to write to {output_file}.",
+            exc_info=True,
         )
         return (False, output_file, str(ex))
 
@@ -1023,19 +1026,24 @@ def upload_files(  # noqa: PLR0913
                         to_date=to_date,
                     )
             return (True, path, None)
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             logger.log(
                 VERBOSE_LVL,
-                f"Failed to upload {path}. ex - {ex}",
+                f"Failed to upload {path}.",
+                exc_info=True,
             )
             return (False, path, str(ex))
 
     if parallel:
         if show_progress:
             with tqdm_joblib(tqdm(total=len(loop))) as _:
-                res = Parallel(n_jobs=n_par, backend="threading")(delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows())
+                res = Parallel(n_jobs=n_par, backend="threading")(
+                    delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows()
+                )
         else:
-            res = Parallel(n_jobs=n_par, backend="threading")(delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows())
+            res = Parallel(n_jobs=n_par, backend="threading")(
+                delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows()
+            )
     else:
         res = [None] * len(loop)
         if show_progress:
