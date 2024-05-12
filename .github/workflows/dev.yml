@@ -328,14 +328,21 @@ jobs:
         pattern: wheels-*
         path: target/wheels
         merge-multiple: true
-        
+
     - name: list dist files
       run: ls -l target/wheels
 
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+    - name: Install auditwheel-symbols
+      run: pip install auditwheel-symbols --no-index --find-links . --force-reinstall
+
     - name: Check wheels
       run: |
-        for wheel in target/wheels/*.whl; do
-          auditwheel show $wheel
+        for wheel in target/wheels/*manylinux*.whl; do
+          echo "Processing $wheel"
+          auditwheel-symbols "$wheel"
         done
       shell: bash
 
