@@ -336,13 +336,13 @@ jobs:
       with:
         python-version: "3.10"
     - name: Install auditwheel-symbols
-      run: pip install auditwheel-symbols --no-index --find-links . --force-reinstall
+      run: pip install auditwheel
 
     - name: Check wheels
       run: |
         for wheel in target/wheels/*manylinux*.whl; do
           echo "Processing $wheel"
-          auditwheel-symbols "$wheel"
+          auditwheel show "$wheel"
         done
       shell: bash
 
