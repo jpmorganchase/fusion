@@ -1,6 +1,6 @@
 [project]
 name = "PyFusion"
-version = "1.0.23"
+version = "1.1.0"
 
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
@@ -206,7 +206,7 @@ report.fail_under = 60
 run.parallel = true
 
 [tool.bumpversion]
-current_version = "1.0.23"
+current_version = "1.1.0"
 parse = """(?x)
     (?P<major>0|[1-9]\\d*)\\.
     (?P<minor>0|[1-9]\\d*)\\.
@@ -240,6 +240,9 @@ optional_value = "dev"
 
 [[tool.bumpversion.files]]
 filename = "Cargo.toml"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
 
 [[tool.bumpversion.files]]
 filename = "fusion/__init__.py"

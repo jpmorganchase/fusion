@@ -2,7 +2,7 @@
 
 __author__ = """Fusion Devs"""
 __email__ = "fusion_developers@jpmorgan.com"
-__version__ = "1.0.23"
+__version__ = "1.1.0"
 
 from _fusion import *  # noqa: F403
 
