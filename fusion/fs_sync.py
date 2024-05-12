@@ -47,15 +47,12 @@ def _download(
     def _download_files(row: pd.Series[Any]) -> tuple[bool, str, Optional[str]]:
         p_path = local_path + row["path_fusion"]
         if not fs_local.exists(p_path):
-            try:
-                fs_local.mkdir(Path(p_path).parent, exist_ok=True, create_parents=True)
-            except Exception as ex:
-                logger.info(f"Path {p_path} exists already", ex)
+            fs_local.mkdir(Path(p_path).parent, exist_ok=True, create_parents=True)
         try:
             fs_fusion.get(row["url"], p_path, chunk_size=DEFAULT_CHUNK_SIZE)
             return (True, p_path, None)
-        except Exception as ex:
-            logger.log(
+        except BaseException as ex:
+            logger.exception(
                 VERBOSE_LVL,
                 f"Failed to write to {p_path}. ex - {ex}",
             )
@@ -94,13 +91,13 @@ def _upload(
     show_progress: bool = True,
     local_path: str = "",
 ) -> list[tuple[bool, str, Optional[str]]]:
-    df.rename(columns={"path_local": "path"}, inplace=True)
-    df["path"] = local_path + df["path"]
+    upload_df = df.rename(columns={"path_local": "path"})
+    upload_df["path"] = local_path + upload_df["path"]
     parallel = len(df) > 1
     res = upload_files(
         fs_fusion,
         fs_local,
-        df,
+        upload_df,
         parallel=parallel,
         n_par=n_par,
         multipart=True,
@@ -153,11 +150,11 @@ def _get_fusion_df(
             if flatten:
                 keys = ["/".join(k.split("/")[:2] + k.split("/")[-1:]) for k in keys]
 
-            df = pd.DataFrame([keys, urls, sz, md]).T
-            df.columns = pd.Index(["path", "url", "size", "sha256"])
-            if dataset_format and len(df) > 0:
-                df = df[df.url.str.split("/").str[-1] == dataset_format]
-            df_lst.append(df)
+            info_df = pd.DataFrame([keys, urls, sz, md]).T
+            info_df.columns = pd.Index(["path", "url", "size", "sha256"])
+            if dataset_format and len(info_df) > 0:
+                info_df = info_df[info_df.url.str.split("/").str[-1] == dataset_format]
+            df_lst.append(info_df)
         else:
             df_lst.append(pd.DataFrame(columns=["path", "url", "size", "sha256"]))
 
@@ -379,6 +376,6 @@ def fsync(  # noqa: PLR0913
                 continue
             break
 
-        except Exception as ex:
-            logger.error("%s Issue occurred: %s", type(ex), ex)
+        except Exception as _:
+            logger.error("Exception thrown", exc_info=True)
             continue

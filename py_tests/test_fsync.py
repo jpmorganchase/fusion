@@ -1,7 +1,7 @@
 from fusion.fs_sync import _url_to_path
 
 
-def test__url_to_path():
+def test__url_to_path() -> None:
     # The function this is testing looks a bit broken. The test is here just to make sure we don't break it further.
 
     catalog = "my_catalog"
