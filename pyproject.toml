@@ -136,25 +136,49 @@ line-length = 120
 indent-width = 4
 target-version = "py39"
 
+
 [tool.ruff.lint]
 extend-select = [
-    'Q',
-    'B',
-    'UP',
-    'I',
-    'F',
-    'PTH',
-    'PIE',
-    'TID',
-    'ERA',
-    'ARG',
-    'PL',
-    #'ANN',
-    'SIM',
-    'PERF',
-    'T20',
+    'F',     # Pyflakes
+    'I',     # isort
+    'N',     # pep8-naming
+    'E',     # pycodestyle
+    'UP',    # pyupgrade
+    'YTT',   # flake8-2020
+    'ASYNC', # flake8-async
+    'TRIO',  # Trio
+    'BLE',   # flake8-blind-except
+    #'FBT',   # flake8-boolean-trap
+    'ANN',   # flake8-annotations
+    'B',     # flake8-bugbear
+    'A',     # flake8-builtins
+    'C4',    # flake8-comprehensions
+    'DTZ',   # flake8-datetimez
+    'T10',   # flake8-debugger
+    'EXE',   # flake8-executable
+    'FA',    # flake8-future-annotations
+    'ICN',   # flake8-import-conventions
+    'INP',   # flake8-no-pep420
+    'PIE',   # flake8-pie
+    'T20',   # flake8-print
+    'PYI',   # flake8-pyi
+    'PT',    # flake8-pytest-style
+    'Q',     # flake8-quotes
+    'SIM',   # flake8-simplify
+    'TID',   # flake8-tidy-imports
+    'PTH',   # flake8-use-pathlib
+    'TCH',   # flake8-type-checking
+    'TD',    # flake8-todos
+    'FIX',   # flake8-fixme
+    'ERA',   # eradicate
+    'PD',    # pandas-vet
+    'ARG',   # flake8-unused-arguments
+    'PL',    # Pylint
+    'FLY',   # flynt
+    'NPY',   # NumPy-specific rules
+    'PERF',  # Perflint
 ]
-extend-ignore = ["S101", "FA100", "F541"]
+extend-ignore = ["S101", "FA100", "F541", "ANN101", "ANN401"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["fusion"]

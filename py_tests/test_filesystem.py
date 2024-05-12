@@ -1,3 +1,4 @@
+from typing import Any
 from unittest import mock
 from unittest.mock import AsyncMock
 
@@ -8,14 +9,14 @@ from fusion.authentication import FusionCredentials
 from fusion.fusion_filesystem import FusionHTTPFileSystem
 
 
-@pytest.fixture(scope="function")
-def http_fs_instance(example_creds_dict):
+@pytest.fixture()
+def http_fs_instance(example_creds_dict: dict[str, Any]) -> FusionHTTPFileSystem:
     """Fixture to create a new instance for each test."""
     creds = FusionCredentials.from_dict(example_creds_dict)
     return FusionHTTPFileSystem(credentials=creds)
 
 
-def test_filesystem(example_creds_dict, example_creds_dict_https_pxy):
+def test_filesystem(example_creds_dict: dict[str, Any], example_creds_dict_https_pxy: dict[str, Any]) -> None:
     creds = FusionCredentials.from_dict(example_creds_dict)
     assert FusionHTTPFileSystem(creds)
 
@@ -24,15 +25,15 @@ def test_filesystem(example_creds_dict, example_creds_dict_https_pxy):
 
     kwargs = {"client_kwargs": {"credentials": creds}}
 
-    assert FusionHTTPFileSystem(**kwargs)
+    assert FusionHTTPFileSystem(None, **kwargs)
 
-    kwargs = {"client_kwargs": {"credentials": 3.14}}
-    with pytest.raises(ValueError):
-        FusionHTTPFileSystem(**kwargs)
+    kwargs = {"client_kwargs": {"credentials": 3.14}}  # type: ignore
+    with pytest.raises(ValueError, match="Credentials not provided"):
+        FusionHTTPFileSystem(None, **kwargs)
 
 
-@pytest.mark.asyncio
-async def test_not_found_status(http_fs_instance):
+@pytest.mark.asyncio()
+async def test_not_found_status(http_fs_instance: FusionHTTPFileSystem) -> None:
     # Create a mock response object
     response = mock.MagicMock(spec=ClientResponse)
     response.status = 404
@@ -43,8 +44,8 @@ async def test_not_found_status(http_fs_instance):
         await http_fs_instance._async_raise_not_found_for_status(response, "http://example.com")
 
 
-@pytest.mark.asyncio
-async def test_other_error_status(example_creds_dict):
+@pytest.mark.asyncio()
+async def test_other_error_status(example_creds_dict: dict[str, Any]) -> None:
     # Create a mock response object
     response = mock.MagicMock(spec=ClientResponse)
     response.status = 500  # Some error status
@@ -55,16 +56,15 @@ async def test_other_error_status(example_creds_dict):
 
     # Patching the internal method to just throw an Exception for testing
     with mock.patch.object(instance, "_raise_not_found_for_status", side_effect=Exception("Custom error")):
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(Exception, match="Custom error"):
             await instance._async_raise_not_found_for_status(response, "http://example.com")
 
-        assert "Custom error" in str(exc_info.value), "The custom error should be raised"
         response.text.assert_awaited_once()
         assert response.reason == "Internal server error", "The reason should be updated to the response text"
 
 
-@pytest.mark.asyncio
-async def test_successful_status(http_fs_instance):
+@pytest.mark.asyncio()
+async def test_successful_status(http_fs_instance: FusionHTTPFileSystem) -> None:
     # Create a mock response object with a successful status code
     response = mock.MagicMock(spec=ClientResponse)
     response.status = 200  # HTTP 200 OK
@@ -74,29 +74,29 @@ async def test_successful_status(http_fs_instance):
     # Since this is the successful path, we are primarily checking that nothing adverse happens
     try:
         await http_fs_instance._async_raise_not_found_for_status(response, "http://example.com")
-    except Exception as e:
+    except FileNotFoundError as e:
         pytest.fail(f"No exception should be raised for a successful response, but got: {e}")
 
 
-@pytest.mark.asyncio
-async def test_decorate_url_with_http_async(http_fs_instance):
+@pytest.mark.asyncio()
+async def test_decorate_url_with_http_async(http_fs_instance: FusionHTTPFileSystem) -> None:
     url = "resource/path"
     exp_res = f"{http_fs_instance.client_kwargs['root_url']}catalogs/{url}"
     result = await http_fs_instance._decorate_url_a(url)
     assert result == exp_res
 
 
-@pytest.mark.asyncio
-async def test_isdir_true(http_fs_instance):
-    http_fs_instance._decorate_url = AsyncMock(return_value="decorated_path_dir")
+@pytest.mark.asyncio()
+async def test_isdir_true(http_fs_instance: FusionHTTPFileSystem) -> None:
+    http_fs_instance._decorate_url = AsyncMock(return_value="decorated_path_dir")  # type: ignore
     http_fs_instance._info = AsyncMock(return_value={"type": "directory"})
     result = await http_fs_instance._isdir("path_dir")
     assert result
 
 
-@pytest.mark.asyncio
-async def test_isdir_false(http_fs_instance):
-    http_fs_instance._decorate_url = AsyncMock(return_value="decorated_path_file")
+@pytest.mark.asyncio()
+async def test_isdir_false(http_fs_instance: FusionHTTPFileSystem) -> None:
+    http_fs_instance._decorate_url = AsyncMock(return_value="decorated_path_file")  # type: ignore
     http_fs_instance._info = AsyncMock(return_value={"type": "file"})
     result = await http_fs_instance._isdir("path_file")
     assert not result

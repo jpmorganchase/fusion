@@ -1,11 +1,10 @@
 """Fusion authentication module."""
 
-import datetime
 import json
 import logging
 import os
 from collections.abc import Mapping
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional, Union
 from urllib.parse import urlparse
@@ -65,7 +64,7 @@ def _is_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
         return all([parsed.scheme, parsed.netloc])
-    except Exception:
+    except (ValueError, AttributeError):
         return False
 
 
@@ -101,7 +100,7 @@ class FusionCredentials:
         resource: Optional[str] = None,
         auth_url: Optional[str] = None,
         bearer_token: Optional[str] = None,
-        bearer_token_expiry: Optional[datetime.datetime] = None,
+        bearer_token_expiry: Optional[datetime] = None,
         is_bearer_token_expirable: Optional[bool] = None,
         proxies: Optional[dict[str, str]] = None,
         grant_type: str = "client_credentials",
@@ -116,7 +115,7 @@ class FusionCredentials:
             resource (str, optional): The OAuth audience. Defaults to None.
             auth_url (str, optional): URL for the OAuth authentication server. Defaults to None.
             bearer_token (str, optional): Bearer token. Defaults to None.
-            bearer_token_expiry (datetime.datetime, optional): Bearer token expiry. Defaults to None.
+            bearer_token_expiry (datetime, optional): Bearer token expiry. Defaults to None.
             is_bearer_token_expirable (bool, optional): Is bearer token expirable. Defaults to None.
             proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet.
             grant_type (str, optional): Allows the grant type to be changed to support different credential types.
@@ -164,15 +163,13 @@ class FusionCredentials:
 
         credentials.proxies["https"] = https_proxy
 
-        data: dict[str, Any] = dict(
-            {
-                "client_id": credentials.client_id,
-                "client_secret": credentials.client_secret,
-                "resource": credentials.resource,
-                "auth_url": credentials.auth_url,
-                "proxies": credentials.proxies,
-            }
-        )
+        data: dict[str, Any] = {
+            "client_id": credentials.client_id,
+            "client_secret": credentials.client_secret,
+            "resource": credentials.resource,
+            "auth_url": credentials.auth_url,
+            "proxies": credentials.proxies,
+        }
         json_data = json.dumps(data, indent=4)
         with Path(credentials_file).open("w") as credentialsfile:
             credentialsfile.write(json_data)
@@ -211,14 +208,12 @@ class FusionCredentials:
         if not client_secret:
             raise CredentialError("A valid client secret is required")
 
-        data: dict[str, Any] = dict(
-            {
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "resource": resource,
-                "auth_url": auth_url,
-            }
-        )
+        data: dict[str, Any] = {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "resource": resource,
+            "auth_url": auth_url,
+        }
 
         proxies_resolved = {}
         if proxies:
@@ -274,48 +269,53 @@ class FusionCredentials:
         Returns:
             FusionCredentials: a credentials object that can be used for authentication.
         """
+        if not credentials or not isinstance(credentials, dict):
+            raise CredentialError("A valid credentials dictionary is required")
+
         grant_type = credentials.get("grant_type", "client_credentials")
+        try:
+            if grant_type == "client_credentials":
+                client_id = credentials["client_id"]
+                client_secret = credentials["client_secret"]
+                username = None
+                password = None
+                bearer_token = None
+                bearer_token_expiry = datetime.now(tz=timezone.utc)
+                is_bearer_token_expirable = True
+                resource = credentials["resource"]
+                auth_url = credentials["auth_url"]
+            elif grant_type == "bearer":
+                client_id = None
+                client_secret = None
+                username = None
+                password = None
+                bearer_token = credentials["bearer_token"]
+                bearer_token_expiry = (
+                    pd.to_datetime(credentials.get("bearer_token_expiry"))  # type: ignore
+                    if credentials.get("bearer_token_expiry")
+                    else None
+                )
+                bearer_token_expirable = credentials.get("bearer_token_expirable")
+                if isinstance(bearer_token_expirable, str):
+                    bearer_token_expirable = bearer_token_expirable.lower()
 
-        if grant_type == "client_credentials":
-            client_id = credentials["client_id"]
-            client_secret = credentials["client_secret"]
-            username = None
-            password = None
-            bearer_token = None
-            bearer_token_expiry = datetime.datetime.now()
-            is_bearer_token_expirable = True
-            resource = credentials["resource"]
-            auth_url = credentials["auth_url"]
-        elif grant_type == "bearer":
-            client_id = None
-            client_secret = None
-            username = None
-            password = None
-            bearer_token = credentials["bearer_token"]
-            bearer_token_expiry = (
-                pd.to_datetime(credentials.get("bearer_token_expiry"))  # type: ignore
-                if credentials.get("bearer_token_expiry")
-                else None
-            )
-            bearer_token_expirable = credentials.get("bearer_token_expirable")
-            if isinstance(bearer_token_expirable, str):
-                bearer_token_expirable = bearer_token_expirable.lower()
-
-            is_bearer_token_expirable = bearer_token_expirable not in ["false"] if bearer_token_expirable else True
-            resource = None
-            auth_url = None
-        elif grant_type == "password":
-            client_id = credentials["client_id"]
-            client_secret = None
-            username = credentials["username"]
-            password = credentials["password"]
-            bearer_token = None
-            bearer_token_expiry = datetime.datetime.now()
-            is_bearer_token_expirable = True
-            resource = credentials["resource"]
-            auth_url = credentials["auth_url"]
-        else:
-            raise CredentialError(f"Unrecognised grant type {grant_type}")
+                is_bearer_token_expirable = bearer_token_expirable not in ["false"] if bearer_token_expirable else True
+                resource = None
+                auth_url = None
+            elif grant_type == "password":
+                client_id = credentials["client_id"]
+                client_secret = None
+                username = credentials["username"]
+                password = credentials["password"]
+                bearer_token = None
+                bearer_token_expiry = datetime.now(tz=timezone.utc)
+                is_bearer_token_expirable = True
+                resource = credentials["resource"]
+                auth_url = credentials["auth_url"]
+            else:
+                raise CredentialError(f"Unrecognised grant type {grant_type}")
+        except KeyError as e:
+            raise CredentialError(f"Missing required key in credentials dictionary: {e}") from e
 
         proxies = credentials.get("proxies")
         creds = FusionCredentials(
@@ -370,9 +370,9 @@ class FusionCredentials:
                     data = json.load(creds_f)
                     credentials = FusionCredentials.from_dict(data)  # noqa: PLW2901
                     return credentials
-            except Exception as e:
+            except CredentialError as e:
                 logger.error(e)
-                raise Exception(e) from e
+                raise e
         else:
             msg = f"{to_use_file_path} is an empty file, make sure to add your credentials to it."
             logger.error(msg)
@@ -433,12 +433,13 @@ class FusionOAuthAdapter(HTTPAdapter):
             if not self.credentials.auth_url:
                 raise CredentialError("A valid auth_url is required")
             response = s.post(self.credentials.auth_url, data=payload)
+            response.raise_for_status()
             response_data = response.json()
             access_token = response_data["access_token"]
             expiry = response_data["expires_in"]
             return access_token, expiry
-        except Exception as ex:
-            raise Exception(f"Failed to authenticate against OAuth server") from ex
+        except CredentialError as ex:
+            raise CredentialError(f"Failed to authenticate against OAuth server") from ex
 
     def _refresh_fusion_token_data(self, request: requests.PreparedRequest, **kwargs: Any) -> tuple[str, str]:
         if not request.url:
@@ -489,7 +490,7 @@ class FusionOAuthAdapter(HTTPAdapter):
         else:
             self.proxies = self.credentials.proxies
         self.token = None
-        self.bearer_token_expiry = datetime.datetime.now()
+        self.bearer_token_expiry = datetime.now(tz=timezone.utc)
         self.number_token_refreshes = 0
         self.refresh_within_seconds = refresh_within_seconds
         self.fusion_token_dict: dict[str, str] = {}
@@ -522,7 +523,7 @@ class FusionOAuthAdapter(HTTPAdapter):
 
         if not self.credentials.bearer_token_expiry:
             raise CredentialError("A valid bearer token is required")
-        token_expires_in = (self.credentials.bearer_token_expiry - datetime.datetime.now()).total_seconds()
+        token_expires_in = (self.credentials.bearer_token_expiry - datetime.now(tz=timezone.utc)).total_seconds()
 
         url_lst = request.path_url.split("/")
         fusion_auth_req = "distributions" in url_lst
@@ -530,7 +531,7 @@ class FusionOAuthAdapter(HTTPAdapter):
         if self.credentials.is_bearer_token_expirable and token_expires_in < self.refresh_within_seconds:
             token, expiry = self._refresh_token_data()
             self.credentials.bearer_token = token
-            self.credentials.bearer_token_expiry = datetime.datetime.now() + timedelta(seconds=int(expiry))
+            self.credentials.bearer_token_expiry = datetime.now(tz=timezone.utc) + timedelta(seconds=int(expiry))
             self.number_token_refreshes += 1
             logger.log(
                 VERBOSE_LVL,
@@ -550,18 +551,18 @@ class FusionOAuthAdapter(HTTPAdapter):
             if fusion_token_key not in self.fusion_token_dict:
                 fusion_token, fusion_token_expiry = self._refresh_fusion_token_data(request, **kwargs)
                 self.fusion_token_dict[fusion_token_key] = fusion_token
-                self.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
+                self.fusion_token_expiry_dict[fusion_token_key] = datetime.now(tz=timezone.utc) + timedelta(
                     seconds=int(fusion_token_expiry)
                 )
                 logger.log(VERBOSE_LVL, "Refreshed fusion token")
             else:
                 fusion_token_expires_in = (
-                    self.fusion_token_expiry_dict[fusion_token_key] - datetime.datetime.now()
+                    self.fusion_token_expiry_dict[fusion_token_key] - datetime.now(tz=timezone.utc)
                 ).total_seconds()
                 if fusion_token_expires_in < self.refresh_within_seconds:
                     fusion_token, fusion_token_expiry = self._refresh_fusion_token_data(request)
                     self.fusion_token_dict[fusion_token_key] = fusion_token
-                    self.fusion_token_expiry_dict[fusion_token_key] = datetime.datetime.now() + timedelta(
+                    self.fusion_token_expiry_dict[fusion_token_key] = datetime.now(tz=timezone.utc) + timedelta(
                         seconds=int(fusion_token_expiry)
                     )
                     logger.log(VERBOSE_LVL, "Refreshed fusion token")
@@ -575,7 +576,7 @@ class FusionOAuthAdapter(HTTPAdapter):
 class FusionAiohttpSession(aiohttp.ClientSession):
     """Bespoke aiohttp session."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Class constructor to create a FusionOAuthAdapter object.
 
         Args:

@@ -27,8 +27,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
     """Fusion HTTP filesystem."""
 
     def __init__(
-        self, credentials: Union[str, FusionCredentials] = "config/client_credentials.json", *args: Any, **kwargs: Any
-    ):
+        self,
+        credentials: Optional[Union[str, FusionCredentials]] = "config/client_credentials.json",
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         """Same signature as the fsspec HTTPFileSystem.
 
         Args:
@@ -42,7 +45,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if "client_kwargs" not in kwargs:
             if isinstance(credentials, FusionCredentials):
                 self.credentials = credentials
-            else:
+            elif isinstance(credentials, str):
                 self.credentials = FusionCredentials.from_object(credentials)
             kwargs["client_kwargs"] = {
                 "credentials": self.credentials,
@@ -90,8 +93,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         try:
             ret: dict[str, str] = await self._info(path)
             return ret["type"] == "directory"
-        except Exception as ex:  # pragma: no cover
-            logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
+        except BaseException:  # pragma: no cover
+            logger.exception(VERBOSE_LVL, f"Artificial error")
             return False
 
     async def _changes(self, url: str) -> dict[Any, Any]:
@@ -102,8 +105,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 self._raise_not_found_for_status(r, url)
                 try:
                     out: dict[Any, Any] = await r.json()
-                except Exception as ex:
-                    logger.log(VERBOSE_LVL, f"{url} cannot be parsed to json, {ex}")
+                except BaseException:
+                    logger.exception(VERBOSE_LVL, f"{url} cannot be parsed to json")
                     out = {}
             return out
         except Exception as ex:
@@ -294,7 +297,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 context = nullcontext(lpath)
                 use_seek = False  # might not support seeking
             else:
-                context = open(lpath, "rb")  # noqa: SIM115, PTH123
+                context = open(lpath, "rb")  # noqa: SIM115, PTH123, ASYNC101
                 use_seek = True
 
             with context as f:
@@ -421,7 +424,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                         try:
                             await self._async_raise_not_found_for_status(resp, url)
                             return await resp.json()  # type: ignore
-                        except Exception as ex:
+                        except Exception as ex:  # noqa: BLE001
                             ex_cnt += 1
                             last_ex = ex
 
@@ -466,7 +469,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
         operation_id = sync(self.loop, _get_operation_id, session)["operationId"]
-        resps = [resp for resp in put_data(session)]
+        resps = list(put_data(session))
 
         hash_sha256 = hash_sha256_lst[0]
         headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
@@ -627,7 +630,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 class FusionFile(HTTPFile):  # type: ignore
     """Fusion File."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Init."""
         super().__init__(*args, **kwargs)
 
