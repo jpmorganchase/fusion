@@ -239,9 +239,6 @@ values = ["dev"]
 optional_value = "dev"
 
 [[tool.bumpversion.files]]
-filename = "pyproject_docs_build.toml"
-
-[[tool.bumpversion.files]]
 filename = "Cargo.toml"
 
 [[tool.bumpversion.files]]
