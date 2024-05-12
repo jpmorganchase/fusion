@@ -124,9 +124,9 @@ jobs:
       run: ls -l target/wheels
 
     - name: Upload Wheels
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
   linux-musllinux:
@@ -192,9 +192,9 @@ jobs:
       run: ls -l target/wheels
 
     - name: Upload Wheels
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
   windows:
@@ -254,9 +254,9 @@ jobs:
       run: ls -l target/wheels
 
     - name: Upload Wheels
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
       
   macos:
@@ -314,7 +314,28 @@ jobs:
       run: ls -l target/wheels
 
     - name: Upload Wheels
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: wheels
+        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
+
+  artifact-check:
+    needs: [linux-manylinux, linux-musllinux, windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: wheels-*
+        path: target/wheels
+        merge-multiple: true
+        
+    - name: list dist files
+      run: ls -l target/wheels
+
+    - name: Check wheels
+      run: |
+        for wheel in target/wheels/*.whl; do
+          auditwheel show $wheel
+        done
+      shell: bash
+
