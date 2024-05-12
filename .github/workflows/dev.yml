@@ -62,6 +62,7 @@ jobs:
         rye run tox
   
   linux-manylinux:
+    needs: tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -119,11 +120,17 @@ jobs:
         args: --release -j $(nproc) -i python${{ matrix.python-versions }}
         sccache: 'true'
   
-
     - name: list dist files
       run: ls -l target/wheels
 
+    - name: Upload Wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels
+        path: target/wheels
+
   linux-musllinux:
+    needs: tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -183,9 +190,15 @@ jobs:
 
     - name: list dist files
       run: ls -l target/wheels
-    
+
+    - name: Upload Wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels
+        path: target/wheels
 
   windows:
+    needs: tests
     runs-on: windows-latest
     strategy:
       matrix:
@@ -239,8 +252,15 @@ jobs:
 
     - name: list dist files
       run: ls -l target/wheels
+
+    - name: Upload Wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels
+        path: target/wheels
       
   macos:
+    needs: tests
     runs-on: macos-latest
     strategy:
       matrix:
@@ -292,3 +312,9 @@ jobs:
 
     - name: list dist files
       run: ls -l target/wheels
+
+    - name: Upload Wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels
+        path: target/wheels
