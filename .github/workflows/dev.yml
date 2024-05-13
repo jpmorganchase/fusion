@@ -62,6 +62,7 @@ jobs:
         rye run tox
   
   linux-manylinux:
+    needs: tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -119,11 +120,17 @@ jobs:
         args: --release -j $(nproc) -i python${{ matrix.python-versions }}
         sccache: 'true'
   
-
     - name: list dist files
       run: ls -l target/wheels
 
+    - name: Upload Wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
+        path: target/wheels
+
   linux-musllinux:
+    needs: tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -183,9 +190,15 @@ jobs:
 
     - name: list dist files
       run: ls -l target/wheels
-    
+
+    - name: Upload Wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
+        path: target/wheels
 
   windows:
+    needs: tests
     runs-on: windows-latest
     strategy:
       matrix:
@@ -239,8 +252,15 @@ jobs:
 
     - name: list dist files
       run: ls -l target/wheels
+
+    - name: Upload Wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
+        path: target/wheels
       
   macos:
+    needs: tests
     runs-on: macos-latest
     strategy:
       matrix:
@@ -292,3 +312,37 @@ jobs:
 
     - name: list dist files
       run: ls -l target/wheels
+
+    - name: Upload Wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
+        path: target/wheels
+
+  artifact-check:
+    needs: [linux-manylinux, linux-musllinux, windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: wheels-*
+        path: target/wheels
+        merge-multiple: true
+
+    - name: list dist files
+      run: ls -l target/wheels
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+    - name: Install auditwheel-symbols
+      run: pip install auditwheel
+
+    - name: Check wheels
+      run: |
+        for wheel in target/wheels/*manylinux*.whl; do
+          echo "Processing $wheel"
+          auditwheel show "$wheel"
+        done
+      shell: bash
+

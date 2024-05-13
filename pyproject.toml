@@ -1,6 +1,6 @@
 [project]
 name = "PyFusion"
-version = "1.0.23"
+version = "1.1.0-dev1"
 
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
@@ -90,7 +90,7 @@ managed = true
 dev-dependencies = [
     "aioresponses>=0.7.6",
     "auditwheel>=6.0.0; sys_platform=='linux'",
-    "bump2version",
+    "bump-my-version",
     "cffi>=1.16.0; sys_platform=='darwin'",
     "freezegun>=1.4.0",
     "ipython",
@@ -204,3 +204,45 @@ html.show_contexts = true
 html.skip_covered = false
 report.fail_under = 60
 run.parallel = true
+
+[tool.bumpversion]
+current_version = "1.1.0-dev1-dev1"
+parse = """(?x)
+    (?P<major>0|[1-9]\\d*)\\.
+    (?P<minor>0|[1-9]\\d*)\\.
+    (?P<patch>0|[1-9]\\d*)
+    (?:
+        -                             # dash separator for pre-release section
+        (?P<pre_l>[a-zA-Z-]+)         # pre-release label
+        (?P<pre_n>0|[1-9]\\d*)        # pre-release version number
+    )?                                # pre-release section is optional
+"""
+serialize = [
+    "{major}.{minor}.{patch}-{pre_l}{pre_n}",
+    "{major}.{minor}.{patch}",
+]
+search = "{current_version}"
+replace = "{new_version}"
+regex = false
+ignore_missing_version = false
+tag = false
+sign_tags = false
+tag_name = "v{new_version}"
+tag_message = "Bump version: {current_version} → {new_version}"
+allow_dirty = false
+commit = false
+message = "Bump version: {current_version} → {new_version}"
+commit_args = ""
+
+[tool.bumpversion.parts.pre_l]
+values = ["dev"]
+optional_value = "dev"
+
+[[tool.bumpversion.files]]
+filename = "Cargo.toml"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+
+[[tool.bumpversion.files]]
+filename = "fusion/__init__.py"
