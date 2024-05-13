@@ -42,8 +42,6 @@ arrow==1.3.0
     # via isoduration
 asttokens==2.4.1
     # via stack-data
-async-timeout==4.0.3
-    # via aiohttp
 attrs==23.2.0
     # via aiohttp
     # via aiohttp-sse-client
@@ -62,8 +60,6 @@ azure-storage-blob==12.19.1
     # via adlfs
 babel==2.14.0
     # via mkdocs-material
-backports-tarfile==1.1.1
-    # via jaraco-context
 beautifulsoup4==4.12.3
     # via nbconvert
 bleach==6.1.0
@@ -125,10 +121,6 @@ docutils==0.21.2
     # via readme-renderer
 entrypoints==0.4
     # via jupyter-client
-exceptiongroup==1.2.1
-    # via anyio
-    # via ipython
-    # via pytest
 executing==2.0.1
     # via stack-data
 fastjsonschema==2.19.1
@@ -185,13 +177,7 @@ idna==3.7
     # via requests
     # via yarl
 importlib-metadata==7.1.0
-    # via keyring
-    # via markdown
     # via mike
-    # via mkdocs
-    # via mkdocs-get-deps
-    # via mkdocstrings
-    # via nbconvert
     # via twine
 importlib-resources==6.4.0
     # via mike
@@ -390,7 +376,7 @@ nest-asyncio==1.6.0
     # via notebook
 nh3==0.2.17
     # via readme-renderer
-notebook==6.5.6
+notebook==6.5.7
     # via jupyter-contrib-core
     # via jupyter-contrib-nbextensions
     # via jupyter-nbextensions-configurator
@@ -542,7 +528,7 @@ pyyaml==6.0.1
     # via responses
 pyyaml-env-tag==0.1
     # via mkdocs
-pyzmq==24.0.1
+pyzmq==26.0.3
     # via ipykernel
     # via jupyter-client
     # via jupyter-server
@@ -642,13 +628,6 @@ tinycss2==1.3.0
     # via nbconvert
 toml==0.10.2
     # via jupytext
-tomli==2.0.1
-    # via coverage
-    # via maturin
-    # via mypy
-    # via pyproject-api
-    # via pytest
-    # via tox
 tomlkit==0.12.5
     # via bump-my-version
 tornado==6.4
@@ -696,12 +675,8 @@ types-tqdm==4.66.0.20240417
 types-urllib3==1.26.25.14
     # via types-requests
 typing-extensions==4.11.0
-    # via aioitertools
-    # via anyio
     # via azure-core
     # via azure-storage-blob
-    # via ipython
-    # via mkdocstrings
     # via mypy
     # via pydantic
     # via pydantic-core
@@ -747,4 +722,3 @@ yarl==1.9.4
 ziglang==0.12.0
 zipp==3.18.1
     # via importlib-metadata
-    # via importlib-resources

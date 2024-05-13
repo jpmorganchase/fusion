@@ -19,12 +19,14 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.9"]
+        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
     name: Run tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: ${{ matrix.python-versions }}
 
@@ -57,7 +59,7 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
   
-    - name: Sync dependencies using rye
+    - name: Run tox
       run: |
         rye run tox
   
@@ -67,13 +69,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11"]
+        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         target: [
           "x86_64-unknown-linux-gnu",
-          "i686-unknown-linux-gnu",
+          # "i686-unknown-linux-gnu", # Remove 32 bit arch
           "aarch64-unknown-linux-gnu",
           "armv7-unknown-linux-gnueabihf",
-          # "powerpc64le-unknown-linux-gnu",
+          "powerpc64le-unknown-linux-gnu",
         ]
 
     steps:
@@ -83,6 +85,8 @@ jobs:
         fetch-depth: 0
 
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: ${{ matrix.python-versions }}
 
@@ -115,7 +119,7 @@ jobs:
       uses: PyO3/maturin-action@main
       with:
         target: ${{ matrix.target }}
-        before-script-linux: rustup target add ${{ matrix.target }}
+        # before-script-linux: rustup target add ${{ matrix.target }}
         manylinux: auto
         args: --release -j $(nproc) -i python${{ matrix.python-versions }}
         sccache: 'true'
@@ -126,7 +130,7 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: wheels-manylinux-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
   linux-musllinux:
@@ -135,13 +139,12 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11"]
+        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         target: [
           "x86_64-unknown-linux-musl",
-          "i686-unknown-linux-musl",
           "aarch64-unknown-linux-musl",
           "armv7-unknown-linux-musleabihf",
-          # "powerpc64le-unknown-linux-musl",
+          # "powerpc64le-unknown-linux-musl", # diasble powerpc64le until we decide to build via container quay.io/pypa/musllinux_1_1_ppc64le
         ]
 
     steps:
@@ -151,6 +154,8 @@ jobs:
         fetch-depth: 0
 
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1      
       with:
         python-version: ${{ matrix.python-versions }}
 
@@ -183,7 +188,7 @@ jobs:
       uses: PyO3/maturin-action@main
       with:
         target: ${{ matrix.target }}
-        before-script-linux: rustup target add ${{ matrix.target }}
+        # before-script-linux: rustup target add ${{ matrix.target }}
         manylinux: musllinux_1_1
         args: --release -j $(nproc) -i python${{ matrix.python-versions }}
         sccache: 'false'
@@ -194,7 +199,7 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: wheels-musllinux-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
   windows:
@@ -202,8 +207,8 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11"]
-        target: ["x64", "x86"]
+        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        target: ["x64"] # Remove 32 bit arch, "x86"]
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -212,6 +217,8 @@ jobs:
         fetch-depth: 0
 
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: ${{ matrix.python-versions }}
 
@@ -256,7 +263,7 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: wheels-win-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
       
   macos:
@@ -264,7 +271,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11"]
+        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         target: ["x86_64"]
 
     steps:
@@ -274,6 +281,8 @@ jobs:
         fetch-depth: 0
 
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: ${{ matrix.python-versions }}
 
@@ -316,7 +325,7 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: wheels-macos-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
   artifact-check:
@@ -333,6 +342,8 @@ jobs:
       run: ls -l target/wheels
 
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: "3.10"
     - name: Install auditwheel-symbols
