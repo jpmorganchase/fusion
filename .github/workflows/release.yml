@@ -33,7 +33,7 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const tagSha = '${{ github.event.after }}';
-            const runs = await github.actions.listWorkflowRuns({
+            const runs = await github.rest.actions.listWorkflowRuns({
               owner,
               repo,
               workflow_id: 'dev.yml',
