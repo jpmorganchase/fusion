@@ -601,20 +601,25 @@ def test_stream_file(overwrite: bool, exists: bool, expected_result: int) -> Non
     fs = Mock(spec=fsspec.AbstractFileSystem)
     fs.exists.return_value = exists
 
+    # Create a mock response object with the necessary context manager methods
+    mock_response = Mock()
+    mock_response.raise_for_status = Mock()
+    mock_response.content = b"0123456789"
+    # Mock the __enter__ method to return the mock response itself
+    mock_response.__enter__ = Mock(return_value=mock_response)
+    # Mock the __exit__ method to do nothing
+    mock_response.__exit__ = Mock()
+
     with (
         patch("fsspec.filesystem", return_value=fs),
-        patch.object(session, "get", wraps=requests.Session().get) as mock_get,
+        patch.object(session, "get", return_value=mock_response) as mock_get,  # Use return_value=mock_response
     ):
-        # Your code here
-        mock_response = Mock()
-        mock_response.raise_for_status = Mock()
-        mock_response.content = b"0123456789"
-        mock_get.return_value.__enter__.return_value = mock_response
-
+        # The actual function to test might need to be imported if it exists elsewhere
         result = stream_single_file_new_session_chunks(
             session, url, output_file, start, end, lock, results, idx, overwrite=overwrite, fs=fs
         )
 
+        # Assertions to verify the behavior
         assert result == expected_result
         if not overwrite and exists:
             fs.exists.assert_called_once_with(output_file)
@@ -623,7 +628,6 @@ def test_stream_file(overwrite: bool, exists: bool, expected_result: int) -> Non
             output_file.seek.assert_called_once_with(start)
             output_file.write.assert_called_once_with(b"0123456789")
             assert results[idx] == (True, output_file, None)
-
 
 def test_stream_single_file_new_session_dry_run(
     credentials: FusionCredentials, requests_mock: requests_mock.Mocker, fusion_obj: Fusion
