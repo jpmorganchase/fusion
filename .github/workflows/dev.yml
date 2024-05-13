@@ -67,8 +67,8 @@ jobs:
     - name: Upload sdist
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-sdist-${{ matrix.python-versions }}
-        path: target/dist/*.tar.gz
+        name: artifacts-sdist-${{ matrix.python-versions }}
+        path: dist/*.tar.gz
   
   linux-manylinux:
     needs: tests
@@ -137,7 +137,7 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-manylinux-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: artifacts-manylinux-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
   linux-musllinux:
@@ -206,7 +206,7 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-musllinux-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: artifacts-musllinux-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
   windows:
@@ -270,7 +270,7 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-win-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: artifacts-win-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
       
   macos:
@@ -332,7 +332,7 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-macos-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: artifacts-macos-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
   artifact-check:
@@ -341,7 +341,7 @@ jobs:
     steps:
     - uses: actions/download-artifact@v4
       with:
-        pattern: wheels-*
+        pattern: artifacts-*
         path: target/wheels
         merge-multiple: true
 
