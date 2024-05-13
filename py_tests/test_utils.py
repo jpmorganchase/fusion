@@ -612,7 +612,7 @@ def test_stream_file(overwrite: bool, exists: bool, expected_result: int) -> Non
 
     with (
         patch("fsspec.filesystem", return_value=fs),
-        patch.object(session, "get", return_value=mock_response) as mock_get,  # Use return_value=mock_response
+        patch.object(session, "get", return_value=mock_response),
     ):
         # The actual function to test might need to be imported if it exists elsewhere
         result = stream_single_file_new_session_chunks(
@@ -628,6 +628,7 @@ def test_stream_file(overwrite: bool, exists: bool, expected_result: int) -> Non
             output_file.seek.assert_called_once_with(start)
             output_file.write.assert_called_once_with(b"0123456789")
             assert results[idx] == (True, output_file, None)
+
 
 def test_stream_single_file_new_session_dry_run(
     credentials: FusionCredentials, requests_mock: requests_mock.Mocker, fusion_obj: Fusion
