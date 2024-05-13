@@ -390,7 +390,7 @@ nest-asyncio==1.6.0
     # via notebook
 nh3==0.2.17
     # via readme-renderer
-notebook==6.5.6
+notebook==6.5.7
     # via jupyter-contrib-core
     # via jupyter-contrib-nbextensions
     # via jupyter-nbextensions-configurator
@@ -542,7 +542,7 @@ pyyaml==6.0.1
     # via responses
 pyyaml-env-tag==0.1
     # via mkdocs
-pyzmq==24.0.1
+pyzmq==26.0.3
     # via ipykernel
     # via jupyter-client
     # via jupyter-server
