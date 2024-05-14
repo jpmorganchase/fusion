@@ -30,6 +30,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: ${{ matrix.python-versions }}
 
@@ -61,6 +63,7 @@ jobs:
           git config --local user.name "github-actions[bot]"
   
     - name: Run tox
+
       run: rye run tox
 
     # Build and upload the sdist, wheels will be done on arch specific images
@@ -94,6 +97,8 @@ jobs:
         fetch-depth: 0
 
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: ${{ matrix.python-versions }}
 
@@ -156,6 +161,8 @@ jobs:
         fetch-depth: 0
 
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1      
       with:
         python-version: ${{ matrix.python-versions }}
 
@@ -212,6 +219,8 @@ jobs:
         fetch-depth: 0
 
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: ${{ matrix.python-versions }}
 
@@ -270,6 +279,8 @@ jobs:
         fetch-depth: 0
 
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: ${{ matrix.python-versions }}
 
@@ -326,6 +337,8 @@ jobs:
       run: ls -l target/wheels
 
     - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: "3.10"
     - name: Install auditwheel-symbols
