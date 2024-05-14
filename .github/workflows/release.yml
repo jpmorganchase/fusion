@@ -32,7 +32,7 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
-            const tagSha = '${{ github.event.after }}';
+            const tagSha = '${{ github.context.sha }}';
             const runs = await github.rest.actions.listWorkflowRuns({
               owner,
               repo,
@@ -40,6 +40,9 @@ jobs:
               status: 'success',
               branch: 'master'
             });
+
+            console.log('tagSha = ' + tagSha)
+            console.log('headSha = ' + run.head_sha)
             const successfulRun = runs.data.workflow_runs.find(run => run.head_sha === tagSha);
             if (successfulRun) {
               core.setOutput('successful', 'true');
