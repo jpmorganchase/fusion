@@ -46,14 +46,14 @@ jobs:
             const util = require('util');
             console.log(util.inspect(runs, {showHidden: false, depth: null, colors: true}))
             
-            const successfulRun = false;
+            const successfulRun = runs.data.workflow_runs.find(run => run.head_sha === tagSha);
             if (successfulRun) {
               core.setOutput('successful', 'true');
             } else {
               core.setOutput('successful', 'false');
               core.setFailed('No successful build for this commit/tag');
             }
-            core.setOutput('successful', 'false');
+
   publish:
     needs: check-build
     if: false 
