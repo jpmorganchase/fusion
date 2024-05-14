@@ -41,7 +41,7 @@ jobs:
               repo,
               workflow_id: 'dev.yml',
               status: 'success',
-              branch: 'master'
+              head_sha: tagSha
             });
             const util = require('util');
             console.log(util.inspect(runs, {showHidden: false, depth: null, colors: true}))
