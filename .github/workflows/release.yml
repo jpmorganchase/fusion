@@ -33,6 +33,7 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const tagSha = '${{ github.context.sha }}';
+            console.log('tagSha = ' + tagSha)
             const runs = await github.rest.actions.listWorkflowRuns({
               owner,
               repo,
@@ -41,19 +42,19 @@ jobs:
               branch: 'master'
             });
 
-            console.log('tagSha = ' + tagSha)
-            console.log('headSha = ' + run.head_sha)
-            const successfulRun = runs.data.workflow_runs.find(run => run.head_sha === tagSha);
+            
+            console.log(runs)
+            const successfulRun = False;
             if (successfulRun) {
               core.setOutput('successful', 'true');
             } else {
               core.setOutput('successful', 'false');
               core.setFailed('No successful build for this commit/tag');
             }
-            
+            core.setOutput('successful', 'false');
   publish:
     needs: check-build
-    if: ${{ needs.check-build.outputs.build-successful == 'true' }}
+    if: false 
     runs-on: ubuntu-latest
 
     steps:
