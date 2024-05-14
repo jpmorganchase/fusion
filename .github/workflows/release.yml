@@ -44,7 +44,7 @@ jobs:
 
             
             console.log(runs)
-            const successfulRun = False;
+            const successfulRun = false;
             if (successfulRun) {
               core.setOutput('successful', 'true');
             } else {
