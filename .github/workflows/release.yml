@@ -33,21 +33,19 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const tagSha = context.sha;
-            console.log('owner = ' + owner)
-            console.log('repo = ' + repo)
-            console.log('tagSha = ' + tagSha)
+            console.log('current run sha = ' + tagSha)
+            dev_workflow = 'dev.yml'
             const runs = await github.rest.actions.listWorkflowRuns({
               owner,
               repo,
-              workflow_id: 'dev.yml',
+              workflow_id: dev_workflow,
               status: 'success',
               head_sha: tagSha
             });
-            const util = require('util');
-            console.log(util.inspect(runs, {showHidden: false, depth: null, colors: true}))
-            
+
             const successfulRun = runs.data.workflow_runs.find(run => run.head_sha === tagSha);
             if (successfulRun) {
+              console.log('Found Successful build run, it was started at' + successfulRun.created_at)
               core.setOutput('successful', 'true');
             } else {
               core.setOutput('successful', 'false');
@@ -56,7 +54,7 @@ jobs:
 
   publish:
     needs: check-build
-    if: false 
+    if: ${{ needs.check-build.outputs.build-successful == 'true' }} 
     runs-on: ubuntu-latest
 
     steps:
