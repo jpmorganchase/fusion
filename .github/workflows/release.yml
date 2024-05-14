@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       build-successful: ${{ steps.check-build-success.outputs.successful }}
+      run_id: ${{ steps.check-build-success.outputs.run_id }}
 
     steps:
       - name: Check latest build status
@@ -45,8 +46,10 @@ jobs:
 
             const successfulRun = runs.data.workflow_runs.find(run => run.head_sha === tagSha);
             if (successfulRun) {
-              console.log('Found Successful build run, it was started at' + successfulRun.created_at)
               core.setOutput('successful', 'true');
+              core.setOutput('run_id', successfulRun.id);
+              console.log('Found Successful build run #' + successfulRun.run_number + ', run_id=' + successfulRun.id + ', it was started at' + successfulRun.created_at)
+
             } else {
               core.setOutput('successful', 'false');
               core.setFailed('No successful build for this commit/tag');
@@ -68,7 +71,6 @@ jobs:
     - name: Checkout main repo
       uses: actions/checkout@v4
       with:
-        path: main_repo
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -77,11 +79,11 @@ jobs:
       uses: mindsers/changelog-reader-action@v2
       with:
         version: ${{ steps.tag_name.outputs.current_version }}
-        path: main_repo/CHANGELOG.md
+        path: CHANGELOG.md
 
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.12'
 
     - name: Set up rye
       run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
@@ -101,14 +103,13 @@ jobs:
 
     - name: Sync dependencies using rye
       run: |
-        rye pin 3.9
+        rye pin 3.12
         rye sync --all-features
 
     - name: Setup main repo deploy git user
       run: |
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
-      working-directory: main_repo
 
     # Build docs but only alias latest for non-dev releases
     - name: build documentation
@@ -122,29 +123,31 @@ jobs:
           # Commands for pre-release
             rye run mike deploy --branch fusion_release --deploy-prefix docs --push ${{ steps.tag_name.outputs.current_version }}
         fi
-      working-directory: main_repo
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - uses: actions/download-artifact@v4
       with:
         pattern: artifacts-*
-        path: target/dist
+        path: dist/
         merge-multiple: true
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        run-id: ${{ needs.check-build.outputs.run_id }}
+
 
     - name: create github release
       id: create_release
       uses: softprops/action-gh-release@v2
       with:
         body: ${{ steps.changelog_reader.outputs.changes }}
-        files: target/dist/*
+        files: dist/*
         draft: ${{ contains(steps.tag_name.outputs.current_version, '.dev') }}
         prerelease: ${{ contains(steps.tag_name.outputs.current_version, '.dev') }}
         token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        packages-dir: target/dist/
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: rye run twine upload dist/*

@@ -63,7 +63,6 @@ jobs:
           git config --local user.name "github-actions[bot]"
   
     - name: Run tox
-
       run: rye run tox
 
     # Build and upload the sdist, wheels will be done on arch specific images
@@ -128,17 +127,24 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        args: --release -j $(nproc) -i python${{ matrix.python-versions }}
+        args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
   
     - name: list dist files
-      run: ls -l target/wheels
+      run: |
+        ls -l dist
+
+    - name: Clear and list dist files
+      run: |
+        rm -f dist/*linux_x86_64.whl
+        ls -l dist
+
 
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
         name: artifacts-manylinux-${{ matrix.target }}-${{ matrix.python-versions }}
-        path: target/wheels
+        path: dist
 
   # Define the musllinux maturin builds, across multiple python versions, these will run in appropriate arch images
   linux-musllinux:
@@ -192,17 +198,23 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: musllinux_1_1
-        args: --release -j $(nproc) -i python${{ matrix.python-versions }}
+        args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'false'
 
     - name: list dist files
-      run: ls -l target/wheels
+      run: |
+        ls -l dist
+  
+    - name: Clear and list dist files
+      run: |
+        rm -f dist/*linux_x86_64.whl
+        ls -l dist
 
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
         name: artifacts-musllinux-${{ matrix.target }}-${{ matrix.python-versions }}
-        path: target/wheels
+        path: dist
 
   # Define the windows maturin builds, across multiple python versions, these will run on windows-latest
   windows:
@@ -252,17 +264,17 @@ jobs:
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
-        args: --release -j 10 -i ${{ matrix.python-versions }}
+        args: --release -j 10 -i ${{ matrix.python-versions }} --out dist
         sccache: 'false'
 
     - name: list dist files
-      run: ls -l target/wheels
+      run: ls -l dist
 
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
         name: artifacts-win-${{ matrix.target }}-${{ matrix.python-versions }}
-        path: target/wheels
+        path: dist
 
   # Define the macos maturin builds, across multiple python versions, these will run on macos-latest
   macos:
@@ -309,18 +321,18 @@ jobs:
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
-        args: --release -j 10 -i ${{ matrix.python-versions }}
+        args: --release -j 10 -i ${{ matrix.python-versions }} --out dist
         sccache: 'false'
         manylinux: auto
 
     - name: list dist files
-      run: ls -l target/wheels
+      run: ls -l dist
 
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
         name: artifacts-macos-${{ matrix.target }}-${{ matrix.python-versions }}
-        path: target/wheels
+        path: dist
 
   # Define the artifact check job that runs on ubuntu-latest
   artifact-check:
@@ -330,11 +342,11 @@ jobs:
     - uses: actions/download-artifact@v4
       with:
         pattern: artifacts-*
-        path: target/wheels
+        path: dist
         merge-multiple: true
 
     - name: list dist files
-      run: ls -l target/wheels
+      run: ls -l dist
 
     - uses: actions/setup-python@v5
       env:
@@ -346,7 +358,7 @@ jobs:
 
     - name: Check wheels
       run: |
-        for wheel in target/wheels/*manylinux*.whl; do
+        for wheel in dist/*manylinux*.whl; do
           echo "Processing $wheel"
           auditwheel show "$wheel"
         done
