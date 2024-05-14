@@ -43,7 +43,7 @@ jobs:
               status: 'success',
               branch: 'master'
             });
-            const util = require('util').inspect;
+            const util = require('util');
             console.log(util.inspect(runs, {showHidden: false, depth: null, colors: true}))
             
             const successfulRun = false;
