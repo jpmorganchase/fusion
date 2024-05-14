@@ -43,9 +43,9 @@ jobs:
               status: 'success',
               branch: 'master'
             });
-
+            const util = require('util').inspect;
+            console.log(util.inspect(runs, {showHidden: false, depth: null, colors: true}))
             
-            console.log(runs)
             const successfulRun = false;
             if (successfulRun) {
               core.setOutput('successful', 'true');
