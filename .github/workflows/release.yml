@@ -110,6 +110,7 @@ jobs:
         git config --local user.name "github-actions[bot]"
       working-directory: main_repo
 
+    # Build docs but only alias latest for non-dev releases
     - name: build documentation
       run: |
         git fetch origin fusion_release --depth=1
