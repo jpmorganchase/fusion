@@ -92,10 +92,6 @@ jobs:
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
       shell: bash
 
-    - name: Set output
-      run: echo "status=success" >> $GITHUB_ENV
-      shell: bash
-
     - name: Use uv instead of pip
       run: rye config --set-bool behavior.use-uv=true
 
@@ -117,8 +113,14 @@ jobs:
     - name: build documentation
       run: |
         git fetch origin fusion_release --depth=1
-        rye run mike deploy --branch fusion_release --deploy-prefix docs --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
-        rye run mike set-default --branch fusion_release --deploy-prefix docs --push latest
+        if [[ "${{ steps.tag_name.outputs.current_version }}" != *.dev* ]]; then
+          # Commands for regular release
+            rye run mike deploy --branch fusion_release --deploy-prefix docs --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
+            rye run mike set-default --branch fusion_release --deploy-prefix docs --push latest
+          else
+          # Commands for pre-release
+            rye run mike deploy --branch fusion_release --deploy-prefix docs --push ${{ steps.tag_name.outputs.current_version }}
+        fi
       working-directory: main_repo
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
