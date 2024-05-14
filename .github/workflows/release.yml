@@ -32,7 +32,9 @@ jobs:
         with:
           script: |
             const { owner, repo } = context.repo;
-            const tagSha = '${{ github.context.sha }}';
+            const tagSha = context.sha;
+            console.log('owner = ' + owner)
+            console.log('repo = ' + repo)
             console.log('tagSha = ' + tagSha)
             const runs = await github.rest.actions.listWorkflowRuns({
               owner,
