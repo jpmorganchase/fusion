@@ -1,6 +1,5 @@
-# This is a basic workflow to help you get started with Actions
 
-name: dev workflow
+name: Build and Test
 
 # Controls when the action will run.
 on:
@@ -13,8 +12,14 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+# Set an environment variables for the workflow
+env:
+  UV_HTTP_TIMEOUT: 300
+  PIP_DISABLE_PIP_VERSION_CHECK: 1
+
+# Define the jobs that run in the workflow
 jobs:
+  # Define the tests job that runs on ubuntu-latest across multiple python versions
   tests:
     strategy:
       fail-fast: true
@@ -39,10 +44,6 @@ jobs:
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
       shell: bash
 
-    - name: Set output
-      run: echo "status=success" >> $GITHUB_ENV
-      shell: bash
-
     - name: Use uv instead of pip
       run: rye config --set-bool behavior.use-uv=true
 
@@ -54,15 +55,28 @@ jobs:
       run: |
         rye pin ${{ matrix.python-versions }}
         rye sync
-    - name: Setup doc deploy git user # required for tox testing on mike
+
+    # required for tox testing on mike
+    - name: Setup doc deploy git user 
       run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
   
     - name: Run tox
-      run: |
-        rye run tox
+
+      run: rye run tox
+
+    # Build and upload the sdist, wheels will be done on arch specific images
+    - name: Build sdist
+      run: rye build --sdist 
+
+    - name: Upload sdist
+      uses: actions/upload-artifact@v4
+      with:
+        name: artifacts-sdist-${{ matrix.python-versions }}
+        path: dist/*.tar.gz
   
+  # Define the manylinux maturin builds, across multiple python versions, these will run in appropriate arch images
   linux-manylinux:
     needs: tests
     runs-on: ubuntu-latest
@@ -72,14 +86,12 @@ jobs:
         python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         target: [
           "x86_64-unknown-linux-gnu",
-          # "i686-unknown-linux-gnu", # Remove 32 bit arch
           "aarch64-unknown-linux-gnu",
           "armv7-unknown-linux-gnueabihf",
           "powerpc64le-unknown-linux-gnu",
         ]
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
@@ -99,10 +111,6 @@ jobs:
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
       shell: bash
 
-    - name: Set output
-      run: echo "status=success" >> $GITHUB_ENV
-      shell: bash
-
     - name: Use uv instead of pip
       run: rye config --set-bool behavior.use-uv=true
 
@@ -119,7 +127,6 @@ jobs:
       uses: PyO3/maturin-action@main
       with:
         target: ${{ matrix.target }}
-        # before-script-linux: rustup target add ${{ matrix.target }}
         manylinux: auto
         args: --release -j $(nproc) -i python${{ matrix.python-versions }}
         sccache: 'true'
@@ -130,9 +137,10 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-manylinux-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: artifacts-manylinux-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
+  # Define the musllinux maturin builds, across multiple python versions, these will run in appropriate arch images
   linux-musllinux:
     needs: tests
     runs-on: ubuntu-latest
@@ -148,7 +156,6 @@ jobs:
         ]
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
@@ -168,10 +175,6 @@ jobs:
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
       shell: bash
 
-    - name: Set output
-      run: echo "status=success" >> $GITHUB_ENV
-      shell: bash
-
     - name: Use uv instead of pip
       run: rye config --set-bool behavior.use-uv=true
 
@@ -188,7 +191,6 @@ jobs:
       uses: PyO3/maturin-action@main
       with:
         target: ${{ matrix.target }}
-        # before-script-linux: rustup target add ${{ matrix.target }}
         manylinux: musllinux_1_1
         args: --release -j $(nproc) -i python${{ matrix.python-versions }}
         sccache: 'false'
@@ -199,19 +201,19 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-musllinux-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: artifacts-musllinux-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
+  # Define the windows maturin builds, across multiple python versions, these will run on windows-latest
   windows:
     needs: tests
     runs-on: windows-latest
     strategy:
       matrix:
         python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        target: ["x64"] # Remove 32 bit arch, "x86"]
+        target: ["x64"]
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
@@ -241,10 +243,6 @@ jobs:
       run: rye --version
       shell: bash
 
-    - name: Set output
-      run: echo "status=success" >> $GITHUB_ENV
-      shell: bash
-
     - name: Sync dependencies using rye
       run: |
         rye pin ${{ matrix.python-versions }}
@@ -263,9 +261,10 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-win-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: artifacts-win-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
-      
+
+  # Define the macos maturin builds, across multiple python versions, these will run on macos-latest
   macos:
     needs: tests
     runs-on: macos-latest
@@ -275,7 +274,6 @@ jobs:
         target: ["x86_64"]
 
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
@@ -302,10 +300,6 @@ jobs:
       run: rye --version
       shell: bash
 
-    - name: Set output
-      run: echo "status=success" >> $GITHUB_ENV
-      shell: bash
-
     - name: Sync dependencies using rye
       run: |
         rye pin ${{ matrix.python-versions }}
@@ -325,16 +319,17 @@ jobs:
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-macos-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: artifacts-macos-${{ matrix.target }}-${{ matrix.python-versions }}
         path: target/wheels
 
+  # Define the artifact check job that runs on ubuntu-latest
   artifact-check:
     needs: [linux-manylinux, linux-musllinux, windows, macos]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/download-artifact@v4
       with:
-        pattern: wheels-*
+        pattern: artifacts-*
         path: target/wheels
         merge-multiple: true
 
