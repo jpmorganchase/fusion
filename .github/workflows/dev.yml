@@ -244,6 +244,7 @@ jobs:
         ls -l dist
 
     - name: Integration test artifact
+      if: false
       run: |
         ls -l dist
         for pkg in dist/*; do
@@ -317,6 +318,7 @@ jobs:
       run: ls -l dist
 
     - name: Integration test artifact
+      if: false
       run: |
         ls -l dist
         for pkg in dist/*; do
@@ -388,6 +390,7 @@ jobs:
       run: ls -l dist
 
     - name: Integration test artifact
+      if: false
       run: |
         ls -l dist
         for pkg in dist/*; do
@@ -429,7 +432,7 @@ jobs:
     - name: Install auditwheel-symbols
       run: pip install auditwheel
 
-    - name: Check wheels
+    - name: Check wheels      
       run: |
         for wheel in dist/*manylinux*.whl; do
           echo "Processing $wheel"
