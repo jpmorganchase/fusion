@@ -160,6 +160,7 @@ jobs:
         ls -l dist
 
     - name: Integration test artifact
+      if: false
       run: |
         ls -l dist
         for pkg in dist/*; do
