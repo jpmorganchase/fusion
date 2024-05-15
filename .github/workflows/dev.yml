@@ -76,7 +76,7 @@ jobs:
     - name: Integration test artifact
       run: |
         for pkg in dist/*; do
-          uv venv .integ --seed
+          rye run uv venv .integ --seed
           .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
           .integ/bin/pytest -v py_integ
         done
