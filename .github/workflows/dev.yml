@@ -12,6 +12,10 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Set an environment variables for the workflow
 env:
   UV_HTTP_TIMEOUT: 300
@@ -68,6 +72,18 @@ jobs:
     # Build and upload the sdist, wheels will be done on arch specific images
     - name: Build sdist
       run: rye build --sdist 
+
+    - name: Integration test artifact
+      run: |
+        for pkg in dist/*; do
+          uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
 
     - name: Upload sdist
       uses: actions/upload-artifact@v4
@@ -139,6 +155,18 @@ jobs:
         rm -f dist/*linux_x86_64.whl
         ls -l dist
 
+    - name: Integration test artifact
+      run: |
+        for pkg in dist/*; do
+          uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
+  
 
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
@@ -210,6 +238,18 @@ jobs:
         rm -f dist/*linux_x86_64.whl
         ls -l dist
 
+    - name: Integration test artifact
+      run: |
+        for pkg in dist/*; do
+          uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
+  
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
@@ -270,6 +310,19 @@ jobs:
     - name: list dist files
       run: ls -l dist
 
+    - name: Integration test artifact
+      run: |
+        for pkg in dist/*; do
+          uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
+
+
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
@@ -327,6 +380,19 @@ jobs:
 
     - name: list dist files
       run: ls -l dist
+
+    - name: Integration test artifact
+      run: |
+        for pkg in dist/*; do
+          uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
+
 
     - name: Upload Wheels
       uses: actions/upload-artifact@v4

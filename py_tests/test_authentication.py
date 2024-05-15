@@ -18,6 +18,8 @@ from fusion.authentication import (
     FusionCredentials,
     FusionOAuthAdapter,
     get_default_fs,
+    try_get_client_id,
+    try_get_client_secret,
 )
 from fusion.exceptions import CredentialError
 from fusion.fusion import Fusion
@@ -501,9 +503,9 @@ def test_refresh_fusion_token_data(
     fusion_oauth_adapter: FusionOAuthAdapter,
     fusion_oauth_adapter_from_obj: FusionOAuthAdapter,
     requests_mock: requests_mock.Mocker,
-    example_creds_dict: dict[str, Any],
+    creds_dict: dict[str, Any],
 ) -> None:
-    creds = FusionCredentials.from_dict(example_creds_dict)
+    creds = FusionCredentials.from_dict(creds_dict)
     fusion_obj = Fusion(credentials=creds)
     catalog = "my_catalog"
     dataset = "my_dataset"
@@ -529,9 +531,9 @@ def test_refresh_fusion_token_data(
 def test_refresh_fusion_token_data_refresh(
     fusion_oauth_adapter: FusionOAuthAdapter,
     requests_mock: requests_mock.Mocker,
-    example_creds_dict: dict[str, Any],
+    creds_dict: dict[str, Any],
 ) -> None:
-    creds = FusionCredentials.from_dict(example_creds_dict)
+    creds = FusionCredentials.from_dict(creds_dict)
     fusion_obj = Fusion(credentials=creds)
     catalog = "my_catalog"
     dataset = "my_dataset"
@@ -560,9 +562,9 @@ def test_refresh_fusion_token_data_refresh(
 def test_fusion_oauth_adapter_send(
     fusion_oauth_adapter: FusionOAuthAdapter,
     requests_mock: requests_mock.Mocker,
-    example_creds_dict: dict[str, Any],
+    creds_dict: dict[str, Any],
 ) -> None:
-    creds = FusionCredentials.from_dict(example_creds_dict)
+    creds = FusionCredentials.from_dict(creds_dict)
     fusion_obj = Fusion(credentials=creds)
     catalog = "my_catalog"
     dataset = "my_dataset"
@@ -717,3 +719,37 @@ def test_async_session() -> None:
 
     session.post_init()
     assert session
+
+
+@pytest.mark.parametrize(
+    ("client_id", "expected", "env_var_value"),
+    [
+        (None, "12345", "12345"),  # Test fetching from environment variable
+        ("abcde", "abcde", "12345"),  # Test returning provided client_id
+        (None, None, None),  # Test with no environment variable set
+    ],
+)
+def test_try_get_client_id(monkeypatch: pytest.MonkeyPatch, client_id: str, expected: str, env_var_value: str) -> None:
+    if env_var_value is not None:
+        monkeypatch.setenv("FUSION_CLIENT_ID", env_var_value)
+    else:
+        monkeypatch.delenv("FUSION_CLIENT_ID", raising=False)
+    assert try_get_client_id(client_id) == expected
+
+
+@pytest.mark.parametrize(
+    ("client_secret", "expected", "env_var_value"),
+    [
+        (None, "secret123", "secret123"),  # Test fetching from environment variable
+        ("mysecret", "mysecret", "secret123"),  # Test returning provided client_secret
+        (None, None, None),  # Test with no environment variable set
+    ],
+)
+def test_try_get_client_secret(
+    monkeypatch: pytest.MonkeyPatch, client_secret: str, expected: str, env_var_value: str
+) -> None:
+    if env_var_value is not None:
+        monkeypatch.setenv("FUSION_CLIENT_SECRET", env_var_value)
+    else:
+        monkeypatch.delenv("FUSION_CLIENT_SECRET", raising=False)
+    assert try_get_client_secret(client_secret) == expected
