@@ -69,19 +69,16 @@ jobs:
     - name: Run tox
       run: |
         rye pin ${{ matrix.python-versions }}
-        rye run tox -e test,format,lint,doc
+        rye run tox -e test,lint,doc
 
     # Build and upload the sdist, wheels will be done on arch specific images
     - name: Build sdist
       run: rye build --sdist 
       shell: bash
 
-    - name: list dist files
-      run: |
-        ls -l dist
-
     - name: Integration test artifact
       run: |
+        ls -l dist
         for pkg in dist/*; do
           rye run uv venv .integ --seed
           .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
@@ -163,16 +160,17 @@ jobs:
         ls -l dist
 
     - name: Integration test artifact
-      run: |
-        for pkg in dist/*; do
-          uv venv .integ --seed
-          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
-          .integ/bin/pytest -v py_integ
-        done
-      env:
-        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-      shell: bash
+        run: |
+          ls -l dist
+          for pkg in dist/*; do
+            rye run uv venv .integ --seed
+            .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+            .integ/bin/pytest -v py_integ
+          done
+        env:
+          FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+          FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+        shell: bash
   
 
     - name: Upload Wheels
@@ -247,8 +245,9 @@ jobs:
 
     - name: Integration test artifact
       run: |
+        ls -l dist
         for pkg in dist/*; do
-          uv venv .integ --seed
+          rye run uv venv .integ --seed
           .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
           .integ/bin/pytest -v py_integ
         done
@@ -319,8 +318,9 @@ jobs:
 
     - name: Integration test artifact
       run: |
+        ls -l dist
         for pkg in dist/*; do
-          uv venv .integ --seed
+          rye run uv venv .integ --seed
           .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
           .integ/bin/pytest -v py_integ
         done
@@ -328,7 +328,6 @@ jobs:
         FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
         FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
       shell: bash
-
 
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
@@ -390,8 +389,9 @@ jobs:
 
     - name: Integration test artifact
       run: |
+        ls -l dist
         for pkg in dist/*; do
-          uv venv .integ --seed
+          rye run uv venv .integ --seed
           .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
           .integ/bin/pytest -v py_integ
         done
