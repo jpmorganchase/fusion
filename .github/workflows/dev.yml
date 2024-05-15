@@ -67,7 +67,10 @@ jobs:
           git config --local user.name "github-actions[bot]"
   
     - name: Run tox
-      run: rye run tox
+      run: |
+        rye pin ${{ matrix.python-versions }}
+        rye run tox
+        rye run tox -e clean
 
     # Build and upload the sdist, wheels will be done on arch specific images
     - name: Build sdist
