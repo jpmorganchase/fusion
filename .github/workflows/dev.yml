@@ -73,6 +73,10 @@ jobs:
     - name: Build sdist
       run: rye build --sdist 
 
+    - name: list dist files
+      run: |
+        ls -l dist
+
     - name: Integration test artifact
       run: |
         for pkg in dist/*; do
