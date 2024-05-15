@@ -160,7 +160,7 @@ jobs:
         ls -l dist
 
     - name: Integration test artifact
-      if: false
+      if: ${{ matrix.target }}== 'x86_64-unknown-linux-gnu'
       run: |
         ls -l dist
         for pkg in dist/*; do
