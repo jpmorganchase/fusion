@@ -102,7 +102,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: [
           "x86_64-unknown-linux-gnu",
           "aarch64-unknown-linux-gnu",
@@ -186,7 +186,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: [
           "x86_64-unknown-linux-musl",
           "aarch64-unknown-linux-musl",
@@ -269,7 +269,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: ["x64"]
 
     steps:
@@ -343,7 +343,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: ["x86_64"]
 
     steps:
