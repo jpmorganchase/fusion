@@ -69,12 +69,12 @@ jobs:
     - name: Run tox
       run: |
         rye pin ${{ matrix.python-versions }}
-        rye run tox
-        rye run tox -e clean
+        rye run tox -e test, format, lint, doc
 
     # Build and upload the sdist, wheels will be done on arch specific images
     - name: Build sdist
       run: rye build --sdist 
+      shell: bash
 
     - name: list dist files
       run: |
