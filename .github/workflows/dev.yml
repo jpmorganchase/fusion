@@ -160,17 +160,17 @@ jobs:
         ls -l dist
 
     - name: Integration test artifact
-        run: |
-          ls -l dist
-          for pkg in dist/*; do
-            rye run uv venv .integ --seed
-            .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
-            .integ/bin/pytest -v py_integ
-          done
-        env:
-          FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-          FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-        shell: bash
+      run: |
+        ls -l dist
+        for pkg in dist/*; do
+          rye run uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
   
 
     - name: Upload Wheels
