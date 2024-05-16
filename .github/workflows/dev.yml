@@ -176,7 +176,7 @@ jobs:
       shell: bash
 
     - name: Cleanup Docker container
-      if: always()
+      if: false
       run: |
         docker stop mycontainer
         docker rm mycontainer  
