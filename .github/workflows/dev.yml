@@ -103,13 +103,15 @@ jobs:
       fail-fast: true
       matrix:
         python-versions: ["3.9", "3.10", "3.11", "3.12"]
-        target: [
-          "x86_64-unknown-linux-gnu",
-          "aarch64-unknown-linux-gnu",
-          "armv7-unknown-linux-gnueabihf",
-          "powerpc64le-unknown-linux-gnu",
-        ]
-
+        include:
+          - target: x86_64-unknown-linux-gnu
+            docker_image: 'quay.io/pypa/manylinux_2_28_x86_64:latest'
+          - target: aarch64-unknown-linux-gnu
+            docker_image: 'ghcr.io/rust-cross/manylinux_2_28-cross:aarch64'
+          - target: armv7-unknown-linux-gnueabihf
+            docker_image: 'ghcr.io/rust-cross/manylinux_2_28-cross:armv7'
+          - target: powerpc64le-unknown-linux-gnu
+            docker_image: 'ghcr.io/rust-cross/manylinux_2_28-cross:ppc64le'
     steps:
     - uses: actions/checkout@v4
       with:
@@ -159,20 +161,25 @@ jobs:
         rm -f dist/*linux_x86_64.whl
         ls -l dist
 
+
     - name: Integration test artifact
       if: ${{ matrix.target }}== 'x86_64-unknown-linux-gnu'
       run: |
-        ls -l dist
-        for pkg in dist/*; do
-          rye run uv venv .integ --seed
-          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
-          .integ/bin/pytest -v py_integ
-        done
-      env:
-        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+        docker exec mycontainer bash -c "
+          ls -l /app/dist &&
+          for pkg in /app/dist/*; do
+            python -m venv /app/.integ &&
+            /app/.integ/bin/pip install \$pkg pytest pytest-random-order --force-reinstall &&
+            FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} /app/.integ/bin/pytest -v py_integ
+          done
+        "
       shell: bash
-  
+
+    - name: Cleanup Docker container
+      if: always()
+      run: |
+        docker stop mycontainer
+        docker rm mycontainer  
 
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
