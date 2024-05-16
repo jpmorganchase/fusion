@@ -15,9 +15,15 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   UV_HTTP_TIMEOUT: 300
   PIP_DISABLE_PIP_VERSION_CHECK: 1
+  DOCS_PY_VERSION: 3.12
+
 
 jobs:
   check-build:
@@ -83,7 +89,7 @@ jobs:
 
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: ${{ env.DOCS_PY_VERSION }}
 
     - name: Set up rye
       run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
@@ -103,7 +109,7 @@ jobs:
 
     - name: Sync dependencies using rye
       run: |
-        rye pin 3.12
+        rye pin ${{ env.DOCS_PY_VERSION }}
         rye sync --all-features
 
     - name: Setup main repo deploy git user

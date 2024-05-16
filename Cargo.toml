@@ -1,5 +1,5 @@
 [package]
-name = "PyFusion"
+name = "pyfusion"
 version = "1.1.0-dev1"
 edition = "2021"
 
@@ -7,7 +7,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "fusion"
-crate-type = ["cdylib"]
+
+# rlib is needed to be able to separate tests into tests/
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.21.1", features = ["extension-module"] }
+# feature "extension-module" is set by maturin via pyproject.toml
+pyo3 = { version = "0.21.2" }
