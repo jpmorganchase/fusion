@@ -12,6 +12,10 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Set an environment variables for the workflow
 env:
   UV_HTTP_TIMEOUT: 300
@@ -24,7 +28,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
     name: Run tests
     runs-on: ubuntu-latest
     steps:
@@ -63,11 +67,27 @@ jobs:
           git config --local user.name "github-actions[bot]"
   
     - name: Run tox
-      run: rye run tox
+      run: |
+        rye pin ${{ matrix.python-versions }}
+        rye run tox -e test,lint,doc
 
     # Build and upload the sdist, wheels will be done on arch specific images
     - name: Build sdist
       run: rye build --sdist 
+      shell: bash
+
+    - name: Integration test artifact
+      run: |
+        ls -l dist
+        for pkg in dist/*; do
+          rye run uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
 
     - name: Upload sdist
       uses: actions/upload-artifact@v4
@@ -82,14 +102,16 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        target: [
-          "x86_64-unknown-linux-gnu",
-          "aarch64-unknown-linux-gnu",
-          "armv7-unknown-linux-gnueabihf",
-          "powerpc64le-unknown-linux-gnu",
-        ]
-
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            docker_image: 'quay.io/pypa/manylinux_2_28_x86_64:latest'
+          - target: aarch64-unknown-linux-gnu
+            docker_image: 'ghcr.io/rust-cross/manylinux_2_28-cross:aarch64'
+          - target: armv7-unknown-linux-gnueabihf
+            docker_image: 'ghcr.io/rust-cross/manylinux_2_28-cross:armv7'
+          - target: powerpc64le-unknown-linux-gnu
+            docker_image: 'ghcr.io/rust-cross/manylinux_2_28-cross:ppc64le'
     steps:
     - uses: actions/checkout@v4
       with:
@@ -140,6 +162,25 @@ jobs:
         ls -l dist
 
 
+    - name: Integration test artifact
+      if: false
+      run: |
+        docker exec mycontainer bash -c "
+          ls -l /app/dist &&
+          for pkg in /app/dist/*; do
+            python -m venv /app/.integ &&
+            /app/.integ/bin/pip install \$pkg pytest pytest-random-order --force-reinstall &&
+            FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} /app/.integ/bin/pytest -v py_integ
+          done
+        "
+      shell: bash
+
+    - name: Cleanup Docker container
+      if: false
+      run: |
+        docker stop mycontainer
+        docker rm mycontainer  
+
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
@@ -153,7 +194,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: [
           "x86_64-unknown-linux-musl",
           "aarch64-unknown-linux-musl",
@@ -210,6 +251,20 @@ jobs:
         rm -f dist/*linux_x86_64.whl
         ls -l dist
 
+    - name: Integration test artifact
+      if: false
+      run: |
+        ls -l dist
+        for pkg in dist/*; do
+          rye run uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
+  
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
@@ -222,7 +277,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: ["x64"]
 
     steps:
@@ -270,6 +325,20 @@ jobs:
     - name: list dist files
       run: ls -l dist
 
+    - name: Integration test artifact
+      if: false
+      run: |
+        ls -l dist
+        for pkg in dist/*; do
+          rye run uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
+
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
@@ -282,7 +351,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-versions: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: ["x86_64"]
 
     steps:
@@ -328,6 +397,21 @@ jobs:
     - name: list dist files
       run: ls -l dist
 
+    - name: Integration test artifact
+      if: false
+      run: |
+        ls -l dist
+        for pkg in dist/*; do
+          rye run uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
+
+
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
@@ -356,7 +440,7 @@ jobs:
     - name: Install auditwheel-symbols
       run: pip install auditwheel
 
-    - name: Check wheels
+    - name: Check wheels      
       run: |
         for wheel in dist/*manylinux*.whl; do
           echo "Processing $wheel"

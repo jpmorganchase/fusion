@@ -91,6 +91,25 @@ def example_creds_dict(example_client_id: str, example_client_secret: str) -> di
 
 
 @pytest.fixture()
+def example_creds_dict_from_env(
+    monkeypatch: pytest.MonkeyPatch, example_client_id: str, example_client_secret: str
+) -> dict[str, Any]:
+    # Mocked creds info
+
+    monkeypatch.setenv("FUSION_CLIENT_ID", example_client_id)
+    monkeypatch.setenv("FUSION_CLIENT_SECRET", example_client_secret)
+
+    return {
+        "resource": "JPMC:URI:RS-97834-Fusion-PROD",
+        "auth_url": "https://authe.mysite.com/as/token.oauth2",
+        "proxies": {
+            "http": "http://myproxy.com:8080",
+            "https": "http://myproxy.com:8081",
+        },
+    }
+
+
+@pytest.fixture()
 def example_creds_dict_https_pxy(example_client_id: str, example_client_secret: str) -> dict[str, Any]:
     # Mocked creds info
     return {
@@ -115,6 +134,20 @@ def example_creds_dict_empty_pxy(example_creds_dict: dict[str, Any]) -> dict[str
     example_creds_dict["proxies"].pop("http")
     example_creds_dict["proxies"].pop("https")
     return example_creds_dict
+
+
+@pytest.fixture(
+    params=[
+        "example_creds_dict",
+        "example_creds_dict_from_env",
+        "example_creds_dict_https_pxy",
+        "example_creds_dict_no_pxy",
+        "example_creds_dict_empty_pxy",
+    ]
+)
+def creds_dict(request: pytest.FixtureRequest) -> Any:
+    """Parameterized fixture to return credentials from different sources."""
+    return request.getfixturevalue(request.param)
 
 
 @pytest.fixture()

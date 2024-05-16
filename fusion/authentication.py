@@ -23,6 +23,41 @@ logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 
 
+def try_get_env_var(var_name: str, default: Optional[str] = None) -> Optional[str]:
+    """Get the value of an environment variable or return a default value.
+
+    Args:
+        var_name (str): The name of the environment variable.
+        default (str, optional): The default value to return if the environment variable is not set. Defaults to None.
+
+    Returns:
+        Optional[str]: The value of the environment variable or the default value.
+    """
+    return os.environ.get(var_name, default)
+
+
+def try_get_client_id(client_id: Optional[str]) -> Optional[str]:
+    """Get the client ID from the environment variable or return None.
+
+    Returns:
+        Optional[str]: The client ID or None.
+    """
+    if client_id:
+        return client_id
+    return try_get_env_var("FUSION_CLIENT_ID")
+
+
+def try_get_client_secret(client_secret: Optional[str]) -> Optional[str]:
+    """Get the client secret from the environment variable or return None.
+
+    Returns:
+        Optional[str]: The client secret or None.
+    """
+    if client_secret:
+        return client_secret
+    return try_get_env_var("FUSION_CLIENT_SECRET")
+
+
 def _res_plural(ref_int: int, pluraliser: str = "s") -> str:
     """Private function to return the plural form when the number is more than one.
 
@@ -123,8 +158,8 @@ class FusionCredentials:
         """
         if proxies is None:
             proxies = {}
-        self.client_id = client_id
-        self.client_secret = client_secret
+        self.client_id = try_get_client_id(client_id)
+        self.client_secret = try_get_client_secret(client_secret)
         self.username = username
         self.password = password
         self.resource = resource
@@ -275,8 +310,8 @@ class FusionCredentials:
         grant_type = credentials.get("grant_type", "client_credentials")
         try:
             if grant_type == "client_credentials":
-                client_id = credentials["client_id"]
-                client_secret = credentials["client_secret"]
+                client_id = try_get_client_id(credentials.get("client_id"))
+                client_secret = try_get_client_secret(credentials.get("client_secret"))
                 username = None
                 password = None
                 bearer_token = None
@@ -303,7 +338,7 @@ class FusionCredentials:
                 resource = None
                 auth_url = None
             elif grant_type == "password":
-                client_id = credentials["client_id"]
+                client_id = try_get_client_id(credentials.get("client_id"))
                 client_secret = None
                 username = credentials["username"]
                 password = credentials["password"]

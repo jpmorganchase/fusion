@@ -3,13 +3,6 @@
 version = 3
 
 [[package]]
-name = "PyFusion"
-version = "1.1.0-dev1"
-dependencies = [
- "pyo3",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -106,6 +99,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d1597b0c024618f09a9c3b8655b7e430397a36d23fdafec26d6965e9eec3eba"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "pyfusion"
+version = "1.1.0-dev1"
+dependencies = [
+ "pyo3",
 ]
 
 [[package]]
