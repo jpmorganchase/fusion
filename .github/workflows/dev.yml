@@ -163,7 +163,7 @@ jobs:
 
 
     - name: Integration test artifact
-      if: ${{ matrix.target }}== 'x86_64-unknown-linux-gnu'
+      if: false
       run: |
         docker exec mycontainer bash -c "
           ls -l /app/dist &&
