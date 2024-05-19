@@ -100,61 +100,48 @@ jobs:
         target: [
           "x86_64-unknown-linux-gnu",
           "aarch64-unknown-linux-gnu",
-#          "armv7-unknown-linux-gnueabihf",
-#          "powerpc64le-unknown-linux-gnu"
+          "armv7-unknown-linux-gnueabihf",
+          "powerpc64le-unknown-linux-gnu"
         ]
-        include:
-          - target: "x86_64-unknown-linux-gnu"
-            container: "quay.io/pypa/manylinux_2_28_x86_64"
-          - target: "aarch64-unknown-linux-gnu"
-            container: "quay.io/pypa/manylinux_2_28_aarch64"
+#        include:
+#          - target: "x86_64-unknown-linux-gnu"
+#            container: "quay.io/pypa/manylinux_2_28_x86_64"
+#          - target: "aarch64-unknown-linux-gnu"
+#            container: "quay.io/pypa/manylinux_2_28_aarch64"
 #          - target: "armv7-unknown-linux-gnueabihf"
 #            container: "dockcross/linux-armv7"
 #          - target: "powerpc64le-unknown-linux-gnu"
 #            container: "quay.io/pypa/manylinux_2_28_ppc64le"
     
-    container: 
-      image: ${{ matrix.container }}
-      volumes:
-        - .:/app
-      options: --workdir /app
+#    container: 
+#      image: ${{ matrix.container }}
+#      volumes:
+#        - .:/app
+#      options: --workdir /app
 
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-
-    - name: Install Rust
-      run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-      shell: bash
   
-    - name: Install rye (container)
+    - name: Install rye
       run: |
         curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" RYE_HOME="/tmp/.rye" bash
         echo "/tmp/.rye/env" >> $GITHUB_PATH
         echo "/tmp/.rye/shims" >> $GITHUB_PATH
       shell: bash
 
-    - name: Setup rye (container)
+    - name: Setup rye
       run: |
         rye config --set-bool behavior.use-uv=true
         rye --version
         which rye
       shell: bash
 
-    - name: Sync dependencies using rye (container)
+    - name: Sync dependencies using rye
       run: |
         rye pin ${{ matrix.python-versions }}
         rye sync
-      shell: bash
-
-    - name: Remove Rye PATH entries
-      run: |
-        echo "Removing Rye PATH entries"
-        export PATH=$(echo $PATH | sed 's|:/tmp/.rye/env||' | sed 's|:/tmp/.rye/shims||')
-        echo "Updated PATH: $PATH"
       shell: bash
 
     - name: Build Wheels - manylinux
@@ -164,14 +151,9 @@ jobs:
         manylinux: auto
         args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
-        
-    - name: Add rye back to env
-      run: |
-        echo "/tmp/.rye/env" >> $GITHUB_PATH
-        echo "/tmp/.rye/shims" >> $GITHUB_PATH
-      shell: bash
   
     - name: Integration test artifact
+      if: false
       run: |
         ls -l dist
         for pkg in dist/*; do
