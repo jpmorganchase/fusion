@@ -101,23 +101,8 @@ jobs:
           "x86_64-unknown-linux-gnu",
           "aarch64-unknown-linux-gnu",
           "armv7-unknown-linux-gnueabihf",
-          "powerpc64le-unknown-linux-gnu"
+          "powerpc64le-unknown-linux-gnu",
         ]
-#        include:
-#          - target: "x86_64-unknown-linux-gnu"
-#            container: "quay.io/pypa/manylinux_2_28_x86_64"
-#          - target: "aarch64-unknown-linux-gnu"
-#            container: "quay.io/pypa/manylinux_2_28_aarch64"
-#          - target: "armv7-unknown-linux-gnueabihf"
-#            container: "dockcross/linux-armv7"
-#          - target: "powerpc64le-unknown-linux-gnu"
-#            container: "quay.io/pypa/manylinux_2_28_ppc64le"
-    
-#    container: 
-#      image: ${{ matrix.container }}
-#      volumes:
-#        - .:/app
-#      options: --workdir /app
 
     steps:
     - uses: actions/checkout@v4
@@ -268,7 +253,7 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Set RYE_INSTALL_OPTION environment variable
+    - name: Set install environment variables
       run: |
         $env:RYE_INSTALL_OPTION="--yes"
         $env:RYE_TOOLCHAIN_VERSION = "${{ matrix.python-versions }}"
