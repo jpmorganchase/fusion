@@ -132,7 +132,7 @@ jobs:
   
     - name: Install rye (container)
       run: |
-        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" RYE_HOME="/tmp" bash
+        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" RYE_HOME="/tmp/.rye" bash
         echo "/tmp/.rye/env" >> $GITHUB_PATH
         echo "/tmp/.rye/shims" >> $GITHUB_PATH
       shell: bash
