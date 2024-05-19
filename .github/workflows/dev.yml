@@ -132,38 +132,23 @@ jobs:
   
     - name: Install rye (container)
       run: |
-        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
-        echo "$HOME/.rye/env" >> $GITHUB_PATH
-        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" RYE_HOME="/tmp" bash
+        echo "/tmp/.rye/env" >> $GITHUB_PATH
+        echo "/tmp/.rye/shims" >> $GITHUB_PATH
       shell: bash
-
-    - name: Install rye (host)
-      run: |
-        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
-        echo "$HOME/.rye/env" >> $GITHUB_PATH
-        echo "$HOME/.rye/shims" >> $GITHUB_PATH
 
     - name: Setup rye (container)
       run: |
         rye config --set-bool behavior.use-uv=true
         rye --version
+        which rye
       shell: bash
-
-    - name: Setup rye (host)
-      run: |
-        rye config --set-bool behavior.use-uv=true
-        rye --version
 
     - name: Sync dependencies using rye (container)
       run: |
         rye pin ${{ matrix.python-versions }}
         rye sync
       shell: bash
-
-    - name: Sync dependencies using rye (host)
-      run: |
-        rye pin ${{ matrix.python-versions }}
-        rye sync
 
     - name: Build Wheels - manylinux
       uses: PyO3/maturin-action@main
