@@ -150,6 +150,13 @@ jobs:
         rye sync
       shell: bash
 
+    - name: Remove Rye PATH entries
+      run: |
+        echo "Removing Rye PATH entries"
+        export PATH=$(echo $PATH | sed 's|:/tmp/.rye/env||' | sed 's|:/tmp/.rye/shims||')
+        echo "Updated PATH: $PATH"
+      shell: bash
+
     - name: Build Wheels - manylinux
       uses: PyO3/maturin-action@main
       with:
@@ -158,6 +165,12 @@ jobs:
         args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
         
+    - name: Add rye back to env
+      run: |
+        echo "/tmp/.rye/env" >> $GITHUB_PATH
+        echo "/tmp/.rye/shims" >> $GITHUB_PATH
+      shell: bash
+  
     - name: Integration test artifact
       run: |
         ls -l dist
