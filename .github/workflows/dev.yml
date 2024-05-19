@@ -33,11 +33,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      env:
-        PIP_DISABLE_PIP_VERSION_CHECK: 1
-      with:
-        python-version: ${{ matrix.python-versions }}
 
     - name: Install rye
       run: |
@@ -56,13 +51,15 @@ jobs:
       run: |
         rye pin ${{ matrix.python-versions }}
         rye sync
+      shell: bash
 
     # required for tox testing on mike
     - name: Setup doc deploy git user 
       run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-  
+      shell: bash
+
     - name: Run tox
       run: |
         rye pin ${{ matrix.python-versions }}
@@ -127,41 +124,46 @@ jobs:
       with:
         fetch-depth: 0
 
-    - uses: actions/setup-python@v5
-      env:
-        PIP_DISABLE_PIP_VERSION_CHECK: 1
-      with:
-        python-version: ${{ matrix.python-versions }}
-
     - name: Install Rust
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       shell: bash
   
-    - name: Install rye
+    - name: Install rye (container)
       run: |
         curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
         echo "$HOME/.rye/env" >> $GITHUB_PATH
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
       shell: bash
 
-    - name: Setup rye
+    - name: Install rye (host)
+      run: |
+        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+        echo "$HOME/.rye/env" >> $GITHUB_PATH
+        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+
+    - name: Setup rye (container)
       run: |
         rye config --set-bool behavior.use-uv=true
         rye --version
       shell: bash
 
-    - name: list container files
+    - name: Setup rye (host)
       run: |
-        pwd
-        ls -la
+        rye config --set-bool behavior.use-uv=true
+        rye --version
 
-    - name: Sync dependencies using rye
+    - name: Sync dependencies using rye (container)
       run: |
         rye pin ${{ matrix.python-versions }}
         rye sync
+      shell: bash
 
+    - name: Sync dependencies using rye (host)
+      run: |
+        rye pin ${{ matrix.python-versions }}
+        rye sync
 
     - name: Build Wheels - manylinux
       uses: PyO3/maturin-action@main
@@ -170,16 +172,7 @@ jobs:
         manylinux: auto
         args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
-  
-    - name: list dist files
-      run: |
-        ls -l dist
-
-    - name: Clear and list dist files
-      run: |
-        rm -f dist/*linux_x86_64.whl
-        ls -l dist
-
+        
     - name: Integration test artifact
       run: |
         ls -l dist
@@ -305,6 +298,10 @@ jobs:
       run: |
         Invoke-WebRequest -Uri "https://github.com/astral-sh/rye/releases/latest/download/rye-x86_64-windows.exe" -OutFile "$env:USERPROFILE\rye.exe"
         Add-Content $env:GITHUB_PATH "$env:USERPROFILE"
+      shell: pwsh
+
+    - name: Download Rye executable
+      run: |
         rye.exe config --set-bool behavior.use-uv=true
         rye.exe --version
       shell: pwsh
