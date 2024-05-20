@@ -205,8 +205,10 @@ jobs:
         arch: ${{ matrix.platform.arch }}
         distro: 'ubuntu22.04'
         install: |
+          add-apt-repository ppa:deadsnakes/ppa -y
           apt-get update
-          apt-get install -y --no-install-recommends python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv
+          apt-get install -y --no-install-recommends python${{ matrix.python-versions }}
+          wget -qO- https://bootstrap.pypa.io/get-pip.py | python -
         run: |
           which python3
           python3 -m pip install -U uv
