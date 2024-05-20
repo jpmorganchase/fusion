@@ -205,6 +205,8 @@ jobs:
         arch: ${{ matrix.platform.arch }}
         distro: 'ubuntu22.04'
         install: |
+          apt-get update
+          apt-get install software-properties-common
           add-apt-repository ppa:deadsnakes/ppa -y
           apt-get update
           apt-get install -y --no-install-recommends python${{ matrix.python-versions }}
