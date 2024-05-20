@@ -204,6 +204,10 @@ jobs:
       with:
         arch: ${{ matrix.platform.arch }}
         distro: 'ubuntu22.04'
+        install: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 python3-pip
+          pip3 install -U uv
         run: |
           ls -l dist
           for pkg in dist/*; do
