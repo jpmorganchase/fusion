@@ -124,6 +124,7 @@ jobs:
   
     - name: Integration test artifact
       run: |
+        pip install uv
         ls -l dist
         for pkg in dist/*; do
           uv venv .integ
