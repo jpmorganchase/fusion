@@ -125,6 +125,8 @@ jobs:
     - name: Integration test artifact
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
+        ls -l $HOME
+        ls -l $HOME/.cargo/bin
         ls -l dist
         for pkg in dist/*; do
           $HOME/.cargo/bin/uv venv .integ
