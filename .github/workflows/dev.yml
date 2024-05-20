@@ -489,7 +489,7 @@ jobs:
 
   # Define the artifact check job that runs on ubuntu-latest
   artifact-check:
-    needs: [sdist-n-tests, linux-manylinux, linux-musllinux, windows, macos-x86_64, macos-aarch64]
+    needs: [sdist-n-tests, linux-x86, linux-arm, linux-musllinux, windows, macos-x86_64, macos-aarch64]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/download-artifact@v4
