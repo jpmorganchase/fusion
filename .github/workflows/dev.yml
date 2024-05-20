@@ -156,6 +156,69 @@ jobs:
       with:
         name: artifacts-manylinux-${{ matrix.target }}-${{ matrix.python-versions }}
         path: dist
+  linux-manylinux-integ:
+    needs: linux-manylinux
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        #python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        target: [
+          "x86_64-unknown-linux-gnu",
+          "aarch64-unknown-linux-gnu",
+#          "armv7-unknown-linux-gnueabihf",
+#          "powerpc64le-unknown-linux-gnu"
+        ]
+        include:
+          - target: "x86_64-unknown-linux-gnu"
+            container: "quay.io/pypa/manylinux_2_28_x86_64"
+          - target: "aarch64-unknown-linux-gnu"
+            container: "quay.io/pypa/manylinux_2_28_aarch64"
+#          - target: "armv7-unknown-linux-gnueabihf"
+#            container: "dockcross/linux-armv7"
+#          - target: "powerpc64le-unknown-linux-gnu"
+#            container: "quay.io/pypa/manylinux_2_28_ppc64le"
+          
+    container: 
+      image: ${{ matrix.container }}
+      volumes:
+        - .:/app
+      options: --workdir /app
+
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: artifacts-manylinux-${{ matrix.target }}*
+        path: dist
+        merge-multiple: true
+
+    - name: Install rye
+      run: |
+        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" RYE_HOME="/tmp/.rye" bash
+        echo "/tmp/.rye/env" >> $GITHUB_PATH
+        echo "/tmp/.rye/shims" >> $GITHUB_PATH
+      shell: bash
+
+    - name: Setup rye
+      run: |
+        rye config --set-bool behavior.use-uv=true
+        rye --version
+        which rye
+      shell: bash
+
+    - name: Integration test artifact
+      run: |
+        ls -l dist
+        for pkg in dist/*.whl; do
+          py_version=$(echo $pkg | sed -n 's/.*-cp\([0-9]\{2\}\)\([0-9]\{2\}\)-.*/\1.\2/p')
+          echo "Testing $pkg with python $py_version"
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
+      
+
 
   # Define the musllinux maturin builds, across multiple python versions, these will run in appropriate arch images
   linux-musllinux:
