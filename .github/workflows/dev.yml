@@ -124,13 +124,13 @@ jobs:
   
     - name: Integration test artifact
       run: |
-        pip install uv
+        curl -LsSf https://astral.sh/uv/install.sh | sh
         ls -l dist
         for pkg in dist/*; do
-          uv venv .integ
+          $HOME/.cargo/bin/uv venv .integ
           source .integ/bin/activate
-          uv pip install $pkg pytest pytest-random-order --force-reinstall
-          pytest -v py_integ
+          $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
         done
       env:
         FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
