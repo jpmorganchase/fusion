@@ -207,7 +207,7 @@ jobs:
         install: |
           apt-get update
           apt-get install -y --no-install-recommends python${{ matrix.python-versions }}
-          python -m pip install -U uv
+          python3 -m pip install -U uv
         run: |
           ls -l dist
           for pkg in dist/*; do
