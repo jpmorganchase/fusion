@@ -202,8 +202,8 @@ jobs:
     - uses: uraimo/run-on-arch-action@v2
       name: Integration test artifact
       with:
-        arch: ${{ matrix.platform.arch == 'arm' && 'armv6' || matrix.platform.arch }}
-        distro: ${{ matrix.platform.arch == 'arm' && 'bullseye' || 'ubuntu20.04' }}
+        arch: ${{ matrix.platform.arch }}
+        distro: 'ubuntu22.04'
         run: |
           ls -l dist
           for pkg in dist/*; do
