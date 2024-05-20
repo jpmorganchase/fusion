@@ -210,9 +210,8 @@ jobs:
           add-apt-repository -y ppa:deadsnakes/ppa
           apt-get update
           apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv
-          curl -sS https://bootstrap.pypa.io/get-pip.py | python3 -
+          curl -LsSf https://astral.sh/uv/install.sh | sh
         run: |
-          python3 -m pip install -U uv
           ls -l dist
           for pkg in dist/*; do
             uv venv .integ
