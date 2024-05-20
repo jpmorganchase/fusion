@@ -214,9 +214,9 @@ jobs:
         run: |
           ls -l dist
           for pkg in dist/*; do
-            uv venv .integ
-            source .integ/bin/activate
-            uv pip install $pkg pytest pytest-random-order --force-reinstall
+            uv venv .integ --seed
+            echo "Installing $pkg"
+            .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
             pytest -v py_integ
           done
       env:
