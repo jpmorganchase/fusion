@@ -207,8 +207,9 @@ jobs:
         install: |
           apt-get update
           apt-get install -y --no-install-recommends python${{ matrix.python-versions }}
-          python3 -m pip install -U uv
         run: |
+          which python3
+          python3 -m pip install -U uv
           ls -l dist
           for pkg in dist/*; do
             uv venv .integ
