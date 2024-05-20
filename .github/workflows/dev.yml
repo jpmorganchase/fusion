@@ -206,8 +206,8 @@ jobs:
         distro: 'ubuntu22.04'
         install: |
           apt-get update
-          apt-get install -y --no-install-recommends python${{ matrix.python-versions }} python${{ matrix.python-versions }}-pip
-          pip3 install -U uv
+          apt-get install -y --no-install-recommends python${{ matrix.python-versions }}
+          python -m pip install -U uv
         run: |
           ls -l dist
           for pkg in dist/*; do
