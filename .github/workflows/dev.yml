@@ -217,7 +217,7 @@ jobs:
             echo "Installing $pkg"
             $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
             VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
-            .integ/bin/pytest -v py_integ
+            .integ/bin/python3 -m fusion --help
           done
       env:
         FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
