@@ -125,9 +125,8 @@ jobs:
     - name: Integration test artifact
       run: |
         for pkg in dist/*; do
-          $HOME/.cargo/bin/uv venv .integ
-          source .integ/bin/activate
-          $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
+          uv venv .integ
+          uv pip install $pkg pytest pytest-random-order --force-reinstall
           .integ/bin/pytest -v py_integ
         done
       env:
