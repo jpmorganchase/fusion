@@ -425,7 +425,7 @@ jobs:
         image: alpine:3.12
         options: -v ${{ github.workspace }}:/io -w /io -e FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} -e FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} 
         run: |
-          apk add python3 curl
+          apk add python${{ matrix.python-versions }} curl
           curl -LsSf https://astral.sh/uv/install.sh | sh
           ls -l dist
           for pkg in dist/*; do
