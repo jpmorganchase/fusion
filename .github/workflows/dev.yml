@@ -215,7 +215,7 @@ jobs:
 
           for pkg in dist/*; do
             echo "Installing $pkg"
-            $HOME/.cargo/bin/uv venv .integ
+            $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
             source .integ/bin/activate
             $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
             .integ/bin/pytest -v py_integ
