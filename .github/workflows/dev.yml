@@ -73,10 +73,11 @@ jobs:
     - name: Integration test artifact
       run: |
         ls -l dist
+        rm -rf .venv
         for pkg in dist/*; do
-          rye run uv venv .integ
+          rye run uv venv
           rye run uv pip install $pkg pytest pytest-random-order --force-reinstall
-          .integ/bin/pytest -v py_integ
+          .venv/bin/pytest -v py_integ
         done
       env:
         FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
