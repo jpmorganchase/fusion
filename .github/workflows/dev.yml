@@ -206,7 +206,7 @@ jobs:
           apt-get install -y software-properties-common build-essential
           add-apt-repository -y ppa:deadsnakes/ppa
           apt-get update
-          apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv
+          apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv python${{ matrix.python-versios }}-dev
           curl -LsSf https://astral.sh/uv/install.sh | sh
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
