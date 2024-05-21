@@ -75,7 +75,7 @@ jobs:
         ls -l dist
         for pkg in dist/*; do
           rye run uv venv .integ
-          VIRTUAL_ENV=.integ rye run uv pip install $pkg pytest pytest-random-order --force-reinstall
+          rye run uv pip install $pkg pytest pytest-random-order --force-reinstall
           .integ/bin/pytest -v py_integ
         done
       env:
@@ -425,7 +425,8 @@ jobs:
         image: alpine:3.12
         options: -v ${{ github.workspace }}:/io -w /io -e FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} -e FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} 
         run: |
-          apk add python${{ matrix.python-versions }} curl
+          apk update
+          apk add python3 curl
           curl -LsSf https://astral.sh/uv/install.sh | sh
           ls -l dist
           for pkg in dist/*; do
