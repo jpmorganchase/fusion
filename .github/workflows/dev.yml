@@ -200,6 +200,7 @@ jobs:
       with:
         arch: ${{ matrix.platform.arch }}
         distro: 'ubuntu22.04'
+        githubToken: ${{ github.token }}
         install: |
           apt-get update
           apt-get install -y software-properties-common build-essential
