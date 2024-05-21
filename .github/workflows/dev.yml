@@ -165,6 +165,7 @@ jobs:
         # Echo the `uname` output parameter from the `runcmd` step
         run: |
           echo "The uname output was ${{ steps.runcmd.outputs.uname }}"
+
   linux-arm:
     #needs: tests
     runs-on: ubuntu-latest
@@ -228,7 +229,70 @@ jobs:
       with:
         name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
         path: dist
-      
+
+  linux-s390x:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        platform:
+          - target: s390x-unknown-linux-gnu
+            arch: s390x
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+    
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-versions }}
+      - run: pip install uv
+  
+      - name: Build Wheels
+        uses: PyO3/maturin-action@main
+        with:
+          target: ${{ matrix.platform.target }}
+          manylinux: "auto"
+          args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
+          sccache: 'true'
+    
+      - uses: uraimo/run-on-arch-action@v2
+        name: Integration test artifact
+        with:
+          arch: ${{ matrix.platform.arch }}
+          distro: 'ubuntu22.04'
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update
+            apt-get install -y software-properties-common build-essential
+            add-apt-repository -y ppa:deadsnakes/ppa
+            apt-get update
+            apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv python${{ matrix.python-versions }}-dev
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+          run: |
+            ls -l $HOME
+            ls -l $HOME/.cargo/bin
+            ls -l dist
+  
+            for pkg in dist/*; do
+              echo "Installing $pkg"
+              $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
+              VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
+              .integ/bin/python3 -m fusion --help
+            done
+        env:
+          FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+          FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+  
+      - name: Upload Wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
+          path: dist
+  
+          
+
   # Define the musllinux maturin builds, across multiple python versions, these will run in appropriate arch images
   linux-musllinux:
     #needs: tests
@@ -239,8 +303,6 @@ jobs:
         python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: [
           "x86_64-unknown-linux-musl",
-          "aarch64-unknown-linux-musl",
-          "armv7-unknown-linux-musleabihf",
           # "powerpc64le-unknown-linux-musl", # diasble powerpc64le until we decide to build via container quay.io/pypa/musllinux_1_1_ppc64le
         ]
 
