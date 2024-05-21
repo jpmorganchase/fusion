@@ -425,13 +425,16 @@ jobs:
         image: alpine:3.12
         options: -v ${{ github.workspace }}:/io -w /io -e FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} -e FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} 
         run: |
-            ls -l dist
-            for pkg in dist/*; do
-              rye run uv venv .integ --seed
-              .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
-              .integ/bin/pytest -v py_integ
-            done
-  
+          apk add python3
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          ls -l dist
+          for pkg in dist/*; do
+            echo "Installing $pkg"
+            $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
+            VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
+            .integ/bin/python3 -m fusion --help
+          done
+
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
