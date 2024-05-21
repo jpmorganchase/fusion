@@ -178,8 +178,6 @@ jobs:
             arch: aarch64
           - target: "armv7-unknown-linux-gnueabihf"
             arch: armv7
-          - target: "armv7-unknown-linux-musleabihf"
-            arch: armv7
     steps:
     - uses: actions/checkout@v4
       with:
@@ -194,7 +192,7 @@ jobs:
       uses: PyO3/maturin-action@main
       with:
         target: ${{ matrix.platform.target }}
-        manylinux: ${{ matrix.platform.arch == 'aarch64' && '2_28' || 'auto' }}
+        manylinux: "auto"
         args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
   
