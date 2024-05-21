@@ -198,6 +198,7 @@ jobs:
         sccache: 'true'
   
     - uses: uraimo/run-on-arch-action@v2
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
       name: Integration test artifact
       with:
         arch: ${{ matrix.platform.arch }}
