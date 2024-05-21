@@ -258,6 +258,7 @@ jobs:
           sccache: 'true'
     
       - uses: uraimo/run-on-arch-action@v2
+        if: false
         name: Integration test artifact
         with:
           arch: ${{ matrix.platform.arch }}
@@ -321,6 +322,7 @@ jobs:
           sccache: 'true'
     
       - uses: uraimo/run-on-arch-action@v2
+        if: false
         name: Integration test artifact
         with:
           arch: ${{ matrix.platform.arch }}
@@ -415,19 +417,20 @@ jobs:
         rm -f dist/*linux_x86_64.whl
         ls -l dist
 
+
     - name: Integration test artifact
-      if: false
-      run: |
-        ls -l dist
-        for pkg in dist/*; do
-          rye run uv venv .integ --seed
-          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
-          .integ/bin/pytest -v py_integ
-        done
-      env:
-        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-      shell: bash
+      if: matrix.target == 'x86_64-unknown-linux-musl'
+      uses: addnab/docker-run-action@v3
+      with:
+        image: alpine:3.12
+        options: -v ${{ github.workspace }}:/io -w /io -e FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} -e FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} 
+        run: |
+            ls -l dist
+            for pkg in dist/*; do
+              rye run uv venv .integ --seed
+              .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+              .integ/bin/pytest -v py_integ
+            done
   
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
