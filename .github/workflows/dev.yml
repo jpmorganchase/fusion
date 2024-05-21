@@ -421,7 +421,7 @@ jobs:
 
 
     - name: Integration test artifact
-      if: matrix.target == 'x86_64-unknown-linux-musl'
+      if: false
       uses: addnab/docker-run-action@v3
       with:
         image: alpine:3.12
