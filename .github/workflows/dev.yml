@@ -74,8 +74,8 @@ jobs:
       run: |
         ls -l dist
         for pkg in dist/*; do
-          rye run uv venv .integ --seed
-          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          rye run uv venv .integ
+          VIRTUAL_ENV=.integ uv pip install $pkg pytest pytest-random-order --force-reinstall
           .integ/bin/pytest -v py_integ
         done
       env:
@@ -126,7 +126,7 @@ jobs:
       run: |
         for pkg in dist/*; do
           uv venv .integ
-          uv pip install $pkg pytest pytest-random-order --force-reinstall
+          VIRTUAL_ENV=.integ uv pip install $pkg pytest pytest-random-order --force-reinstall
           .integ/bin/pytest -v py_integ
         done
       env:
@@ -209,7 +209,6 @@ jobs:
           apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv python${{ matrix.python-versios }}-dev
           curl -LsSf https://astral.sh/uv/install.sh | sh
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
           ls -l $HOME
           ls -l $HOME/.cargo/bin
           ls -l dist
@@ -217,8 +216,7 @@ jobs:
           for pkg in dist/*; do
             echo "Installing $pkg"
             $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
-            source .integ/bin/activate
-            $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
+            VIRTUAL_ENV=.integ uv pip install $pkg pytest pytest-random-order --force-reinstall
             .integ/bin/pytest -v py_integ
             .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
             pytest -v py_integ
