@@ -205,7 +205,7 @@ jobs:
         distro: 'ubuntu22.04'
         install: |
           apt-get update
-          apt-get install -y software-properties-common
+          apt-get install -y software-properties-common build-essential
           add-apt-repository -y ppa:deadsnakes/ppa
           apt-get update
           apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv
