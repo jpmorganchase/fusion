@@ -124,10 +124,6 @@ jobs:
   
     - name: Integration test artifact
       run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        ls -l $HOME
-        ls -l $HOME/.cargo/bin
-        ls -l dist
         for pkg in dist/*; do
           $HOME/.cargo/bin/uv venv .integ
           source .integ/bin/activate
@@ -215,10 +211,17 @@ jobs:
           apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv
           curl -LsSf https://astral.sh/uv/install.sh | sh
         run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          ls -l $HOME
+          ls -l $HOME/.cargo/bin
           ls -l dist
+
           for pkg in dist/*; do
-            uv venv .integ --seed
             echo "Installing $pkg"
+            $HOME/.cargo/bin/uv venv .integ
+            source .integ/bin/activate
+            $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
+            .integ/bin/pytest -v py_integ
             .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
             pytest -v py_integ
           done
