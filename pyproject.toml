@@ -1,6 +1,6 @@
 [project]
 name = "pyfusion"
-version = "1.1.0-dev1"
+version = "1.1.0-dev3"
 
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
@@ -207,20 +207,11 @@ report.fail_under = 60
 run.parallel = true
 
 [tool.bumpversion]
-current_version = "1.1.0-dev1-dev1"
-parse = """(?x)
-    (?P<major>0|[1-9]\\d*)\\.
-    (?P<minor>0|[1-9]\\d*)\\.
-    (?P<patch>0|[1-9]\\d*)
-    (?:
-        -                             # dash separator for pre-release section
-        (?P<pre_l>[a-zA-Z-]+)         # pre-release label
-        (?P<pre_n>0|[1-9]\\d*)        # pre-release version number
-    )?                                # pre-release section is optional
-"""
+current_version = "1.1.0-dev3"
+parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[a-z]+)(?P<candidate>\d+))?'
 serialize = [
-    "{major}.{minor}.{patch}-{pre_l}{pre_n}",
-    "{major}.{minor}.{patch}",
+    '{major}.{minor}.{patch}-{release}{candidate}',
+	'{major}.{minor}.{patch}'
 ]
 search = "{current_version}"
 replace = "{new_version}"
@@ -235,9 +226,13 @@ commit = false
 message = "Bump version: {current_version} → {new_version}"
 commit_args = ""
 
-[tool.bumpversion.parts.pre_l]
-values = ["dev"]
-optional_value = "dev"
+[tool.bumpversion.parts.release]
+first_value = 'dev'
+optional_value = 'release'
+values = [
+    'dev',
+    'release'
+]
 
 [[tool.bumpversion.files]]
 filename = "Cargo.toml"
