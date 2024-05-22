@@ -44,10 +44,13 @@ def _download(
     show_progress: bool = True,
     local_path: str = "",
 ) -> list[tuple[bool, str, Optional[str]]]:
-    def _download_files(row: pd.Series[Any]) -> tuple[bool, str, Optional[str]]:
+    def _download_files(row: pd.Series) -> tuple[bool, str, Optional[str]]:
         p_path = local_path + row["path_fusion"]
         if not fs_local.exists(p_path):
-            fs_local.mkdir(Path(p_path).parent, exist_ok=True, create_parents=True)
+            try:
+                fs_local.mkdir(Path(p_path).parent, exist_ok=True, create_parents=True)
+            except Exception as ex:
+                logger.info(f"Path {p_path} exists already", ex)
         try:
             fs_fusion.get(row["url"], p_path, chunk_size=DEFAULT_CHUNK_SIZE)
             return (True, p_path, None)
@@ -80,7 +83,7 @@ def _download(
     else:
         return []
 
-    return  # type: ignore
+    return res  # type: ignore
 
 
 def _upload(
@@ -191,14 +194,14 @@ def _get_local_state(
     is_raw_lst = is_dataset_raw(local_files, fs_fusion)
     local_url_eqiv = [path_to_url(i, r) for i, r in zip(local_files, is_raw_lst)]
     df_local = pd.DataFrame([local_files_rel, local_url_eqiv, local_mtime, local_files]).T
-    df_local = df_local[["path", "url", "mtime", "local_path"]]
+    df_local.columns = pd.Index(["path", "url", "mtime", "local_path"])
 
     if local_state is not None and len(local_state) > 0:
         df_join = df_local.merge(local_state, on="path", how="left", suffixes=("", "_prev"))
         df_join.loc[df_join["mtime"] != df_join["mtime_prev"], "sha256"] = [
             _generate_sha256_token(x, fs_local) for x in df_join[df_join["mtime"] != df_join["mtime_prev"]].local_path
         ]
-        df_local.columns = pd.Index(["path", "url", "mtime", "sha256"])
+        df_local = df_join[["path", "url", "mtime", "sha256"]]
     else:
         df_local["sha256"] = [_generate_sha256_token(x, fs_local) for x in local_files]
 
