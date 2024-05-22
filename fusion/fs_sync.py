@@ -44,7 +44,7 @@ def _download(
     show_progress: bool = True,
     local_path: str = "",
 ) -> list[tuple[bool, str, Optional[str]]]:
-    def _download_files(row: pd.Series) -> tuple[bool, str, Optional[str]]:
+    def _download_files(row: pd.Series) -> tuple[bool, str, Optional[str]]:  # type: ignore
         p_path = local_path + row["path_fusion"]
         if not fs_local.exists(p_path):
             try:
