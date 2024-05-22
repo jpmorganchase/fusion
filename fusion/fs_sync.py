@@ -9,7 +9,7 @@ import time
 import warnings
 from os.path import relpath
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import fsspec
 import pandas as pd
@@ -49,7 +49,7 @@ def _download(
         if not fs_local.exists(p_path):
             try:
                 fs_local.mkdir(Path(p_path).parent, exist_ok=True, create_parents=True)
-            except Exception as ex:
+            except Exception as ex:  # noqa: BLE001
                 logger.info(f"Path {p_path} exists already", ex)
         try:
             fs_fusion.get(row["url"], p_path, chunk_size=DEFAULT_CHUNK_SIZE)
