@@ -54,7 +54,7 @@ jobs:
             if (successfulRun) {
               core.setOutput('successful', 'true');
               core.setOutput('run_id', successfulRun.id);
-              console.log('Found Successful build run #' + successfulRun.run_number + ', run_id=' + successfulRun.id + ', it was started at' + successfulRun.created_at)
+              console.log('Found Successful build run #' + successfulRun.run_number + ', run_id=' + successfulRun.id + ', it was started at ' + successfulRun.created_at)
 
             } else {
               core.setOutput('successful', 'false');
