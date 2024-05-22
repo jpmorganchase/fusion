@@ -393,8 +393,8 @@ class FusionCredentials:
             to_use_file_path = Path(file_path)
         else:
             for p in p_path.absolute().parents:
-                if (p / p_path.name).exists():
-                    to_use_file_path = p / p_path.name
+                if (p / p_path).exists():
+                    to_use_file_path = p / p_path
                     logger.log(VERBOSE_LVL, f"Found credentials file at {to_use_file_path}")
                     break
         if not to_use_file_path:
