@@ -24,48 +24,44 @@ env:
 # Define the jobs that run in the workflow
 jobs:
   # Define the tests job that runs on ubuntu-latest across multiple python versions
-  tests:
+  sdist-n-tests:
     strategy:
       fail-fast: true
       matrix:
         python-versions: ["3.9", "3.10", "3.11", "3.12"]
-    name: Run tests
+    name: sdist and tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      env:
-        PIP_DISABLE_PIP_VERSION_CHECK: 1
-      with:
-        python-version: ${{ matrix.python-versions }}
 
-    - name: Set up rye
-      run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
-
-    - name: Add Rye to PATH
+    - name: Install rye and uv
       run: |
+        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+        curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.rye/env" >> $GITHUB_PATH
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       shell: bash
 
-    - name: Use uv instead of pip
-      run: rye config --set-bool behavior.use-uv=true
-
-    - name: Verify Rye Installation
-      run: rye --version
+    - name: Setup rye
+      run: |
+        rye config --set-bool behavior.use-uv=true
+        rye --version
       shell: bash
-
+    
     - name: Sync dependencies using rye
       run: |
         rye pin ${{ matrix.python-versions }}
         rye sync
+      shell: bash
 
     # required for tox testing on mike
     - name: Setup doc deploy git user 
       run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-  
+      shell: bash
+
     - name: Run tox
       run: |
         rye pin ${{ matrix.python-versions }}
@@ -79,10 +75,11 @@ jobs:
     - name: Integration test artifact
       run: |
         ls -l dist
+        rm -rf .venv
         for pkg in dist/*; do
-          rye run uv venv .integ --seed
-          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
-          .integ/bin/pytest -v py_integ
+          uv venv
+          uv pip install $pkg pytest pytest-random-order --force-reinstall
+          .venv/bin/pytest -v py_integ
         done
       env:
         FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
@@ -96,100 +93,251 @@ jobs:
         path: dist/*.tar.gz
   
   # Define the manylinux maturin builds, across multiple python versions, these will run in appropriate arch images
-  linux-manylinux:
-    needs: tests
+  linux-x86:
+    #needs: tests
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         python-versions: ["3.9", "3.10", "3.11", "3.12"]
-        include:
-          - target: x86_64-unknown-linux-gnu
-            docker_image: 'quay.io/pypa/manylinux_2_28_x86_64:latest'
-          - target: aarch64-unknown-linux-gnu
-            docker_image: 'ghcr.io/rust-cross/manylinux_2_28-cross:aarch64'
-          - target: armv7-unknown-linux-gnueabihf
-            docker_image: 'ghcr.io/rust-cross/manylinux_2_28-cross:armv7'
-          - target: powerpc64le-unknown-linux-gnu
-            docker_image: 'ghcr.io/rust-cross/manylinux_2_28-cross:ppc64le'
+        platform:
+          - target: "x86_64-unknown-linux-gnu"
+          # - target: "i686-unknown-linux-gnu"
+          #- target: "aarch64-unknown-linux-gnu"
+          #- target: "armv7-unknown-linux-gnueabihf"
+          #- target: "powerpc64le-unknown-linux-gnu"
+
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-
+  
     - uses: actions/setup-python@v5
-      env:
-        PIP_DISABLE_PIP_VERSION_CHECK: 1
       with:
         python-version: ${{ matrix.python-versions }}
-
-    - name: Set up rye
-      run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
-
-    - name: Add Rye to PATH
-      run: |
-        echo "$HOME/.rye/env" >> $GITHUB_PATH
-        echo "$HOME/.rye/shims" >> $GITHUB_PATH
-      shell: bash
-
-    - name: Use uv instead of pip
-      run: rye config --set-bool behavior.use-uv=true
-
-    - name: Verify Rye Installation
-      run: rye --version
-      shell: bash
-
-    - name: Sync dependencies using rye
-      run: |
-        rye pin ${{ matrix.python-versions }}
-        rye sync
+    - run: pip install uv
 
     - name: Build Wheels - manylinux
       uses: PyO3/maturin-action@main
       with:
-        target: ${{ matrix.target }}
+        target: ${{ matrix.platform.target }}
         manylinux: auto
-        args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
+        args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
   
-    - name: list dist files
-      run: |
-        ls -l dist
-
-    - name: Clear and list dist files
-      run: |
-        rm -f dist/*linux_x86_64.whl
-        ls -l dist
-
-
     - name: Integration test artifact
-      if: false
       run: |
-        docker exec mycontainer bash -c "
-          ls -l /app/dist &&
-          for pkg in /app/dist/*; do
-            python -m venv /app/.integ &&
-            /app/.integ/bin/pip install \$pkg pytest pytest-random-order --force-reinstall &&
-            FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} /app/.integ/bin/pytest -v py_integ
-          done
-        "
+        for pkg in dist/*; do
+          uv venv .integ
+          VIRTUAL_ENV=.integ uv pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
       shell: bash
-
-    - name: Cleanup Docker container
-      if: false
-      run: |
-        docker stop mycontainer
-        docker rm mycontainer  
 
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
-        name: artifacts-manylinux-${{ matrix.target }}-${{ matrix.python-versions }}
+        name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
         path: dist
+
+  linux-arm:
+    #needs: tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        platform:
+          - target: "aarch64-unknown-linux-gnu"
+            arch: aarch64
+          - target: "armv7-unknown-linux-gnueabihf"
+            arch: armv7
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+  
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-versions }}
+    - run: pip install uv
+
+    - name: Build Wheels
+      uses: PyO3/maturin-action@main
+      with:
+        target: ${{ matrix.platform.target }}
+        manylinux: "auto"
+        args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
+        sccache: 'true'
+  
+    - uses: uraimo/run-on-arch-action@v2
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      name: Integration test artifact
+      with:
+        arch: ${{ matrix.platform.arch }}
+        distro: 'ubuntu22.04'
+        githubToken: ${{ github.token }}
+        install: |
+          apt-get update
+          apt-get install -y software-properties-common build-essential
+          add-apt-repository -y ppa:deadsnakes/ppa
+          apt-get update
+          apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv python${{ matrix.python-versions }}-dev
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+        run: |
+          ls -l $HOME
+          ls -l $HOME/.cargo/bin
+          ls -l dist
+
+          for pkg in dist/*; do
+            echo "Installing $pkg"
+            $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
+            VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
+            .integ/bin/python3 -m fusion --help
+          done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+
+    - name: Upload Wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
+        path: dist
+
+  linux-s390x:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        platform:
+          - target: s390x-unknown-linux-gnu
+            arch: s390x
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+    
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-versions }}
+      - run: pip install uv
+  
+      - name: Build Wheels
+        uses: PyO3/maturin-action@main
+        with:
+          target: ${{ matrix.platform.target }}
+          manylinux: "auto"
+          args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
+          sccache: 'true'
+    
+      - uses: uraimo/run-on-arch-action@v2
+        if: false
+        name: Integration test artifact
+        with:
+          arch: ${{ matrix.platform.arch }}
+          distro: 'ubuntu22.04'
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update
+            apt-get install -y software-properties-common build-essential
+            add-apt-repository -y ppa:deadsnakes/ppa
+            apt-get update
+            apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv python${{ matrix.python-versions }}-dev
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+          run: |
+            ls -l $HOME
+            ls -l $HOME/.cargo/bin
+            ls -l dist
+  
+            for pkg in dist/*; do
+              echo "Installing $pkg"
+              $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
+              VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
+              .integ/bin/python3 -m fusion --help
+            done
+        env:
+          FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+          FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+  
+      - name: Upload Wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
+          path: dist
+  
+  linux-powerpc:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        platform:
+          - target: powerpc64le-unknown-linux-gnu
+            arch: ppc64le
+          - target: powerpc64-unknown-linux-gnu
+            arch: ppc64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+    
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-versions }}
+      - run: pip install uv
+  
+      - name: Build Wheels
+        uses: PyO3/maturin-action@main
+        with:
+          target: ${{ matrix.platform.target }}
+          manylinux: "auto"
+          args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
+          sccache: 'true'
+    
+      - uses: uraimo/run-on-arch-action@v2
+        if: false
+        name: Integration test artifact
+        with:
+          arch: ${{ matrix.platform.arch }}
+          distro: 'ubuntu22.04'
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update
+            apt-get install -y software-properties-common build-essential
+            add-apt-repository -y ppa:deadsnakes/ppa
+            apt-get update
+            apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv python${{ matrix.python-versions }}-dev
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+          run: |
+            ls -l $HOME
+            ls -l $HOME/.cargo/bin
+            ls -l dist
+  
+            for pkg in dist/*; do
+              echo "Installing $pkg"
+              $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
+              VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
+              .integ/bin/python3 -m fusion --help
+            done
+        env:
+          FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+          FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+  
+      - name: Upload Wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
+          path: dist
+              
 
   # Define the musllinux maturin builds, across multiple python versions, these will run in appropriate arch images
   linux-musllinux:
-    needs: tests
+    #needs: tests
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -197,8 +345,6 @@ jobs:
         python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: [
           "x86_64-unknown-linux-musl",
-          "aarch64-unknown-linux-musl",
-          "armv7-unknown-linux-musleabihf",
           # "powerpc64le-unknown-linux-musl", # diasble powerpc64le until we decide to build via container quay.io/pypa/musllinux_1_1_ppc64le
         ]
 
@@ -213,21 +359,19 @@ jobs:
       with:
         python-version: ${{ matrix.python-versions }}
 
-    - name: Set up rye
-      run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
-
-    - name: Add Rye to PATH
+    - name: Install rye
       run: |
+        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
         echo "$HOME/.rye/env" >> $GITHUB_PATH
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
       shell: bash
-
-    - name: Use uv instead of pip
-      run: rye config --set-bool behavior.use-uv=true
-
-    - name: Verify Rye Installation
-      run: rye --version
+  
+    - name: Setup rye
+      run: |
+        rye config --set-bool behavior.use-uv=true
+        rye --version
       shell: bash
+  
 
     - name: Sync dependencies using rye
       run: |
@@ -251,20 +395,25 @@ jobs:
         rm -f dist/*linux_x86_64.whl
         ls -l dist
 
+
     - name: Integration test artifact
       if: false
-      run: |
-        ls -l dist
-        for pkg in dist/*; do
-          rye run uv venv .integ --seed
-          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
-          .integ/bin/pytest -v py_integ
-        done
-      env:
-        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-      shell: bash
-  
+      uses: addnab/docker-run-action@v3
+      with:
+        image: alpine:3.12
+        options: -v ${{ github.workspace }}:/io -w /io -e FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} -e FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} 
+        run: |
+          apk update
+          apk add python3 curl
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          ls -l dist
+          for pkg in dist/*; do
+            echo "Installing $pkg"
+            $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
+            VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
+            .integ/bin/python3 -m fusion --help
+          done
+
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
       with:
@@ -273,7 +422,7 @@ jobs:
 
   # Define the windows maturin builds, across multiple python versions, these will run on windows-latest
   windows:
-    needs: tests
+    #needs: tests
     runs-on: windows-latest
     strategy:
       matrix:
@@ -285,35 +434,29 @@ jobs:
       with:
         fetch-depth: 0
 
-    - uses: actions/setup-python@v5
-      env:
-        PIP_DISABLE_PIP_VERSION_CHECK: 1
-      with:
-        python-version: ${{ matrix.python-versions }}
-
-    - name: Set up rye
+    - name: Set install environment variables
       run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        cargo install --git https://github.com/astral-sh/rye.git  --features winapi/winioctl,winapi/ioapiset rye
-      shell: bash
-
-    - name: Add Rye to PATH
+        $env:RYE_INSTALL_OPTION="--yes"
+        $env:RYE_TOOLCHAIN_VERSION = "${{ matrix.python-versions }}"
+      shell: pwsh
+  
+    - name: Download Rye executable
       run: |
-        echo "$HOME/.rye/env" >> $GITHUB_PATH
-        echo "$HOME/.rye/shims" >> $GITHUB_PATH
-      shell: bash
+        Invoke-WebRequest -Uri "https://github.com/astral-sh/rye/releases/latest/download/rye-x86_64-windows.exe" -OutFile "$env:USERPROFILE\rye.exe"
+        Add-Content $env:GITHUB_PATH "$env:USERPROFILE"
+      shell: pwsh
 
-    - name: Use uv instead of pip
-      run: rye config --set-bool behavior.use-uv=true
-
-    - name: Verify Rye Installation
-      run: rye --version
-      shell: bash
-
-    - name: Sync dependencies using rye
+    - name: Download Rye executable
       run: |
-        rye pin ${{ matrix.python-versions }}
-        rye sync
+        rye.exe config --set-bool behavior.use-uv=true
+        rye.exe --version
+      shell: pwsh
+
+    - name: Sync dependencies using Rye
+      run: |
+        rye.exe pin ${{ matrix.python-versions }}
+        rye.exe sync
+      shell: pwsh
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
@@ -326,18 +469,17 @@ jobs:
       run: ls -l dist
 
     - name: Integration test artifact
-      if: false
+      if: true
       run: |
-        ls -l dist
-        for pkg in dist/*; do
-          rye run uv venv .integ --seed
-          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
-          .integ/bin/pytest -v py_integ
-        done
+        Get-ChildItem dist -Filter *.whl | ForEach-Object {
+          rye.exe run uv venv .integ --seed
+          .\.integ\Scripts\pip.exe install $_.FullName pytest pytest-random-order --force-reinstall
+          .\.integ\Scripts\pytest.exe -v py_integ
+        }
       env:
         FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
         FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-      shell: bash
+      shell: pwsh
 
     - name: Upload Wheels
       uses: actions/upload-artifact@v4
@@ -345,10 +487,10 @@ jobs:
         name: artifacts-win-${{ matrix.target }}-${{ matrix.python-versions }}
         path: dist
 
-  # Define the macos maturin builds, across multiple python versions, these will run on macos-latest
-  macos:
-    needs: tests
-    runs-on: macos-latest
+  # Define the macos x86 64 maturin builds, across multiple python versions, these will run on macos-12
+  macos-x86_64:
+    #needs: tests
+    runs-on: macos-12
     strategy:
       matrix:
         python-versions: ["3.9", "3.10", "3.11", "3.12"]
@@ -365,20 +507,17 @@ jobs:
       with:
         python-version: ${{ matrix.python-versions }}
 
-    - name: Set up rye
-      run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
-
-    - name: Add Rye to PATH
+    - name: Install rye
       run: |
+        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
         echo "$HOME/.rye/env" >> $GITHUB_PATH
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
       shell: bash
 
-    - name: Use uv instead of pip
-      run: rye config --set-bool behavior.use-uv=true
-
-    - name: Verify Rye Installation
-      run: rye --version
+    - name: Setup rye
+      run: |
+        rye config --set-bool behavior.use-uv=true
+        rye --version
       shell: bash
 
     - name: Sync dependencies using rye
@@ -398,7 +537,7 @@ jobs:
       run: ls -l dist
 
     - name: Integration test artifact
-      if: false
+      if: true
       run: |
         ls -l dist
         for pkg in dist/*; do
@@ -418,9 +557,80 @@ jobs:
         name: artifacts-macos-${{ matrix.target }}-${{ matrix.python-versions }}
         path: dist
 
+  # Define the macos aarch64 maturin builds, across multiple python versions, these will run on macos-14
+  macos-aarch64:
+    #needs: tests
+    runs-on: macos-14
+    strategy:
+      matrix:
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        target: ["aarch64"]
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-python@v5
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: 1
+      with:
+        python-version: ${{ matrix.python-versions }}
+
+    - name: Set up rye
+      run: |
+        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+        echo "$HOME/.rye/env" >> $GITHUB_PATH
+        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+      shell: bash
+
+    - name: Add Rye to PATH
+      run: |
+        rye config --set-bool behavior.use-uv=true
+        rye --version
+      shell: bash
+    
+    - name: Sync dependencies using rye
+      run: |
+        rye pin ${{ matrix.python-versions }}
+        rye sync
+
+    - name: Build wheels
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        args: --release -j 10 -i ${{ matrix.python-versions }} --out dist
+        sccache: 'false'
+        manylinux: auto
+
+    - name: list dist files
+      run: ls -l dist
+
+    - name: Integration test artifact
+      if: true
+      run: |
+        ls -l dist
+        for pkg in dist/*; do
+          rye run uv venv .integ --seed
+          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
+          .integ/bin/pytest -v py_integ
+        done
+      env:
+        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
+        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
+      shell: bash
+
+
+    - name: Upload Wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: artifacts-macos-${{ matrix.target }}-${{ matrix.python-versions }}
+        path: dist
+
+
   # Define the artifact check job that runs on ubuntu-latest
   artifact-check:
-    needs: [linux-manylinux, linux-musllinux, windows, macos]
+    needs: [sdist-n-tests, linux-x86, linux-arm, linux-powerpc, linux-s390x, linux-musllinux, windows, macos-x86_64, macos-aarch64]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/download-artifact@v4
