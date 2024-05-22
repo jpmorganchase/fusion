@@ -78,10 +78,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * fix proxy support to aiohttp
 * fix filtering support for csv and json
 
-## [1.0.11] - 2023-05-09
-* bearer token authentication
-* proxy bug fix for aiohttp
-
 ## [1.0.10] - 2023-03-23
 
 * md5 to sha256 convention change
