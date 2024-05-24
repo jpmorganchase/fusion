@@ -36,7 +36,7 @@ jobs:
 
     - name: Install rye and uv
       run: |
-        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+        curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.rye/env" >> $GITHUB_PATH
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
@@ -362,7 +362,7 @@ jobs:
 
     - name: Install rye
       run: |
-        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+        curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
         echo "$HOME/.rye/env" >> $GITHUB_PATH
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
       shell: bash
@@ -510,7 +510,7 @@ jobs:
 
     - name: Install rye
       run: |
-        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+        curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
         echo "$HOME/.rye/env" >> $GITHUB_PATH
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
       shell: bash
@@ -580,7 +580,7 @@ jobs:
 
     - name: Set up rye
       run: |
-        curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+        curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
         echo "$HOME/.rye/env" >> $GITHUB_PATH
         echo "$HOME/.rye/shims" >> $GITHUB_PATH
       shell: bash
