@@ -4,7 +4,7 @@ __author__ = """Fusion Devs"""
 __email__ = "fusion_developers@jpmorgan.com"
 __version__ = "1.1.0.dev3"
 
-from _fusion import *  # noqa: F403
+from ._fusion import *  # noqa: F403
 
 from fusion.authentication import FusionCredentials
 from fusion.fs_sync import fsync

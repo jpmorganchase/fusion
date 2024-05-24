@@ -42,7 +42,7 @@ requires = ["maturin>=1.2,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
-python-source = "fusion"
+#python-source = "fusion"
 module-name = "fusion._fusion"
 features = ["pyo3/extension-module"]
 
