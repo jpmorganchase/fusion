@@ -730,7 +730,7 @@ jobs:
                         ls -l dist && \
                         source /venvs/.venv_uv_${{ matrix.python.version }}/bin/activate && \
                         pip install uv 
-                        uv pip install dist/$WHEEL_FILE pytest pytest-random-order --force-reinstall && \
+                        uv pip install $WHEEL_FILE pytest pytest-random-order --force-reinstall && \
                         pytest -v py_integ")
         docker logs -f $CONTAINER_ID
         docker wait $CONTAINER_ID
