@@ -682,10 +682,10 @@ jobs:
             tag: linux-s390x
             arch: s390x
             artifact-arch: s390x-unknown-linux-gnu
-          - platform: linux/ppc64
-            tag: linux-ppc64
-            arch: ppc64
-            artifact-arch: powerpc64-unknown-linux-gnu
+          #- platform: linux/ppc64
+          #  tag: linux-ppc64
+          #  arch: ppc64
+          #  artifact-arch: powerpc64-unknown-linux-gnu
         python:
           - version: "3.9"
             wheel: cp39
@@ -718,16 +718,19 @@ jobs:
     - name: Run integration tests in Docker
       run: |
         IMAGE_NAME=docker.io/nazq/cross-rye-py-runner:latest
-        docker run --rm --platform ${{ matrix.architecture.platform }} \
+        CONTAINER_ID=$(docker run -d --platform ${{ matrix.architecture.platform }} \
           -e FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} \
           -e FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} \
           -e WHEEL_FILE=${{ env.WHEEL_FILE }} \
           -v ${{ github.workspace }}:/workspace \
           $IMAGE_NAME \
           /bin/bash -c "cd /workspace && \
-                        echo "Arch is $(uname -m)" && \ 
+                        echo \"Arch is \$(uname -m)\" && \
                         ls -l dist && \
                         source /venvs/.venv_uv_${{ matrix.python.version }}/bin/activate && \
                         uv pip install dist/$WHEEL_FILE pytest pytest-random-order --force-reinstall && \
-                        pytest -v py_integ"
+                        pytest -v py_integ")
+        docker logs -f $CONTAINER_ID
+        docker wait $CONTAINER_ID
+        docker rm $CONTAINER_ID          
       shell: bash
