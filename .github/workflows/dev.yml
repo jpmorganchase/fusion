@@ -718,7 +718,7 @@ jobs:
     - name: Run integration tests in Docker
       run: |
         IMAGE_NAME=docker.io/nazq/cross-rye-py-runner:latest
-        docker buildx run --rm --platform ${{ matrix.architecture.platform }} \
+        docker run --rm --platform ${{ matrix.architecture.platform }} \
           -e FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} \
           -e FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} \
           -e WHEEL_FILE=${{ env.WHEEL_FILE }} \
