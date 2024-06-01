@@ -676,7 +676,7 @@ jobs:
             artifact-arch: aarch64-unknown-linux-gnu
           - platform: linux/ppc64le
             tag: linux-ppc64le
-            arch: powerpc64le
+            arch: ppc64le
             artifact-arch: powerpc64le-unknown-linux-gnu
           - platform: linux/s390x
             tag: linux-s390x
@@ -684,7 +684,7 @@ jobs:
             artifact-arch: s390x-unknown-linux-gnu
           - platform: linux/ppc64
             tag: linux-ppc64
-            arch: powerpc64
+            arch: ppc64
             artifact-arch: powerpc64-unknown-linux-gnu
         python:
           - version: "3.9"
