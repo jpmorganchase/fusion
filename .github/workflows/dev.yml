@@ -728,8 +728,8 @@ jobs:
                         cd /workspace && \
                         echo \"Arch is \$(uname -m)\" && \
                         ls -l dist && \
-                        source $HOME/.cargo/env
                         source /venvs/.venv_uv_${{ matrix.python.version }}/bin/activate && \
+                        pip install uv 
                         uv pip install dist/$WHEEL_FILE pytest pytest-random-order --force-reinstall && \
                         pytest -v py_integ")
         docker logs -f $CONTAINER_ID
