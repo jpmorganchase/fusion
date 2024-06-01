@@ -5,7 +5,7 @@ edit_uri: fusion/
 repo_name: jpmorganchase/fusion
 docs_dir: docs
 watch:
-  - fusion
+  - python/fusion
 
 nav:
   - Home: index.md
@@ -63,7 +63,7 @@ plugins:
   - include-markdown
   - mkdocstrings:
       watch:
-        - fusion
+        - python/fusion
   - search:
       lang: en
 
