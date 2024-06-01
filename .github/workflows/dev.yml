@@ -724,7 +724,8 @@ jobs:
           -e WHEEL_FILE=${{ env.WHEEL_FILE }} \
           -v ${{ github.workspace }}:/workspace \
           $IMAGE_NAME \
-          /bin/bash -c "cd /workspace && \
+          /bin/bash -c "set -e && \
+                        cd /workspace && \
                         echo \"Arch is \$(uname -m)\" && \
                         ls -l dist && \
                         source $HOME/.cargo/env
