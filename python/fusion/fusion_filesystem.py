@@ -397,13 +397,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         method: str = "put",
     ) -> None:
-        async def _get_operation_id(session: Any) -> dict[str, Any]:
+        async def _get_operation_id() -> dict[str, Any]:
+            session = await self.set_session()
             async with session.post(rpath + "/operationType/upload", **self.kwargs) as r:
                 await self._async_raise_not_found_for_status(r, rpath + "/operationType/upload")
                 res: dict[str, Any] = await r.json()
                 return res
 
         async def _finish_operation(session: Any, operation_id: Any, kw: Any) -> None:
+            session = await self.set_session()
             async with session.post(
                 url=rpath + f"/operations/upload?operationId={operation_id}",
                 json={"parts": resps},
@@ -413,8 +415,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     r, rpath + f"/operations/upload?operationId={operation_id}"
                 )
 
-        def put_data(session: Any) -> Generator[dict[str, Any], None, None]:
-            async def _meth(session: Any, url: Any, kw: Any) -> None:
+        def put_data() -> Generator[dict[str, Any], None, None]:
+            async def _meth(url: Any, kw: Any) -> None:
+                session = await self.set_session()
                 meth = getattr(session, method)
                 retry_num = 3
                 ex_cnt = 0
@@ -447,12 +450,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 kw = self.kwargs.copy()
                 kw.update({"headers": headers_chunks})
                 url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
-                yield sync(self.loop, _meth, session, url, kw)
+                yield sync(self.loop, _meth, url, kw)
                 i += 1
                 callback.relative_update(len(chunk))
                 chunk = f.read(chunk_size)
 
-        session = sync(self.loop, self.set_session)
         method = method.lower()
         if method not in ("put", "post"):
             raise ValueError(f"method has to be either 'post' or 'put', not {method!r}")
@@ -468,14 +470,14 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         lpath.seek(0)
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
-        operation_id = sync(self.loop, _get_operation_id, session)["operationId"]
-        resps = list(put_data(session))
+        operation_id = sync(self.loop, _get_operation_id)["operationId"]
+        resps = list(put_data())
 
         hash_sha256 = hash_sha256_lst[0]
         headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
-        sync(self.loop, _finish_operation, session, operation_id, kw)
+        sync(self.loop, _finish_operation, operation_id, kw)
 
     def put(  # noqa: PLR0913
         self,

@@ -3,7 +3,6 @@
 import json
 import logging
 import os
-from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -540,11 +539,7 @@ class FusionOAuthAdapter(HTTPAdapter):
     def send(  # noqa: PLR0915
         self,
         request: requests.PreparedRequest,
-        stream: bool = False,  # noqa: ARG002
-        timeout: Union[None, float, tuple[float, float], tuple[float, None]] = None,  # noqa: ARG002
-        verify: Union[bool, str] = True,  # noqa: ARG002
-        cert: Union[None, bytes, str, tuple[Union[bytes, str], Union[bytes, str]]] = None,  # noqa: ARG002
-        proxies: Optional[Mapping[str, str]] = None,  # noqa: ARG002
+        *args: Any,  # noqa: ARG002
         **kwargs: Any,
     ) -> requests.Response:
         """Function to send a request to the authentication server.
