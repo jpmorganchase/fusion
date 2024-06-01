@@ -725,7 +725,7 @@ jobs:
           -v ${{ github.workspace }}:/workspace \
           $IMAGE_NAME \
           /bin/bash -c "cd /workspace && \
-                        echo "Arch is $(uname -m) && \ 
+                        echo "Arch is $(uname -m)" && \ 
                         ls -l dist && \
                         source /venvs/.venv_uv_${{ matrix.python.version }}/bin/activate && \
                         uv pip install dist/$WHEEL_FILE pytest pytest-random-order --force-reinstall && \
