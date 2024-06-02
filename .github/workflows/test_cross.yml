@@ -22,7 +22,26 @@ env:
 jobs:
   integ-tests:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture:
+          - platform: linux/amd64
+            tag: linux-amd64
+            arch: x86_64
+            artifact-arch: x86_64-unknown-linux-gnu
+          - platform: linux/arm64
+            tag: linux-arm64
+            arch: aarch64
+            artifact-arch: aarch64-unknown-linux-gnu
+          - platform: linux/ppc64le
+            tag: linux-ppc64le
+            arch: ppc64le
+            artifact-arch: powerpc64le-unknown-linux-gnu
+          - platform: linux/s390x
+            tag: linux-s390x
+            arch: s390x
+            artifact-arch: s390x-unknown-linux-gnu
     steps:
     - uses: actions/checkout@v4
       with:
@@ -66,11 +85,11 @@ jobs:
           fi
           echo
         done
-        docker run --rm arm64v8/alpine sh -c "uname -a && echo"
-        docker run --rm arm32v7/alpine sh -c "uname -a && echo"
-        docker run --rm ppc64le/alpine sh -c "uname -a && echo"
-        docker run --rm s390x/alpine sh -c "uname -a && echo"
-        docker run --rm tonistiigi/debian:riscv sh -c "uname -a && echo"
-        docker run --rm --platform=linux/s390x s390x/ubuntu sh -c "uname -a && echo"
-        docker run --rm --platform=linux/ppc64le ppc64le/ubuntu sh -c "uname -a && echo"
-        docker run --rm --platform=linux/arm64 arm64v8/ubuntu sh -c "uname -a && echo"
+        #docker run --rm arm64v8/alpine sh -c "uname -a && echo"
+        #docker run --rm arm32v7/alpine sh -c "uname -a && echo"
+        #docker run --rm ppc64le/alpine sh -c "uname -a && echo"
+        #docker run --rm s390x/alpine sh -c "uname -a && echo"
+        #docker run --rm tonistiigi/debian:riscv sh -c "uname -a && echo"
+        #docker run --rm --platform=linux/s390x s390x/ubuntu sh -c "uname -a && echo"
+        #docker run --rm --platform=linux/ppc64le ppc64le/ubuntu sh -c "uname -a && echo"
+        docker run --rm --platform=${{ matrix.architecture.platform }} ${{ matrix.architecture.arch }}/ubuntu sh -c "uname -a && echo"
