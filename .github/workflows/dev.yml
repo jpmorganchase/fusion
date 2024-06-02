@@ -724,11 +724,15 @@ jobs:
         WHEEL_FILE=$(ls dist/pyfusion-*-${{ matrix.python.wheel }}-${{ matrix.python.wheel }}-manylinux_2_17_${{ matrix.architecture.arch }}.manylinux2014_${{ matrix.architecture.arch }}.whl)
         echo "WHEEL_FILE=$WHEEL_FILE" >> $GITHUB_ENV
 
+    - name: Get architecture-specific digest
+      id: get-digest
+      run: |
+        DIGEST=$(docker buildx imagetools inspect docker.io/nazq/cross-rye-py-runner:latest --format "{{json .Manifest}}" | jq -r '.manifests[] | select(.platform.architecture == "${{ matrix.architecture.arch }}") | .digest')
+        echo "DIGEST=${DIGEST}" >> $GITHUB_ENV
+
     - name: Run integration tests in Docker
       run: |
-        echo "platforms=${{ steps.buildx.outputs.platforms}}, driver=${{ steps.buildx.outputs.driver }}, name=${{ steps.buildx.outputs.name }}"
-        docker --debug buildx inspect --bootstrap
-        IMAGE_NAME=docker.io/nazq/cross-rye-py-runner:latest
+        IMAGE_NAME=docker.io/nazq/cross-rye-py-runner:latest@${{ env.DIGEST }}
         CONTAINER_ID=$(docker run -d --platform ${{ matrix.architecture.platform }} \
           -e FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} \
           -e FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} \
