@@ -43,7 +43,6 @@ jobs:
         docker run --rm ppc64le/alpine uname -a
         docker run --rm s390x/alpine uname -a
         docker run --rm tonistiigi/debian:riscv uname -a
-        docker run --rm yangzewei2023/debian:loongarch64 uname -a
         docker run --rm --platform=linux/s390x s390x/ubuntu apt update
         docker run --rm --platform=linux/ppc64le ppc64le/ubuntu apt update
         docker run --rm --platform=linux/arm64 arm64v8/ubuntu apt update
