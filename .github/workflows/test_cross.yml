@@ -1,0 +1,47 @@
+
+name: Test Cross Platform
+
+# Controls when the action will run.
+on:
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Set an environment variables for the workflow
+env:
+  UV_HTTP_TIMEOUT: 300
+  PIP_DISABLE_PIP_VERSION_CHECK: 1
+
+# Define the jobs that run in the workflow
+jobs:
+  integ-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+  
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v2
+      with:
+        install: true
+
+    - name: Test mainline
+      run: |
+        docker run --rm --privileged tonistiigi/binfmt:test --uninstall amd64,arm64,arm,ppc64le,s390x,riscv64,loongarch64
+        docker run --rm --privileged tonistiigi/binfmt:test --install all
+        docker run --rm arm64v8/alpine uname -a
+        docker run --rm arm32v7/alpine uname -a
+        docker run --rm ppc64le/alpine uname -a
+        docker run --rm s390x/alpine uname -a
+        docker run --rm tonistiigi/debian:riscv uname -a
+        docker run --rm yangzewei2023/debian:loongarch64 uname -a
+        docker run --rm --platform=linux/s390x s390x/ubuntu apt update
+        docker run --rm --platform=linux/ppc64le ppc64le/ubuntu apt update
+        docker run --rm --platform=linux/arm64 arm64v8/ubuntu apt update
