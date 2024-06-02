@@ -50,8 +50,11 @@ jobs:
         for entry in /proc/sys/fs/binfmt_misc/*; do
           if [ "$(basename "$entry")" != "status" ]; then
             echo "Contents of $entry:"
-            cat "$entry"
-            echo
+            if ! cat "$entry"; then
+              echo "Permission denied for $entry"
+            else
+              echo
+            fi
           fi
         done
         docker run --rm arm64v8/alpine sh -c "uname -a && echo"
