@@ -28,19 +28,19 @@ jobs:
         architecture:
           - platform: linux/amd64
             tag: linux-amd64
-            arch: x86_64
+            arch: ubuntu
             artifact-arch: x86_64-unknown-linux-gnu
           - platform: linux/arm64
             tag: linux-arm64
-            arch: aarch64
+            arch: arm64v8/ubnutu
             artifact-arch: aarch64-unknown-linux-gnu
           - platform: linux/ppc64le
             tag: linux-ppc64le
-            arch: ppc64le
+            arch: ppc64le/ubuntu
             artifact-arch: powerpc64le-unknown-linux-gnu
           - platform: linux/s390x
             tag: linux-s390x
-            arch: s390x
+            arch: s390x/ubuntu
             artifact-arch: s390x-unknown-linux-gnu
     steps:
     - uses: actions/checkout@v4
@@ -92,4 +92,4 @@ jobs:
         #docker run --rm tonistiigi/debian:riscv sh -c "uname -a && echo"
         #docker run --rm --platform=linux/s390x s390x/ubuntu sh -c "uname -a && echo"
         #docker run --rm --platform=linux/ppc64le ppc64le/ubuntu sh -c "uname -a && echo"
-        docker run --rm --platform=${{ matrix.architecture.platform }} ${{ matrix.architecture.arch }}/ubuntu sh -c "uname -a && echo"
+        docker run --rm --platform=${{ matrix.architecture.platform }} ${{ matrix.architecture.arch }} sh -c "echo && uname -a && echo"
