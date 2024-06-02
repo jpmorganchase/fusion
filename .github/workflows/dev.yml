@@ -705,7 +705,7 @@ jobs:
       run: |
         docker run --rm --privileged tonistiigi/binfmt --install all
         ls -al /proc/sys/fs/binfmt_misc
-        for entry in /proc/sys/fs/binfmt_misc/*; do
+        for entry in /proc/sys/fs/binfmt_misc/qemu-*; do
           if [ "$(basename "$entry")" != "status" ]; then
             if [ -r "$entry" ]; then
               echo "Contents of $entry:"
@@ -737,6 +737,8 @@ jobs:
 
     - name: Run integration tests in Docker
       run: |
+        docker version
+        docker info
         IMAGE_NAME=docker.io/nazq/cross-rye-py-runner:latest
         echo "Full image name: $IMAGE_NAME"
         CONTAINER_ID=$(docker run -d --platform ${{ matrix.architecture.platform }} \

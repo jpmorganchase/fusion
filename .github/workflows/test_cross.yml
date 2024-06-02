@@ -37,7 +37,7 @@ jobs:
     - name: init QEMU
       run: |
         ls -al /proc/sys/fs/binfmt_misc
-        for entry in /proc/sys/fs/binfmt_misc/*; do
+        for entry in /proc/sys/fs/binfmt_misc/qemu-*; do
           if [ "$(basename "$entry")" != "status" ]; then
             if [ -r "$entry" ]; then
               echo "Contents of $entry:"
