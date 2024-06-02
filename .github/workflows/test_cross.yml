@@ -28,19 +28,23 @@ jobs:
         architecture:
           - platform: linux/amd64
             tag: linux-amd64
-            arch: ubuntu
+            #arch: ubuntu
+            arch: docker.io/nazq/cross-rye-py-runner:latest
             artifact-arch: x86_64-unknown-linux-gnu
           - platform: linux/arm64
             tag: linux-arm64
-            arch: arm64v8/ubuntu
+            #arch: arm64v8/ubuntu
+            arch: docker.io/nazq/cross-rye-py-runner:latest
             artifact-arch: aarch64-unknown-linux-gnu
           - platform: linux/ppc64le
             tag: linux-ppc64le
-            arch: ppc64le/ubuntu
+            #arch: ppc64le/ubuntu
+            arch: docker.io/nazq/cross-rye-py-runner:latest
             artifact-arch: powerpc64le-unknown-linux-gnu
           - platform: linux/s390x
             tag: linux-s390x
-            arch: s390x/ubuntu
+            #arch: s390x/ubuntu
+            arch: docker.io/nazq/cross-rye-py-runner:latest
             artifact-arch: s390x-unknown-linux-gnu
     steps:
     - uses: actions/checkout@v4
