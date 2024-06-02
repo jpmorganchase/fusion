@@ -47,13 +47,14 @@ jobs:
               echo "Skipping $entry: Permission denied"
             fi
           fi
+          echo
         done
 
     - name: Test mainline
       run: |
         docker run --rm --privileged tonistiigi/binfmt --install all
         ls -al /proc/sys/fs/binfmt_misc
-        for entry in /proc/sys/fs/binfmt_misc/*; do
+        for entry in /proc/sys/fs/binfmt_misc/qemu-*; do
           if [ "$(basename "$entry")" != "status" ]; then
             if [ -r "$entry" ]; then
               echo "Contents of $entry:"
@@ -63,6 +64,7 @@ jobs:
               echo "Skipping $entry: Permission denied"
             fi
           fi
+          echo
         done
         docker run --rm arm64v8/alpine sh -c "uname -a && echo"
         docker run --rm arm32v7/alpine sh -c "uname -a && echo"
