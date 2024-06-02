@@ -50,7 +50,15 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-  
+
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-docker-${{ matrix.architecture.platform }}
+        restore-keys: |
+          ${{ runner.os }}-docker-${{ matrix.architecture.platform }}-
+
     - name: Set up Docker Buildx
       id: buildx
       uses: docker/setup-buildx-action@v2
@@ -75,6 +83,7 @@ jobs:
 
     - name: Test mainline
       run: |
+        docker pull tonistiigi/binfmt || true
         docker run --rm --privileged tonistiigi/binfmt --install all
         ls -al /proc/sys/fs/binfmt_misc
         for entry in /proc/sys/fs/binfmt_misc/qemu-*; do
@@ -89,6 +98,12 @@ jobs:
           fi
           echo
         done
+        docker pull docker.io/${{ matrix.architecture.arch }} || true
+        DOCKER_CMD="docker run --rm --platform=${{ matrix.architecture.platform }} ${{ matrix.architecture.arch }} sh -c 'echo && uname -a && echo'"
+        echo "DOCKER_CMD: $DOCKER_CMD"
+        eval $DOCKER_CMD
+      shell: bash
+
         #docker run --rm arm64v8/alpine sh -c "uname -a && echo"
         #docker run --rm arm32v7/alpine sh -c "uname -a && echo"
         #docker run --rm ppc64le/alpine sh -c "uname -a && echo"
@@ -96,7 +111,3 @@ jobs:
         #docker run --rm tonistiigi/debian:riscv sh -c "uname -a && echo"
         #docker run --rm --platform=linux/s390x s390x/ubuntu sh -c "uname -a && echo"
         #docker run --rm --platform=linux/ppc64le ppc64le/ubuntu sh -c "uname -a && echo"
-        DOCKER_CMD="docker run --rm --platform=${{ matrix.architecture.platform }} ${{ matrix.architecture.arch }} sh -c \"echo && uname -a && echo\""
-        echo "DOCKER_CMD: $DOCKER_CMD"
-        $DOCKER_CMD
-      shell: bash
