@@ -733,6 +733,7 @@ jobs:
     - name: Run integration tests in Docker
       run: |
         IMAGE_NAME=docker.io/nazq/cross-rye-py-runner:latest@${{ env.DIGEST }}
+        echo "Full image name: $IMAGE_NAME"
         CONTAINER_ID=$(docker run -d --platform ${{ matrix.architecture.platform }} \
           -e FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} \
           -e FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} \
