@@ -96,4 +96,7 @@ jobs:
         #docker run --rm tonistiigi/debian:riscv sh -c "uname -a && echo"
         #docker run --rm --platform=linux/s390x s390x/ubuntu sh -c "uname -a && echo"
         #docker run --rm --platform=linux/ppc64le ppc64le/ubuntu sh -c "uname -a && echo"
-        docker run --rm --platform=${{ matrix.architecture.platform }} ${{ matrix.architecture.arch }} sh -c "echo && uname -a && echo"
+        DOCKER_CMD="docker run --rm --platform=${{ matrix.architecture.platform }} ${{ matrix.architecture.arch }} sh -c \"echo && uname -a && echo\""
+        echo "DOCKER_CMD: $DOCKER_CMD"
+        $DOCKER_CMD
+      shell: bash
