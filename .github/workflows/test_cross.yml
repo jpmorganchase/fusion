@@ -47,6 +47,7 @@ jobs:
     - name: Test mainline
       run: |
         docker run --rm --privileged tonistiigi/binfmt --install all
+        ls -al /proc/sys/fs/binfmt_misc
         for entry in /proc/sys/fs/binfmt_misc/*; do
           if [ "$(basename "$entry")" != "status" ]; then
             if [ -r "$entry" ]; then
