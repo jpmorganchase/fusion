@@ -704,6 +704,18 @@ jobs:
     - name: Set up QEMU
       run: |
         docker run --rm --privileged tonistiigi/binfmt --install all
+        ls -al /proc/sys/fs/binfmt_misc
+        for entry in /proc/sys/fs/binfmt_misc/*; do
+          if [ "$(basename "$entry")" != "status" ]; then
+            if [ -r "$entry" ]; then
+              echo "Contents of $entry:"
+              cat "$entry"
+              echo
+            else
+              echo "Skipping $entry: Permission denied"
+            fi
+          fi
+        done
   
     - name: Set up Docker Buildx
       id: buildx
