@@ -57,6 +57,17 @@ def try_get_client_secret(client_secret: Optional[str]) -> Optional[str]:
     return try_get_env_var("FUSION_CLIENT_SECRET")
 
 
+def try_get_fusion_e2e(fusion_e2e: Optional[str]) -> Optional[str]:
+    """Get the Fusion E2E token from the environment variable or return None.
+
+    Returns:
+        Optional[str]: The client secret or None.
+    """
+    if fusion_e2e:
+        return fusion_e2e
+    return try_get_env_var("FUSION_E2E")
+
+
 def _res_plural(ref_int: int, pluraliser: str = "s") -> str:
     """Private function to return the plural form when the number is more than one.
 
@@ -138,6 +149,7 @@ class FusionCredentials:
         is_bearer_token_expirable: Optional[bool] = None,
         proxies: Optional[dict[str, str]] = None,
         grant_type: str = "client_credentials",
+        fusion_e2e: Optional[str] = None,
     ) -> None:
         """Constructor for the FusionCredentials authentication management class.
 
@@ -154,6 +166,7 @@ class FusionCredentials:
             proxies (dict, optional): Any proxy servers required to route HTTP and HTTPS requests to the internet.
             grant_type (str, optional): Allows the grant type to be changed to support different credential types.
                 Defaults to client_credentials.
+            fusion_e2e (str, Optional): Fusion E2E token. Defaults to None.
         """
         if proxies is None:
             proxies = {}
@@ -168,6 +181,7 @@ class FusionCredentials:
         self.bearer_token = bearer_token
         self.bearer_token_expiry = bearer_token_expiry
         self.is_bearer_token_expirable = is_bearer_token_expirable
+        self.fusion_e2e = try_get_fusion_e2e(fusion_e2e)
 
     @staticmethod
     def add_proxies(
@@ -350,7 +364,7 @@ class FusionCredentials:
                 raise CredentialError(f"Unrecognised grant type {grant_type}")
         except KeyError as e:
             raise CredentialError(f"Missing required key in credentials dictionary: {e}") from e
-
+        fusion_e2e = credentials.get("fusion_e2e")
         proxies = credentials.get("proxies")
         creds = FusionCredentials(
             client_id,
@@ -364,6 +378,7 @@ class FusionCredentials:
             is_bearer_token_expirable,
             proxies,
             grant_type=grant_type,
+            fusion_e2e=fusion_e2e,
         )
         return creds
 
@@ -598,6 +613,9 @@ class FusionOAuthAdapter(HTTPAdapter):
                     logger.log(VERBOSE_LVL, "Refreshed fusion token")
 
             request.headers.update({"Fusion-Authorization": f"Bearer {self.fusion_token_dict[fusion_token_key]}"})
+
+        if self.credentials.fusion_e2e is not None:
+            request.headers.update({"Fusion-e2e": self.credentials.fusion_e2e})
 
         response = super().send(request, **kwargs)
         return response
