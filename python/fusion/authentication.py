@@ -615,7 +615,7 @@ class FusionOAuthAdapter(HTTPAdapter):
             request.headers.update({"Fusion-Authorization": f"Bearer {self.fusion_token_dict[fusion_token_key]}"})
 
         if self.credentials.fusion_e2e is not None:
-            request.headers.update({"Fusion-e2e": self.credentials.fusion_e2e})
+            request.headers.update({"fusion-e2e": self.credentials.fusion_e2e})
 
         response = super().send(request, **kwargs)
         return response

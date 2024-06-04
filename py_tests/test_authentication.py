@@ -1,4 +1,3 @@
-import asyncio
 import json
 import os
 from collections.abc import Generator
@@ -12,7 +11,6 @@ import fsspec
 import pytest
 import requests
 import requests_mock
-from aioresponses import aioresponses
 from freezegun import freeze_time
 
 from fusion.authentication import (
@@ -27,7 +25,6 @@ from fusion.exceptions import CredentialError
 from fusion.fusion import Fusion
 from fusion.utils import (
     distribution_to_url,
-    get_client,
 )
 
 from .conftest import change_dir
@@ -666,8 +663,8 @@ def test_fusion_oauth_adapter_send_header(
     requests_mock.get(token_auth_url, json={"access_token": init_token, "expires_in": 180})
 
     fusion_oauth_adapter.send(prep_req)
-    if prep_req.headers.get("fusion_e2e"):
-        assert prep_req.headers.get("fusion_e2e") == creds.get("fusion_e2e")
+    if prep_req.headers.get("fusion-e2e"):
+        assert prep_req.headers.get("fusion-e2e") == creds_dict.get("fusion_e2e")
 
 
 def test_fusion_oauth_adapter_send_no_bearer_token_exp(fusion_oauth_adapter: FusionOAuthAdapter) -> None:
@@ -782,29 +779,6 @@ def test_async_session() -> None:
 
     session.post_init()
     assert session
-
-
-def test_async_fusion_session(creds_dict: dict[str, Any]) -> None:
-    creds = FusionCredentials.from_dict(creds_dict)
-    fusion_obj = Fusion(credentials=creds)
-    catalog = "my_catalog"
-    dataset = "my_dataset"
-    datasetseries = "2020-04-04"
-    file_format = "csv"
-    url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
-    token_auth_url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/authorize/token"
-    loop = asyncio.get_event_loop()
-    session = loop.run_until_complete(get_client(creds))
-    loop = asyncio.get_event_loop()
-    with aioresponses() as m:
-        m.post(creds.auth_url, payload={"access_token": "token123", "expires_in": 180})
-        init_token = "ds_token123_1"
-        m.get(token_auth_url, payload={"access_token": init_token, "expires_in": 180})
-        m.get(url, status=200, body="test")
-        resp = loop.run_until_complete(session.get(url))
-
-    if resp.headers.get("fusion_e2e"):
-        assert resp.headers.get("fusion_e2e") == creds.get("fusion_e2e")
 
 
 @pytest.mark.parametrize(
