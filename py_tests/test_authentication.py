@@ -33,7 +33,7 @@ from fusion.utils import (
 from .conftest import change_dir
 
 
-def test_creds_from_dict() -> None:
+def test_creds_from_dict() -> None:  # noqa: PLR0915
     credentials = {
         "grant_type": "client_credentials",
         "client_id": "my_client_id",
