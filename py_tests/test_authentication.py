@@ -23,12 +23,14 @@ from fusion.authentication import (
 )
 from fusion.exceptions import CredentialError
 from fusion.fusion import Fusion
-from fusion.utils import distribution_to_url
+from fusion.utils import (
+    distribution_to_url,
+)
 
 from .conftest import change_dir
 
 
-def test_creds_from_dict() -> None:
+def test_creds_from_dict() -> None:  # noqa: PLR0915
     credentials = {
         "grant_type": "client_credentials",
         "client_id": "my_client_id",
@@ -91,6 +93,30 @@ def test_creds_from_dict() -> None:
     assert creds.auth_url == "my_auth_url"
     assert not creds.proxies
     assert creds.grant_type == "password"
+
+    credentials = {
+        "grant_type": "password",
+        "client_id": "my_client_id",
+        "username": "my_username",
+        "password": "my_password",
+        "resource": "my_resource",
+        "auth_url": "my_auth_url",
+        "fusion_e2e": "fusion-e2e",
+    }
+
+    creds = FusionCredentials.from_dict(credentials)
+
+    assert creds.client_id == "my_client_id"
+    assert creds.client_secret is None
+    assert creds.username == "my_username"
+    assert creds.password == "my_password"
+    assert creds.bearer_token is None
+    assert creds.is_bearer_token_expirable is True
+    assert creds.resource == "my_resource"
+    assert creds.auth_url == "my_auth_url"
+    assert not creds.proxies
+    assert creds.grant_type == "password"
+    assert creds.fusion_e2e == "fusion-e2e"
 
     credentials = {"grant_type": "unknown"}
 
@@ -605,6 +631,40 @@ def test_fusion_oauth_adapter_send(
         frozen_datetime.move_to(delta_after_exp)
         fusion_oauth_adapter.send(prep_req)
         assert fusion_oauth_adapter.fusion_token_dict[fusion_token_key] == next_token
+
+
+def test_fusion_oauth_adapter_send_header(
+    fusion_oauth_adapter: FusionOAuthAdapter,
+    requests_mock: requests_mock.Mocker,
+    creds_dict: dict[str, Any],
+) -> None:
+    creds = FusionCredentials.from_dict(creds_dict)
+    fusion_obj = Fusion(credentials=creds)
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    fusion_oauth_adapter.credentials = creds
+    url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
+    token_auth_url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/authorize/token"
+
+    exp_win = 3600
+    assert fusion_oauth_adapter.credentials.auth_url
+    requests_mock.post(
+        fusion_oauth_adapter.credentials.auth_url, json={"access_token": "token123", "expires_in": exp_win}
+    )
+
+    # Prep the mock urls
+    prep_req = requests.Request("GET", url).prepare()
+    requests_mock.get(url)
+
+    init_token = "ds_token123_1"
+
+    requests_mock.get(token_auth_url, json={"access_token": init_token, "expires_in": 180})
+
+    fusion_oauth_adapter.send(prep_req)
+    if prep_req.headers.get("fusion-e2e"):
+        assert prep_req.headers.get("fusion-e2e") == creds_dict.get("fusion_e2e")
 
 
 def test_fusion_oauth_adapter_send_no_bearer_token_exp(fusion_oauth_adapter: FusionOAuthAdapter) -> None:

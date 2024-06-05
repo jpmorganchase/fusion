@@ -124,6 +124,21 @@ def example_creds_dict_https_pxy(example_client_id: str, example_client_secret: 
 
 
 @pytest.fixture()
+def example_creds_dict_https_pxy_e2e(example_client_id: str, example_client_secret: str) -> dict[str, Any]:
+    # Mocked creds info
+    return {
+        "client_id": example_client_id,
+        "client_secret": example_client_secret,
+        "resource": "JPMC:URI:RS-97834-Fusion-PROD",
+        "auth_url": "https://authe.mysite.com/as/token.oauth2",
+        "proxies": {
+            "https": "http://myproxy.com:8081",
+        },
+        "fusion_e2e": "fusion-e2e-token",
+    }
+
+
+@pytest.fixture()
 def example_creds_dict_no_pxy(example_creds_dict: dict[str, Any]) -> dict[str, Any]:
     example_creds_dict.pop("proxies")
     return example_creds_dict
@@ -143,6 +158,7 @@ def example_creds_dict_empty_pxy(example_creds_dict: dict[str, Any]) -> dict[str
         "example_creds_dict_https_pxy",
         "example_creds_dict_no_pxy",
         "example_creds_dict_empty_pxy",
+        "example_creds_dict_https_pxy_e2e",
     ]
 )
 def creds_dict(request: pytest.FixtureRequest) -> Any:

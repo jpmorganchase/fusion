@@ -588,6 +588,8 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
                 "User-Agent": f"fusion-python-sdk {version}",
             }
         )
+        if session.credentials.fusion_e2e is not None:
+            params.headers.update({"fusion-e2e": session.credentials.fusion_e2e})
 
     async def on_request_start_fusion_token(session: Any, _trace_config_ctx: Any, params: Any) -> None:
         async def _refresh_fusion_token_data() -> tuple[str, str]:
