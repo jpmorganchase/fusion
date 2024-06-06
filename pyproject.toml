@@ -241,4 +241,4 @@ filename = "Cargo.toml"
 filename = "pyproject.toml"
 
 [[tool.bumpversion.files]]
-filename = "fusion/__init__.py"
+filename = "python/fusion/__init__.py"
