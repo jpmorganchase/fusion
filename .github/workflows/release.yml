@@ -92,7 +92,7 @@ jobs:
         python-version: ${{ env.DOCS_PY_VERSION }}
 
     - name: Set up rye
-      run: curl -sSf https://rye-up.com/get | RYE_INSTALL_OPTION="--yes" bash
+      run: curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
 
     - name: Add Rye to PATH
       run: |
