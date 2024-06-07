@@ -339,9 +339,9 @@ class FusionCredentials:
                 password = None
                 bearer_token = credentials["bearer_token"]
                 bearer_token_expiry = (
-                    pd.to_datetime(credentials.get("bearer_token_expiry"))  # type: ignore
+                    pd.to_datetime(credentials.get("bearer_token_expiry"), utc=True)  # type: ignore
                     if credentials.get("bearer_token_expiry")
-                    else None
+                    else datetime.now(tz=timezone.utc)
                 )
                 bearer_token_expirable = credentials.get("bearer_token_expirable")
                 if isinstance(bearer_token_expirable, str):
