@@ -404,7 +404,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 res: dict[str, Any] = await r.json()
                 return res
 
-        async def _finish_operation(session: Any, operation_id: Any, kw: Any) -> None:
+        async def _finish_operation(operation_id: Any, kw: Any) -> None:
             session = await self.set_session()
             async with session.post(
                 url=rpath + f"/operations/upload?operationId={operation_id}",
