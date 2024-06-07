@@ -42,7 +42,7 @@ requires = ["maturin>=1.2,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
-python-source = "python"
+python-source = "py_src"
 module-name = "fusion._fusion"
 features = ["pyo3/extension-module"]
 
@@ -241,4 +241,4 @@ filename = "Cargo.toml"
 filename = "pyproject.toml"
 
 [[tool.bumpversion.files]]
-filename = "python/fusion/__init__.py"
+filename = "py_src/fusion/__init__.py"
