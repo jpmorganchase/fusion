@@ -13,4 +13,11 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # feature "extension-module" is set by maturin via pyproject.toml
-pyo3 = { version = "0.21.2" }
+pyo3 = { version = "0.21.2"}
+pyo3-asyncio = { version = "0.13", features = ["testing", "attributes", "async-std-runtime"] }
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+serde_urlencoded = "0.7"
