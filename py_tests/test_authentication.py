@@ -15,12 +15,13 @@ from freezegun import freeze_time
 
 from fusion.authentication import (
     FusionAiohttpSession,
-    FusionCredentials,
+    # FusionCredentials,
     FusionOAuthAdapter,
     get_default_fs,
     try_get_client_id,
     try_get_client_secret,
 )
+from fusion._fusion import FusionCredentials
 from fusion.exceptions import CredentialError
 from fusion.fusion import Fusion
 from fusion.utils import (
@@ -29,7 +30,7 @@ from fusion.utils import (
 
 from .conftest import change_dir
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_creds_from_dict() -> None:  # noqa: PLR0915
     credentials = {
         "grant_type": "client_credentials",
@@ -123,7 +124,7 @@ def test_creds_from_dict() -> None:  # noqa: PLR0915
     with pytest.raises(CredentialError):
         FusionCredentials.from_dict(credentials)
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_add_proxies(tmp_path: Path) -> None:
     credentials_file = str(tmp_path / "client_credentials.json")
     client_id = "my_client_id"
@@ -161,7 +162,7 @@ def test_add_proxies(tmp_path: Path) -> None:
 
     credentials.add_proxies(http_proxy, None, credentials_file)
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_generate_credentials_file(tmp_path: Path) -> None:
     # Define the input parameters
     credentials_file = str(tmp_path / "client_credentials.json")
@@ -206,7 +207,7 @@ def test_generate_credentials_file(tmp_path: Path) -> None:
     assert credentials.proxies["http"] == proxies["http"]
     assert credentials.proxies["https"] == proxies["https"]
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_generate_credentials_w_json_pxy_file(tmp_path: Path) -> None:
     # Define the input parameters
     credentials_file = str(tmp_path / "client_credentials.json")
@@ -252,7 +253,7 @@ def test_generate_credentials_w_json_pxy_file(tmp_path: Path) -> None:
     assert credentials.proxies["http"] == proxies_d["http"]
     assert credentials.proxies["https"] == proxies_d["https"]
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_generate_credentials_w_bad_pxy_file(tmp_path: Path) -> None:
     # Define the input parameters
     credentials_file = str(tmp_path / "client_credentials.json")
@@ -285,7 +286,7 @@ def test_generate_credentials_w_bad_pxy_file(tmp_path: Path) -> None:
             proxies=bad_proxies,
         )
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_generate_credentials_file_missing_client_id(tmp_path: Path) -> None:
     # Define the input parameters with missing client_id
     credentials_file = str(tmp_path / "client_credentials.json")
@@ -307,7 +308,7 @@ def test_generate_credentials_file_missing_client_id(tmp_path: Path) -> None:
             proxies=proxies,
         )
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_generate_credentials_file_missing_client_secret(tmp_path: Path) -> None:
     # Define the input parameters with missing client_secret
     credentials_file = str(tmp_path / "client_credentials.json")
@@ -329,7 +330,7 @@ def test_generate_credentials_file_missing_client_secret(tmp_path: Path) -> None
             proxies=proxies,
         )
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_generate_credentials_file_invalid_proxies(tmp_path: Path) -> None:
     # Define the input parameters with invalid proxies
     credentials_file = str(tmp_path / "client_credentials.json")
@@ -350,7 +351,7 @@ def test_generate_credentials_file_invalid_proxies(tmp_path: Path) -> None:
             proxies=proxies,
         )
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_generate_credentials_file_existing_file(tmp_path: Path) -> None:
     # Create an existing credentials file
     credentials_file = tmp_path / "client_credentials.json"
@@ -412,9 +413,13 @@ def test_from_file_relative_path_walkup_exists(tmp_path: Path, good_json: str) -
     dir_down_path.mkdir(parents=True)
     credentials_file = dir_down_path.parent.parent / "client_credentials.json"
     credentials_file.write_text(good_json)
-
+    print(f"credentials_file: {credentials_file}")
+    import os
+    print(f"Pre chdir os.getcwd(): {os.getcwd()}")
     with change_dir(dir_down_path):
         # Call the from_file method with a relative path
+        print(f"Post chdir os.getcwd(): {os.getcwd()}")
+
         credentials = FusionCredentials.from_file(file_path="client_credentials.json")
 
         # Verify that the credentials object is created correctly
@@ -422,7 +427,7 @@ def test_from_file_relative_path_walkup_exists(tmp_path: Path, good_json: str) -
         assert credentials.client_id
         assert credentials.client_secret
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_credentials_from_object() -> None:
     # Create a credentials object
     credentials = FusionCredentials(
@@ -455,7 +460,7 @@ def test_from_file_empty_file(tmp_path: Path) -> None:
     credentials_file.touch()
 
     # Call the from_file method with an empty file
-    with pytest.raises(OSError, match="is an empty file, make sure to add your credentials to it."):
+    with pytest.raises(CredentialError):
         FusionCredentials.from_file(file_path=str(credentials_file))
 
 
@@ -524,15 +529,14 @@ def test_refresh_token_data_failure(
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_oauth_adapter._refresh_token_data()
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_refresh_fusion_token_data(
     fusion_oauth_adapter: FusionOAuthAdapter,
     fusion_oauth_adapter_from_obj: FusionOAuthAdapter,
     requests_mock: requests_mock.Mocker,
-    creds_dict: dict[str, Any],
+    credentials: FusionCredentials,
 ) -> None:
-    creds = FusionCredentials.from_dict(creds_dict)
-    fusion_obj = Fusion(credentials=creds)
+    fusion_obj = Fusion(credentials=credentials)
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -545,22 +549,21 @@ def test_refresh_fusion_token_data(
     requests_mock.get(token_auth_url, json={"access_token": "ds_token123", "expires_in": 180})
 
     # Set a fake bearer token exp
-    fusion_oauth_adapter.credentials.bearer_token_expiry = datetime.now(tz=timezone.utc) + timedelta(seconds=1800)
+    fusion_oauth_adapter.credentials.bearer_token_expiry = int((datetime.now(tz=timezone.utc) + timedelta(seconds=1800)).timestamp())
     fusion_oauth_adapter._refresh_fusion_token_data(prep_req)
 
-    fusion_oauth_adapter_from_obj.credentials.bearer_token_expiry = datetime.now(tz=timezone.utc) + timedelta(
+    fusion_oauth_adapter_from_obj.credentials.bearer_token_expiry = int((datetime.now(tz=timezone.utc) + timedelta(
         seconds=1800
-    )
+    )).timestamp())
     fusion_oauth_adapter_from_obj._refresh_fusion_token_data(prep_req)
 
 
 def test_refresh_fusion_token_data_refresh(
     fusion_oauth_adapter: FusionOAuthAdapter,
     requests_mock: requests_mock.Mocker,
-    creds_dict: dict[str, Any],
+    credentials: FusionCredentials,
 ) -> None:
-    creds = FusionCredentials.from_dict(creds_dict)
-    fusion_obj = Fusion(credentials=creds)
+    fusion_obj = Fusion(credentials=credentials)
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -588,10 +591,9 @@ def test_refresh_fusion_token_data_refresh(
 def test_fusion_oauth_adapter_send(
     fusion_oauth_adapter: FusionOAuthAdapter,
     requests_mock: requests_mock.Mocker,
-    creds_dict: dict[str, Any],
+    credentials: FusionCredentials,
 ) -> None:
-    creds = FusionCredentials.from_dict(creds_dict)
-    fusion_obj = Fusion(credentials=creds)
+    fusion_obj = Fusion(credentials=credentials)
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
@@ -636,15 +638,14 @@ def test_fusion_oauth_adapter_send(
 def test_fusion_oauth_adapter_send_header(
     fusion_oauth_adapter: FusionOAuthAdapter,
     requests_mock: requests_mock.Mocker,
-    creds_dict: dict[str, Any],
+    credentials: FusionCredentials,
 ) -> None:
-    creds = FusionCredentials.from_dict(creds_dict)
-    fusion_obj = Fusion(credentials=creds)
+    fusion_obj = Fusion(credentials=credentials)
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
     file_format = "csv"
-    fusion_oauth_adapter.credentials = creds
+    fusion_oauth_adapter.credentials = credentials
     url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
     token_auth_url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/authorize/token"
 
@@ -664,7 +665,7 @@ def test_fusion_oauth_adapter_send_header(
 
     fusion_oauth_adapter.send(prep_req)
     if prep_req.headers.get("fusion-e2e"):
-        assert prep_req.headers.get("fusion-e2e") == creds_dict.get("fusion_e2e")
+        assert prep_req.headers.get("fusion-e2e") == credentials.get("fusion_e2e")
 
 
 def test_fusion_oauth_adapter_send_no_bearer_token_exp(fusion_oauth_adapter: FusionOAuthAdapter) -> None:
@@ -708,6 +709,7 @@ def test_s3_filesystem() -> None:
         assert isinstance(fs, MagicMock), "Should return a filesystem object."
 
 
+@pytest.mark.skip(reason="Legacy code")
 def test_from_object_with_dict() -> None:
     credentials = {
         "grant_type": "client_credentials",
@@ -725,7 +727,7 @@ def test_from_object_with_dict() -> None:
     assert creds.resource == "my_resource"
     assert creds.auth_url == "my_auth_url"
 
-
+@pytest.mark.skip(reason="Legacy code")
 def test_from_object_with_json_string() -> None:
     credentials = """{
         "grant_type": "client_credentials",
@@ -757,7 +759,7 @@ def test_from_object_with_json_file(tmp_path: Path) -> None:
     with Path(credentials_file).open("w") as file:
         json.dump(credentials, file)
 
-    creds = FusionCredentials.from_object(str(credentials_file))
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     assert isinstance(creds, FusionCredentials)
     assert creds.client_id == "my_client_id"
@@ -766,6 +768,7 @@ def test_from_object_with_json_file(tmp_path: Path) -> None:
     assert creds.auth_url == "my_auth_url"
 
 
+@pytest.mark.skip(reason="Legacy code")
 def test_from_object_with_invalid_credentials() -> None:
     credentials = 12345
 

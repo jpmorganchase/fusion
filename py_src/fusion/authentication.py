@@ -529,10 +529,7 @@ class FusionOAuthAdapter(HTTPAdapter):
             proxies = {}
         super().__init__(*args, **kwargs)
 
-        if isinstance(credentials, FusionCredentials):
-            self.credentials = credentials
-        else:
-            self.credentials = FusionCredentials.from_object(credentials)
+        self.credentials = credentials
 
         if proxies:
             self.proxies = proxies

@@ -5,4 +5,4 @@ client.list_catalogs()
 client.list_datasets()
 
 fs = client.get_fusion_filesystem()
-print(fs.ls('common'))
+print(fs.ls("common"))

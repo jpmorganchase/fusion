@@ -104,6 +104,7 @@ dev-dependencies = [
     "polars",
     "pytest",
     "pytest-asyncio>=0.23.6",
+    "pytest-benchmark>=4.0.0",
     "pytest-cov",
     "pytest-mock>=3.14.0",
     "pytest-random-order>=1.1.1",
