@@ -18,7 +18,8 @@ import requests_mock
 from pytest_mock import MockerFixture
 from tqdm import tqdm
 
-from fusion.authentication import FusionCredentials, FusionOAuthAdapter
+from fusion._fusion import FusionCredentials
+from fusion.authentication import FusionOAuthAdapter
 from fusion.fusion import Fusion
 from fusion.utils import (
     PathLikeT,

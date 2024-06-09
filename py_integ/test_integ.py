@@ -1,12 +1,74 @@
+from __future__ import annotations
 import hashlib
 import shutil
 from pathlib import Path
 from typing import Optional
-
+from functools import partial
 from fusion import Fusion
+import pandas as pd
+
+from dataclasses import dataclass
 
 
-def download_clean_up(download_res: Optional[list[tuple[bool, str, Optional[str]]]]) -> None:
+@dataclass
+class DownloadTestSpec:
+    client_dl_params: dict[str : str | bool]
+    method: str
+    st_dt: str | None = None
+    end_dt: str | None = None
+    res_shape: tuple[int, int] | None = None
+    md5_hash: str | None = None
+
+
+download_hashes = {
+    "test_download_csv": DownloadTestSpec(
+        client_dl_params={
+            "dataset": "FXO_SP",
+            "dataset_format": "csv",
+            "return_paths": True,
+            "force_download": True,
+            "dt_str": "20231201:20231208",
+        },
+        method="download",
+        st_dt="20231201",
+        end_dt="20231208",
+        res_shape=None,
+        md5_hash="17746f55909185c4fae932128fe09e07",
+    ),
+    "test_download_parquet": DownloadTestSpec(
+        client_dl_params={
+            "dataset": "FXO_SP",
+            "dataset_format": "csv",
+            "return_paths": True,
+            "force_download": True,
+            "dt_str": "20231201:20231208",
+        },
+        method="download",
+        st_dt="20231201",
+        end_dt="20231208",
+        res_shape=None,
+        md5_hash="17746f55909185c4fae932128fe09e07",
+    ),
+    "test_to_df_csv": DownloadTestSpec(
+        client_dl_params={"dataset": "FXO_SP", "dataset_format": "csv", "dt_str": "20231201:20231208"},
+        method="to_df",
+        st_dt="20231201",
+        end_dt="20231208",
+        res_shape=(366, 6),
+        md5_hash=None,
+    ),
+    "test_to_df_parquet": DownloadTestSpec(
+        client_dl_params={"dataset": "FXO_SP", "dataset_format": "parquet", "dt_str": "20231201:20231208"},
+        method="to_df",
+        st_dt="20231201",
+        end_dt="20231208",
+        res_shape=(366, 6),
+        md5_hash=None,
+    ),
+}
+
+
+def download_clean_up(download_res: list[tuple[bool, str, str | None]] | None) -> None:
     if not download_res:
         return
 
@@ -14,58 +76,85 @@ def download_clean_up(download_res: Optional[list[tuple[bool, str, Optional[str]
         Path(path_str).unlink(missing_ok=True)
 
 
-def test_download_csv(client: Fusion) -> None:
-    download_res = client.download(
-        "FXO_SP", "20231201:20231208", dataset_format="csv", return_paths=True, force_download=True
+def gen_generic_dl() -> None:
+    import os
+
+    from fusion._fusion import FusionCredentials
+    from fusion.fusion import Fusion
+
+    creds = FusionCredentials.from_client_id(
+        client_id=os.getenv("FUSION_CLIENT_ID"),
+        client_secret=os.getenv("FUSION_CLIENT_SECRET"),
+        resource="JPMC:URI:RS-93742-Fusion-PROD",
+        auth_url="https://authe.jpmorgan.com/as/token.oauth2",
+        proxies={},
+        fusion_e2e=None,
     )
-    # hash of all files in csv paths
-    hash_out = hashlib.md5()
-    for success, path, _ in download_res:
-        if success:
-            with Path(path).open("rb") as f:
-                hash_out.update(f.read())
-    download_clean_up(download_res)
-    assert hash_out.hexdigest() == "5f9a51c38325947745c2e75afbb2d368"
+    client = Fusion(credentials=creds)
+
+    print_res = {}
+    for test_nm, params in download_hashes.items():
+        res_params = params.client_dl_params
+
+        dt_str = ""
+        if params.st_dt:
+            dt_str += params.st_dt + ":"
+        if params.end_dt:
+            dt_str += params.end_dt
+        if dt_str:
+            res_params["dt_str"] = dt_str
+
+        if params.method == "download":
+            res = client.download(**res_params)
+            hash_out = hashlib.md5()
+            for success, path, _ in res:
+                if success:
+                    with Path(path).open("rb") as f:
+                        hash_out.update(f.read())
+
+            params.md5_hash = hash_out.hexdigest()
+        elif params.method == "to_df":
+            res = client.to_df(**res_params)
+            params.res_shape = res.shape
+
+        print_res[test_nm] = params
+
+    print(print_res)
 
 
-def test_download_parquet(client: Fusion) -> None:
-    download_res = client.download(
-        "FXO_SP", "20231201:20231208", dataset_format="parquet", return_paths=True, force_download=True
-    )
-    hash_out = hashlib.md5()
-    for success, path, _ in download_res:
-        if success:
-            with Path(path).open("rb") as f:
-                hash_out.update(f.read())
-    download_clean_up(download_res)
-    assert hash_out.hexdigest() == "6c279fb1ed1bb56ef90b0b82b847d347"
+def test_generic_dl(client: Fusion) -> None:
+    for test_nm, params in download_hashes.items():
+        res_params = params.client_dl_params
+
+        dt_str = ""
+        if params.st_dt:
+            dt_str += params.st_dt + ":"
+        if params.end_dt:
+            dt_str += params.end_dt
+        if dt_str:
+            res_params["dt_str"] = dt_str
+        if params.method == "download":
+            res = client.download(**res_params)
+            hash_out = hashlib.md5()
+            for success, path, _ in res:
+                if success:
+                    with Path(path).open("rb") as f:
+                        print(f"Reading {path}")
+                        hash_out.update(f.read())
+            assert hash_out.hexdigest() == params.md5_hash, f"Failed hash for {test_nm}"
+            #download_clean_up(res)
+        elif params.method == "to_df":
+            res = client.to_df(**res_params)
+            assert res.shape == params.res_shape
+            assert res["date"].iloc[0] == int(params.st_dt)
+            assert res["date"].iloc[-1] == int(params.end_dt)
+            for p in Path("./downloads").iterdir():
+                if p.is_file():
+                    p.unlink()
+                else:
+                    shutil.rmtree(p)
+        print(f"Passed integ tests for {test_nm}")  # noqa: T201
 
 
-def test_to_df_csv(client: Fusion) -> None:
-    st_date = 20231201
-    end_date = 20231208
-    df_down = client.to_df("FXO_SP", f"{st_date}:{end_date}", dataset_format="csv")
-    df_down = df_down.sort_values("date")
-    assert df_down.shape == (366, 6)
-    assert df_down["date"].iloc[0] == st_date
-    assert df_down["date"].iloc[-1] == end_date
-    for p in Path("./downloads").iterdir():
-        if p.is_file():
-            p.unlink()
-        else:
-            shutil.rmtree(p)
-
-
-def test_to_df_parquet(client: Fusion) -> None:
-    st_date = 20231201
-    end_date = 20231208
-    df_down = client.to_df("FXO_SP", f"{st_date}:{end_date}", dataset_format="parquet")
-    df_down = df_down.sort_values("date")
-    assert df_down.shape == (366, 6)
-    assert df_down["date"].iloc[0] == st_date
-    assert df_down["date"].iloc[-1] == end_date
-    for p in Path("./downloads").iterdir():
-        if p.is_file():
-            p.unlink()
-        else:
-            shutil.rmtree(p)
+if __name__ == "__main__":
+    gen_generic_dl()

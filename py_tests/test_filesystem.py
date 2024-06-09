@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from typing import Any
 from unittest import mock
 from unittest.mock import AsyncMock
@@ -5,22 +7,30 @@ from unittest.mock import AsyncMock
 import pytest
 from aiohttp import ClientResponse
 
-from fusion.authentication import FusionCredentials
+from fusion._fusion import FusionCredentials
 from fusion.fusion_filesystem import FusionHTTPFileSystem
 
 
 @pytest.fixture()
-def http_fs_instance(example_creds_dict: dict[str, Any]) -> FusionHTTPFileSystem:
+def http_fs_instance(credentials_examples: Path) -> FusionHTTPFileSystem:
     """Fixture to create a new instance for each test."""
-    creds = FusionCredentials.from_dict(example_creds_dict)
+    creds = FusionCredentials.from_file(credentials_examples)
     return FusionHTTPFileSystem(credentials=creds)
 
 
-def test_filesystem(example_creds_dict: dict[str, Any], example_creds_dict_https_pxy: dict[str, Any]) -> None:
-    creds = FusionCredentials.from_dict(example_creds_dict)
+def test_filesystem(
+    example_creds_dict: dict[str, Any], example_creds_dict_https_pxy: dict[str, Any], tmp_path: Path
+) -> None:
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
+    creds = FusionCredentials.from_file(credentials_file)
     assert FusionHTTPFileSystem(creds)
 
-    creds = FusionCredentials.from_dict(example_creds_dict_https_pxy)
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict_https_pxy, f)
+    creds = FusionCredentials.from_file(credentials_file)
     assert FusionHTTPFileSystem(creds)
 
     kwargs = {"client_kwargs": {"credentials": creds}}
@@ -45,14 +55,14 @@ async def test_not_found_status(http_fs_instance: FusionHTTPFileSystem) -> None:
 
 
 @pytest.mark.asyncio()
-async def test_other_error_status(example_creds_dict: dict[str, Any]) -> None:
+async def test_other_error_status(credentials: FusionCredentials) -> None:
     # Create a mock response object
     response = mock.MagicMock(spec=ClientResponse)
     response.status = 500  # Some error status
     response.text = mock.AsyncMock(return_value="Internal server error")
 
     # Instance of your class
-    instance = FusionHTTPFileSystem(FusionCredentials.from_dict(example_creds_dict))
+    instance = FusionHTTPFileSystem(credentials)
 
     # Patching the internal method to just throw an Exception for testing
     with mock.patch.object(instance, "_raise_not_found_for_status", side_effect=Exception("Custom error")):

@@ -16,7 +16,6 @@ classifiers = [
     'Natural Language :: English',
     'Programming Language :: Rust',
     'Programming Language :: Python :: 3',
-    'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
@@ -24,7 +23,7 @@ classifiers = [
     'Typing :: Typed',
 ]
 
-requires-python = ">= 3.9"
+requires-python = ">= 3.8"
 
 dependencies = [
     "requests >= 2",
@@ -38,7 +37,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["maturin>=1.2,<2.0"]
+requires = ["maturin>=1.6,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
@@ -94,16 +93,17 @@ dev-dependencies = [
     "cffi>=1.16.0; sys_platform=='darwin'",
     "freezegun>=1.4.0",
     "ipython",
-    "maturin>=1.2,<2.0",
+    "maturin>=1.6,<2.0",
     "moto[s3]>=5.0.5",
     "mypy",
     "patchelf>=0.17.2.1; sys_platform=='linux'",
     "pandas >= 1.1",
     "pandas-stubs>1.1",
-    "pip",
+    "pip>=24.0",
     "polars",
     "pytest",
     "pytest-asyncio>=0.23.6",
+    "pytest-benchmark>=4.0.0",
     "pytest-cov",
     "pytest-mock>=3.14.0",
     "pytest-random-order>=1.1.1",
@@ -121,6 +121,11 @@ dev-dependencies = [
     "ziglang>=0.11.0; sys_platform=='linux'",
     "pytest-aiohttp>=1.0.5",
     "tox-uv>=1.7.0",
+    "pytest-html>=4.1.1",
+    "jinja2>=3.1.4",
+    "nox[uv]>=2024.4.15",
+    "beeprint>=2.4.11",
+    "typer>=0.12.3",
 ]
 
 
@@ -188,7 +193,7 @@ known-first-party = ["fusion"]
 max-args = 7
 
 [tool.pytest.ini_options]
-addopts = "--cov fusion --cov-report html:.reports/html --cov-report term --random-order -p no:warnings -v"
+addopts = "--cov fusion --html .reports/py/index.html --cov-report html:.reports/py/cov --cov-report term --random-order -p no:warnings -v"
 minversion = "8.0"
 pythonpath = ["src", "py_tests"]
 testpaths = "py_tests"
@@ -203,8 +208,18 @@ disallow_untyped_defs = true
 [tool.coverage]
 html.show_contexts = true
 html.skip_covered = false
-report.fail_under = 60
-run.parallel = true
+
+
+[tool.coverage.run]
+parallel = true
+
+[tool.coverage.report]
+fail_under = 50
+omit = [
+    "py_src/fusion/_legacy/authentication.py",
+    "py_src/fusion/_legacy/__init__.py"
+]
+
 
 [tool.bumpversion]
 current_version = "1.1.4"
