@@ -2,7 +2,7 @@ use chrono::{NaiveDate, Utc};
 use pyo3::exceptions::{PyFileNotFoundError, PyValueError};
 use pyo3::import_exception;
 use pyo3::prelude::*;
-use pyo3::types::{PyDate, PyDateAccess, PyType};
+use pyo3::types::{PyDate, PyDateAccess, PyTuple, PyType};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use std::env;
@@ -26,8 +26,8 @@ fn default_grant_type() -> String {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ProxyType {
-    Http,
-    Https,
+    http,
+    https,
 }
 
 impl FromStr for ProxyType {
@@ -35,8 +35,8 @@ impl FromStr for ProxyType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "http" => Ok(ProxyType::Http),
-            "https" => Ok(ProxyType::Https),
+            "http" => Ok(ProxyType::http),
+            "https" => Ok(ProxyType::https),
             _ => Err(()),
         }
     }
@@ -45,8 +45,8 @@ impl FromStr for ProxyType {
 impl Display for ProxyType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ProxyType::Http => write!(f, "http"),
-            ProxyType::Https => write!(f, "https"),
+            ProxyType::http => write!(f, "http"),
+            ProxyType::https => write!(f, "https"),
         }
     }
 }
@@ -80,6 +80,7 @@ where
     D: Deserializer<'de>,
 {
     let opt = Option::<String>::deserialize(deserializer)?;
+    println!("Deser Option: {:?}. Env {:?}", opt, env::var(env_var));
     let res = match opt {
         Some(value) => Some(value),
         None => match env::var(env_var) {
@@ -89,6 +90,7 @@ where
     };
     Ok(res)
 }
+
 
 fn deserialize_client_id<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
@@ -168,6 +170,7 @@ struct FusionCredsPersistent {
     password: Option<String>,
     resource: Option<String>,
     auth_url: Option<String>,
+    #[serde(default)]
     proxies: HashMap<ProxyType, String>,
     #[serde(default = "default_grant_type")]
     grant_type: String,
@@ -178,15 +181,14 @@ struct FusionCredsPersistent {
 #[pyclass]
 #[derive(Debug, Clone)]
 pub struct AuthToken {
+    #[pyo3(get)]
     token: String,
+    #[pyo3(get)]
     expiry: Option<i64>,
 }
 
+#[pymethods]
 impl AuthToken {
-    pub fn new(token: String, expiry: Option<i64>) -> Self {
-        AuthToken { token, expiry }
-    }
-
     pub fn is_expirable(&self) -> bool {
         self.expiry.is_some()
     }
@@ -199,6 +201,15 @@ impl AuthToken {
             }
             None => None,
         }
+    }
+
+    #[staticmethod]
+    pub fn from_token(token: String, expires_in_secs: Option<i64>) -> Self {
+        let expiry = expires_in_secs.map(|secs| {
+            let current_time = Utc::now().timestamp();
+            current_time + secs
+        });
+        AuthToken { token, expiry }
     }
 }
 
@@ -226,9 +237,10 @@ pub struct FusionCredentials {
     #[pyo3(get, set)]
     fusion_e2e: Option<String>,
 
-    proxies: HashMap<ProxyType, String>,
-
     #[pyo3(get)]
+    proxies: HashMap<String, String>,
+
+    #[pyo3(get, set)]
     bearer_token: Option<AuthToken>,
 
     #[pyo3(get)]
@@ -270,7 +282,7 @@ impl FusionCredentials {
             client_secret,
             resource,
             auth_url,
-            proxies: typed_proxies(proxies)?,
+            proxies: proxies.unwrap_or_default(),
             grant_type: "client_credentials".to_string(),
             fusion_e2e,
             fusion_token: HashMap::new(),
@@ -295,7 +307,7 @@ impl FusionCredentials {
             password,
             resource,
             auth_url,
-            proxies: typed_proxies(proxies)?,
+            proxies: proxies.unwrap_or_default(),
             grant_type: "password".to_string(),
             fusion_e2e,
             fusion_token: HashMap::new(),
@@ -318,7 +330,7 @@ impl FusionCredentials {
         Ok(Self {
             resource,
             auth_url,
-            proxies: typed_proxies(proxies)?,
+            proxies: proxies.unwrap_or_default(),
             grant_type: "password".to_string(),
             fusion_e2e,
             fusion_token: HashMap::new(),
@@ -367,20 +379,57 @@ impl FusionCredentials {
             auth_url,
             bearer_token,
             fusion_token: HashMap::new(),
-            proxies: typed_proxies(proxies)?,
+            proxies: proxies.unwrap_or_default(),
             grant_type: grant_type.unwrap_or_else(|| "client_credentials".to_string()),
             fusion_e2e,
         })
     }
 
     fn put_bearer_token(&mut self, bearer_token: String, expires_in_secs: Option<i64>) {
-        self.bearer_token = Some(AuthToken {
-            token: bearer_token,
-            expiry: expires_in_secs.map(|secs| {
-                let current_time = Utc::now().timestamp();
-                current_time + secs
-            }),
-        });
+        self.bearer_token = Some(AuthToken::from_token(bearer_token, expires_in_secs));
+    }
+
+    fn put_fusion_token(&mut self, token_key: String, token: String, expires_in_secs: Option<i64>) {
+        self.fusion_token
+            .insert(token_key, AuthToken::from_token(token, expires_in_secs));
+    }
+
+    fn get_bearer_token_header<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let token_tup =
+            self.bearer_token
+                .as_ref()
+                .map_or(Vec::<(String, String)>::new(), |token| {
+                    vec![(
+                        "Authorization".to_owned(),
+                        format!("Bearer {}", token.token),
+                    )]
+                });
+        Ok(PyTuple::new_bound(py, &token_tup))
+    }
+
+    fn get_fusion_token_header<'py>(
+        &self,
+        py: Python<'py>,
+        token_key: String,
+    ) -> PyResult<Bound<'py, PyTuple>> {
+        let token_tup = self.fusion_token.get(&token_key).as_ref().map_or(
+            Vec::<(String, String)>::new(),
+            |token| {
+                vec![(
+                    "Fusion-Authorization".to_owned(),
+                    format!("Bearer {}", token.token),
+                )]
+            },
+        );
+        Ok(PyTuple::new_bound(py, &token_tup))
+    }
+
+    fn get_fusion_token_expires_in<'py>(
+        &self,
+        py: Python<'py>,
+        token_key: String,
+    ) -> PyResult<Option<i64>> {
+        Ok(self.fusion_token.get(&token_key).and_then(|token| token.expires_in_secs()))
     }
 
     #[classmethod]
@@ -394,8 +443,10 @@ impl FusionCredentials {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
-        let credentials: FusionCredsPersistent = serde_json::from_str(&contents)
-            .map_err(|_| CredentialError::new_err("Invalid JSON"))?;
+        let credentials: FusionCredsPersistent =
+            serde_json::from_str(&contents).map_err(|err| {
+                CredentialError::new_err(format!("Invalid JSON: {}\nContents:\n{}", err, &contents))
+            })?;
 
         let full_creds = match credentials.grant_type.as_str() {
             "client_credentials" => FusionCredentials::from_client_id(

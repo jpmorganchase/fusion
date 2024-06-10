@@ -3,7 +3,7 @@
 import json
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, Union
 from urllib.parse import urlparse
@@ -536,11 +536,8 @@ class FusionOAuthAdapter(HTTPAdapter):
         else:
             self.proxies = self.credentials.proxies
         self.token = None
-        self.bearer_token_expiry = datetime.now(tz=timezone.utc)
         self.number_token_refreshes = 0
         self.refresh_within_seconds = refresh_within_seconds
-        self.fusion_token_dict: dict[str, str] = {}
-        self.fusion_token_expiry_dict: dict[str, Any] = {}
         self.mount_url = mount_url
 
         if not auth_retries:
@@ -563,53 +560,43 @@ class FusionOAuthAdapter(HTTPAdapter):
             requests.Response: The response from the server.
         """
 
-        if not self.credentials.bearer_token_expiry:
+        if not self.credentials.bearer_token:
             raise CredentialError("A valid bearer token is required")
-        token_expires_in = (self.credentials.bearer_token_expiry - datetime.now(tz=timezone.utc)).total_seconds()
 
         url_lst = request.path_url.split("/")
         fusion_auth_req = "distributions" in url_lst
 
-        if self.credentials.is_bearer_token_expirable and token_expires_in < self.refresh_within_seconds:
+        if (
+            self.credentials.bearer_token.is_expirable()
+            and self.credentials.bearer_token.expires_in_secs() < self.refresh_within_seconds
+        ):
             token, expiry = self._refresh_token_data()
-            self.credentials.bearer_token = token
-            self.credentials.bearer_token_expiry = datetime.now(tz=timezone.utc) + timedelta(seconds=int(expiry))
+            self.credentials.bearer_token.put_bearer_token(token, expiry)
             self.number_token_refreshes += 1
             logger.log(
                 VERBOSE_LVL,
                 f"Refreshed token {self.number_token_refreshes} time{_res_plural(self.number_token_refreshes)}",
             )
-        request.headers.update(
-            {
-                "Authorization": f"Bearer {self.credentials.bearer_token}",
-                "User-Agent": f"fusion-python-sdk {version}",
-            }
-        )
+        request.headers.update(self.credentials.get_bearer_token_header())
+        request.headers.update({"User-Agent": f"fusion-python-sdk {version}"})
+
         if fusion_auth_req:
             catalog = url_lst[url_lst.index("catalogs") + 1]
             dataset = url_lst[url_lst.index("datasets") + 1]
             fusion_token_key = catalog + "_" + dataset
 
-            if fusion_token_key not in self.fusion_token_dict:
+            if fusion_token_key not in self.credentials.fusion_token:
                 fusion_token, fusion_token_expiry = self._refresh_fusion_token_data(request, **kwargs)
-                self.fusion_token_dict[fusion_token_key] = fusion_token
-                self.fusion_token_expiry_dict[fusion_token_key] = datetime.now(tz=timezone.utc) + timedelta(
-                    seconds=int(fusion_token_expiry)
-                )
+                self.credentials.put_fusion_token(fusion_token_key, fusion_token, fusion_token_expiry)
                 logger.log(VERBOSE_LVL, "Refreshed fusion token")
             else:
-                fusion_token_expires_in = (
-                    self.fusion_token_expiry_dict[fusion_token_key] - datetime.now(tz=timezone.utc)
-                ).total_seconds()
+                fusion_token_expires_in = self.credentials.get_fusion_token_expires_in(fusion_token_key)
                 if fusion_token_expires_in < self.refresh_within_seconds:
                     fusion_token, fusion_token_expiry = self._refresh_fusion_token_data(request)
-                    self.fusion_token_dict[fusion_token_key] = fusion_token
-                    self.fusion_token_expiry_dict[fusion_token_key] = datetime.now(tz=timezone.utc) + timedelta(
-                        seconds=int(fusion_token_expiry)
-                    )
+                    self.credentials.put_fusion_token(fusion_token_key, fusion_token, fusion_token_expiry)
                     logger.log(VERBOSE_LVL, "Refreshed fusion token")
 
-            request.headers.update({"Fusion-Authorization": f"Bearer {self.fusion_token_dict[fusion_token_key]}"})
+            request.headers.update(self.credentials.get_fusion_token_header(fusion_token_key))
 
         if self.credentials.fusion_e2e is not None:
             request.headers.update({"fusion-e2e": self.credentials.fusion_e2e})

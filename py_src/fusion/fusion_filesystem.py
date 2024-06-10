@@ -16,7 +16,8 @@ from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
 
-from .authentication import FusionCredentials
+from fusion._fusion import FusionCredentials
+
 from .utils import get_client
 
 logger = logging.getLogger(__name__)
