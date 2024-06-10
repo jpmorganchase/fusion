@@ -1,19 +1,25 @@
 from typing import Any
-
+import json
 import pytest
-
-from fusion._fusion import FusionCredentials
+from pathlib import Path
 
 
 @pytest.mark.benchmark(group="credentials")
-def test_rust_creds(benchmark: Any, creds_dict: "FusionCredentials") -> None:
+def test_rust_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
     from fusion._fusion import FusionCredentials
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
 
-    benchmark(FusionCredentials.from_file, str(creds_dict))
+    benchmark(FusionCredentials.from_file, str(credentials_file))
 
 
 @pytest.mark.benchmark(group="credentials")
-def test_py_creds(benchmark: Any, creds_dict: "FusionCredentials") -> None:
+def test_py_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
     from fusion.authentication import FusionCredentials
 
-    benchmark(FusionCredentials.from_file, str(creds_dict))
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
+
+    benchmark(FusionCredentials.from_file, str(credentials_file))

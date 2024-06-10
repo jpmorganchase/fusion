@@ -29,7 +29,6 @@ def change_dir(destination: PathLike) -> Generator[None, None, None]:
 
 @pytest.fixture()
 def example_creds_dict() -> dict[str, Any]:
-    # Mocked creds info
     return {
         "client_id": "vf3tdjK0jdp7MdY3",
         "client_secret": "vswag2iet7Merdkdwe64YcI9gxbemjMsh5jgimrwpcghsqc2mnj4w4qQffrfhtKz0ba3u48tqJrbp1y",
@@ -44,8 +43,6 @@ def example_creds_dict() -> dict[str, Any]:
 
 @pytest.fixture()
 def example_creds_dict_from_env(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    # Mocked creds info
-
     example_client_id = "vf3tdjK0jdp7MdY3"
     example_client_secret = "vswag2iet7Merdkdwe64YcI9gxbemjMsh5jgimrwpcghsqc2mnj4w4qQffrfhtKz0ba3u48tqJrbp1y"
     monkeypatch.setenv("FUSION_CLIENT_ID", example_client_id)
@@ -63,7 +60,6 @@ def example_creds_dict_from_env(monkeypatch: pytest.MonkeyPatch) -> dict[str, An
 
 @pytest.fixture()
 def example_creds_dict_https_pxy() -> dict[str, Any]:
-    # Mocked creds info
     return {
         "client_id": "vf3tdjK0jdp7MdY3",
         "client_secret": "vswag2iet7Merdkdwe64YcI9gxbemjMsh5jgimrwpcghsqc2mnj4w4qQffrfhtKz0ba3u48tqJrbp1y",
@@ -77,7 +73,6 @@ def example_creds_dict_https_pxy() -> dict[str, Any]:
 
 @pytest.fixture()
 def example_creds_dict_https_pxy_e2e() -> dict[str, Any]:
-    # Mocked creds info
     return {
         "client_id": "vf3tdjK0jdp7MdY3",
         "client_secret": "vswag2iet7Merdkdwe64YcI9gxbemjMsh5jgimrwpcghsqc2mnj4w4qQffrfhtKz0ba3u48tqJrbp1y",
@@ -113,7 +108,7 @@ def example_creds_dict_empty_pxy(example_creds_dict: dict[str, Any]) -> dict[str
         "example_creds_dict_https_pxy_e2e",
     ]
 )
-def creds_dict(request: pytest.FixtureRequest, tmp_path: Path) -> Any:
+def credentials_examples(request: pytest.FixtureRequest, tmp_path: Path) -> Any:
     """Parameterized fixture to return credentials from different sources."""
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
@@ -148,15 +143,6 @@ def credentials(example_creds_dict: dict[str, Any], tmp_path: Path) -> FusionCre
 @pytest.fixture()
 def fusion_oauth_adapter(credentials: FusionCredentials) -> FusionOAuthAdapter:
     return FusionOAuthAdapter(credentials)
-
-
-@pytest.fixture()
-def fusion_oauth_adapter_from_obj(example_creds_dict: dict[str, Any]) -> FusionOAuthAdapter:
-    proxies = {
-        "http": "http://myproxy.com:8080",
-        "https": "http://myproxy.com:8081",
-    }
-    return FusionOAuthAdapter(example_creds_dict, auth_retries=5, proxies=proxies)
 
 
 @pytest.fixture()

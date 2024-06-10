@@ -81,22 +81,6 @@ def _res_plural(ref_int: int, pluraliser: str = "s") -> str:
     return "" if abs(ref_int) == 1 else pluraliser
 
 
-def _is_json(data: str) -> bool:
-    """Test whether the content of a string is a JSON object.
-
-    Args:
-        data (str): The content to evaluate.
-
-    Returns:
-        bool: True if the content of data is JSON, False otherwise.
-    """
-    try:
-        json.loads(data)
-    except ValueError:
-        return False
-    return True
-
-
 def _is_url(url: str) -> bool:
     """Test whether the content of a string is a valid URL.
 
@@ -184,139 +168,53 @@ class FusionCredentials:
         self.fusion_e2e = try_get_fusion_e2e(fusion_e2e)
 
     @staticmethod
-    def add_proxies(
-        http_proxy: str,
-        https_proxy: Optional[str] = None,
-        credentials_file: str = "config/client_credentials.json",
-    ) -> None:
-        """A function to add proxies to an existing credentials files.
-        This function can be called to add proxy addresses to a credential file downloaded from the Fusion website.
-
-        Args:
-            http_proxy (str): The HTTP proxy address.
-            https_proxy (str): The HTTPS proxy address. If not specified then this will be the
-                copied form the HTTP proxy.
-            credentials_file (str, optional): The path and filename to store the credentials under.
-                Path may be absolute or relative to current working directory.
-                Defaults to 'config/client_credentials.json'.
-
-        Returns:
-            None
-        """
-
-        credentials = FusionCredentials.from_file(credentials_file)
-        credentials.proxies["http"] = http_proxy
-        if https_proxy is None:
-            https_proxy = http_proxy
-
-        credentials.proxies["https"] = https_proxy
-
-        data: dict[str, Any] = {
-            "client_id": credentials.client_id,
-            "client_secret": credentials.client_secret,
-            "resource": credentials.resource,
-            "auth_url": credentials.auth_url,
-            "proxies": credentials.proxies,
-        }
-        json_data = json.dumps(data, indent=4)
-        with Path(credentials_file).open("w") as credentialsfile:
-            credentialsfile.write(json_data)
-
-    @staticmethod
-    def generate_credentials_file(
-        credentials_file: str = "config/client_credentials.json",
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
-        resource: str = "JPMC:URI:RS-93742-Fusion-PROD",
-        auth_url: str = "https://authe.jpmorgan.com/as/token.oauth2",
-        proxies: Optional[Union[str, dict[str, str]]] = None,
+    def from_file(
+        file_path: str = "config/client.credentials.json",
+        fs: Optional[fsspec.filesystem] = None,
+        _walk_up_dirs: bool = True,
     ) -> "FusionCredentials":
-        """Utility function to generate credentials file that can be used for authentication.
+        """Create a credentials object from a file.
 
         Args:
-            credentials_file (str, optional): The path and filename to store the credentials under.
-                Path may be absolute or relative to current working directory.
-                Defaults to 'config/client_credentials.json'.
-            client_id (str, optional): A valid OAuth client identifier. Defaults to None.
-            client_secret (str, optional): A valid OAuth client secret. Defaults to None.
-            resource (str, optional): The OAuth audience. Defaults to None.
-            auth_url (str, optional): URL for the OAuth authentication server. Defaults to None.
-            proxies (Union[str, dict], optional): Any proxy servers required to route HTTP and HTTPS
-                requests to the internet. Defaults to {}. Keys are http and https. Or specify a single
-                URL to set both http and https
-
-        Raises:
-            CredentialError: Exception to handle missing values required for authentication.
-
-        Returns:
-           FusionCredentials: a credentials object that can be used for authentication.
-        """
-        if not client_id:
-            raise CredentialError("A valid client_id is required")
-        if not client_secret:
-            raise CredentialError("A valid client secret is required")
-
-        data: dict[str, Any] = {
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "resource": resource,
-            "auth_url": auth_url,
-        }
-
-        proxies_resolved = {}
-        if proxies:
-            if isinstance(proxies, dict):
-                raw_proxies_dict = proxies
-            elif isinstance(proxies, str):
-                if _is_url(proxies):
-                    raw_proxies_dict = {"http": proxies, "https": proxies}
-                elif _is_json(proxies):
-                    raw_proxies_dict = json.loads(proxies)
-                else:
-                    raise CredentialError(f"A valid proxies param is required, [{proxies}] is not supported.")
-            else:
-                raise CredentialError(f"A valid proxies param is required, [{proxies}] is not supported.")
-
-            # Now validate and conform proxies dict
-            valid_pxy_keys = ["http", "https", "http_proxy", "https_proxy"]
-            pxy_key_map = {
-                "http": "http",
-                "https": "https",
-                "http_proxy": "http",
-                "https_proxy": "https",
-            }
-            lcase_dict = {k.lower(): v for k, v in raw_proxies_dict.items()}
-
-            if set(lcase_dict.keys()).intersection(set(valid_pxy_keys)) != set(lcase_dict.keys()):
-                raise CredentialError(
-                    f"Invalid proxies keys in dict {raw_proxies_dict.keys()}."
-                    f"Only {pxy_key_map.keys()} are accepted and will be mapped as necessary."
-                )
-            proxies_resolved = {pxy_key_map[k]: v for k, v in lcase_dict.items()}
-
-        data["proxies"] = proxies_resolved
-        json_data = json.dumps(data, indent=4)
-        Path(credentials_file).parent.mkdir(parents=True, exist_ok=True)
-        with Path(credentials_file).open("w") as credentialsfile:
-            credentialsfile.write(json_data)
-
-        credentials = FusionCredentials.from_file(file_path=credentials_file)
-        return credentials
-
-    @staticmethod
-    def from_dict(credentials: dict[str, Any]) -> "FusionCredentials":
-        """Create a credentials object from a dictionary.
-
-            This is the only FusionCredentials creation method that supports the password grant type
-            since the username and password should be provided by the user.
-
-        Args:
-            credentials (dict): A dictionary containing the requried keys: client_id, client_secret,
-                resource, auth_url, and optionally proxies and an OAuth grant type.
-
+            file_path (str, optional): Path (absolute or relative) and filename
+                to load credentials from. Defaults to 'config/client.credentials.json'.
+            fs (fsspec.filesystem): Filesystem to use.
+            walk_up_dirs (bool): if true it walks up the directories in search of a config folder
         Returns:
             FusionCredentials: a credentials object that can be used for authentication.
         """
+        fs = fs if fs else get_default_fs()
+        p_path = Path(file_path)
+        to_use_file_path: Optional[Path] = None
+
+        if p_path.exists():  # exact match path case
+            logger.log(VERBOSE_LVL, f"Found credentials file at {file_path}")
+            to_use_file_path = Path(file_path)
+        else:
+            for p in p_path.absolute().parents:
+                if (p / p_path).exists():
+                    to_use_file_path = p / p_path
+                    logger.log(VERBOSE_LVL, f"Found credentials file at {to_use_file_path}")
+                    break
+        if not to_use_file_path:
+            raise FileNotFoundError(f"Credentials file not found at {p_path} or in any parent directory.")
+        if fs.size(to_use_file_path) > 0:
+            try:
+                with fs.open(to_use_file_path, "r") as creds_f:
+                    data = json.load(creds_f)
+                    credentials = FusionCredentials._internal_load(data)
+                    return credentials
+            except CredentialError as e:
+                logger.error(e)
+                raise e
+        else:
+            msg = f"{to_use_file_path} is an empty file, make sure to add your credentials to it."
+            logger.error(msg)
+            raise OSError(msg)
+    
+    @staticmethod
+    def _internal_load(credentials: dict[str, Any]) -> "FusionCredentials":
+        
         if not credentials or not isinstance(credentials, dict):
             raise CredentialError("A valid credentials dictionary is required")
 
@@ -381,76 +279,6 @@ class FusionCredentials:
             fusion_e2e=fusion_e2e,
         )
         return creds
-
-    @staticmethod
-    def from_file(
-        file_path: str = "config/client.credentials.json",
-        fs: Optional[fsspec.filesystem] = None,
-        _walk_up_dirs: bool = True,
-    ) -> "FusionCredentials":
-        """Create a credentials object from a file.
-
-        Args:
-            file_path (str, optional): Path (absolute or relative) and filename
-                to load credentials from. Defaults to 'config/client.credentials.json'.
-            fs (fsspec.filesystem): Filesystem to use.
-            walk_up_dirs (bool): if true it walks up the directories in search of a config folder
-        Returns:
-            FusionCredentials: a credentials object that can be used for authentication.
-        """
-        fs = fs if fs else get_default_fs()
-        p_path = Path(file_path)
-        to_use_file_path: Optional[Path] = None
-
-        if p_path.exists():  # exact match path case
-            logger.log(VERBOSE_LVL, f"Found credentials file at {file_path}")
-            to_use_file_path = Path(file_path)
-        else:
-            for p in p_path.absolute().parents:
-                if (p / p_path).exists():
-                    to_use_file_path = p / p_path
-                    logger.log(VERBOSE_LVL, f"Found credentials file at {to_use_file_path}")
-                    break
-        if not to_use_file_path:
-            raise FileNotFoundError(f"Credentials file not found at {p_path} or in any parent directory.")
-        if fs.size(to_use_file_path) > 0:
-            try:
-                with fs.open(to_use_file_path, "r") as creds_f:
-                    data = json.load(creds_f)
-                    credentials = FusionCredentials.from_dict(data)  # noqa: PLW2901
-                    return credentials
-            except CredentialError as e:
-                logger.error(e)
-                raise e
-        else:
-            msg = f"{to_use_file_path} is an empty file, make sure to add your credentials to it."
-            logger.error(msg)
-            raise OSError(msg)
-
-    @staticmethod
-    def from_object(credentials_source: Union[str, dict[str, Any], "FusionCredentials"]) -> "FusionCredentials":
-        """Utility function that will determine how to create a credentials object based on data passed.
-
-        Args:
-            credentials_source (Union[str, dict]): A string which could be a filename or a JSON object, or a dictionary.
-
-        Raises:
-            CredentialError: Exception raised when the provided credentials is not one of the supported types
-
-        Returns:
-            FusionCredentials: a credentials object that can be used for authentication.
-        """
-        if isinstance(credentials_source, FusionCredentials):
-            return credentials_source
-        elif isinstance(credentials_source, dict):
-            return FusionCredentials.from_dict(credentials_source)
-        elif isinstance(credentials_source, str):
-            if _is_json(credentials_source):
-                return FusionCredentials.from_dict(json.loads(credentials_source))
-            return FusionCredentials.from_file(credentials_source)
-        else:
-            raise CredentialError(f"Could not resolve the credentials provided: {credentials_source}")
-
 
 class FusionOAuthAdapter(HTTPAdapter):
     """An OAuth adapter to manage authentication and session tokens."""
