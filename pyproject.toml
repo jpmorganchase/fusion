@@ -44,7 +44,7 @@ build-backend = "maturin"
 [tool.maturin]
 python-source = "py_src"
 module-name = "fusion._fusion"
-features = ["pyo3/extension-module"]
+cargo-extra-args = "--features extension-module"
 
 [project.optional-dependencies]
 doc = [
