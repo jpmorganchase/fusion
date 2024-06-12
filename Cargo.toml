@@ -22,3 +22,9 @@ chrono = { version = "0.4.38", features = ["serde"] }
 [features]
 extension-module = ["pyo3/extension-module"]
 default = ["extension-module"]
+
+[package.metadata.cargo-llvm-cov]
+# Ignore directories and files that are not part of the Rust source code
+ignore-filename-regex = "(.cargo|py_integ|py_src|py_tests|dist|docs|downloads|runnable|site|target|\\.git|\\.github)/"
+ignore-glob = ["py_integ/*", "py_src/*", "py_tests/*", "dist/*", "docs/*", "downloads/*", "runnable/*", "site/*", "target/*"]
+

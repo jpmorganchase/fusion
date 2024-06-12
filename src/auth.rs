@@ -51,22 +51,6 @@ impl Display for ProxyType {
     }
 }
 
-fn typed_proxies(proxies: Option<HashMap<String, String>>) -> PyResult<HashMap<ProxyType, String>> {
-    match proxies {
-        Some(proxies) => {
-            let mut mapped_proxies = HashMap::new();
-            for (key, value) in proxies {
-                let key = key
-                    .parse::<ProxyType>()
-                    .map_err(|_| PyValueError::new_err("Invalid proxy type"))?;
-                mapped_proxies.insert(key, value);
-            }
-            Ok(mapped_proxies)
-        }
-        None => Ok(HashMap::new()),
-    }
-}
-
 fn untyped_proxies(proxies: HashMap<ProxyType, String>) -> HashMap<String, String> {
     let mut untyped_proxies = HashMap::new();
     for (key, value) in proxies {
@@ -483,5 +467,44 @@ impl FusionCredentials {
             }
         };
         Ok(full_creds)
+    }
+}
+
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_grant_type() {
+        let expected = "client_credentials".to_string();
+        let result = default_grant_type();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_proxy_type_from_str() {
+        assert_eq!(ProxyType::from_str("http"), Ok(ProxyType::http));
+        assert_eq!(ProxyType::from_str("https"), Ok(ProxyType::https));
+        assert_eq!(ProxyType::from_str("ftp"), Err(()));
+    }
+
+    #[test]
+    fn test_proxy_type_display() {
+        assert_eq!(format!("{}", ProxyType::http), "http");
+        assert_eq!(format!("{}", ProxyType::https), "https");
+    }
+
+    #[test]
+    fn test_untyped_proxies() {
+        let mut proxies = HashMap::new();
+        proxies.insert(ProxyType::http, "http://example.com".to_string());
+        proxies.insert(ProxyType::https, "https://example.com".to_string());
+
+        let untyped = untyped_proxies(proxies);
+        assert_eq!(untyped.get("http"), Some(&"http://example.com".to_string()));
+        assert_eq!(untyped.get("https"), Some(&"https://example.com".to_string()));
     }
 }
