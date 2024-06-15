@@ -16,7 +16,7 @@ from fusion.utils import _normalise_dt_param, distribution_to_url
 
 
 def test_rust_ok() -> None:
-    from fusion import rust_ok  # type: ignore
+    from fusion import rust_ok
 
     assert rust_ok()
 

@@ -20,7 +20,6 @@ from tqdm import tqdm
 
 from fusion._fusion import FusionCredentials
 
-from .authentication import get_default_fs
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .types import PyArrowFilterT
@@ -30,6 +29,7 @@ from .utils import (
     distribution_to_filename,
     distribution_to_url,
     download_single_file_threading,
+    get_default_fs,
     get_session,
     is_dataset_raw,
     json_to_table,
@@ -88,7 +88,7 @@ class Fusion:
 
     def __init__(
         self,
-        credentials: Union[str, dict[str, Any], FusionCredentials] = "config/client_credentials.json",
+        credentials: Union[str, FusionCredentials] = "config/client_credentials.json",
         root_url: str = "https://fusion-api.jpmorgan.com/fusion/v1/",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
@@ -98,9 +98,8 @@ class Fusion:
         """Constructor to instantiate a new Fusion object.
 
         Args:
-            credentials (Union[str, dict, FusionCredentials]): A path to a credentials file or
-                a dictionary containing the required keys.
-                Defaults to 'config/client_credentials.json'.
+            credentials (Union[str, FusionCredentials]): A path to a credentials file or a fully populated
+            FusionCredentials object. Defaults to 'config/client_credentials.json'.
             root_url (_type_, optional): The API root URL.
                 Defaults to "https://fusion-api.jpmorgan.com/fusion/v1/".
             download_folder (str, optional): The folder path where downloaded data files
@@ -131,8 +130,8 @@ class Fusion:
 
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
-        elif isinstance(credentials, (str, dict)):
-            self.credentials = FusionCredentials.from_object(credentials)
+        elif isinstance(credentials, str):
+            self.credentials = FusionCredentials.from_file(credentials)
         else:
             raise ValueError(
                 "credentials must be a path to a credentials file or a dictionary containing the required keys"

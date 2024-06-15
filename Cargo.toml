@@ -13,18 +13,18 @@ crate-type = ["cdylib", "rlib"]
 
 
 [dependencies]
-pyo3 = { version = "0.21.2", features = ["extension-module"], optional = true }
+pyo3 = { version = "0.21.1" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-serde_with = { version = "3.8.1", features = ["chrono"] }
+#serde_with = { version = "3.8.1", features = ["chrono"] }
 chrono = { version = "0.4.38", features = ["serde"] }
+#tempdir = "0.3.7"
 
-[features]
-extension-module = ["pyo3/extension-module"]
-default = ["extension-module"]
 
 [package.metadata.cargo-llvm-cov]
 # Ignore directories and files that are not part of the Rust source code
 ignore-filename-regex = "(.cargo|py_integ|py_src|py_tests|dist|docs|downloads|runnable|site|target|\\.git|\\.github)/"
 ignore-glob = ["py_integ/*", "py_src/*", "py_tests/*", "dist/*", "docs/*", "downloads/*", "runnable/*", "site/*", "target/*"]
 
+[dev-dependencies]
+tempdir = "0.3.7"

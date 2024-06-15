@@ -41,6 +41,7 @@
         .container {
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
         }
         .card-body {
             text-align: center;
@@ -62,7 +63,7 @@
 <body>
     <h1>Coverage Reports</h1>
     <div class="container">
-        <div class="card mr-3" style="width: 18rem;">
+        <div class="card mr-3 mb-3" style="width: 18rem;">
             <div class="card-body">
                 <i class="fab fa-python card-icon"></i>
                 <h5 class="card-title mt-3">Python Coverage</h5>
@@ -70,12 +71,20 @@
                 <a href=".reports/py/index.html" class="btn btn-primary">View Report</a>
             </div>
         </div>
-        <div class="card" style="width: 18rem;">
+        <div class="card mr-3 mb-3" style="width: 18rem;">
             <div class="card-body">
                 <i class="fab fa-rust card-icon"></i>
                 <h5 class="card-title mt-3">Rust Coverage</h5>
                 <p class="card-text">Detailed coverage report for Rust code.</p>
                 <a href=".reports/rust/html/index.html" class="btn btn-primary">View Report</a>
+            </div>
+        </div>
+        <div class="card mb-3" style="width: 18rem;">
+            <div class="card-body">
+                <i class="fas fa-chart-line card-icon"></i>
+                <h5 class="card-title mt-3">Pytest Benchmark</h5>
+                <p class="card-text">Performance benchmark results for Python tests.</p>
+                <a href=".reports/py/py_bench.html" class="btn btn-primary">View Report</a>
             </div>
         </div>
     </div>

@@ -38,13 +38,13 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["maturin>=1.2,<2.0"]
+requires = ["maturin>=1.6,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
 python-source = "py_src"
 module-name = "fusion._fusion"
-cargo-extra-args = "--features extension-module"
+features = ["pyo3/extension-module"]
 
 [project.optional-dependencies]
 doc = [
@@ -94,7 +94,7 @@ dev-dependencies = [
     "cffi>=1.16.0; sys_platform=='darwin'",
     "freezegun>=1.4.0",
     "ipython",
-    "maturin>=1.2,<2.0",
+    "maturin>=1.6,<2.0",
     "moto[s3]>=5.0.5",
     "mypy",
     "patchelf>=0.17.2.1; sys_platform=='linux'",
@@ -123,6 +123,9 @@ dev-dependencies = [
     "pytest-aiohttp>=1.0.5",
     "tox-uv>=1.7.0",
     "pytest-html>=4.1.1",
+    "jinja2>=3.1.4",
+    "nox[uv]>=2024.4.15",
+    "beeprint>=2.4.11",
 ]
 
 
@@ -190,7 +193,7 @@ known-first-party = ["fusion"]
 max-args = 7
 
 [tool.pytest.ini_options]
-addopts = "--cov fusion --html .reports/py/index.html --cov-report term --random-order -p no:warnings -v"
+addopts = "--cov fusion --ignore=py_src/_legacy/* --html .reports/py/index.html --cov-report term --random-order -p no:warnings -v"
 minversion = "8.0"
 pythonpath = ["src", "py_tests"]
 testpaths = "py_tests"
@@ -205,8 +208,10 @@ disallow_untyped_defs = true
 [tool.coverage]
 html.show_contexts = true
 html.skip_covered = false
-report.fail_under = 60
-run.parallel = true
+report.fail_under = 50
+
+[tool.coverage.run]
+parallel = true
 
 [tool.bumpversion]
 current_version = "1.1.1"

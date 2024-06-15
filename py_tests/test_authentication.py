@@ -14,18 +14,18 @@ import requests_mock
 from freezegun import freeze_time
 
 from fusion._fusion import FusionCredentials
-from fusion.authentication import (
-    FusionAiohttpSession,
-    # FusionCredentials,
-    FusionOAuthAdapter,
-    get_default_fs,
+from fusion._legacy.authentication import (
     try_get_client_id,
     try_get_client_secret,
+)
+from fusion.authentication import (
+    FusionOAuthAdapter,
 )
 from fusion.exceptions import CredentialError
 from fusion.fusion import Fusion
 from fusion.utils import (
     distribution_to_url,
+    get_default_fs,
 )
 
 from .conftest import change_dir
@@ -132,7 +132,7 @@ def test_refresh_token_data_failure(
         fusion_oauth_adapter._refresh_token_data()
 
 
-#@pytest.mark.skip(reason="Legacy code")
+# @pytest.mark.skip(reason="Legacy code")
 def test_refresh_fusion_token_data(
     fusion_oauth_adapter: FusionOAuthAdapter,
     requests_mock: requests_mock.Mocker,
@@ -263,7 +263,7 @@ def test_fusion_oauth_adapter_send_header(
 
     fusion_oauth_adapter.send(prep_req)
     if prep_req.headers.get("fusion-e2e"):
-        assert prep_req.headers.get("fusion-e2e") == credentials.get("fusion_e2e")
+        assert prep_req.headers.get("fusion-e2e") == credentials.fusion_e2e
 
 
 def test_fusion_oauth_adapter_send_no_bearer_token_exp(fusion_oauth_adapter: FusionOAuthAdapter) -> None:

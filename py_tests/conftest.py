@@ -11,7 +11,32 @@ from fusion._fusion import FusionCredentials
 from fusion.authentication import FusionOAuthAdapter
 from fusion.fusion import Fusion
 
+from .bench_rep_gen import generate_benchmark_html
+
 PathLike = Union[str, Path]
+
+
+def pytest_addoption(parser: Any) -> None:
+    parser.addoption("--benchmark", action="store_true", default=False, help="Run benchmark tests")
+
+
+def pytest_collection_modifyitems(config: Any, items: Any) -> None:
+    if config.getoption("--benchmark"):
+        for item in items:
+            if "benchmark" not in item.keywords:
+                item.add_marker(pytest.mark.skip(reason="Only benchmark tests are selected"))
+        return
+    for item in items:
+        if "benchmark" in item.keywords:
+            item.add_marker(pytest.mark.skip(reason="to be run with --benchmark option"))
+
+
+@pytest.hookimpl()
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001
+    if session.config.getoption("--benchmark"):
+        json_file = sorted(Path().glob(".benchmarks/**/*.json"))[-1]
+        html_file = Path(".reports/py/py_bench.html")
+        generate_benchmark_html(json_file, html_file)
 
 
 @contextmanager

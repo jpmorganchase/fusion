@@ -31,8 +31,10 @@ from pyarrow.parquet import filters_to_expression
 from tqdm import tqdm
 from urllib3.util.retry import Retry
 
+from fusion._fusion import FusionCredentials
+
 from . import __version__ as version
-from .authentication import FusionAiohttpSession, FusionCredentials, FusionOAuthAdapter
+from .authentication import FusionAiohttpSession, FusionOAuthAdapter
 from .types import PyArrowFilterT, WorkerQueueT
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,26 @@ DT_YYYYMMDDTHHMM_RE = re.compile(r"(\d{4})(\d{2})(\d{2})T(\d{4})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
 DEFAULT_CHUNK_SIZE = 2**16
 DEFAULT_THREAD_POOL_SIZE = 5
+
+
+def get_default_fs() -> fsspec.filesystem:
+    """Retrieve default filesystem.
+
+    Returns: filesystem
+
+    """
+    protocol = os.environ.get("FS_PROTOCOL", "file")
+    if "S3_ENDPOINT" in os.environ and "AWS_ACCESS_KEY_ID" in os.environ and "AWS_SECRET_ACCESS_KEY" in os.environ:
+        endpoint = os.environ["S3_ENDPOINT"]
+        fs = fsspec.filesystem(
+            "s3",
+            client_kwargs={"endpoint_url": f"https://{endpoint}"},
+            key=os.environ["AWS_ACCESS_KEY_ID"],
+            secret=os.environ["AWS_SECRET_ACCESS_KEY"],
+        )
+    else:
+        fs = fsspec.filesystem(protocol)
+    return fs
 
 
 @contextlib.contextmanager

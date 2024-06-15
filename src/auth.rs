@@ -12,8 +12,6 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-//use std::time::{SystemTime, UNIX_EPOCH};
-
 import_exception!(fusion.exceptions, APIResponseError);
 import_exception!(fusion.exceptions, APIRequestError);
 import_exception!(fusion.exceptions, APIConnectError);
@@ -64,7 +62,6 @@ where
     D: Deserializer<'de>,
 {
     let opt = Option::<String>::deserialize(deserializer)?;
-    println!("Deser Option: {:?}. Env {:?}", opt, env::var(env_var));
     let res = match opt {
         Some(value) => Some(value),
         None => match env::var(env_var) {
@@ -139,7 +136,8 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
                 cfg_file_name,
                 start_dir_init.display()
             );
-            return Err(PyFileNotFoundError::new_err(error_message.clone()));
+            //return Err(std::io::Error::new(std::io::ErrorKind::NotFound, error_message));
+            return Err(PyFileNotFoundError::new_err(error_message));
         }
     }
 }
@@ -476,6 +474,11 @@ impl FusionCredentials {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::fs::File;
+    use std::io::Write;
+    use tempdir::TempDir;
+
 
     #[test]
     fn test_default_grant_type() {
@@ -506,5 +509,54 @@ mod tests {
         let untyped = untyped_proxies(proxies);
         assert_eq!(untyped.get("http"), Some(&"http://example.com".to_string()));
         assert_eq!(untyped.get("https"), Some(&"https://example.com".to_string()));
+    }
+
+    #[test]
+    fn test_find_cfg_file_in_current_directory() {
+        let temp_dir = TempDir::new("test_find_cfg_file").unwrap();
+        let cfg_file_path = temp_dir.path().join("client_credentials.json");
+
+        // Create the config file in the current directory
+        let mut file = File::create(&cfg_file_path).unwrap();
+        writeln!(file, "{{\"key\": \"value\"}}").unwrap();
+
+        let result = find_cfg_file(&cfg_file_path).unwrap();
+        assert_eq!(result, cfg_file_path);
+    }
+
+    #[test]
+    fn test_find_cfg_file_in_parent_directory() {
+        let temp_dir = TempDir::new("test_find_cfg_file").unwrap();
+        let parent_dir = temp_dir.path().join("parent");
+        let child_dir = parent_dir.join("child");
+
+        fs::create_dir_all(&child_dir).unwrap();
+        let cfg_file_path = parent_dir.join("client_credentials.json");
+
+        // Create the config file in the parent directory
+        let mut file = File::create(&cfg_file_path).unwrap();
+        writeln!(file, "{{\"key\": \"value\"}}").unwrap();
+
+        let result = find_cfg_file(&child_dir.join("dummy_file")).unwrap();
+        assert_eq!(result, cfg_file_path);
+    }
+
+    #[test]
+    fn test_file_not_found() {
+        pyo3::prepare_freethreaded_python();
+        let temp_dir = TempDir::new("test_find_cfg_file").unwrap();
+        let child_dir = temp_dir.path().join("child");
+
+        fs::create_dir_all(&child_dir).unwrap();
+
+        let result = find_cfg_file(&child_dir.join("dummy_file"));
+        assert!(result.is_err());
+        if let Err(e) = result {
+            let error_message = e.to_string();
+            assert!(error_message.contains("File client_credentials.json not found in"));
+            assert!(error_message.contains("or any of its parents"));
+        } else {
+            assert!(false, "Expected an error, but got Ok");
+        }
     }
 }

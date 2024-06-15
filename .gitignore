@@ -120,3 +120,4 @@ poetry.lock
 # Fusion specific
 config/
 .reports/
+.benchmarks/
