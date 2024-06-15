@@ -42,11 +42,11 @@ def main() -> None:
     cpython_paths = get_cpython_paths()
     ld_library_path, rustflags = generate_tox_env(cpython_paths)
     update_tox_file(ld_library_path, rustflags)
-    print(
+    print(  # noqa: T201
         f"""tox.ini has been updated with the new LD_LIBRARY_PATH and RUSTFLAGS
 LD_LIBRARY_PATH: {ld_library_path}
 RUSTFLAGS: {rustflags}"""
-    )  # noqa: T201
+    )
 
 
 if __name__ == "__main__":
