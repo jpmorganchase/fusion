@@ -1,3 +1,5 @@
+from __future__ import annotations  # noqa: PYI044
+
 from datetime import date
 
 class AuthToken:

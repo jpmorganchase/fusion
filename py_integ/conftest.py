@@ -12,8 +12,9 @@ def creds() -> FusionCredentials:
         client_id=os.getenv("FUSION_CLIENT_ID"),
         client_secret=os.getenv("FUSION_CLIENT_SECRET"),
         resource="JPMC:URI:RS-93742-Fusion-PROD",
-        root_url="https://fusion-api.jpmorgan.com/fusion/v1",
         auth_url="https://authe.jpmorgan.com/as/token.oauth2",
+        proxies={},
+        fusion_e2e=None,
     )
 
 
