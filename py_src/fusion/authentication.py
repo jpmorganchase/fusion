@@ -155,14 +155,22 @@ class FusionOAuthAdapter(HTTPAdapter):
             requests.Response: The response from the server.
         """
 
-        if not self.credentials.bearer_token:
-            raise CredentialError("A valid bearer token is required")
-
         url_lst = request.path_url.split("/")
         fusion_auth_req = "distributions" in url_lst
 
+        if not self.credentials.bearer_token:
+            # First time through, get a token
+            token, expiry = self._refresh_token_data()
+            self.credentials.put_bearer_token(token, int(expiry))
+            self.number_token_refreshes += 1
+            logger.log(
+                VERBOSE_LVL,
+                f"Got init bearer token {self.number_token_refreshes} time{_res_plural(self.number_token_refreshes)}",
+            )
+            
         exp = self.credentials.bearer_token.expires_in_secs()
         if exp and exp < self.refresh_within_seconds:
+            # Expired or about to expire, get a new token
             token, expiry = self._refresh_token_data()
             self.credentials.put_bearer_token(token, int(expiry))
             self.number_token_refreshes += 1
