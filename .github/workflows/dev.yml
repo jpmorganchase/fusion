@@ -34,6 +34,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install Rust
+      run: rustup update stable
+    - name: Install cargo-llvm-cov
+      uses: taiki-e/install-action@cargo-llvm-cov
+
     - name: Install rye and uv
       run: |
         curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
