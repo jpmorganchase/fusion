@@ -13,7 +13,7 @@ def test_rust_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
 
-    benchmark(FusionCredentials.from_file, str(credentials_file))
+    benchmark(FusionCredentials.from_file, credentials_file)
 
 
 @pytest.mark.benchmark(group="credentials")
@@ -24,7 +24,7 @@ def test_py_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path: 
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
 
-    benchmark(FusionCredentials.from_file, str(credentials_file))
+    benchmark(FusionCredentials.from_file, credentials_file)
 
 
 @pytest.mark.benchmark(group="dummy")

@@ -144,9 +144,7 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct FusionCredsPersistent {
-    #[serde(deserialize_with = "deserialize_client_id")]
     client_id: Option<String>,
-    #[serde(deserialize_with = "deserialize_client_secret")]
     client_secret: Option<String>,
     username: Option<String>,
     password: Option<String>,
@@ -498,11 +496,20 @@ impl FusionCredentials {
                 CredentialError::new_err(format!("Invalid JSON: {}\nContents:\n{}", err, &contents))
             })?;
 
+        let client_id = credentials
+            .client_id
+            .or_else(|| std::env::var("FUSION_CLIENT_ID").ok())
+            .ok_or_else(|| CredentialError::new_err("Missing client ID"))?;
+        let client_secret = credentials
+            .client_secret
+            .or_else(|| std::env::var("FUSION_CLIENT_SECRET").ok())
+            .ok_or_else(|| CredentialError::new_err("Missing client secret"))?;
+
         let full_creds = match credentials.grant_type.as_str() {
             "client_credentials" => FusionCredentials::from_client_id(
                 cls,
-                credentials.client_id,
-                credentials.client_secret,
+                Some(client_id),
+                Some(client_secret),
                 credentials.resource,
                 credentials.auth_url,
                 Some(untyped_proxies(credentials.proxies)),

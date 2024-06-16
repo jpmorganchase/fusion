@@ -33,7 +33,7 @@ def test_fusion_credentials(example_creds_dict: dict[str, Any], tmp_path: Path) 
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    assert FusionCredentials.from_file(str(credentials_file))
+    assert FusionCredentials.from_file(credentials_file)
 
 
 def test_fusion_init(credentials: FusionCredentials) -> None:
@@ -45,7 +45,7 @@ def test_fusion_credentials_no_pxy(example_creds_dict_no_pxy: dict[str, Any], tm
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict_no_pxy, f)
-    assert FusionCredentials.from_file(str(credentials_file))
+    assert FusionCredentials.from_file(credentials_file)
 
 
 def test_fusion_credentials_empty_pxy(example_creds_dict_empty_pxy: dict[str, Any], tmp_path: Path) -> None:
@@ -53,7 +53,7 @@ def test_fusion_credentials_empty_pxy(example_creds_dict_empty_pxy: dict[str, An
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict_empty_pxy, f)
 
-    assert FusionCredentials.from_file(str(credentials_file))
+    assert FusionCredentials.from_file(credentials_file)
 
 
 def test_use_catalog(credentials: FusionCredentials) -> None:
