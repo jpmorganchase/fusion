@@ -1,3 +1,4 @@
+use bincode::{deserialize, serialize};
 use chrono::{NaiveDate, Utc};
 use pyo3::exceptions::{PyFileNotFoundError, PyValueError};
 use pyo3::import_exception;
@@ -71,7 +72,6 @@ where
     };
     Ok(res)
 }
-
 
 fn deserialize_client_id<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
@@ -160,8 +160,8 @@ struct FusionCredsPersistent {
     fusion_e2e: Option<String>,
 }
 
-#[pyclass]
-#[derive(Debug, Clone)]
+#[pyclass(module = "fusion._fusion")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthToken {
     #[pyo3(get)]
     token: String,
@@ -193,10 +193,40 @@ impl AuthToken {
         });
         AuthToken { token, expiry }
     }
+
+    fn __getstate__(&self) -> PyResult<Vec<u8>> {
+        println!("__getstate__\n");
+        Ok(serialize(&self).unwrap())
+    }
+
+    fn __setstate__(&mut self, state: Vec<u8>) -> PyResult<()> {
+        println!("__setstate__\n");
+        *self = deserialize(&state).unwrap();
+        Ok(())
+    }
+
+    fn __getnewargs__(&self) -> PyResult<(String, Option<i64>)> {
+        println!("__getnewargs__\n");
+        Ok((self.token.clone(), self.expiry))
+    }
+
+    #[new]
+    fn new(token: String, expires_in_secs: Option<i64>) -> Self {
+        AuthToken::from_token(token, expires_in_secs)
+    }
 }
 
-#[pyclass]
-#[derive(Debug, Clone)]
+impl Default for AuthToken {
+    fn default() -> Self {
+        AuthToken {
+            token: "".to_string(),
+            expiry: None,
+        }
+    }
+}
+
+#[pyclass(module = "fusion._fusion")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FusionCredentials {
     #[pyo3(get, set)]
     client_id: Option<String>,
@@ -231,6 +261,7 @@ pub struct FusionCredentials {
 
 impl Default for FusionCredentials {
     fn default() -> Self {
+        println!("Default FusionCredentials\n");
         FusionCredentials {
             client_id: None,
             client_secret: None,
@@ -249,6 +280,43 @@ impl Default for FusionCredentials {
 
 #[pymethods]
 impl FusionCredentials {
+    fn __getstate__(&self) -> PyResult<Vec<u8>> {
+        Ok(serialize(&self).unwrap())
+    }
+
+    fn __setstate__(&mut self, state: Vec<u8>) -> PyResult<()> {
+        *self = deserialize(&state).unwrap();
+        Ok(())
+    }
+
+    fn __getnewargs__(
+        &self,
+    ) -> PyResult<(
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<AuthToken>,
+        Option<HashMap<String, String>>,
+        Option<String>,
+        Option<String>,
+    )> {
+        Ok((
+            self.client_id.clone(),
+            self.client_secret.clone(),
+            self.username.clone(),
+            self.password.clone(),
+            self.resource.clone(),
+            self.auth_url.clone(),
+            self.bearer_token.clone(),
+            Some(self.proxies.clone()),
+            Some(self.grant_type.clone()),
+            self.fusion_e2e.clone(),
+        ))
+    }
+
     #[classmethod]
     fn from_client_id(
         _cls: &Bound<'_, PyType>,
@@ -352,6 +420,7 @@ impl FusionCredentials {
         grant_type: Option<String>,
         fusion_e2e: Option<String>,
     ) -> PyResult<Self> {
+        println!("New FusionCredentials {:?}\n", client_id);
         Ok(FusionCredentials {
             client_id,
             client_secret,
@@ -406,12 +475,11 @@ impl FusionCredentials {
         Ok(PyTuple::new_bound(py, &token_tup))
     }
 
-    fn get_fusion_token_expires_in<'py>(
-        &self,
-        py: Python<'py>,
-        token_key: String,
-    ) -> PyResult<Option<i64>> {
-        Ok(self.fusion_token.get(&token_key).and_then(|token| token.expires_in_secs()))
+    fn get_fusion_token_expires_in(&self, token_key: String) -> PyResult<Option<i64>> {
+        Ok(self
+            .fusion_token
+            .get(&token_key)
+            .and_then(|token| token.expires_in_secs()))
     }
 
     #[classmethod]
@@ -468,7 +536,6 @@ impl FusionCredentials {
     }
 }
 
-
 // Tests
 
 #[cfg(test)]
@@ -478,7 +545,6 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
     use tempdir::TempDir;
-
 
     #[test]
     fn test_default_grant_type() {
@@ -508,7 +574,10 @@ mod tests {
 
         let untyped = untyped_proxies(proxies);
         assert_eq!(untyped.get("http"), Some(&"http://example.com".to_string()));
-        assert_eq!(untyped.get("https"), Some(&"https://example.com".to_string()));
+        assert_eq!(
+            untyped.get("https"),
+            Some(&"https://example.com".to_string())
+        );
     }
 
     #[test]
@@ -556,7 +625,7 @@ mod tests {
             assert!(error_message.contains("File client_credentials.json not found in"));
             assert!(error_message.contains("or any of its parents"));
         } else {
-            assert!(false, "Expected an error, but got Ok");
+            panic!("Expected an error, but got Ok");
         }
     }
 }

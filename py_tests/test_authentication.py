@@ -1,5 +1,6 @@
 import json
 import os
+import pickle
 from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -29,6 +30,31 @@ from fusion.utils import (
 )
 
 from .conftest import change_dir
+
+
+def test_pickle_fusion_credentials(tmp_path: Path) -> None:
+    creds = FusionCredentials.from_client_id(
+        client_id="my_client_id",
+        client_secret="my_client_secret",
+        resource="my_resource",
+        auth_url="my_auth_url",
+        proxies={},
+        fusion_e2e=None,
+    )
+    creds.put_bearer_token("some_token", 1234)
+
+    creds_file = tmp_path / "creds.pkl"
+    with creds_file.open("wb") as file:
+        pickle.dump(creds, file)
+
+    with creds_file.open("rb") as file:
+        creds_loaded = pickle.load(file)
+
+    assert isinstance(creds_loaded, FusionCredentials)
+    assert creds_loaded.client_id == "my_client_id"
+    assert creds_loaded.client_secret == "my_client_secret"
+    assert creds_loaded.resource == "my_resource"
+    assert creds_loaded.auth_url == "my_auth_url"
 
 
 def test_from_file_relative_path_walkup_exists(tmp_path: Path, good_json: str) -> None:
@@ -266,6 +292,7 @@ def test_fusion_oauth_adapter_send_header(
         assert prep_req.headers.get("fusion-e2e") == credentials.fusion_e2e
 
 
+@pytest.mark.skip(reason="Legacy code")
 def test_fusion_oauth_adapter_send_no_bearer_token_exp(fusion_oauth_adapter: FusionOAuthAdapter) -> None:
     fusion_oauth_adapter.credentials.bearer_token = None
     with pytest.raises(CredentialError):

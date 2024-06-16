@@ -30,7 +30,7 @@ def test_download_csv(client: Fusion) -> None:
 
 def test_download_parquet(client: Fusion) -> None:
     download_res = client.download(
-        "FXO_SP", "20231201:20231208", dataset_format="parquet", return_paths=True, force_download=True
+        "FXO_SP", "20231201:20231208", dataset_format="parquet", return_paths=True, force_download=True, show_progress=False
     )
     hash_out = hashlib.md5()
     for success, path, _ in download_res:
@@ -69,3 +69,20 @@ def test_to_df_parquet(client: Fusion) -> None:
             p.unlink()
         else:
             shutil.rmtree(p)
+
+if __name__ == "__main__":
+    from fusion._fusion import FusionCredentials
+    from fusion.fusion import Fusion
+    import os
+    
+    creds = FusionCredentials.from_client_id(
+        client_id=os.getenv("FUSION_CLIENT_ID"),
+        client_secret=os.getenv("FUSION_CLIENT_SECRET"),
+        resource="JPMC:URI:RS-93742-Fusion-PROD",
+        auth_url="https://authe.jpmorgan.com/as/token.oauth2",
+        proxies={},
+        fusion_e2e=None,
+    )
+    
+    fusion = Fusion(credentials=creds)
+    test_download_parquet(fusion)

@@ -167,7 +167,10 @@ class FusionOAuthAdapter(HTTPAdapter):
                 VERBOSE_LVL,
                 f"Got init bearer token {self.number_token_refreshes} time{_res_plural(self.number_token_refreshes)}",
             )
-            
+
+        if not self.credentials.bearer_token:
+            raise CredentialError("Failed to authenticate against OAuth server")
+
         exp = self.credentials.bearer_token.expires_in_secs()
         if exp and exp < self.refresh_within_seconds:
             # Expired or about to expire, get a new token
