@@ -131,7 +131,7 @@ class Fusion:
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
         elif isinstance(credentials, str):
-            self.credentials = FusionCredentials.from_file(credentials)
+            self.credentials = FusionCredentials.from_file(Path(credentials))
         else:
             raise ValueError(
                 "credentials must be a path to a credentials file or a dictionary containing the required keys"

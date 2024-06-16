@@ -12,7 +12,7 @@ from fusion.fusion_filesystem import FusionHTTPFileSystem
 
 
 @pytest.fixture()
-def http_fs_instance(credentials_examples: FusionCredentials) -> FusionHTTPFileSystem:
+def http_fs_instance(credentials_examples: Path) -> FusionHTTPFileSystem:
     """Fixture to create a new instance for each test."""
     creds = FusionCredentials.from_file(credentials_examples)
     return FusionHTTPFileSystem(credentials=creds)

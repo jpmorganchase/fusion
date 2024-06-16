@@ -1,6 +1,7 @@
 from __future__ import annotations  # noqa: PYI044
 
 from datetime import date
+from pathlib import Path
 
 class AuthToken:
     token: str
@@ -55,7 +56,7 @@ class FusionCredentials:
         fusion_e2e: str | None,
     ) -> FusionCredentials: ...
     @classmethod
-    def from_file(cls: type[FusionCredentials], file_path: str) -> FusionCredentials: ...
+    def from_file(cls: type[FusionCredentials], file_path: Path) -> FusionCredentials: ...
     def __init__(  # noqa: PLR0913
         self,
         client_id: str | None,

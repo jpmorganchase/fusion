@@ -66,7 +66,7 @@ def test_from_file_relative_path_walkup_exists(tmp_path: Path, good_json: str) -
 
     with change_dir(dir_down_path):
         # Call the from_file method with a relative path
-        credentials = FusionCredentials.from_file(file_path="client_credentials.json")
+        credentials = FusionCredentials.from_file(file_path=Path("client_credentials.json"))
 
         # Verify that the credentials object is created correctly
         assert isinstance(credentials, FusionCredentials)
@@ -391,21 +391,20 @@ def test_try_get_client_secret(
 
 
 def test_client_from_env_vars(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    
     client_id = "my_client_id"
     client_secret = "my_client_secret"
     monkeypatch.setenv("FUSION_CLIENT_ID", client_id)
     monkeypatch.setenv("FUSION_CLIENT_SECRET", client_secret)
-    
+
     creds_dict = {
         "resource": "my_resource",
         "auth_url": "https://auth_url.com",
     }
-    
+
     creds_file = tmp_path / "creds.json"
     creds_file.write_text(json.dumps(creds_dict))
-    
+
     creds = FusionCredentials.from_file(creds_file)
-    
+
     assert creds.client_id == client_id
     assert creds.client_secret == client_secret

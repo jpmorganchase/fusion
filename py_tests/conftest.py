@@ -133,7 +133,7 @@ def example_creds_dict_empty_pxy(example_creds_dict: dict[str, Any]) -> dict[str
         "example_creds_dict_https_pxy_e2e",
     ]
 )
-def credentials_examples(request: pytest.FixtureRequest, tmp_path: Path) -> Any:
+def credentials_examples(request: pytest.FixtureRequest, tmp_path: Path) -> Path:
     """Parameterized fixture to return credentials from different sources."""
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:

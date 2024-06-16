@@ -193,7 +193,7 @@ known-first-party = ["fusion"]
 max-args = 7
 
 [tool.pytest.ini_options]
-addopts = "--cov fusion --ignore=py_src/_legacy/* --html .reports/py/index.html --cov-report term --random-order -p no:warnings -v"
+addopts = "--cov fusion --ignore=py_src/_legacy/* --html .reports/py/index.html --cov-report html:.reports/py/cov --cov-report term --random-order -p no:warnings -v"
 minversion = "8.0"
 pythonpath = ["src", "py_tests"]
 testpaths = "py_tests"

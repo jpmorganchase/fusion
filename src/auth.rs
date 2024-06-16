@@ -4,7 +4,7 @@ use pyo3::exceptions::{PyFileNotFoundError, PyValueError};
 use pyo3::import_exception;
 use pyo3::prelude::*;
 use pyo3::types::{PyDate, PyDateAccess, PyTuple, PyType};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::fmt::Display;
@@ -56,43 +56,6 @@ fn untyped_proxies(proxies: HashMap<ProxyType, String>) -> HashMap<String, Strin
         untyped_proxies.insert(key.to_string(), value);
     }
     untyped_proxies
-}
-
-fn deserialize_with_env<'de, D>(deserializer: D, env_var: &str) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let opt = Option::<String>::deserialize(deserializer)?;
-    let res = match opt {
-        Some(value) => Some(value),
-        None => match env::var(env_var) {
-            Ok(value) => Some(value),
-            Err(_) => None,
-        },
-    };
-    Ok(res)
-}
-
-fn deserialize_client_id<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_with_env(deserializer, "FUSION_CLIENT_ID")
-}
-
-fn deserialize_client_secret<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_with_env(deserializer, "FUSION_CLIENT_SECRET")
-}
-
-#[allow(dead_code)]
-fn deserialize_fusion_e2e<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_with_env(deserializer, "FUSION_E2E")
 }
 
 fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
@@ -548,6 +511,8 @@ impl FusionCredentials {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bincode::{deserialize, serialize};
+    use serde_json::json;
     use std::fs;
     use std::fs::File;
     use std::io::Write;
@@ -634,5 +599,491 @@ mod tests {
         } else {
             panic!("Expected an error, but got Ok");
         }
+    }
+
+    #[test]
+    fn test_auth_token_creation() {
+        let token = AuthToken::new("test_token".to_string(), Some(3600));
+        assert_eq!(token.token, "test_token");
+        assert!(token.expiry.is_some());
+    }
+
+    #[test]
+    fn test_auth_token_default() {
+        let token = AuthToken::default();
+        assert_eq!(token.token, "");
+        assert!(token.expiry.is_none());
+    }
+
+    #[test]
+    fn test_auth_token_is_expirable() {
+        let token_with_expiry = AuthToken::new("test_token".to_string(), Some(3600));
+        assert!(token_with_expiry.is_expirable());
+
+        let token_without_expiry = AuthToken::new("test_token".to_string(), None);
+        assert!(!token_without_expiry.is_expirable());
+    }
+
+    #[test]
+    fn test_auth_token_expires_in_secs() {
+        let token = AuthToken::new("test_token".to_string(), Some(3600));
+        assert!(token.expires_in_secs().is_some());
+        assert!(token.expires_in_secs().unwrap() <= 3600);
+
+        let token_without_expiry = AuthToken::new("test_token".to_string(), None);
+        assert!(token_without_expiry.expires_in_secs().is_none());
+    }
+
+    #[test]
+    fn test_auth_token_from_token() {
+        let token = AuthToken::from_token("test_token".to_string(), Some(3600));
+        assert_eq!(token.token, "test_token");
+        assert!(token.expiry.is_some());
+
+        let token_without_expiry = AuthToken::from_token("test_token".to_string(), None);
+        assert_eq!(token_without_expiry.token, "test_token");
+        assert!(token_without_expiry.expiry.is_none());
+    }
+
+    #[test]
+    fn test_auth_token_serialization() {
+        let token = AuthToken::new("test_token".to_string(), Some(3600));
+        let serialized_token = token.__getstate__().unwrap();
+        let deserialized_token: AuthToken = deserialize(&serialized_token).unwrap();
+        assert_eq!(token.token, deserialized_token.token);
+        assert_eq!(token.expiry, deserialized_token.expiry);
+    }
+
+    #[test]
+    fn test_auth_token_deserialization() {
+        let token = AuthToken::new("test_token".to_string(), Some(3600));
+        let serialized_token = serialize(&token).unwrap();
+        let mut deserialized_token = AuthToken::default();
+        deserialized_token.__setstate__(serialized_token).unwrap();
+        assert_eq!(token.token, deserialized_token.token);
+        assert_eq!(token.expiry, deserialized_token.expiry);
+    }
+
+    #[test]
+    fn test_auth_token_getnewargs() {
+        let token = AuthToken::new("test_token".to_string(), Some(3600));
+        let (token_str, expiry) = token.__getnewargs__().unwrap();
+        assert_eq!(token_str, token.token);
+        assert_eq!(expiry, token.expiry);
+    }
+
+    #[test]
+    fn test_auth_token_pymethods() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let token = Py::new(py, AuthToken::new("test_token".to_string(), Some(3600))).unwrap();
+            let token_ref = token.borrow(py);
+            assert_eq!(token_ref.token, "test_token");
+            assert!(token_ref.expiry.is_some());
+
+            let token_dict = token_ref.__getstate__().unwrap();
+            assert!(!token_dict.is_empty());
+
+            let new_args = token_ref.__getnewargs__().unwrap();
+            assert_eq!(new_args.0, "test_token");
+            assert!(new_args.1.is_some());
+        });
+    }
+
+    #[test]
+    fn test_fusion_credentials_creation() {
+        let creds = FusionCredentials::new(
+            Some("client_id".to_string()),
+            Some("client_secret".to_string()),
+            Some("username".to_string()),
+            Some("password".to_string()),
+            Some("resource".to_string()),
+            Some("auth_url".to_string()),
+            None,
+            Some(HashMap::new()),
+            Some("grant_type".to_string()),
+            Some("fusion_e2e".to_string()),
+        )
+        .unwrap();
+
+        assert_eq!(creds.client_id, Some("client_id".to_string()));
+        assert_eq!(creds.client_secret, Some("client_secret".to_string()));
+        assert_eq!(creds.username, Some("username".to_string()));
+        assert_eq!(creds.password, Some("password".to_string()));
+        assert_eq!(creds.resource, Some("resource".to_string()));
+        assert_eq!(creds.auth_url, Some("auth_url".to_string()));
+        assert_eq!(creds.grant_type, "grant_type".to_string());
+        assert_eq!(creds.fusion_e2e, Some("fusion_e2e".to_string()));
+    }
+
+    #[test]
+    fn test_fusion_credentials_default() {
+        let creds = FusionCredentials::default();
+        assert!(creds.client_id.is_none());
+        assert!(creds.client_secret.is_none());
+        assert!(creds.username.is_none());
+        assert!(creds.password.is_none());
+        assert!(creds.resource.is_none());
+        assert!(creds.auth_url.is_none());
+        assert_eq!(creds.grant_type, "client_credentials".to_string());
+        assert!(creds.fusion_e2e.is_none());
+        assert!(creds.bearer_token.is_none());
+        assert!(creds.proxies.is_empty());
+        assert!(creds.fusion_token.is_empty());
+    }
+
+    #[test]
+    fn test_fusion_credentials_serialization() {
+        let creds = FusionCredentials::new(
+            Some("client_id".to_string()),
+            Some("client_secret".to_string()),
+            Some("username".to_string()),
+            Some("password".to_string()),
+            Some("resource".to_string()),
+            Some("auth_url".to_string()),
+            None,
+            Some(HashMap::new()),
+            Some("grant_type".to_string()),
+            Some("fusion_e2e".to_string()),
+        )
+        .unwrap();
+
+        let serialized_creds = creds.__getstate__().unwrap();
+        let deserialized_creds: FusionCredentials = deserialize(&serialized_creds).unwrap();
+
+        assert_eq!(creds.client_id, deserialized_creds.client_id);
+        assert_eq!(creds.client_secret, deserialized_creds.client_secret);
+        assert_eq!(creds.username, deserialized_creds.username);
+        assert_eq!(creds.password, deserialized_creds.password);
+        assert_eq!(creds.resource, deserialized_creds.resource);
+        assert_eq!(creds.auth_url, deserialized_creds.auth_url);
+        assert_eq!(creds.grant_type, deserialized_creds.grant_type);
+        assert_eq!(creds.fusion_e2e, deserialized_creds.fusion_e2e);
+    }
+
+    #[test]
+    fn test_fusion_credentials_deserialization() {
+        let creds = FusionCredentials::new(
+            Some("client_id".to_string()),
+            Some("client_secret".to_string()),
+            Some("username".to_string()),
+            Some("password".to_string()),
+            Some("resource".to_string()),
+            Some("auth_url".to_string()),
+            None,
+            Some(HashMap::new()),
+            Some("grant_type".to_string()),
+            Some("fusion_e2e".to_string()),
+        )
+        .unwrap();
+
+        let serialized_creds = serialize(&creds).unwrap();
+        let mut deserialized_creds = FusionCredentials::default();
+        deserialized_creds.__setstate__(serialized_creds).unwrap();
+
+        assert_eq!(creds.client_id, deserialized_creds.client_id);
+        assert_eq!(creds.client_secret, deserialized_creds.client_secret);
+        assert_eq!(creds.username, deserialized_creds.username);
+        assert_eq!(creds.password, deserialized_creds.password);
+        assert_eq!(creds.resource, deserialized_creds.resource);
+        assert_eq!(creds.auth_url, deserialized_creds.auth_url);
+        assert_eq!(creds.grant_type, deserialized_creds.grant_type);
+        assert_eq!(creds.fusion_e2e, deserialized_creds.fusion_e2e);
+    }
+
+    #[test]
+    fn test_fusion_credentials_getnewargs() {
+        let creds = FusionCredentials::new(
+            Some("client_id".to_string()),
+            Some("client_secret".to_string()),
+            Some("username".to_string()),
+            Some("password".to_string()),
+            Some("resource".to_string()),
+            Some("auth_url".to_string()),
+            None,
+            Some(HashMap::new()),
+            Some("grant_type".to_string()),
+            Some("fusion_e2e".to_string()),
+        )
+        .unwrap();
+
+        let (
+            client_id,
+            client_secret,
+            username,
+            password,
+            resource,
+            auth_url,
+            bearer_token,
+            proxies,
+            grant_type,
+            fusion_e2e,
+        ) = creds.__getnewargs__().unwrap();
+
+        assert_eq!(client_id, Some("client_id".to_string()));
+        assert_eq!(client_secret, Some("client_secret".to_string()));
+        assert_eq!(username, Some("username".to_string()));
+        assert_eq!(password, Some("password".to_string()));
+        assert_eq!(resource, Some("resource".to_string()));
+        assert_eq!(auth_url, Some("auth_url".to_string()));
+        assert!(bearer_token.is_none());
+        assert!(proxies.is_some());
+        assert_eq!(grant_type, Some("grant_type".to_string()));
+        assert_eq!(fusion_e2e, Some("fusion_e2e".to_string()));
+    }
+
+    #[test]
+    fn test_fusion_credentials_from_client_id() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let creds = FusionCredentials::from_client_id(
+                &py.get_type_bound::<FusionCredentials>(),
+                Some("client_id".to_string()),
+                Some("client_secret".to_string()),
+                Some("resource".to_string()),
+                Some("auth_url".to_string()),
+                None,
+                None,
+            )
+            .unwrap();
+
+            assert_eq!(creds.client_id, Some("client_id".to_string()));
+            assert_eq!(creds.client_secret, Some("client_secret".to_string()));
+            assert_eq!(creds.resource, Some("resource".to_string()));
+            assert_eq!(creds.auth_url, Some("auth_url".to_string()));
+            assert_eq!(creds.grant_type, "client_credentials".to_string());
+        });
+    }
+
+    #[test]
+    fn test_fusion_credentials_from_user_id() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let creds = FusionCredentials::from_user_id(
+                &py.get_type_bound::<FusionCredentials>(),
+                Some("username".to_string()),
+                Some("password".to_string()),
+                Some("resource".to_string()),
+                Some("auth_url".to_string()),
+                None,
+                None,
+            )
+            .unwrap();
+
+            assert_eq!(creds.username, Some("username".to_string()));
+            assert_eq!(creds.password, Some("password".to_string()));
+            assert_eq!(creds.resource, Some("resource".to_string()));
+            assert_eq!(creds.auth_url, Some("auth_url".to_string()));
+            assert_eq!(creds.grant_type, "password".to_string());
+        });
+    }
+
+    #[test]
+    fn test_fusion_credentials_from_bearer_token() {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let expiry_date = PyDate::new_bound(py, 2023, 12, 31).unwrap();
+            let creds = FusionCredentials::from_bearer_token(
+                &py.get_type_bound::<FusionCredentials>(),
+                Some("resource".to_string()),
+                Some("auth_url".to_string()),
+                Some("token".to_string()),
+                Some(&expiry_date),
+                None,
+                None,
+            )
+            .unwrap();
+
+            assert_eq!(creds.resource, Some("resource".to_string()));
+            assert_eq!(creds.auth_url, Some("auth_url".to_string()));
+            let token = creds.bearer_token.clone().unwrap();
+            assert_eq!(token.token, "token".to_string());
+            assert!(token.expires_in_secs().is_some());
+        });
+    }
+
+    #[test]
+    fn test_fusion_credentials_put_bearer_token() {
+        let mut creds = FusionCredentials::default();
+        creds.put_bearer_token("new_token".to_string(), Some(3600));
+
+        assert!(creds.bearer_token.is_some());
+        assert_eq!(creds.bearer_token.unwrap().token, "new_token".to_string());
+    }
+
+    #[test]
+    fn test_fusion_credentials_put_fusion_token() {
+        let mut creds = FusionCredentials::default();
+        creds.put_fusion_token("key".to_string(), "token".to_string(), Some(3600));
+
+        assert!(creds.fusion_token.contains_key("key"));
+        assert_eq!(
+            creds.fusion_token.get("key").unwrap().token,
+            "token".to_string()
+        );
+    }
+
+    #[test]
+    fn test_fusion_credentials_get_bearer_token_header() {
+        pyo3::prepare_freethreaded_python();
+        let mut creds = FusionCredentials::default();
+        creds.put_bearer_token("token".to_string(), Some(3600));
+
+        Python::with_gil(|py| {
+            let header = creds.get_bearer_token_header(py).unwrap();
+            assert_eq!(header.len(), 1);
+            assert_eq!(
+                header
+                    .get_item(0)
+                    .unwrap()
+                    .get_item(0)
+                    .unwrap()
+                    .extract::<String>()
+                    .unwrap(),
+                "Authorization"
+            );
+            assert_eq!(
+                header
+                    .get_item(0)
+                    .unwrap()
+                    .get_item(1)
+                    .unwrap()
+                    .extract::<String>()
+                    .unwrap(),
+                "Bearer token"
+            );
+        });
+    }
+
+    #[test]
+    fn test_fusion_credentials_get_fusion_token_header() {
+        pyo3::prepare_freethreaded_python();
+        let mut creds = FusionCredentials::default();
+        creds.put_fusion_token("key".to_string(), "token".to_string(), Some(3600));
+
+        Python::with_gil(|py| {
+            let header = creds
+                .get_fusion_token_header(py, "key".to_string())
+                .unwrap();
+            assert_eq!(header.len(), 1);
+            assert_eq!(
+                header
+                    .get_item(0)
+                    .unwrap()
+                    .get_item(0)
+                    .unwrap()
+                    .extract::<String>()
+                    .unwrap(),
+                "Fusion-Authorization"
+            );
+            assert_eq!(
+                header
+                    .get_item(0)
+                    .unwrap()
+                    .get_item(1)
+                    .unwrap()
+                    .extract::<String>()
+                    .unwrap(),
+                "Bearer token"
+            );
+        });
+    }
+
+    #[test]
+    fn test_fusion_credentials_get_fusion_token_expires_in() {
+        let mut creds = FusionCredentials::default();
+        creds.put_fusion_token("key".to_string(), "token".to_string(), Some(3600));
+
+        let expires_in = creds
+            .get_fusion_token_expires_in("key".to_string())
+            .unwrap();
+        assert!(expires_in.is_some());
+        assert!(expires_in.unwrap() <= 3600);
+    }
+
+    #[test]
+    fn test_fusion_credentials_from_file() {
+        pyo3::prepare_freethreaded_python();
+        let temp_dir =
+            TempDir::new("test_fusion_credentials_from_file").expect("Failed to create temp dir");
+
+        // Path to the temporary file
+        let temp_file_path = temp_dir.path().join("credentials.json");
+
+        // JSON content to be written to the file
+        let json_content = json!({
+            "grant_type": "client_credentials",
+            "client_id": "my_client_id",
+            "client_secret": "my_client_secret",
+            "resource": "my_resource",
+            "auth_url": "my_auth_url",
+        });
+
+        // Write the JSON content to the file
+        let mut file = File::create(&temp_file_path).expect("Failed to create temp file");
+        file.write_all(json_content.to_string().as_bytes())
+            .expect("Failed to write to temp file");
+
+        Python::with_gil(|py| {
+            let creds = FusionCredentials::from_file(
+                &py.get_type_bound::<FusionCredentials>(),
+                temp_file_path.clone(),
+            )
+            .unwrap();
+
+            assert_eq!(creds.client_id, Some("my_client_id".to_string()));
+            assert_eq!(creds.client_secret, Some("my_client_secret".to_string()));
+            assert_eq!(creds.resource, Some("my_resource".to_string()));
+            assert_eq!(creds.auth_url, Some("my_auth_url".to_string()));
+            assert_eq!(creds.grant_type, "client_credentials".to_string());
+        });
+    }
+
+    #[test]
+    fn test_fusion_credentials_from_file_with_env_vars() {
+        pyo3::prepare_freethreaded_python();
+        // Set environment variables
+        env::set_var("FUSION_CLIENT_ID", "env_client_id");
+        env::set_var("FUSION_CLIENT_SECRET", "env_client_secret");
+
+        // Create a temporary directory
+        let temp_dir = TempDir::new("test_fusion_credentials_from_file_with_env_vars")
+            .expect("Failed to create temp dir");
+
+        // Path to the temporary file
+        let temp_file_path = temp_dir.path().join("credentials.json");
+
+        // JSON content to be written to the file
+        let json_content = json!({
+            "grant_type": "client_credentials",
+            "resource": "my_resource",
+            "auth_url": "my_auth_url",
+        });
+
+        // Write the JSON content to the file
+        let mut file = File::create(&temp_file_path).expect("Failed to create temp file");
+        file.write_all(json_content.to_string().as_bytes())
+            .expect("Failed to write to temp file");
+
+        // Test the from_file method
+        Python::with_gil(|py| {
+            let creds = FusionCredentials::from_file(
+                &py.get_type_bound::<FusionCredentials>(),
+                temp_file_path.clone(),
+            )
+            .expect("Failed to create FusionCredentials from file");
+
+            assert_eq!(creds.client_id, Some("env_client_id".to_string()));
+            assert_eq!(creds.client_secret, Some("env_client_secret".to_string()));
+            assert_eq!(creds.resource, Some("my_resource".to_string()));
+            assert_eq!(creds.auth_url, Some("my_auth_url".to_string()));
+            assert_eq!(creds.grant_type, "client_credentials".to_string());
+        });
+
+        // Cleanup is handled automatically by TempDir
+
+        // Unset environment variables
+        env::remove_var("FUSION_CLIENT_ID");
+        env::remove_var("FUSION_CLIENT_SECRET");
     }
 }

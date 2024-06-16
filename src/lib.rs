@@ -1,7 +1,5 @@
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 mod auth;
 
@@ -13,17 +11,6 @@ fn rust_ok_impl() -> bool {
 #[pyfunction]
 fn rust_ok() -> PyResult<bool> {
     Ok(rust_ok_impl())
-}
-
-#[pyclass(module = "fusion._fusion")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct TestRust {
-    #[pyo3(get, set)]
-    pub name: String,
-    #[pyo3(get, set)]
-    pub age: i32,
-    #[pyo3(get, set)]
-    pub map: HashMap<String, String>,
 }
 
 /// A Python module implemented in Rust.
@@ -42,5 +29,22 @@ mod tests {
     #[test]
     fn test_rust_ok_rs() {
         assert!(rust_ok_impl());
+    }
+
+    #[test]
+    fn test_rusk_ok() -> Result<(), PyErr> {
+        let res = rust_ok();
+        assert!(res.unwrap());
+        Ok(())
+    }
+
+    #[test]
+    fn test_load_module() -> Result<(), PyErr> {
+        pyo3::prepare_freethreaded_python();
+        Python::with_gil(|py| {
+            let _module = PyModule::new_bound(py, "_fusion")?;
+            _fusion(py, &PyModule::new_bound(py, "fusion")?)?;
+            Ok(())
+        })
     }
 }
