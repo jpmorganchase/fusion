@@ -87,7 +87,7 @@ class Fusion:
     def __init__(
         self,
         credentials: Union[str, dict[str, Any], FusionCredentials] = "config/client_credentials.json",
-        root_url: str = "https://fusion-api.jpmorgan.com/fusion/v1/",
+        root_url: str = "https://fusion.jpmorgan.com/api/v1/",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
         fs: fsspec.filesystem = None,
