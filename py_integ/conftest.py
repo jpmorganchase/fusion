@@ -10,7 +10,7 @@ def creds() -> FusionCredentials:
         {
             "resource": "JPMC:URI:RS-93742-Fusion-PROD",
             "application_name": "fusion",
-            "root_url": "https://fusion-api.jpmorgan.com/fusion/v1",
+            "root_url": "https://fusion.jpmorgan.com/api/v1/",
             "auth_url": "https://authe.jpmorgan.com/as/token.oauth2",
         }
     )
