@@ -87,7 +87,7 @@ class Fusion:
     def __init__(
         self,
         credentials: Union[str, dict[str, Any], FusionCredentials] = "config/client_credentials.json",
-        root_url: str = "https://fusion-api.jpmorgan.com/fusion/v1/",
+        root_url: str = "https://fusion.jpmorgan.com/api/v1/",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
         fs: fsspec.filesystem = None,
@@ -669,7 +669,7 @@ class Fusion:
             if not self.fs.exists(d):
                 self.fs.mkdir(d, create_parents=True)
 
-        if len(required_series) == 1:
+        if len(required_series) == 1 and type(self.fs).__name__ == "LocalFileSystem":
             n_par = cpu_count(n_par, is_threading=True)
             with tqdm(total=1) as pbar:
                 output_file = distribution_to_filename(
