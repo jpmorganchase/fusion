@@ -106,7 +106,7 @@ dev-dependencies = [
     "pytest-asyncio>=0.23.6",
     "pytest-cov",
     "pytest-mock>=3.14.0",
-    "pytest-random-order>=1.1.2-dev0",
+    "pytest-random-order>=1.1.1",
     "pyzmq>25.1",
     "requests-mock>=1.12.1",
     "ruff",
