@@ -23,7 +23,7 @@ def test_rust_ok() -> None:
 def test__get_canonical_root_url() -> None:
     from fusion.utils import _get_canonical_root_url
 
-    some_url = "https://fusion-api.jpmorgan.com/fusion/v1/a_given_resource"
+    some_url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     root_url = "https://fusion-api.jpmorgan.com"
     assert root_url == _get_canonical_root_url(some_url)
 
@@ -239,7 +239,7 @@ def test_get_fusion_filesystem(fusion_obj: Fusion) -> None:
 
 def test__call_for_dataframe_success(requests_mock: requests_mock.Mocker) -> None:
     # Mock the response from the API endpoint
-    url = "https://fusion-api.jpmorgan.com/fusion/v1/a_given_resource"
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
     requests_mock.get(url, json=expected_data)
 
@@ -256,7 +256,7 @@ def test__call_for_dataframe_success(requests_mock: requests_mock.Mocker) -> Non
 
 def test__call_for_dataframe_error(requests_mock: requests_mock.Mocker) -> None:
     # Mock the response from the API endpoint with an error status code
-    url = "https://fusion-api.jpmorgan.com/fusion/v1/a_given_resource"
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     requests_mock.get(url, status_code=500)
 
     # Create a mock session
@@ -269,7 +269,7 @@ def test__call_for_dataframe_error(requests_mock: requests_mock.Mocker) -> None:
 
 def test__call_for_bytes_object_success(requests_mock: requests_mock.Mocker) -> None:
     # Mock the response from the API endpoint
-    url = "https://fusion-api.jpmorgan.com/fusion/v1/a_given_resource"
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     expected_data = b"some binary data"
     requests_mock.get(url, content=expected_data)
 
@@ -285,7 +285,7 @@ def test__call_for_bytes_object_success(requests_mock: requests_mock.Mocker) -> 
 
 def test__call_for_bytes_object_fail(requests_mock: requests_mock.Mocker) -> None:
     # Mock the response from the API endpoint with an error status code
-    url = "https://fusion-api.jpmorgan.com/fusion/v1/a_given_resource"
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     requests_mock.get(url, status_code=500)
 
     # Create a mock session
@@ -298,7 +298,7 @@ def test__call_for_bytes_object_fail(requests_mock: requests_mock.Mocker) -> Non
 
 def test_list_catalogs_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     # Mock the response from the API endpoint
-    url = "https://fusion-api.jpmorgan.com/fusion/v1/catalogs/"
+    url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
     expected_data = {"resources": [{"id": 1, "name": "Catalog 1"}, {"id": 2, "name": "Catalog 2"}]}
     requests_mock.get(url, json=expected_data)
 
@@ -312,7 +312,7 @@ def test_list_catalogs_success(requests_mock: requests_mock.Mocker, fusion_obj: 
 
 def test_list_catalogs_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     # Mock the response from the API endpoint with an error status code
-    url = "https://fusion-api.jpmorgan.com/fusion/v1/catalogs/"
+    url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
     requests_mock.get(url, status_code=500)
 
     # Call the list_catalogs method and expect an exception to be raised
