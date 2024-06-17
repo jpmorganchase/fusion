@@ -24,7 +24,7 @@ def test__get_canonical_root_url() -> None:
     from fusion.utils import _get_canonical_root_url
 
     some_url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
-    root_url = "https://fusion-api.jpmorgan.com"
+    root_url = "https://fusion.jpmorgan.com"
     assert root_url == _get_canonical_root_url(some_url)
 
 
