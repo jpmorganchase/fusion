@@ -669,7 +669,7 @@ class Fusion:
             if not self.fs.exists(d):
                 self.fs.mkdir(d, create_parents=True)
 
-        if len(required_series) == 1:
+        if len(required_series) == 1 and type(self.fs).__name__ == "LocalFileSystem":
             n_par = cpu_count(n_par, is_threading=True)
             with tqdm(total=1) as pbar:
                 output_file = distribution_to_filename(

@@ -813,7 +813,7 @@ def download_single_file_threading(
     starts = [i * chunk_size for i in range(n_chunks)]
     ends = [min((i + 1) * chunk_size, content_length) for i in range(n_chunks)]
     lock = Lock()
-    output_file_h: fsspec.spec.AbstractBufferedFile = fs.open(output_file, "wb+")
+    output_file_h: fsspec.spec.AbstractBufferedFile = fs.open(output_file, "wb")
     results = [None] * n_chunks
     queue: WorkerQueueT = Queue(max_threads)
     threads = []
