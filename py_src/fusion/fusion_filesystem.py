@@ -49,7 +49,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 self.credentials = FusionCredentials.from_object(credentials)
             kwargs["client_kwargs"] = {
                 "credentials": self.credentials,
-                "root_url": "https://fusion-api.jpmorgan.com/fusion/v1/",
+                "root_url": "https://fusion.jpmorgan.com/api/v1/",
             }
         elif "client_kwargs" in kwargs and isinstance(kwargs["client_kwargs"]["credentials"], FusionCredentials):
             self.credentials = kwargs["client_kwargs"]["credentials"]
