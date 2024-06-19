@@ -1,6 +1,6 @@
 use std::{fs::File, io::Write};
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 
 use fusion::auth::FusionCredentials;
 use pyo3::Python;
@@ -41,7 +41,6 @@ fn bench_fusion_creds(c: &mut Criterion) {
         })
     });
 }
-
 
 criterion_group!(benches, bench_fusion_creds);
 criterion_main!(benches);

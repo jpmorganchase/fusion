@@ -7,25 +7,7 @@ from typing import Any
 
 import pytest
 
-from fusion._fusion import RustTestClass
-
-
-def py_fibonacci(n: int) -> int:
-    if n <= 1:
-        return n
-    return py_fibonacci(n - 1) + py_fibonacci(n - 2)
-
-
-@pytest.mark.benchmark(group="fibonacci")
-def test_py_fibonacci(benchmark: Any) -> None:
-    benchmark(py_fibonacci, 20)
-
-
-@pytest.mark.benchmark(group="fibonacci")
-def test_rust_fibonacci(benchmark: Any) -> None:
-    from fusion._fusion import rust_fibonacci_py
-
-    benchmark(rust_fibonacci_py, 20)
+from fusion._fusion import RustTestClass  # type: ignore
 
 
 class TestPy:
@@ -58,10 +40,10 @@ class TestPy:
         return cls(i64_1, i64_2, str_1, str_2, str_3, str_4)
 
     @classmethod
-    def factory_with_file(
+    def factory_with_file(  # noqa: PLR0913
         cls: type[TestPy],
         file_path: Path,
-        i64_1: int | None,
+        _i64_1: int | None,
         i64_2: int | None,
         str_1: str | None,
         str_2: str | None,
@@ -70,7 +52,8 @@ class TestPy:
     ) -> TestPy:
         with Path(file_path).open() as f:
             data = f.read()
-            return cls(i64_1, i64_2, str_1, str_2, str_3, str_4)
+            x = len(data)
+            return cls(x, i64_2, str_1, str_2, str_3, str_4)
 
     @classmethod
     def factory_with_deser(cls: type[TestPy], file_path: Path) -> TestPy:

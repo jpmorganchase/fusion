@@ -18,8 +18,6 @@ PathLike = Union[str, Path]
 
 @pytest.hookimpl()
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001
-    cross_json_path = Path(".benchmarks/cross")
-
     if session.config.getoption("--benchmark-only") or session.config.getoption("--benchmark-enable"):
         benches = sorted(Path().glob(".benchmarks/**/*.json"))
         if not benches:

@@ -24,7 +24,7 @@ def test_rust_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path
 
 
 @pytest.mark.benchmark(group="credentials")
-def test_rust_creds_plain(benchmark: Any, example_creds_dict: dict) -> None:
+def test_rust_creds_plain(benchmark: Any, example_creds_dict: dict[str, Any]) -> None:
     from fusion._fusion import FusionCredentials
 
     benchmark.pedantic(
@@ -41,7 +41,6 @@ def test_rust_creds_plain(benchmark: Any, example_creds_dict: dict) -> None:
     )
 
 
-@pytest.mark.benchmark(group="credentials")
 def test_py_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
     from fusion._legacy.authentication import FusionCredentials
 
