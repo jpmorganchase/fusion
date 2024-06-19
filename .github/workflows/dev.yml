@@ -130,6 +130,8 @@ jobs:
         manylinux: auto
         args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
+      env:
+        OPENSSL_DIR: /etc/pki/tls
   
     - name: Integration test artifact
       run: |
