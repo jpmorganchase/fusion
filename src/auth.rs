@@ -4,6 +4,7 @@ use pyo3::exceptions::{PyFileNotFoundError, PyValueError};
 use pyo3::import_exception;
 use pyo3::prelude::*;
 use pyo3::types::{PyDate, PyDateAccess, PyTuple, PyType};
+use reqwest::Proxy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
@@ -58,6 +59,24 @@ fn untyped_proxies(proxies: HashMap<ProxyType, String>) -> HashMap<String, Strin
     untyped_proxies
 }
 
+fn client_builder_from_proxies(proxies: &HashMap<String, String>) -> reqwest::ClientBuilder {
+    let mut client_builder = reqwest::Client::builder();
+    for (key, value) in proxies {
+        match ProxyType::from_str(key) {
+            Ok(ProxyType::http) => {
+                client_builder = client_builder.proxy(Proxy::http(value).unwrap());
+            }
+            Ok(ProxyType::https) => {
+                client_builder = client_builder.proxy(Proxy::https(value).unwrap());
+            }
+            Err(_) => {
+                eprintln!("Unrecognized proxy type: {}", key);
+            }
+        }
+    }
+    client_builder
+}
+
 fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
     let current_path = file_path.to_path_buf();
 
@@ -66,7 +85,6 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
     }
 
     let cwd = env::current_dir()?;
-    println!("The current directory is {}", cwd.display());
 
     let cfg_file_name = "client_credentials.json";
     let mut start_dir = match file_path.parent() {
@@ -218,6 +236,9 @@ pub struct FusionCredentials {
 
     #[pyo3(get)]
     fusion_token: HashMap<String, AuthToken>,
+
+    #[serde(skip)]
+    http_client: Option<reqwest::Client>,
 }
 
 impl Default for FusionCredentials {
@@ -235,6 +256,7 @@ impl Default for FusionCredentials {
             proxies: HashMap::new(),
             grant_type: "client_credentials".to_string(),
             fusion_e2e: None,
+            http_client: None,
         }
     }
 }
@@ -288,6 +310,12 @@ impl FusionCredentials {
         proxies: Option<HashMap<String, String>>,
         fusion_e2e: Option<String>,
     ) -> PyResult<Self> {
+        /*let client = client_builder_from_proxies(&proxies.clone().unwrap_or_default())
+        .build()
+        .map_err(|err| {
+            CredentialError::new_err(format!("Error creating HTTP client: {}", err))
+        })?;*/
+
         Ok(Self {
             client_id,
             client_secret,
@@ -300,6 +328,7 @@ impl FusionCredentials {
             bearer_token: None,
             username: None,
             password: None,
+            http_client: None, //Some(client),
         })
     }
 
@@ -313,6 +342,12 @@ impl FusionCredentials {
         proxies: Option<HashMap<String, String>>,
         fusion_e2e: Option<String>,
     ) -> PyResult<Self> {
+        let client = client_builder_from_proxies(&proxies.clone().unwrap_or_default())
+            .build()
+            .map_err(|err| {
+                CredentialError::new_err(format!("Error creating HTTP client: {}", err))
+            })?;
+
         Ok(Self {
             username,
             password,
@@ -325,6 +360,7 @@ impl FusionCredentials {
             bearer_token: None,
             client_id: None,
             client_secret: None,
+            http_client: Some(client),
         })
     }
 
@@ -338,6 +374,11 @@ impl FusionCredentials {
         proxies: Option<HashMap<String, String>>,
         fusion_e2e: Option<String>,
     ) -> PyResult<Self> {
+        let client = client_builder_from_proxies(&proxies.clone().unwrap_or_default())
+            .build()
+            .map_err(|err| {
+                CredentialError::new_err(format!("Error creating HTTP client: {}", err))
+            })?;
         Ok(Self {
             resource,
             auth_url,
@@ -364,6 +405,7 @@ impl FusionCredentials {
             client_secret: None,
             username: None,
             password: None,
+            http_client: Some(client),
         })
     }
 
@@ -381,7 +423,11 @@ impl FusionCredentials {
         grant_type: Option<String>,
         fusion_e2e: Option<String>,
     ) -> PyResult<Self> {
-        println!("New FusionCredentials {:?}\n", client_id);
+        let client = client_builder_from_proxies(&proxies.clone().unwrap_or_default())
+            .build()
+            .map_err(|err| {
+                CredentialError::new_err(format!("Error creating HTTP client: {}", err))
+            })?;
         Ok(FusionCredentials {
             client_id,
             client_secret,
@@ -394,7 +440,63 @@ impl FusionCredentials {
             proxies: proxies.unwrap_or_default(),
             grant_type: grant_type.unwrap_or_else(|| "client_credentials".to_string()),
             fusion_e2e,
+            http_client: Some(client),
         })
+    }
+
+    fn refresh_bearer_token(&mut self) -> PyResult<()> {
+        let client = self.http_client.as_ref().ok_or_else(|| {
+            CredentialError::new_err(
+                "HTTP client not initialized. Use from_* methods to create credentials",
+            )
+        })?;
+        let payload = match self.grant_type.clone().as_str() {
+            "client_credentials" => {
+                vec![
+                    ("grant_type", self.grant_type.as_str()),
+                    ("client_id", self.client_id.as_ref().unwrap()),
+                    ("client_secret", self.client_secret.as_ref().unwrap()),
+                    ("aud", self.resource.as_ref().unwrap()),
+                ]
+            }
+            "password" => {
+                vec![
+                    ("grant_type", self.grant_type.as_str()),
+                    ("client_id", self.client_id.as_ref().unwrap()),
+                    ("username", self.username.as_ref().unwrap()),
+                    ("password", self.password.as_ref().unwrap()),
+                    ("resource", self.resource.as_ref().unwrap()),
+                ]
+            }
+            _ => {
+                return Err(PyValueError::new_err("Unrecognized grant type"));
+            }
+        };
+        let rt = tokio::runtime::Runtime::new().unwrap();
+
+        let response_res: PyResult<HashMap<String, serde_json::Value>> = rt.block_on(async {
+            let res = client
+                .post(self.auth_url.as_ref().unwrap())
+                .form(&payload)
+                .send()
+                .await
+                .map_err(|e| {
+                    CredentialError::new_err(format!("Could not post request: {:?}", e))
+                })?;
+
+            let res_json: HashMap<String, serde_json::Value> = res.json().await.map_err(|e| {
+                CredentialError::new_err(format!("Could not parse response JSON: {:?}", e))
+            })?;
+
+            Ok(res_json)
+        });
+        let response = response_res?;
+        let token = response
+            .get("access_token")
+            .map(|v| v.as_str().unwrap().to_string());
+        let expires_in_secs = response.get("expires_in").map(|v| v.as_i64().unwrap());
+        self.put_bearer_token(token.unwrap(), expires_in_secs);
+        Ok(())
     }
 
     fn put_bearer_token(&mut self, bearer_token: String, expires_in_secs: Option<i64>) {
@@ -444,21 +546,25 @@ impl FusionCredentials {
     }
 
     #[classmethod]
-    fn from_file(cls: &Bound<'_, PyType>, file_path: PathBuf) -> PyResult<FusionCredentials> {
-        let found_path = find_cfg_file(&file_path)
-            .map_err(|_| PyFileNotFoundError::new_err("File not found"))?;
+    pub fn from_file(cls: &Bound<'_, PyType>, file_path: PathBuf) -> PyResult<FusionCredentials> {
+        let found_path = find_cfg_file(&file_path)?;
+        let file =
+            File::open(&found_path).map_err(|_| PyFileNotFoundError::new_err("File not found"))?;
 
-        let mut file =
-            File::open(found_path).map_err(|_| PyFileNotFoundError::new_err("File not found"))?;
-
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
-
-        let credentials: FusionCredsPersistent =
-            serde_json::from_str(&contents).map_err(|err| {
-                CredentialError::new_err(format!("Invalid JSON: {}\nContents:\n{}", err, &contents))
-            })?;
-
+        let credentials: FusionCredsPersistent = match serde_json::from_reader(file) {
+            Ok(credentials) => credentials,
+            Err(err) => {
+                let mut contents = String::new();
+                let mut file = File::open(&found_path)
+                    .map_err(|_| PyFileNotFoundError::new_err("File not found"))?;
+                file.read_to_string(&mut contents)
+                    .map_err(|_| PyFileNotFoundError::new_err("Could not read file contents"))?;
+                return Err(CredentialError::new_err(format!(
+                    "Invalid JSON: {}\nContents:\n{}",
+                    err, contents
+                )));
+            }
+        };
         let client_id = credentials
             .client_id
             .or_else(|| std::env::var("FUSION_CLIENT_ID").ok())

@@ -16,27 +16,18 @@ from .bench_rep_gen import generate_benchmark_html
 PathLike = Union[str, Path]
 
 
-def pytest_addoption(parser: Any) -> None:
-    parser.addoption("--benchmark", action="store_true", default=False, help="Run benchmark tests")
-
-
-def pytest_collection_modifyitems(config: Any, items: Any) -> None:
-    if config.getoption("--benchmark"):
-        for item in items:
-            if "benchmark" not in item.keywords:
-                item.add_marker(pytest.mark.skip(reason="Only benchmark tests are selected"))
-        return
-    for item in items:
-        if "benchmark" in item.keywords:
-            item.add_marker(pytest.mark.skip(reason="to be run with --benchmark option"))
-
-
 @pytest.hookimpl()
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001
-    if session.config.getoption("--benchmark"):
-        json_file = sorted(Path().glob(".benchmarks/**/*.json"))[-1]
+    cross_json_path = Path(".benchmarks/cross")
+
+    if session.config.getoption("--benchmark-only") or session.config.getoption("--benchmark-enable"):
+        benches = sorted(Path().glob(".benchmarks/**/*.json"))
+        if not benches:
+            raise ValueError("No benchmark files found.")
+        json_file = benches[-1]
+        prev_json_file = benches[-2] if len(benches) > 1 else None
         html_file = Path(".reports/py/py_bench.html")
-        generate_benchmark_html(json_file, html_file)
+        generate_benchmark_html(json_file, prev_json_file, html_file)
 
 
 @contextmanager

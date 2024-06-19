@@ -230,7 +230,7 @@ def parquet_to_table(
     ).read(columns=columns)
 
 
-def read_csv(
+def read_csv(  # noqa: PLR0912
     path: str,
     columns: Optional[list[str]] = None,
     filters: Optional[PyArrowFilterT] = None,

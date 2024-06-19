@@ -11,51 +11,95 @@
             margin: 20px;
             background-color: #f8f9fa;
         }
+
         h1 {
             text-align: center;
             margin-bottom: 40px;
             font-size: 2rem;
             color: #007bff;
         }
+
         h2 {
             margin-top: 40px;
             font-size: 1.5rem;
             color: #007bff;
         }
+
         .table-container {
             overflow-x: auto;
         }
+
         table {
             width: 100%;
             margin-bottom: 1rem;
             color: #212529;
             border-collapse: collapse;
         }
-        th, td {
+
+        th,
+        td {
             padding: 0.75rem;
             vertical-align: top;
             border-top: 1px solid #dee2e6;
             text-align: left;
         }
+
         th {
             border-bottom: 2px solid #dee2e6;
         }
-        tbody + tbody {
+
+        tbody+tbody {
             border-top: 2px solid #dee2e6;
+        }
+
+        .positive {
+            color: green;
+        }
+
+        .negative {
+            color: red;
+        }
+
+        .best {
+            font-weight: bold;
+            background-color: #d4edda;
         }
     </style>
 </head>
+
 <body>
     <h1>Benchmark Report</h1>
     <div class="container">
-        <h2><button class="btn btn-link" data-toggle="collapse" data-target="#info" aria-expanded="true" aria-controls="info">Machine and Commit Information</button></h2>
+        <h2><button class="btn btn-link" data-toggle="collapse" data-target="#info" aria-expanded="true"
+                aria-controls="info">Machine and Commit Information</button></h2>
         <div id="info" class="collapse show">
             <table class="table table-striped">
-                <tr><th>Node</th><td>{{ machine_info.node }}</td><th>Commit ID</th><td>{{ commit_info.id }}</td></tr>
-                <tr><th>Processor</th><td>{{ machine_info.processor }}</td><th>Commit Time</th><td>{{ commit_info.time }}</td></tr>
-                <tr><th>Machine</th><td>{{ machine_info.machine }}</td><th>Branch</th><td>{{ commit_info.branch }}</td></tr>
-                <tr><th>Python Version</th><td>{{ machine_info.python_version }}</td></tr>
-                <tr><th>System</th><td>{{ machine_info.system }}</td></tr>
+                <tr>
+                    <th>Node</th>
+                    <td>{{ machine_info.node }}</td>
+                    <th>Commit ID</th>
+                    <td>{{ commit_info.id }}</td>
+                </tr>
+                <tr>
+                    <th>Processor</th>
+                    <td>{{ machine_info.processor }}</td>
+                    <th>Commit Time</th>
+                    <td>{{ commit_info.time }}</td>
+                </tr>
+                <tr>
+                    <th>Machine</th>
+                    <td>{{ machine_info.machine }}</td>
+                    <th>Branch</th>
+                    <td>{{ commit_info.branch }}</td>
+                </tr>
+                <tr>
+                    <th>Python Version</th>
+                    <td>{{ machine_info.python_version }}</td>
+                </tr>
+                <tr>
+                    <th>System</th>
+                    <td>{{ machine_info.system }}</td>
+                </tr>
             </table>
         </div>
         <h2>Benchmark Results</h2>
@@ -75,9 +119,16 @@
                         <th>OPS (Kops/s)</th>
                         <th>Rounds</th>
                         <th>Iterations</th>
+                        <th>Min Diff</th>
+                        <th>Max Diff</th>
+                        <th>Mean Diff</th>
+                        <th>StdDev Diff</th>
+                        <th>Median Diff</th>
+                        <th>IQR Diff</th>
+                        <th>OPS Diff (Kops/s)</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="benchmark-table-body">
                     {% for benchmark in benchmarks %}
                         <tr>
                             <td>{{ benchmark.get("group", "Ungrouped") }}</td>
@@ -92,24 +143,121 @@
                             <td>{{ '%.4f' | format(benchmark.stats.ops / 1e3) }}</td>
                             <td>{{ benchmark.stats.rounds }}</td>
                             <td>{{ benchmark.stats.iterations }}</td>
+                            <td class="{{ 'positive' if benchmark.difference.min > 0 else 'negative' }}">{{ '%.4f' | format(benchmark.difference.min) }}</td>
+                            <td class="{{ 'positive' if benchmark.difference.max > 0 else 'negative' }}">{{ '%.4f' | format(benchmark.difference.max) }}</td>
+                            <td class="{{ 'positive' if benchmark.difference.mean > 0 else 'negative' }}">{{ '%.4f' | format(benchmark.difference.mean) }}</td>
+                            <td class="{{ 'positive' if benchmark.difference.stddev > 0 else 'negative' }}">{{ '%.4f' | format(benchmark.difference.stddev) }}</td>
+                            <td class="{{ 'positive' if benchmark.difference.median > 0 else 'negative' }}">{{ '%.4f' | format(benchmark.difference.median) }}</td>
+                            <td class="{{ 'positive' if benchmark.difference.iqr > 0 else 'negative' }}">{{ '%.4f' | format(benchmark.difference.iqr) }}</td>
+                            <td class="{{ 'positive' if benchmark.difference.ops > 0 else 'negative' }}">{{ '%.4f' | format(benchmark.difference.ops) }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        <h2>Implementation Comparison</h2>
+        <div id="comparison-tables"></div>
         <p>Report generated on: {{ datetime_info }}</p>
         <p>pytest-benchmark version: {{ version }}</p>
     </div>
+    <!-- Embedding the JSON data into the HTML -->
+    <script id="benchmark-data" type="application/json">
+        {
+            "benchmarks": {{ benchmarks | tojson }},
+            "compareGroups": {{ compare_groups | tojson }}
+        }
+    </script>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        $(document).ready(function() {
+        document.addEventListener('DOMContentLoaded', function () {
+            const dataElement = document.getElementById('benchmark-data');
+            const data = JSON.parse(dataElement.textContent);
+
+            const benchmarkTableBody = document.getElementById('benchmark-table-body');
+
+            data.benchmarks.forEach(benchmark => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${benchmark.group || 'Ungrouped'}</td>
+                    <td>${benchmark.name}</td>
+                    <td>${(benchmark.stats.min * 1e6).toFixed(4)}</td>
+                    <td>${(benchmark.stats.max * 1e6).toFixed(4)}</td>
+                    <td>${(benchmark.stats.mean * 1e6).toFixed(4)}</td>
+                    <td>${(benchmark.stats.stddev * 1e6).toFixed(4)}</td>
+                    <td>${(benchmark.stats.median * 1e6).toFixed(4)}</td>
+                    <td>${(benchmark.stats.iqr * 1e6).toFixed(4)}</td>
+                    <td>${benchmark.stats.outliers}</td>
+                    <td>${(benchmark.stats.ops / 1e3).toFixed(4)}</td>
+                    <td>${benchmark.stats.rounds}</td>
+                    <td>${benchmark.stats.iterations}</td>
+                    <td class="${benchmark.difference.min > 0 ? 'positive' : 'negative'}">${(benchmark.difference.min).toFixed(4)}</td>
+                    <td class="${benchmark.difference.max > 0 ? 'positive' : 'negative'}">${(benchmark.difference.max).toFixed(4)}</td>
+                    <td class="${benchmark.difference.mean > 0 ? 'positive' : 'negative'}">${(benchmark.difference.mean).toFixed(4)}</td>
+                    <td class="${benchmark.difference.stddev > 0 ? 'positive' : 'negative'}">${(benchmark.difference.stddev).toFixed(4)}</td>
+                    <td class="${benchmark.difference.median > 0 ? 'positive' : 'negative'}">${(benchmark.difference.median).toFixed(4)}</td>
+                    <td class="${benchmark.difference.iqr > 0 ? 'positive' : 'negative'}">${(benchmark.difference.iqr).toFixed(4)}</td>
+                    <td class="${benchmark.difference.ops > 0 ? 'positive' : 'negative'}">${(benchmark.difference.ops).toFixed(4)}</td>
+                `;
+                benchmarkTableBody.appendChild(row);
+            });
+
             $('#benchmark-table').DataTable({
                 "searching": true,
                 "ordering": true,
                 "paging": true
+            });
+
+            const comparisonTablesContainer = document.getElementById('comparison-tables');
+
+            Object.keys(data.compareGroups).forEach((group, index) => {
+                const tableId = `compare-table-${index}`;
+                const table = document.createElement('table');
+                table.id = tableId;
+                table.className = 'display';
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Mean</th>
+                            <th>Median</th>
+                            <th>OPS</th>
+                            <th>Mean Diff (%)</th>
+                            <th>Median Diff (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.compareGroups[group].map((benchmark, idx) => `
+                            <tr class="${idx === 0 ? 'best' : ''}">
+                                <td>${benchmark.name}</td>
+                                <td>${(benchmark.stats.mean * 1e6).toFixed(4)}</td>
+                                <td>${(benchmark.stats.median * 1e6).toFixed(4)}</td>
+                                <td>${(benchmark.stats.ops / 1e3).toFixed(4)}</td>
+                                ${benchmark.comparison && benchmark.comparison.percentage_diff ? `
+                                    ${idx !== 0 ? `
+                                        <td class="${benchmark.comparison.percentage_diff.mean < 0 ? 'positive' : 'negative'}">${benchmark.comparison.percentage_diff.mean.toFixed(2)}%</td>
+                                        <td class="${benchmark.comparison.percentage_diff.median < 0 ? 'positive' : 'negative'}">${benchmark.comparison.percentage_diff.median.toFixed(2)}%</td>
+                                    ` : `
+                                        <td>-</td>
+                                        <td>-</td>
+                                    `}
+                                ` : `
+                                    <td>-</td>
+                                    <td>-</td>
+                                `}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                `;
+                comparisonTablesContainer.appendChild(table);
+
+                $(`#${tableId}`).DataTable({
+                    "searching": true,
+                    "ordering": true,
+                    "paging": true
+                });
             });
         });
     </script>

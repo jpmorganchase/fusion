@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any
@@ -13,7 +15,30 @@ def test_rust_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
 
-    benchmark(FusionCredentials.from_file, credentials_file)
+    benchmark.pedantic(
+        FusionCredentials.from_file,
+        args=(credentials_file,),
+        iterations=10,
+        rounds=500,
+    )
+
+
+@pytest.mark.benchmark(group="credentials")
+def test_rust_creds_plain(benchmark: Any, example_creds_dict: dict) -> None:
+    from fusion._fusion import FusionCredentials
+
+    benchmark.pedantic(
+        FusionCredentials.__init__,
+        args=(
+            example_creds_dict["client_id"],
+            example_creds_dict["client_secret"],
+            example_creds_dict["resource"],
+            example_creds_dict["auth_url"],
+            example_creds_dict["proxies"],
+        ),
+        iterations=10,
+        rounds=500,
+    )
 
 
 @pytest.mark.benchmark(group="credentials")
@@ -24,7 +49,12 @@ def test_py_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path: 
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
 
-    benchmark(FusionCredentials.from_file, credentials_file)
+    benchmark.pedantic(
+        FusionCredentials.from_file,
+        args=(credentials_file,),
+        iterations=10,
+        rounds=500,
+    )
 
 
 @pytest.mark.benchmark(group="dummy")

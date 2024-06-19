@@ -100,7 +100,7 @@ dev-dependencies = [
     "patchelf>=0.17.2.1; sys_platform=='linux'",
     "pandas >= 1.1",
     "pandas-stubs>1.1",
-    "pip",
+    "pip>=24.0",
     "polars",
     "pytest",
     "pytest-asyncio>=0.23.6",

@@ -192,12 +192,7 @@ idna==3.7
     # via yarl
 importlib-metadata==7.1.0
     # via keyring
-    # via markdown
     # via mike
-    # via mkdocs
-    # via mkdocs-get-deps
-    # via mkdocstrings
-    # via nbconvert
     # via twine
 importlib-resources==6.4.0
     # via mike
@@ -715,12 +710,9 @@ types-tqdm==4.66.0.20240417
 types-urllib3==1.26.25.14
     # via types-requests
 typing-extensions==4.11.0
-    # via aioitertools
     # via anyio
     # via azure-core
     # via azure-storage-blob
-    # via ipython
-    # via mkdocstrings
     # via mypy
     # via pydantic
     # via pydantic-core
@@ -772,4 +764,3 @@ yarl==1.9.4
 ziglang==0.12.0
 zipp==3.18.1
     # via importlib-metadata
-    # via importlib-resources
