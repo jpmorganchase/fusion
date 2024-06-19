@@ -251,6 +251,9 @@ jobs:
           before-script-linux: |
             apt update
             apt install -y libssl-dev
+            ls -l $OPENSSL_DIR
+            ls -l $OPENSSL_LIB_DIR
+            ls -l $OPENSSL_INCLUDE_DIR
           docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu -e OPENSSL_INCLUDE_DIR=/usr/include/openssl
 
       - uses: uraimo/run-on-arch-action@v2
@@ -320,7 +323,7 @@ jobs:
             apt update
             apt install -y libssl-dev
           docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu -e OPENSSL_INCLUDE_DIR=/usr/include/openssl
-          
+
       - uses: uraimo/run-on-arch-action@v2
         if: false
         name: Integration test artifact
