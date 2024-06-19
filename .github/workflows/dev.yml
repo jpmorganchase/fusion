@@ -128,7 +128,7 @@ jobs:
       with:
         target: ${{ matrix.platform.target }}
         manylinux: auto
-        args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
+        args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
         before-script-linux: |
           yum update
@@ -179,7 +179,7 @@ jobs:
       with:
         target: ${{ matrix.platform.target }}
         manylinux: "auto"
-        args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
+        args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
         docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu -e OPENSSL_INCLUDE_DIR=/usr/include/openssl
         before-script-linux: |
@@ -246,7 +246,7 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           manylinux: "auto"
-          args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
+          args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
           sccache: 'true'
           before-script-linux: |
             apt update
@@ -317,7 +317,7 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           manylinux: "auto"
-          args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
+          args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
           sccache: 'true'
           before-script-linux: |
             apt update
