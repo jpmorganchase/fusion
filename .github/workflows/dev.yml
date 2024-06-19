@@ -130,6 +130,10 @@ jobs:
         manylinux: auto
         args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
+        before-script-linux: |
+          yum install -y openssl-devel
+          find /usr -name "ssl.h"
+          echo env
       env:
         OPENSSL_DIR: /etc/pki/tls
         OPENSSL_LIB_DIR: /lib64
