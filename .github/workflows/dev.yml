@@ -132,6 +132,7 @@ jobs:
         sccache: 'true'
       env:
         OPENSSL_DIR: /etc/pki/tls
+        OPENSSL_LIB_DIR: /lib64
   
     - name: Integration test artifact
       run: |
