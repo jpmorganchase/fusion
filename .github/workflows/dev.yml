@@ -131,6 +131,7 @@ jobs:
         args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
         before-script-linux: |
+          yum update
           yum install -y openssl-devel
       env:
         OPENSSL_DIR: /etc/pki/tls
@@ -184,7 +185,8 @@ jobs:
         args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
         before-script-linux: |
-          yum install -y openssl-devel
+          apt update
+          apt install -y libssl-dev
 
   
     - uses: uraimo/run-on-arch-action@v2
@@ -249,7 +251,8 @@ jobs:
           args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
           sccache: 'true'
           before-script-linux: |
-            yum install -y openssl-devel
+            apt update
+            apt install -y libssl-dev
 
       - uses: uraimo/run-on-arch-action@v2
         if: false
@@ -315,7 +318,8 @@ jobs:
           args: --release --locked -j $(nproc) -i python${{ matrix.python-versions }} --out dist
           sccache: 'true'
           before-script-linux: |
-            yum install -y openssl-devel
+            apt update
+            apt install -y libssl-dev
 
       - uses: uraimo/run-on-arch-action@v2
         if: false
@@ -404,7 +408,8 @@ jobs:
         args: --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'false'
         before-script-linux: |
-          yum install -y openssl-devel
+          apt update
+          apt install -y libssl-dev
 
     - name: list dist files
       run: |
