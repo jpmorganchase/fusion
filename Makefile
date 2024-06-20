@@ -1,4 +1,8 @@
-.PHONY: cross-perf
+.PHONY: cross-perf, gha-dev
+
+BRANCH_NAME := $(shell git rev-parse --abbrev-ref HEAD)
+REPO := jpmorganchase/fusion
+WORKFLOW_FILE := dev.yml
 
 cross-perf:
 	@for version in 3.9 3.10 3.11 3.12; do \
@@ -12,3 +16,9 @@ cross-perf:
 		cargo llvm-cov report --html --output-dir .reports/rust && \
 		pytest --color=yes --benchmark-only --benchmark-save=cross || true; \
 	done
+
+gha-dev:
+	gh workflow run $(WORKFLOW_FILE) --ref $(BRANCH_NAME) --repo $(REPO)
+
+gha-dev-cancel:
+	gh run list --branch $(BRANCH_NAME) --workflow=$(WORKFLOW_FILE) --limit 1 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run cancel {}
