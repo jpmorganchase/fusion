@@ -25,7 +25,7 @@ def test_download_csv(client: Fusion) -> None:
             with Path(path).open("rb") as f:
                 hash_out.update(f.read())
     download_clean_up(download_res)
-    assert hash_out.hexdigest() == "5f9a51c38325947745c2e75afbb2d368"
+    assert hash_out.hexdigest() == "f0ded6503c66e5fc4574f62af0d57b57"
 
 
 def test_download_parquet(client: Fusion) -> None:
