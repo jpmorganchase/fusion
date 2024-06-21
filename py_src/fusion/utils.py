@@ -61,10 +61,7 @@ def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # type: igno
 
         def __call__(self, *args: Any, **kwargs: Any) -> Any:
             n = 0
-            if hasattr(args[0], '_result'):
-                lst = args[0]._result
-            else:
-                lst = args[0]
+            lst = args[0]._result if hasattr(args[0], "_result") else args[0]
             for i in lst:
                 try:
                     if i[0] is True:
