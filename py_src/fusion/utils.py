@@ -61,7 +61,11 @@ def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # type: igno
 
         def __call__(self, *args: Any, **kwargs: Any) -> Any:
             n = 0
-            for i in args[0]._result:
+            if hasattr(args[0], '_result'):
+                lst = args[0]._result
+            else:
+                lst = args[0]
+            for i in lst:
                 try:
                     if i[0] is True:
                         n += 1
@@ -1050,7 +1054,7 @@ def upload_files(  # noqa: PLR0913
         res = [None] * len(loop)
         if show_progress:
             with tqdm(total=len(loop)) as p:
-                for i, row in loop.iterrows():
+                for i, (_, row) in enumerate(loop.iterrows()):
                     r = _upload(row["url"], row["path"])
                     res[i] = r
                     if r[0] is True:
