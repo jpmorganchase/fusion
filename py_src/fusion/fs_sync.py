@@ -95,7 +95,7 @@ def _upload(
     local_path: str = "",
 ) -> list[tuple[bool, str, Optional[str]]]:
     upload_df = df.rename(columns={"path_local": "path"})
-    upload_df["path"] = local_path + upload_df["path"]
+    upload_df["path"] = [Path(local_path) / p for p in upload_df["path"]]
     parallel = len(df) > 1
     res = upload_files(
         fs_fusion,
