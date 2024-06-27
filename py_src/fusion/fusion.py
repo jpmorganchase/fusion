@@ -1047,7 +1047,8 @@ class Fusion:
             path (str): path to a file or a folder with files
             dataset (str, optional): Dataset name to which the file will be uplaoded (for single file only).
                                     If not provided the dataset will be implied from file's name.
-            dt_str (str, optional): A single date. Defaults to 'latest' which will return the most recent.
+            dt_str (str, optional): A file name. Can be any string but is usually a date. 
+                                    Defaults to 'latest' which will return the most recent.
                                     Relevant for a single file upload only. If not provided the dataset will
                                     be implied from file's name.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
@@ -1101,8 +1102,10 @@ class Fusion:
                     warnings.warn(msg, stacklevel=2)
                     return [(False, path, msg)]
                 is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
-                file_format = path.split(".")[-1]
-                local_url_eqiv = [path_to_url(f"{dataset}__{catalog}__{dt_str}.{file_format}", is_raw)]
+                file_format = path.split(".")[-1] if not is_raw else "raw"
+                local_url_eqiv = [
+                    "/".join(distribution_to_url("", dataset, dt_str, file_format, catalog, False).split("/")[1:])
+                ]
 
         data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
         data_map_df.columns = ["path", "url"]  # type: ignore
