@@ -6,6 +6,8 @@
 #   features: []
 #   all-features: true
 #   with-sources: false
+#   generate-hashes: false
+#   universal: false
 
 -e file:.
 adlfs==2024.4.1
@@ -32,6 +34,8 @@ annotated-types==0.6.0
     # via pydantic
 anyio==4.3.0
     # via jupyter-server
+argcomplete==3.3.0
+    # via nox
 argon2-cffi==23.1.0
     # via jupyter-server
     # via nbclassic
@@ -62,6 +66,7 @@ babel==2.14.0
     # via mkdocs-material
 beautifulsoup4==4.12.3
     # via nbconvert
+beeprint==2.4.11
 bleach==6.1.0
     # via nbconvert
 boto3==1.34.69
@@ -92,10 +97,13 @@ click==8.1.7
     # via mkdocs
     # via mkdocstrings
     # via rich-click
+    # via typer
 colorama==0.4.6
     # via griffe
     # via mkdocs-material
     # via tox
+colorlog==6.8.2
+    # via nox
 comm==0.2.2
     # via ipykernel
 coverage==7.5.0
@@ -208,7 +216,7 @@ jedi==0.19.1
 jeepney==0.8.0
     # via keyring
     # via secretstorage
-jinja2==3.1.3
+jinja2==3.1.4
     # via jupyter-server
     # via mike
     # via mkdocs
@@ -219,6 +227,7 @@ jinja2==3.1.3
     # via nbclassic
     # via nbconvert
     # via notebook
+    # via pytest-html
 jmespath==1.0.1
     # via boto3
     # via botocore
@@ -293,7 +302,7 @@ markupsafe==2.1.5
 matplotlib-inline==0.1.7
     # via ipykernel
     # via ipython
-maturin==1.5.1
+maturin==1.6.0
 mdit-py-plugins==0.4.0
     # via jupytext
 mdurl==0.1.2
@@ -383,6 +392,7 @@ notebook==6.5.7
     # via pyfusion
 notebook-shim==0.2.4
     # via nbclassic
+nox==2024.4.15
 numpy==1.26.4
     # via pandas
     # via pandas-stubs
@@ -399,6 +409,7 @@ packaging==24.0
     # via mkdocs
     # via msal-extensions
     # via nbconvert
+    # via nox
     # via pyproject-api
     # via pytest
     # via tox
@@ -453,6 +464,8 @@ ptyprocess==0.7.0
     # via terminado
 pure-eval==0.2.2
     # via stack-data
+py-cpuinfo==9.0.0
+    # via pytest-benchmark
 py-partiql-parser==0.5.4
     # via moto
 pyarrow==16.0.0
@@ -492,13 +505,20 @@ pyproject-api==1.6.1
 pytest==8.1.2
     # via pytest-aiohttp
     # via pytest-asyncio
+    # via pytest-benchmark
     # via pytest-cov
+    # via pytest-html
+    # via pytest-metadata
     # via pytest-mock
     # via pytest-random-order
 pytest-aiohttp==1.0.5
 pytest-asyncio==0.23.6
     # via pytest-aiohttp
+pytest-benchmark==4.0.0
 pytest-cov==5.0.0
+pytest-html==4.1.1
+pytest-metadata==3.1.1
+    # via pytest-html
 pytest-mock==3.14.0
 pytest-random-order==1.1.1
 python-dateutil==2.9.0.post0
@@ -579,6 +599,7 @@ rich==13.7.1
     # via bump-my-version
     # via rich-click
     # via twine
+    # via typer
 rich-click==1.8.1
     # via bump-my-version
 rpds-py==0.18.0
@@ -599,6 +620,8 @@ send2trash==1.8.3
     # via notebook
 setuptools==69.5.1
     # via jupyter-contrib-core
+shellingham==1.5.4
+    # via typer
 six==1.16.0
     # via asttokens
     # via azure-core
@@ -665,6 +688,7 @@ traitlets==5.14.3
     # via nbformat
     # via notebook
 twine==5.0.0
+typer==0.12.3
 types-python-dateutil==2.9.0.20240316
     # via arrow
 types-pytz==2024.1.0.20240417
@@ -681,6 +705,8 @@ typing-extensions==4.11.0
     # via pydantic
     # via pydantic-core
     # via rich-click
+    # via typer
+    # via urwid
 tzdata==2024.1
     # via pandas
 uri-template==1.3.0
@@ -690,11 +716,15 @@ urllib3==1.26.18
     # via requests
     # via responses
     # via twine
+urwid==2.6.14
+    # via beeprint
 uv==0.1.39
+    # via nox
     # via tox-uv
 verspec==0.1.0
     # via mike
 virtualenv==20.26.0
+    # via nox
     # via tox
 watchdog==4.0.0
     # via mkdocs
@@ -703,6 +733,7 @@ wcmatch==8.5.1
     # via mkdocs-include-markdown-plugin
 wcwidth==0.2.13
     # via prompt-toolkit
+    # via urwid
 webcolors==1.13
     # via jsonschema
 webencodings==0.5.1

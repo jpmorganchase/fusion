@@ -6,6 +6,7 @@ import io
 import logging
 from collections.abc import AsyncGenerator, Generator
 from copy import deepcopy
+from pathlib import Path
 from typing import Any, Optional, Union
 from urllib.parse import quote, urljoin
 
@@ -16,7 +17,8 @@ from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
 
-from .authentication import FusionCredentials
+from fusion._fusion import FusionCredentials
+
 from .utils import get_client
 
 logger = logging.getLogger(__name__)
@@ -46,7 +48,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             if isinstance(credentials, FusionCredentials):
                 self.credentials = credentials
             elif isinstance(credentials, str):
-                self.credentials = FusionCredentials.from_object(credentials)
+                self.credentials = FusionCredentials.from_file(Path(credentials))
             kwargs["client_kwargs"] = {
                 "credentials": self.credentials,
                 "root_url": "https://fusion.jpmorgan.com/api/v1/",
