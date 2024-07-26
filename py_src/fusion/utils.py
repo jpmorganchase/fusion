@@ -10,7 +10,7 @@ import re
 import threading
 from collections.abc import Generator
 from contextlib import nullcontext
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
 from queue import Queue
@@ -31,8 +31,9 @@ from pyarrow.parquet import filters_to_expression
 from tqdm import tqdm
 from urllib3.util.retry import Retry
 
-from . import __version__ as version
-from .authentication import FusionAiohttpSession, FusionCredentials, FusionOAuthAdapter
+from fusion._fusion import FusionCredentials
+
+from .authentication import FusionAiohttpSession, FusionOAuthAdapter
 from .types import PyArrowFilterT, WorkerQueueT
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,26 @@ DT_YYYYMMDDTHHMM_RE = re.compile(r"(\d{4})(\d{2})(\d{2})T(\d{4})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
 DEFAULT_CHUNK_SIZE = 2**16
 DEFAULT_THREAD_POOL_SIZE = 5
+
+
+def get_default_fs() -> fsspec.filesystem:
+    """Retrieve default filesystem.
+
+    Returns: filesystem
+
+    """
+    protocol = os.environ.get("FS_PROTOCOL", "file")
+    if "S3_ENDPOINT" in os.environ and "AWS_ACCESS_KEY_ID" in os.environ and "AWS_SECRET_ACCESS_KEY" in os.environ:
+        endpoint = os.environ["S3_ENDPOINT"]
+        fs = fsspec.filesystem(
+            "s3",
+            client_kwargs={"endpoint_url": f"https://{endpoint}"},
+            key=os.environ["AWS_ACCESS_KEY_ID"],
+            secret=os.environ["AWS_SECRET_ACCESS_KEY"],
+        )
+    else:
+        fs = fsspec.filesystem(protocol)
+    return fs
 
 
 @contextlib.contextmanager
@@ -209,7 +230,7 @@ def parquet_to_table(
     ).read(columns=columns)
 
 
-def read_csv(
+def read_csv(  # noqa: PLR0912
     path: str,
     columns: Optional[list[str]] = None,
     filters: Optional[PyArrowFilterT] = None,
@@ -546,106 +567,11 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
     """
 
     async def on_request_start_token(session: Any, _trace_config_ctx: Any, params: Any) -> None:
-        async def _refresh_token_data() -> tuple[str, str]:
-            payload = (
-                {
-                    "grant_type": "client_credentials",
-                    "client_id": credentials.client_id,
-                    "client_secret": credentials.client_secret,
-                    "aud": credentials.resource,
-                }
-                if credentials.grant_type == "client_credentials"
-                else {
-                    "grant_type": "password",
-                    "client_id": credentials.client_id,
-                    "username": credentials.username,
-                    "password": credentials.password,
-                    "resource": credentials.resource,
-                }
-            )
-            async with aiohttp.ClientSession(trust_env=True) as session:
-                if not credentials.auth_url:
-                    raise ValueError("Auth URL is required for token refresh")
-                if credentials.proxies:
-                    response = await session.post(credentials.auth_url, data=payload, proxy=http_proxy)
-                else:
-                    response = await session.post(credentials.auth_url, data=payload)
-                response_data = await response.json()
-
-            access_token = response_data["access_token"]
-            expiry = response_data["expires_in"]
-            return access_token, expiry
-
-        token_expires_in = (session.credentials.bearer_token_expiry - datetime.now(tz=timezone.utc)).total_seconds()
-        if session.credentials.is_bearer_token_expirable and token_expires_in < session.refresh_within_seconds:
-            token, expiry = await _refresh_token_data()
-            session.credentials.bearer_token = token
-            session.credentials.bearer_token_expiry = datetime.now(tz=timezone.utc) + timedelta(seconds=int(expiry))
-            session.number_token_refreshes += 1
-
-        params.headers.update(
-            {
-                "Authorization": f"Bearer {session.credentials.bearer_token}",
-                "User-Agent": f"fusion-python-sdk {version}",
-            }
-        )
-        if session.credentials.fusion_e2e is not None:
-            params.headers.update({"fusion-e2e": session.credentials.fusion_e2e})
-
-    async def on_request_start_fusion_token(session: Any, _trace_config_ctx: Any, params: Any) -> None:
-        async def _refresh_fusion_token_data() -> tuple[str, str]:
-            full_url_lst = str(params.url).split("/")
-            url = "/".join(full_url_lst[: full_url_lst.index("datasets") + 2]) + "/authorize/token"
-            if credentials.proxies:
-                async with session.get(url, proxy=http_proxy) as response:
-                    response_data = await response.json()
-            else:
-                async with session.get(url) as response:
-                    response_data = await response.json()
-            access_token = response_data["access_token"]
-            expiry = response_data["expires_in"]
-            return access_token, expiry
-
-        url_lst = params.url.path.split("/")
-        fusion_auth_req = "distributions" in url_lst
-        if fusion_auth_req:
-            catalog = url_lst[url_lst.index("catalogs") + 1]
-            dataset = url_lst[url_lst.index("datasets") + 1]
-            fusion_token_key = catalog + "_" + dataset
-            if fusion_token_key not in session.fusion_token_dict:
-                fusion_token, fusion_token_expiry = await _refresh_fusion_token_data()
-                session.fusion_token_dict[fusion_token_key] = fusion_token
-                session.fusion_token_expiry_dict[fusion_token_key] = datetime.now(tz=timezone.utc) + timedelta(
-                    seconds=int(fusion_token_expiry)
-                )
-                logger.log(VERBOSE_LVL, "Refreshed fusion token")
-            else:
-                fusion_token_expires_in = (
-                    session.fusion_token_expiry_dict[fusion_token_key] - datetime.now(tz=timezone.utc)
-                ).total_seconds()
-                if fusion_token_expires_in < session.refresh_within_seconds:
-                    (
-                        fusion_token,
-                        fusion_token_expiry,
-                    ) = await _refresh_fusion_token_data()
-                    session.fusion_token_dict[fusion_token_key] = fusion_token
-                    session.fusion_token_expiry_dict[fusion_token_key] = datetime.now(tz=timezone.utc) + timedelta(
-                        seconds=int(fusion_token_expiry)
-                    )
-                    logger.log(VERBOSE_LVL, "Refreshed fusion token")
-
-            params.headers.update({"Fusion-Authorization": f"Bearer {session.fusion_token_dict[fusion_token_key]}"})
-
-    if credentials.proxies:
-        http_proxy: Optional[str] = None
-        if "http" in credentials.proxies:
-            http_proxy = credentials.proxies["http"]
-        elif "https" in credentials.proxies:
-            http_proxy = credentials.proxies["https"]
+        if params.url:
+            params.headers.update(session.credentials.get_fusion_token_headers(str(params.url)))
 
     trace_config = aiohttp.TraceConfig()
     trace_config.on_request_start.append(on_request_start_token)
-    trace_config.on_request_start.append(on_request_start_fusion_token)
 
     if "timeout" in kwargs:
         timeout = aiohttp.ClientTimeout(total=kwargs["timeout"])
