@@ -105,7 +105,7 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
 
     let cwd = env::current_dir()?;
 
-    let cfg_file_name = "client_credentials.json";
+    let cfg_file_name = "config/client_credentials.json";
     let mut start_dir = match file_path.parent() {
         Some(parent) => match parent.exists() {
             true => parent.to_path_buf(),
@@ -781,16 +781,15 @@ impl FusionCredentials {
             .client_id
             .or_else(|| std::env::var("FUSION_CLIENT_ID").ok())
             .ok_or_else(|| CredentialError::new_err("Missing client ID"))?;
-        let client_secret = credentials
-            .client_secret
-            .or_else(|| std::env::var("FUSION_CLIENT_SECRET").ok())
-            .ok_or_else(|| CredentialError::new_err("Missing client secret"))?;
 
         let full_creds = match credentials.grant_type.as_str() {
             "client_credentials" => FusionCredentials::from_client_id(
                 cls,
                 Some(client_id),
-                Some(client_secret),
+                Some(credentials
+                    .client_secret
+                    .or_else(|| std::env::var("FUSION_CLIENT_SECRET").ok())
+                    .ok_or_else(|| CredentialError::new_err("Missing client secret"))?),
                 credentials.resource,
                 credentials.auth_url,
                 Some(untyped_proxies(credentials.proxies)),
