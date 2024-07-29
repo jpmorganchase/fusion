@@ -888,7 +888,7 @@ mod tests {
         let child_dir = parent_dir.join("child");
 
         fs::create_dir_all(&child_dir).unwrap();
-        let cfg_file_path = parent_dir.join("client_credentials.json");
+        let cfg_file_path = parent_dir.join("config").join("client_credentials.json");
 
         // Create the config file in the parent directory
         let mut file = File::create(&cfg_file_path).unwrap();
