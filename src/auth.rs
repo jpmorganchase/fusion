@@ -107,7 +107,7 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
 
     let cfg_file_name = "client_credentials.json";
     let cfg_folder_name = "config";
-    let mut start_dir = match file_path.parent() {
+    let mut start_dir = match current_path.parent() {
         Some(parent) => match parent.exists() {
             true => parent.to_path_buf(),
             false => cwd,
@@ -115,7 +115,6 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
         None => cwd,
     };
     let start_dir_init = start_dir.clone();
-
     loop {
         let full_path = start_dir.join(cfg_folder_name).join(cfg_file_name);
         if full_path.is_file() {
@@ -129,9 +128,10 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
         } else {
             // Reached the root directory
             let error_message = format!(
-                "File {} not found in {} or any of its parents",
+                "File {} not found in {} or any of its parents. Current parent: {}",
                 cfg_file_name,
-                start_dir_init.display()
+                start_dir_init.display(),
+                start_dir.display()
             );
             return Err(PyFileNotFoundError::new_err(error_message));
         }
