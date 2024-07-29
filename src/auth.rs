@@ -105,7 +105,8 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
 
     let cwd = env::current_dir()?;
 
-    let cfg_file_name = "config/client_credentials.json";
+    let cfg_file_name = "client_credentials.json";
+    let cfg_folder_name = "config";
     let mut start_dir = match file_path.parent() {
         Some(parent) => match parent.exists() {
             true => parent.to_path_buf(),
@@ -116,7 +117,7 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
     let start_dir_init = start_dir.clone();
 
     loop {
-        let full_path = start_dir.join(cfg_file_name);
+        let full_path = start_dir.join(cfg_folder_name).join(cfg_file_name);
         if full_path.is_file() {
             debug!("Found file at: {}", full_path.display());
             return Ok(full_path);
