@@ -787,10 +787,12 @@ impl FusionCredentials {
             "client_credentials" => FusionCredentials::from_client_id(
                 cls,
                 Some(client_id),
-                Some(credentials
-                    .client_secret
-                    .or_else(|| std::env::var("FUSION_CLIENT_SECRET").ok())
-                    .ok_or_else(|| CredentialError::new_err("Missing client secret"))?),
+                Some(
+                    credentials
+                        .client_secret
+                        .or_else(|| std::env::var("FUSION_CLIENT_SECRET").ok())
+                        .ok_or_else(|| CredentialError::new_err("Missing client secret"))?,
+                ),
                 credentials.resource,
                 credentials.auth_url,
                 Some(untyped_proxies(credentials.proxies)),
@@ -892,7 +894,7 @@ mod tests {
         let cfg_file_path = parent_dir.join("config").join("client_credentials.json");
 
         // Create the config file in the parent directory
-        fs::create_dir_all(&dir_path).expect("Failed to create directory");
+        fs::create_dir_all(parent_dir.join(dir_path)).expect("Failed to create directory");
         let mut file = File::create(&cfg_file_path).unwrap();
         writeln!(file, "{{\"key\": \"value\"}}").unwrap();
 
