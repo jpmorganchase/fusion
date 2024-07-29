@@ -886,11 +886,13 @@ mod tests {
         let temp_dir = TempDir::new("test_find_cfg_file").unwrap();
         let parent_dir = temp_dir.path().join("parent");
         let child_dir = parent_dir.join("child");
+        let dir_path = Path::new("config");
 
         fs::create_dir_all(&child_dir).unwrap();
         let cfg_file_path = parent_dir.join("config").join("client_credentials.json");
 
         // Create the config file in the parent directory
+        fs::create_dir_all(&dir_path).expect("Failed to create directory");
         let mut file = File::create(&cfg_file_path).unwrap();
         writeln!(file, "{{\"key\": \"value\"}}").unwrap();
 
