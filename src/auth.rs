@@ -102,7 +102,6 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
         );
         return Ok(current_path);
     }
-
     let cwd = env::current_dir()?;
 
     let cfg_file_name = "client_credentials.json";
@@ -114,17 +113,18 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
         },
         None => cwd,
     };
-    let start_dir_init = start_dir.clone();
+    let mut start_dir_abs = start_dir.canonicalize()?;
+    let start_dir_init = start_dir_abs.clone();
     loop {
-        let full_path = start_dir.join(cfg_folder_name).join(cfg_file_name);
+        let full_path = start_dir_abs.join(cfg_folder_name).join(cfg_file_name);
         if full_path.is_file() {
             debug!("Found file at: {}", full_path.display());
             return Ok(full_path);
         }
 
         // Move to the parent directory
-        if let Some(parent) = start_dir.parent() {
-            start_dir = parent.to_path_buf();
+        if let Some(parent) = start_dir_abs.parent() {
+            start_dir_abs = parent.to_path_buf().canonicalize()?;
         } else {
             // Reached the root directory
             let error_message = format!(
