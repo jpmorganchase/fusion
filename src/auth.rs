@@ -102,35 +102,35 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
         );
         return Ok(current_path);
     }
-
     let cwd = env::current_dir()?;
-
     let cfg_file_name = "client_credentials.json";
-    let mut start_dir = match file_path.parent() {
+    let cfg_folder_name = "config";
+    let start_dir = match current_path.parent() {
         Some(parent) => match parent.exists() {
             true => parent.to_path_buf(),
             false => cwd,
         },
         None => cwd,
     };
-    let start_dir_init = start_dir.clone();
-
+    let mut start_dir_abs = start_dir.canonicalize()?;
+    let start_dir_init = start_dir_abs.clone();
     loop {
-        let full_path = start_dir.join(cfg_file_name);
+        let full_path = start_dir_abs.join(cfg_folder_name).join(cfg_file_name);
         if full_path.is_file() {
             debug!("Found file at: {}", full_path.display());
             return Ok(full_path);
         }
 
         // Move to the parent directory
-        if let Some(parent) = start_dir.parent() {
-            start_dir = parent.to_path_buf();
+        if let Some(parent) = start_dir_abs.parent() {
+            start_dir_abs = parent.to_path_buf().canonicalize()?;
         } else {
             // Reached the root directory
             let error_message = format!(
-                "File {} not found in {} or any of its parents",
+                "File {} not found in {} or any of its parents. Current parent: {}",
                 cfg_file_name,
-                start_dir_init.display()
+                start_dir_init.display(),
+                start_dir.display()
             );
             return Err(PyFileNotFoundError::new_err(error_message));
         }
@@ -781,16 +781,17 @@ impl FusionCredentials {
             .client_id
             .or_else(|| std::env::var("FUSION_CLIENT_ID").ok())
             .ok_or_else(|| CredentialError::new_err("Missing client ID"))?;
-        let client_secret = credentials
-            .client_secret
-            .or_else(|| std::env::var("FUSION_CLIENT_SECRET").ok())
-            .ok_or_else(|| CredentialError::new_err("Missing client secret"))?;
 
         let full_creds = match credentials.grant_type.as_str() {
             "client_credentials" => FusionCredentials::from_client_id(
                 cls,
                 Some(client_id),
-                Some(client_secret),
+                Some(
+                    credentials
+                        .client_secret
+                        .or_else(|| std::env::var("FUSION_CLIENT_SECRET").ok())
+                        .ok_or_else(|| CredentialError::new_err("Missing client secret"))?,
+                ),
                 credentials.resource,
                 credentials.auth_url,
                 Some(untyped_proxies(credentials.proxies)),
@@ -886,11 +887,13 @@ mod tests {
         let temp_dir = TempDir::new("test_find_cfg_file").unwrap();
         let parent_dir = temp_dir.path().join("parent");
         let child_dir = parent_dir.join("child");
+        let dir_path = Path::new("config");
 
         fs::create_dir_all(&child_dir).unwrap();
-        let cfg_file_path = parent_dir.join("client_credentials.json");
+        let cfg_file_path = parent_dir.join("config").join("client_credentials.json");
 
         // Create the config file in the parent directory
+        fs::create_dir_all(parent_dir.join(dir_path)).expect("Failed to create directory");
         let mut file = File::create(&cfg_file_path).unwrap();
         writeln!(file, "{{\"key\": \"value\"}}").unwrap();
 
