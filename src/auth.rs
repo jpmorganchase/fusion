@@ -422,9 +422,10 @@ impl FusionCredentials {
     }
 
     #[classmethod]
-    #[pyo3(signature = (username=None, password=None, resource=None, auth_url=None, proxies=None, fusion_e2e=None))]
+    #[pyo3(signature = (client_id=None, username=None, password=None, resource=None, auth_url=None, proxies=None, fusion_e2e=None))]
     fn from_user_id(
         _cls: &Bound<'_, PyType>,
+        client_id: Option<String>,
         username: Option<String>,
         password: Option<String>,
         resource: Option<String>,
@@ -433,6 +434,7 @@ impl FusionCredentials {
         fusion_e2e: Option<String>,
     ) -> PyResult<Self> {
         Ok(Self {
+            client_id,
             username,
             password,
             resource,
@@ -442,7 +444,6 @@ impl FusionCredentials {
             fusion_e2e,
             fusion_token: HashMap::new(),
             bearer_token: None,
-            client_id: None,
             client_secret: None,
             http_client: None,
         })
@@ -806,6 +807,7 @@ impl FusionCredentials {
             )?,
             "password" => FusionCredentials::from_user_id(
                 cls,
+                Some(client_id),
                 credentials.username,
                 credentials.password,
                 credentials.resource,
@@ -1180,6 +1182,7 @@ mod tests {
         Python::with_gil(|py| {
             let creds = FusionCredentials::from_user_id(
                 &py.get_type_bound::<FusionCredentials>(),
+                Some("client_id".to_string()),
                 Some("username".to_string()),
                 Some("password".to_string()),
                 Some("resource".to_string()),
