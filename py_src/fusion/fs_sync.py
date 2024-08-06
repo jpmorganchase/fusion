@@ -14,14 +14,14 @@ from typing import Optional
 import fsspec
 import pandas as pd
 from joblib import Parallel, delayed
-from tqdm import tqdm
+from rich.progress import Progress
 
 from .utils import (
     cpu_count,
     distribution_to_filename,
     is_dataset_raw,
+    joblib_progress,
     path_to_url,
-    tqdm_joblib,
     upload_files,
     validate_file_names,
 )
@@ -65,19 +65,20 @@ def _download(
 
     if n_par > 1 and len(df) > 0:
         if show_progress:
-            with tqdm_joblib(tqdm(total=len(df))) as _:
+            with joblib_progress("Downloading", total=len(df)):
                 res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for _, row in df.iterrows())
         else:
             res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for _, row in df.iterrows())
     elif len(df) > 0:
         if show_progress:
             res = [None] * len(df)
-            with tqdm(total=len(df)) as p:
+            with Progress() as p:
+                task = p.add_task("Downloading", total=len(df))
                 for i, row in df.iterrows():
                     r = _download_files(row)
                     res[i] = r
                     if r[0] is True:
-                        p.update(1)
+                        p.update(task, advance=1)
         else:
             res = [_download_files(row) for _, row in df.iterrows()]
     else:

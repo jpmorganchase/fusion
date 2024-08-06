@@ -1,5 +1,7 @@
 """Fusion utilities."""
 
+from __future__ import annotations
+
 import contextlib
 import json as js
 import logging
@@ -28,6 +30,15 @@ import requests
 from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 from tqdm import tqdm
 from urllib3.util.retry import Retry
 
@@ -43,6 +54,40 @@ DT_YYYYMMDDTHHMM_RE = re.compile(r"(\d{4})(\d{2})(\d{2})T(\d{4})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
 DEFAULT_CHUNK_SIZE = 2**16
 DEFAULT_THREAD_POOL_SIZE = 5
+RECOGNIZED_FORMATS = [
+    "csv",
+    "parquet",
+    "psv",
+    "json",
+    "pdf",
+    "txt",
+    "doc",
+    "docx",
+    "htm",
+    "html",
+    "xls",
+    "xlsx",
+    "xlsm",
+    "dot",
+    "dotx",
+    "docm",
+    "dotm",
+    "rtf",
+    "odt",
+    "xltx",
+    "xlsb",
+    "jpg",
+    "jpeg",
+    "bmp",
+    "png",
+    "tif",
+    "gif",
+    "mp3",
+    "wav",
+    "mp4",
+    "mov",
+    "mkv",
+]
 
 
 def get_default_fs() -> fsspec.filesystem:
@@ -63,6 +108,37 @@ def get_default_fs() -> fsspec.filesystem:
     else:
         fs = fsspec.filesystem(protocol)
     return fs
+
+
+@contextlib.contextmanager
+def joblib_progress(description: str, total: Optional[int]) -> Generator[Progress, None, None]:
+    show_speed = not total
+    progress = Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TaskProgressColumn(show_speed=show_speed),
+        "R:",
+        TimeRemainingColumn(),
+        "E:",
+        TimeElapsedColumn(),
+    )
+    task_id = progress.add_task(f"[cyan]{description}", total=total)
+
+    class BatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):  # type: ignore
+        def __call__(self: BatchCompletionCallback, *args: Any, **kwargs: Any) -> Any:
+            progress.update(task_id, advance=self.batch_size, refresh=True)
+            return super().__call__(*args, **kwargs)
+
+    old_callback = joblib.parallel.BatchCompletionCallBack
+
+    try:
+        joblib.parallel.BatchCompletionCallBack = BatchCompletionCallback
+        progress.start()
+        yield progress
+    finally:
+        progress.stop()
+        joblib.parallel.BatchCompletionCallBack = old_callback
 
 
 @contextlib.contextmanager
@@ -713,7 +789,7 @@ def _worker(
 def download_single_file_threading(
     credentials: FusionCredentials,
     url: str,
-    output_file: fsspec.spec.AbstractBufferedFile,
+    output_file: str,
     chunk_size: int = 5 * 2**20,
     fs: Optional[fsspec.AbstractFileSystem] = None,
     max_threads: int = 10,
@@ -735,6 +811,10 @@ def download_single_file_threading(
         fs = fsspec.filesystem("file")
     session = get_session(credentials, url)
     header = session.head(url).headers
+    file_name = None
+    if "x-jpmc-file-name" in header:
+        file_name = header["x-jpmc-file-name"]
+        output_file = output_file.parent.joinpath(file_name)
     content_length = int(header["Content-Length"])
     n_chunks = int(math.ceil(content_length / chunk_size))
     starts = [i * chunk_size for i in range(n_chunks)]
@@ -895,7 +975,7 @@ def path_to_url(x: str, is_raw: bool = False, is_download: bool = False) -> str:
 
     """
     catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
-    ext = "raw" if is_raw else ext
+    ext = "raw" if is_raw and ext not in RECOGNIZED_FORMATS else ext
     return "/".join(distribution_to_url("", dataset, date, ext, catalog, is_download).split("/")[1:])
 
 
@@ -965,7 +1045,7 @@ def upload_files(  # noqa: PLR0913
 
     if parallel:
         if show_progress:
-            with tqdm_joblib(tqdm(total=len(loop))) as _:
+            with joblib_progress("Uploading", total=len(loop)):
                 res = Parallel(n_jobs=n_par, backend="threading")(
                     delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows()
                 )

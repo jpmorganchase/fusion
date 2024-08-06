@@ -15,8 +15,8 @@ import pandas as pd
 import pyarrow as pa
 import requests
 from joblib import Parallel, delayed
+from rich.progress import Progress
 from tabulate import tabulate
-from tqdm import tqdm
 
 from fusion._fusion import FusionCredentials
 
@@ -24,6 +24,7 @@ from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .types import PyArrowFilterT
 from .utils import (
+    RECOGNIZED_FORMATS,
     cpu_count,
     csv_to_table,
     distribution_to_filename,
@@ -32,6 +33,7 @@ from .utils import (
     get_default_fs,
     get_session,
     is_dataset_raw,
+    joblib_progress,
     json_to_table,
     normalise_dt_param_str,
     parquet_to_table,
@@ -40,7 +42,6 @@ from .utils import (
     read_json,
     read_parquet,
     stream_single_file_new_session,
-    tqdm_joblib,
     upload_files,
     validate_file_names,
 )
@@ -654,6 +655,9 @@ class Fusion:
                 dataset_format = "csv"
             required_series = [(catalog, dataset, dt_str, dataset_format)]
 
+        if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
+            raise ValueError(f"Dataset format {dataset_format} is not supported")
+
         if not download_folder:
             download_folder = self.download_folder
 
@@ -672,7 +676,8 @@ class Fusion:
 
         if len(required_series) == 1 and type(self.fs).__name__ == "LocalFileSystem":
             n_par = cpu_count(n_par, is_threading=True)
-            with tqdm(total=1) as pbar:
+            with Progress() as pbar:
+                task = pbar.add_task("Downloading: ", total=1)
                 output_file = distribution_to_filename(
                     download_folders[0],
                     required_series[0][1],
@@ -696,7 +701,7 @@ class Fusion:
                     max_threads=n_par,
                 )
                 if (len(res) > 0) and all(r[0] for r in res):
-                    pbar.update(1)
+                    pbar.update(task, advance=1)
                     res = [(res[0][0], output_file, res[0][2])]
 
         else:
@@ -731,7 +736,7 @@ class Fusion:
                 f"Beginning {len(download_spec)} downloads in batches of {n_par}",
             )
             if show_progress:
-                with tqdm_joblib(tqdm(total=len(download_spec))) as _:
+                with joblib_progress("Downloading", total=len(download_spec)):
                     res = Parallel(n_jobs=n_par)(
                         delayed(stream_single_file_new_session)(**spec) for spec in download_spec
                     )
@@ -1146,6 +1151,8 @@ class Fusion:
         chunk_size: int = 5 * 2**20,
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
+        file_name: Optional[str] = None,
+        **kwargs: Any,
     ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Uploads data from an object in memory.
 
@@ -1163,6 +1170,7 @@ class Fusion:
             from_date (str, optional): start of the data date range contained in the distribution,
                 defaults to upload date
             to_date (str, optional): end of the data date range contained in the distribution, defaults to upload date.
+            file_name (str, optional): file name to be used for the uploaded file. Defaults to Fusion standard naming.
 
         Returns:
 
@@ -1171,6 +1179,8 @@ class Fusion:
         catalog = self._use_catalog(catalog)
 
         fs_fusion = self.get_fusion_filesystem()
+        if distribution is not in RECOGNIZED_FORMATS + ["raw"]:
+            raise ValueError(f"Dataset format {distribution} is not supported")
 
         is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
         local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)

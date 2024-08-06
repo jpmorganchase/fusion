@@ -344,6 +344,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 operation_id = await resp.json()
 
             operation_id = operation_id["operationId"]
+            # TODO: make this async
             resps = [resp async for resp in put_data()]
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
@@ -356,7 +357,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     @staticmethod
     def _construct_headers(
-        file_local: Any, dt_from: str, dt_to: str, dt_created: str, chunk_size: int = 5 * 2**20, multipart: bool = False
+        file_local: Any, dt_from: str, dt_to: str, dt_created: str, chunk_size: int = 5 * 2**20, multipart: bool = False, file_name: Optional[str] = None
     ) -> tuple[dict[str, str], list[dict[str, str]]]:
         headers = {
             "Content-Type": "application/octet-stream",
@@ -365,6 +366,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             "x-jpmc-distribution-to-date": dt_to,
             "Digest": "",  # to be changed to x-jpmc-digest
         }
+        if file_name:
+            headers["file-name"] = file_name
         headers["Content-Type"] = "application/json" if multipart else headers["Content-Type"]
         headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
 
@@ -398,6 +401,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         chunk_size: int = 5 * 2**20,
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         method: str = "put",
+        file_name: Optional[str] = None,
     ) -> None:
         async def _get_operation_id() -> dict[str, Any]:
             session = await self.set_session()
@@ -469,10 +473,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             "x-jpmc-distribution-to-date": dt_to,
             "Digest": "",  # to be changed to x-jpmc-digest
         }
+        if file_name:
+            headers["file-name"] = file_name
         lpath.seek(0)
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
         operation_id = sync(self.loop, _get_operation_id)["operationId"]
+        # resps = sync(super().loop, put_data, *args, **kwargs)
         resps = list(put_data())
 
         hash_sha256 = hash_sha256_lst[0]
@@ -491,6 +498,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         multipart: bool = False,
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
+        file_name: Optional[str] = None,
         **kwargs: Any,
     ) -> Any:
         """Copy file(s) from local.
@@ -504,6 +512,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             multipart: Flag which indicated whether it's a multipart uplaod.
             from_date: earliest date of data in upload file
             to_date: latest date of data in upload file
+            file_name: Name of the file.
             **kwargs: Kwargs.
 
         Returns:
@@ -521,7 +530,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         rpath = self._decorate_url(rpath)
         if type(lpath).__name__ in ["S3File"]:
             return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method)
-        headers, chunk_headers_lst = self._construct_headers(lpath, dt_from, dt_to, dt_created, chunk_size, multipart)
+        headers, chunk_headers_lst = self._construct_headers(lpath, dt_from, dt_to, dt_created, chunk_size, multipart, file_name)
         kwargs.update({"headers": headers})
         if multipart:
             kwargs.update({"chunk_headers_lst": chunk_headers_lst})
