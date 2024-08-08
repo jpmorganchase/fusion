@@ -1179,7 +1179,7 @@ class Fusion:
         catalog = self._use_catalog(catalog)
 
         fs_fusion = self.get_fusion_filesystem()
-        if distribution is not in RECOGNIZED_FORMATS + ["raw"]:
+        if distribution not in RECOGNIZED_FORMATS + ["raw"]:
             raise ValueError(f"Dataset format {distribution} is not supported")
 
         is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
