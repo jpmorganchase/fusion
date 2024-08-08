@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Optional, Union
 from urllib.parse import quote, urljoin
 
+import aiohttp
 import fsspec
 import fsspec.asyn
 import pandas as pd
@@ -263,6 +264,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     async def _fetch_range(
         self,
+        session: aiohttp.ClientSession,
         url: str,
         start: int,
         end: int,
@@ -281,8 +283,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
 
         try:
-            session = await self.set_session()
-            async with session.get(url + f"?downloadRange=bytes={start}-{end-1}") as response:
+            # session = await self.set_session()
+            async with session.get(url + f"?downloadRange=bytes={start}-{end-1}", **self.kwargs) as response:
                 if response.status in [200, 206]:
                     chunk = await response.read()
                     output_file.seek(start)
@@ -324,9 +326,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
 
         coros = []
+        session = await self.set_session()
         for start in range(0, file_size, chunk_size):
             end = min(start + chunk_size - 1, file_size - 1)
-            task = self._fetch_range(url, start, end, output_file)
+            task = self._fetch_range(session, url, start, end, output_file)
             coros.append(task)
 
         # Execute the tasks concurrently
@@ -409,7 +412,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         async def get_headers() -> Any:
             session = await self.set_session()
-            async with session.head(rpath) as r:
+            async with session.head(rpath, **self.kwargs) as r:
                 r.raise_for_status()
                 return r.headers
 
