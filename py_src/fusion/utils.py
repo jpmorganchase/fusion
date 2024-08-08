@@ -814,7 +814,7 @@ def download_single_file_threading(
     file_name = None
     if "x-jpmc-file-name" in header:
         file_name = header["x-jpmc-file-name"]
-        output_file = output_file.parent.joinpath(file_name)
+        output_file = Path(output_file).parent.joinpath(file_name)
     content_length = int(header["Content-Length"])
     n_chunks = int(math.ceil(content_length / chunk_size))
     starts = [i * chunk_size for i in range(n_chunks)]

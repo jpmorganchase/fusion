@@ -11,12 +11,15 @@ from copy import deepcopy
 from pathlib import Path
 import threading
 from threading import Lock, Thread
-from typing import Any, Optional, Union
+from typing import Any, Dict, Optional, Union
 from urllib.parse import quote, urljoin
 from queue import Queue
 
+import aiohttp
 import fsspec
+import fsspec.asyn
 import pandas as pd
+from pydantic import AnyHttpUrl
 import requests
 from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
@@ -266,178 +269,84 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         url = self._decorate_url(url)
         return super().cat(url, start=start, end=end, **kwargs)
 
-    @staticmethod
-    def stream_single_file_new_session_chunks(  # noqa: PLR0913
-        session: requests.Session,
-        url: str,
-        output_file: fsspec.spec.AbstractBufferedFile,
-        start: int,
-        end: int,
-        lock: threading.Lock,
-        results: list[tuple[bool, str, Optional[str]]],
-        idx: int,
-        overwrite: bool = True,
-        fs: Optional[fsspec.AbstractFileSystem] = None,
-    ) -> int:
-        """Function to stream a single file from the API to a file on disk.
-
-        Args:
-            session (class `requests.Session`): HTTP session.
-            url (str): The URL to call.
-            output_file: The file handle for the target write file.
-            start (int): Start byte.
-            end(int): End byte.
-            lock (Threading.Lock): Lock.
-            results (list): Results list.
-            idx (int): Results list index.
-            overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
-            fs (fsspec.filesystem): Filesystem.
-
-        Returns:
-            int: Exit status
-
-        """
-        if fs is None:
-            fs = fsspec.filesystem("file")
-        if not overwrite and fs.exists(output_file):
-            results[idx] = True, output_file, None
-            return 0
-
-        try:
-            url = url + f"?downloadRange=bytes={start}-{end-1}"
-            with session.get(url, stream=False) as r:
-                r.raise_for_status()
-                with lock:
-                    output_file.seek(start)
-                    output_file.write(r.content)
-
-            logger.log(
-                VERBOSE_LVL,
-                f"Wrote {start} - {end} bytes to {output_file}",
-            )
-            results[idx] = (True, output_file, None)
-            return 0
-        except Exception as ex:  # noqa: BLE001
-            logger.log(
-                VERBOSE_LVL,
-                f"Failed to write to {output_file}.",
-                exc_info=True,
-            )
-            results[idx] = (False, output_file, str(ex))
-            return 1
-
-    @staticmethod
-    def _worker(
-        queue: WorkerQueueT,
-        session: requests.Session,
-        url: str,
-        output_file: str,
-        lock: threading.Lock,
-        results: list[tuple[bool, str, Optional[str]]],
-    ) -> None:
-        while True:
-            idx, start, end = queue.get()
-            if idx == -1 and start == -1 and end == -1:
-                break
-            FusionHTTPFileSystem.stream_single_file_new_session_chunks(session, url, output_file, start, end, lock, results, idx)
-            queue.task_done()
-    
-    @staticmethod
-    async def _fetch_range(session, url, start, end, file_handle, results, idx):
-        headers = {'Range': f'bytes={start}-{end}'}
-        try:
-            async with session.get(url, headers=headers) as response:
-                response.raise_for_status()
-                if response.status == 206:
-                    chunk = await response.content.read()
-                    file_handle.seek(start)
-                    file_handle.write(chunk)
-                    logger.log(
-                    VERBOSE_LVL,
-                    f"Wrote {start} - {end} bytes to {output_file}",
-                )
-                    results[idx] = (True, output_file, None)
-                    return 0
-        except Exception as ex:  # noqa: BLE001
-            logger.log(
-                VERBOSE_LVL,
-                f"Failed to write to {output_file}.",
-                exc_info=True,
-            )
-            results[idx] = (False, output_file, str(ex))
-            return 1
-            
-    async def _download_single_file_async(self, url, output_file, results, file_size, chunk_size=DEFAULT_CHUNK_SIZE, n_threads=10) -> list[tuple[bool, str, Optional[str]]]:
-        async with self.set_session() as session:
-            tasks = []
-            semaphore = asyncio.Semaphore(n_threads)
-            results = [None] * len(range(0, file_size, chunk_size))
-            for idx, start in enumerate(range(0, file_size, chunk_size)):
-                end = min(start + chunk_size - 1, file_size - 1)
-                async with semaphore:
-                    task = FusionHTTPFileSystem._fetch_range(session, url, start, end, output_file, results, idx)
-                    tasks.append(task)
-
-            # Execute the tasks concurrently
-            await asyncio.gather(*tasks)
-        return results
-
-    def download_single_file_threading(
+    async def _fetch_range(
         self,
         url: str,
-        output_file: str,
-        chunk_size: int = 5 * 2**20,
-        max_threads: int = 10,
-    ) -> list[tuple[bool, str, Optional[str]]]:
-        """Download single file using range requests.
+        start: int,
+        end: int,
+        output_file: io.IOBase,
+    ) -> Any:
+        """Fetch a range of bytes from a URL and write it to a file.
 
         Args:
-            credentials (FusionCredentials): Valid user credentials to provide an access token
-            url (str): The URL to call.
-            output_file (str): The filename that the data will be saved into.
-            chunk_size (int): Chunk size for parallelization.
-            fs (fsspec.filesystem): Filesystem.
-            max_threads (int, optional): Number of threads to use. Defaults to 10.
+            url (str): _description_
+            start (int): _description_
+            end (int): _description_
+            output_file (io.IOBase): _description_
 
-        Returns: List[Tuple]
-
+        Returns:
+            _type_: _description_
         """
-        if isinstance(output_file, str):
-            fs = fsspec.filesystem("file")
-            output_file: fsspec.spec.AbstractBufferedFile = fs.open(output_file, "wb")
-        
-        session = sync(self.loop, self.set_session)
-        header = session.head(url).headers
-        # file_name = None
-        # if "x-jpmc-file-name" in header:
-        #     file_name = header["x-jpmc-file-name"]
-        #     output_file = output_file.parent.joinpath(file_name)
-        content_length = int(header["Content-Length"])
-        n_chunks = int(math.ceil(content_length / chunk_size))
-        starts = [i * chunk_size for i in range(n_chunks)]
-        ends = [min((i + 1) * chunk_size, content_length) for i in range(n_chunks)]
-        lock = Lock()
-        # output_file_h: fsspec.spec.AbstractBufferedFile = fs.open(output_file, "wb")
-        results = [None] * n_chunks
-        queue: WorkerQueueT = Queue(max_threads)
-        threads = []
-        for _ in range(max_threads):
-            t = Thread(target=FusionHTTPFileSystem._worker, args=(queue, session, url, output_file, lock, results))
-            t.start()
-            threads.append(t)
 
-        for idx, (start, end) in enumerate(zip(starts, ends)):
-            queue.put((idx, start, end))
+        try:
+            session = await self.set_session()
+            async with session.get(url + f"?downloadRange=bytes={start}-{end-1}") as response:
+                if response.status in [200, 206]:
+                    chunk = await response.read()
+                    output_file.seek(start)
+                    output_file.write(chunk)
+                    logger.log(
+                        VERBOSE_LVL,
+                        f"Wrote {start} - {end} bytes to {output_file}",
+                    )
+                else:
+                    response.raise_for_status()
+        except Exception as ex:  # noqa: BLE001
+            logger.log(
+                VERBOSE_LVL,
+                f"Failed to write to {output_file}.",
+                exc_info=True,
+            )
+            raise ex
 
-        queue.join()
+    async def _download_single_file_async(
+        self,
+        url: str,
+        output_file: io.IOBase,
+        file_size: int,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        n_threads: int = 10,
+    ) -> list[tuple[bool, str, Optional[str]]]:
+        """Download a single file using asynchronous range requests.
 
-        for _ in range(max_threads):
-            queue.put((-1, -1, -1))
-        for t in threads:
-            t.join()
+        Args:
+            url (str): _description_
+            output_file (io.IOBase): _description_
+            results (list[tuple[bool, str, Optional[str]]]): _description_
+            file_size (int): _description_
+            chunk_size (int, optional): _description_. Defaults to DEFAULT_CHUNK_SIZE.
+            n_threads (int, optional): _description_. Defaults to 10.
 
+        Returns:
+            list[tuple[bool, str, Optional[str]]]: Return array.
+        """
+
+        coros = []
+        for start in range(0, file_size, chunk_size):
+            end = min(start + chunk_size - 1, file_size - 1)
+            task = self._fetch_range(url, start, end, output_file)
+            coros.append(task)
+
+        # Execute the tasks concurrently
+        on_error = "raise"
+        out = await fsspec.asyn._run_coros_in_chunks(coros, batch_size=n_threads, nofiles=True, return_exceptions=True)
         output_file.close()
-        return results  # type: ignore
+        if on_error == "raise":
+            ex = next(filter(fsspec.asyn.is_exception, out), False)
+            if ex:
+                return False, output_file.path, str(ex)
+
+        return True, output_file.path, None
 
     def stream_single_file(
         self,
@@ -456,8 +365,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             tuple: A tuple
 
         """
-        try:
-            with sync(self.loop, self.set_session).get(url, stream=True) as r:
+
+        async def get_file() -> None:
+            async with sync(self.loop, self.set_session).get(url, stream=True) as r:
                 r.raise_for_status()
                 byte_cnt = 0
                 for chunk in r.iter_content(block_size):
@@ -466,8 +376,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 output_file.close()
             logger.log(
                 VERBOSE_LVL,
-                f"Wrote {byte_cnt:,} bytes to {output_file}",
+                f"Wrote {byte_cnt:,} bytes to {output_file.name}",
             )
+
+        try:
+            sync(self.loop, get_file)
             return (True, output_file, None)
         except Exception as ex:  # noqa: BLE001
             output_file.close()
@@ -476,48 +389,61 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 f"Failed to write to {output_file}.",
                 exc_info=True,
             )
-            return (False, output_file, str(ex))
+            return False, output_file, str(ex)
 
-    def download(self,
+    def download(
+        self,
         lfs: fsspec.AbstractFileSystem,
         rpath: Union[str, Path],
         lpath: Union[str, Path],
         chunk_size: int = 5 * 2**20,
-        callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         overwrite: bool = True,
-        **kwargs: Any,) -> Any:
+        **kwargs: Any,
+    ) -> Any:
         """Download file(s) from remote to local.
-    
+
         Args:
             rfs (fsspec.AbstractFileSystem): Remote filesystem.
             lfs (fsspec.AbstractFileSystem): Local filesystem.
             rpath (Union[str, io.IOBase, Path]): Remote path.
             lpath (Union[str, io.IOBase, Path]): Local path.
             chunk_size (int, optional): Chunk size. Defaults to 5 * 2**20.
-            callback (fsspec.callbacks.Callback, optional): Callback function. Defaults to _DEFAULT_CALLBACK.
             overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
             **kwargs (Any): Kwargs.
-            
+
         Returns:
             Any: Return value.
         """
-        rpath = self._decorate_url(rpath)
-        with sync(self.loop, self.set_session).head(rpath) as r:
-            r.raise_for_status()
-            headers = r.headers
-        if "x-jpmc-file-name" in headers:
+
+        async def get_headers() -> Any:
+            session = await self.set_session()
+            async with session.head(rpath) as r:
+                r.raise_for_status()
+                return r.headers
+
+        headers = sync(self.loop, get_headers)
+        if "x-jpmc-file-name" in headers.keys():  # noqa: SIM118
             file_name = headers.get("x-jpmc-file-name")
-            lpath = lpath.parent.joinpath(file_name)
+            lpath = Path(lpath).parent.joinpath(file_name)
+
+        is_local_fs = type(lfs).__name__ == "LocalFileSystem"
 
         if not overwrite and lfs.exists(lpath):
             return True, lpath, None
-        
-        return self.get(rpath, lfs.open(lpath, "wb"), chunk_size=chunk_size, callback=callback, headers=headers, **kwargs)
 
-    def get(
+        return self.get(
+            str(rpath),
+            lfs.open(lpath, "wb"),
+            chunk_size=chunk_size,
+            headers=headers,
+            is_local_fs=is_local_fs,
+            **kwargs,
+        )
+
+    def get(  # noqa: arguments-differ
         self,
         rpath: Union[str, io.IOBase],
-        lpath: Union[str, io.IOBase],
+        lpath: io.IOBase,
         chunk_size: int = 5 * 2**20,
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         **kwargs: Any,
@@ -534,15 +460,18 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         Returns:
 
         """
-        rpath = self._decorate_url(rpath)
-        n_threads = kwargs.get("max_threads", 1)
-
-        if n_threads == 1:
-            return self.stream_single_file(rpath, lpath, chunk_size=chunk_size)
+        rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
+        n_threads = kwargs.get("n_threads", 1)
+        file_size = 0
+        if "headers" in kwargs:
+            file_size = int(kwargs["headers"].get("Content-Length"))
+        is_local_fs = kwargs.get("is_local_fs", False)
+        if n_threads == 1 or not is_local_fs:
+            return self.stream_single_file(str(rpath), lpath, block_size=chunk_size)
         else:
-            pass
-
-        return super().get(rpath, lpath, chunk_size=chunk_size, callback=callback, **kwargs)
+            return sync(
+                self.loop, self._download_single_file_async, str(rpath), lpath, file_size, chunk_size, n_threads
+            )
 
     async def _put_file(
         self,
@@ -619,7 +548,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     @staticmethod
     def _construct_headers(
-        file_local: Any, dt_from: str, dt_to: str, dt_created: str, chunk_size: int = 5 * 2**20, multipart: bool = False, file_name: Optional[str] = None
+        file_local: Any,
+        dt_from: str,
+        dt_to: str,
+        dt_created: str,
+        chunk_size: int = 5 * 2**20,
+        multipart: bool = False,
+        file_name: Optional[str] = None,
     ) -> tuple[dict[str, str], list[dict[str, str]]]:
         headers = {
             "Content-Type": "application/octet-stream",
@@ -792,7 +727,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         rpath = self._decorate_url(rpath)
         if type(lpath).__name__ in ["S3File"]:
             return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method)
-        headers, chunk_headers_lst = self._construct_headers(lpath, dt_from, dt_to, dt_created, chunk_size, multipart, file_name)
+        headers, chunk_headers_lst = self._construct_headers(
+            lpath, dt_from, dt_to, dt_created, chunk_size, multipart, file_name
+        )
         kwargs.update({"headers": headers})
         if multipart:
             kwargs.update({"chunk_headers_lst": chunk_headers_lst})
