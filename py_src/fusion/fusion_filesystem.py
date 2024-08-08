@@ -291,14 +291,14 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     output_file.write(chunk)
                     logger.log(
                         VERBOSE_LVL,
-                        f"Wrote {start} - {end} bytes to {output_file}",
+                        f"Wrote {start} - {end} bytes to {output_file.path}",
                     )
                 else:
                     response.raise_for_status()
         except Exception as ex:  # noqa: BLE001
             logger.log(
                 VERBOSE_LVL,
-                f"Failed to write to {output_file}.",
+                f"Failed to write to {output_file.path}.",
                 exc_info=True,
             )
             raise ex
@@ -343,7 +343,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return True, output_file.path, None
 
-    def stream_single_file(
+    async def stream_single_file(
         self,
         url: str,
         output_file: io.IOBase,
@@ -362,7 +362,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
 
         async def get_file() -> None:
-            async with sync(self.loop, self.set_session).get(url, stream=True) as r:
+            session = await self.set_session()
+            async with session.get(url, stream=True, **self.kwargs) as r:
                 r.raise_for_status()
                 byte_cnt = 0
                 for chunk in r.iter_content(block_size):
@@ -375,7 +376,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             )
 
         try:
-            sync(self.loop, get_file)
+            await get_file()
             return (True, output_file, None)
         except Exception as ex:  # noqa: BLE001
             output_file.close()
@@ -462,7 +463,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             file_size = int(kwargs["headers"].get("Content-Length"))
         is_local_fs = kwargs.get("is_local_fs", False)
         if n_threads == 1 or not is_local_fs:
-            return self.stream_single_file(str(rpath), lpath, block_size=chunk_size)
+            return sync(self.stream_single_file, str(rpath), lpath, block_size=chunk_size)
         else:
             return sync(
                 self.loop, self._download_single_file_async, str(rpath), lpath, file_size, chunk_size, n_threads
