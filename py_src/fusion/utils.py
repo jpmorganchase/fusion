@@ -554,7 +554,7 @@ def distribution_to_filename(
     """
     if datasetseries[-1] == "/" or datasetseries[-1] == "\\":
         datasetseries = datasetseries[0:-1]
-    
+
     if partitioning == "hive":
         file_name = f"{dataset}.{file_format}"
     else:

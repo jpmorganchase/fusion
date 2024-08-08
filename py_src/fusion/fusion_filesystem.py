@@ -1,25 +1,18 @@
 """Fusion FileSystem."""
 
-import asyncio
 import base64
 import hashlib
 import io
 import logging
-import math
 from collections.abc import AsyncGenerator, Generator
 from copy import deepcopy
 from pathlib import Path
-import threading
-from threading import Lock, Thread
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 from urllib.parse import quote, urljoin
-from queue import Queue
 
-import aiohttp
 import fsspec
 import fsspec.asyn
 import pandas as pd
-from pydantic import AnyHttpUrl
 import requests
 from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
@@ -28,7 +21,6 @@ from fsspec.utils import nullcontext
 from fusion._fusion import FusionCredentials
 
 from .utils import get_client
-from .types import WorkerQueueT
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
