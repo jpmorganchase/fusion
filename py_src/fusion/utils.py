@@ -5,18 +5,14 @@ from __future__ import annotations
 import contextlib
 import json as js
 import logging
-import math
 import multiprocessing as mp
 import os
 import re
-import threading
 from collections.abc import Generator
 from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-from queue import Queue
-from threading import Lock, Thread
 from typing import Any, Optional, Union
 from urllib.parse import urlparse, urlunparse
 
@@ -45,7 +41,7 @@ from urllib3.util.retry import Retry
 from fusion._fusion import FusionCredentials
 
 from .authentication import FusionAiohttpSession, FusionOAuthAdapter
-from .types import PyArrowFilterT, WorkerQueueT
+from .types import PyArrowFilterT
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -139,42 +135,6 @@ def joblib_progress(description: str, total: Optional[int]) -> Generator[Progres
     finally:
         progress.stop()
         joblib.parallel.BatchCompletionCallBack = old_callback
-
-
-@contextlib.contextmanager
-def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # type: ignore
-    # pragma: no cover
-    """Progress bar sensitive to exceptions during the batch processing.
-
-    Args:
-        tqdm_object (tqdm.tqdm): tqdm object.
-
-    Yields: tqdm.tqdm object
-
-    """
-
-    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):  # type: ignore
-        """Tqdm execution wrapper."""
-
-        def __call__(self, *args: Any, **kwargs: Any) -> Any:
-            n = 0
-            lst = args[0]._result if hasattr(args[0], "_result") else args[0]
-            for i in lst:
-                try:
-                    if i[0] is True:
-                        n += 1
-                except Exception as _:  # noqa: F841, PERF203, BLE001
-                    n += 1
-            tqdm_object.update(n=n)
-            return super().__call__(*args, **kwargs)
-
-    old_batch_callback: type[joblib.parallel.BatchCompletionCallBack] = joblib.parallel.BatchCompletionCallBack
-    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
-    try:
-        yield tqdm_object
-    finally:
-        joblib.parallel.BatchCompletionCallBack = old_batch_callback
-        tqdm_object.close()
 
 
 def cpu_count(thread_pool_size: Optional[int] = None, is_threading: bool = False) -> int:
@@ -685,218 +645,6 @@ def get_session(
     auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url)
     session.mount(mount_url, auth_handler)
     return session
-
-
-def _stream_single_file_new_session_dry_run(
-    credentials: FusionCredentials, url: str, output_file: str
-) -> tuple[bool, str, Optional[str]]:
-    """Function to test that a distribution is available without downloading.
-
-    Args:
-        credentials (FusionCredentials): Valid user credentials to provide an acces token
-        root_url (str): The URL to call.
-        output_file: The filename that the data will be saved into.
-
-    Returns:
-        requests.Session(): A HTTP Session object
-
-    """
-    try:
-        resp = get_session(credentials, url).head(url)
-        resp.raise_for_status()
-        return (True, output_file, None)
-    except BaseException as ex:  # noqa: BLE001
-        logger.log(VERBOSE_LVL, f"Failed to download url {url} to {output_file}", exc_info=True)
-        return (False, output_file, str(ex))
-
-
-def stream_single_file_new_session_chunks(  # noqa: PLR0913
-    session: requests.Session,
-    url: str,
-    output_file: fsspec.spec.AbstractBufferedFile,
-    start: int,
-    end: int,
-    lock: threading.Lock,
-    results: list[tuple[bool, str, Optional[str]]],
-    idx: int,
-    overwrite: bool = True,
-    fs: Optional[fsspec.AbstractFileSystem] = None,
-) -> int:
-    """Function to stream a single file from the API to a file on disk.
-
-    Args:
-        session (class `requests.Session`): HTTP session.
-        url (str): The URL to call.
-        output_file: The file handle for the target write file.
-        start (int): Start byte.
-        end(int): End byte.
-        lock (Threading.Lock): Lock.
-        results (list): Results list.
-        idx (int): Results list index.
-        overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
-        fs (fsspec.filesystem): Filesystem.
-
-    Returns:
-        int: Exit status
-
-    """
-    if fs is None:
-        fs = fsspec.filesystem("file")
-    if not overwrite and fs.exists(output_file):
-        results[idx] = True, output_file, None
-        return 0
-
-    try:
-        url = url + f"?downloadRange=bytes={start}-{end-1}"
-        with session.get(url, stream=False) as r:
-            r.raise_for_status()
-            with lock:
-                output_file.seek(start)
-                output_file.write(r.content)
-
-        logger.log(
-            VERBOSE_LVL,
-            f"Wrote {start} - {end} bytes to {output_file}",
-        )
-        results[idx] = (True, output_file, None)
-        return 0
-    except Exception as ex:  # noqa: BLE001
-        logger.log(
-            VERBOSE_LVL,
-            f"Failed to write to {output_file}.",
-            exc_info=True,
-        )
-        results[idx] = (False, output_file, str(ex))
-        return 1
-
-
-def _worker(
-    queue: WorkerQueueT,
-    session: requests.Session,
-    url: str,
-    output_file: str,
-    lock: threading.Lock,
-    results: list[tuple[bool, str, Optional[str]]],
-) -> None:
-    while True:
-        idx, start, end = queue.get()
-        if idx == -1 and start == -1 and end == -1:
-            break
-        stream_single_file_new_session_chunks(session, url, output_file, start, end, lock, results, idx)
-        queue.task_done()
-
-
-def download_single_file_threading(
-    credentials: FusionCredentials,
-    url: str,
-    output_file: str,
-    chunk_size: int = 5 * 2**20,
-    fs: Optional[fsspec.AbstractFileSystem] = None,
-    max_threads: int = 10,
-) -> list[tuple[bool, str, Optional[str]]]:
-    """Download single file using range requests.
-
-    Args:
-        credentials (FusionCredentials): Valid user credentials to provide an access token
-        url (str): The URL to call.
-        output_file (str): The filename that the data will be saved into.
-        chunk_size (int): Chunk size for parallelization.
-        fs (fsspec.filesystem): Filesystem.
-        max_threads (int, optional): Number of threads to use. Defaults to 10.
-
-    Returns: List[Tuple]
-
-    """
-    if fs is None:
-        fs = fsspec.filesystem("file")
-    session = get_session(credentials, url)
-    header = session.head(url).headers
-    file_name = None
-    if "x-jpmc-file-name" in header:
-        file_name = header["x-jpmc-file-name"]
-        output_file = Path(output_file).parent.joinpath(file_name)
-    content_length = int(header["Content-Length"])
-    n_chunks = int(math.ceil(content_length / chunk_size))
-    starts = [i * chunk_size for i in range(n_chunks)]
-    ends = [min((i + 1) * chunk_size, content_length) for i in range(n_chunks)]
-    lock = Lock()
-    output_file_h: fsspec.spec.AbstractBufferedFile = fs.open(output_file, "wb")
-    results = [None] * n_chunks
-    queue: WorkerQueueT = Queue(max_threads)
-    threads = []
-    for _ in range(max_threads):
-        t = Thread(target=_worker, args=(queue, session, url, output_file_h, lock, results))
-        t.start()
-        threads.append(t)
-
-    for idx, (start, end) in enumerate(zip(starts, ends)):
-        queue.put((idx, start, end))
-
-    queue.join()
-
-    for _ in range(max_threads):
-        queue.put((-1, -1, -1))
-    for t in threads:
-        t.join()
-
-    output_file_h.close()
-    return results  # type: ignore
-
-
-def stream_single_file_new_session(
-    credentials: FusionCredentials,
-    url: str,
-    output_file: str,
-    overwrite: bool = True,
-    block_size: int = DEFAULT_CHUNK_SIZE,
-    dry_run: bool = False,
-    fs: Optional[fsspec.AbstractFileSystem] = None,
-) -> tuple[bool, str, Optional[str]]:
-    """Function to stream a single file from the API to a file on disk.
-
-    Args:
-        credentials (FusionCredentials): Valid user credentials to provide an access token
-        url (str): The URL to call.
-        output_file (str): The filename that the data will be saved into.
-        overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
-        block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
-        dry_run (bool, optional): Test that a file can be downloaded and return the filename without
-            downloading the data. Defaults to False.
-        fs (fsspec.filesystem): Filesystem.
-
-    Returns:
-        tuple: A tuple
-
-    """
-    if fs is None:
-        fs = fsspec.filesystem("file")
-    if dry_run:
-        return _stream_single_file_new_session_dry_run(credentials, url, output_file)
-
-    if not overwrite and fs.exists(output_file):
-        return True, output_file, None
-
-    try:
-        with get_session(credentials, url).get(url, stream=True) as r:
-            r.raise_for_status()
-            byte_cnt = 0
-            with fs.open(output_file, "wb") as outfile:
-                for chunk in r.iter_content(block_size):
-                    byte_cnt += len(chunk)
-                    outfile.write(chunk)
-        logger.log(
-            VERBOSE_LVL,
-            f"Wrote {byte_cnt:,} bytes to {output_file}",
-        )
-        return (True, output_file, None)
-    except Exception as ex:  # noqa: BLE001
-        logger.log(
-            VERBOSE_LVL,
-            f"Failed to write to {output_file}.",
-            exc_info=True,
-        )
-        return (False, output_file, str(ex))
-
 
 def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) -> list[bool]:
     """Validate if the file name format adheres to the standard.

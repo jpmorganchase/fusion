@@ -363,12 +363,20 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         async def get_file() -> None:
             session = await self.set_session()
-            async with session.get(url, stream=True, **self.kwargs) as r:
-                r.raise_for_status()
+            async with session.get(url, **self.kwargs) as r:
                 byte_cnt = 0
-                for chunk in r.iter_content(block_size):
+                while True:
+                    chunk = await r.content.read(block_size)
+                    if not chunk:
+                        break
                     byte_cnt += len(chunk)
                     output_file.write(chunk)
+                    
+                # r.raise_for_status()
+                # byte_cnt = 0
+                # for chunk in r.iter_content(block_size):
+                #     byte_cnt += len(chunk)
+                #     output_file.write(chunk)
                 output_file.close()
             logger.log(
                 VERBOSE_LVL,
@@ -377,7 +385,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         try:
             await get_file()
-            return (True, output_file, None)
+            return (True, output_file.path, None)
         except Exception as ex:  # noqa: BLE001
             output_file.close()
             logger.log(
@@ -385,7 +393,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 f"Failed to write to {output_file}.",
                 exc_info=True,
             )
-            return False, output_file, str(ex)
+            return False, output_file.path, str(ex)
 
     def download(
         self,
@@ -394,22 +402,30 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         lpath: Union[str, Path],
         chunk_size: int = 5 * 2**20,
         overwrite: bool = True,
+        preserve_original_name: bool = False,
         **kwargs: Any,
     ) -> Any:
         """Download file(s) from remote to local.
 
         Args:
-            rfs (fsspec.AbstractFileSystem): Remote filesystem.
             lfs (fsspec.AbstractFileSystem): Local filesystem.
             rpath (Union[str, io.IOBase, Path]): Remote path.
             lpath (Union[str, io.IOBase, Path]): Local path.
             chunk_size (int, optional): Chunk size. Defaults to 5 * 2**20.
             overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
+            preserve_original_name (bool, optional): True if the original name should be preserved. Defaults to False.
             **kwargs (Any): Kwargs.
 
         Returns:
             Any: Return value.
         """
+
+        rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
+        if not lfs.exists(lpath):
+            try:
+                lfs.mkdir(Path(lpath).parent, exist_ok=True, create_parents=True)
+            except Exception as ex:  # noqa: BLE001
+                logger.info(f"Path {lpath} exists already", ex)
 
         async def get_headers() -> Any:
             session = await self.set_session()
@@ -418,7 +434,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 return r.headers
 
         headers = sync(self.loop, get_headers)
-        if "x-jpmc-file-name" in headers.keys():  # noqa: SIM118
+        if "x-jpmc-file-name" in headers.keys() and preserve_original_name:  # noqa: SIM118
             file_name = headers.get("x-jpmc-file-name")
             lpath = Path(lpath).parent.joinpath(file_name)
 
@@ -441,7 +457,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         rpath: Union[str, io.IOBase],
         lpath: io.IOBase,
         chunk_size: int = 5 * 2**20,
-        callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         **kwargs: Any,
     ) -> Any:
         """Copy file(s) to local.
@@ -463,8 +478,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             file_size = int(kwargs["headers"].get("Content-Length"))
         is_local_fs = kwargs.get("is_local_fs", False)
         if n_threads == 1 or not is_local_fs:
-            return sync(self.stream_single_file, str(rpath), lpath, block_size=chunk_size)
+            return sync(self.loop, self.stream_single_file, str(rpath), lpath, block_size=chunk_size)
         else:
+            rpath = str(rpath) if "operationType/download" in str(rpath) else str(rpath) + "/operationType/download" 
             return sync(
                 self.loop, self._download_single_file_async, str(rpath), lpath, file_size, chunk_size, n_threads
             )

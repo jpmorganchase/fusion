@@ -29,7 +29,7 @@ from .utils import (
     csv_to_table,
     distribution_to_filename,
     distribution_to_url,
-    download_single_file_threading,
+    # download_single_file_threading,
     get_default_fs,
     get_session,
     is_dataset_raw,
@@ -41,7 +41,7 @@ from .utils import (
     read_csv,
     read_json,
     read_parquet,
-    stream_single_file_new_session,
+    # stream_single_file_new_session,
     upload_files,
     validate_file_names,
 )
@@ -620,6 +620,7 @@ class Fusion:
         download_folder: Optional[str] = None,
         return_paths: bool = False,
         partitioning: Optional[str] = None,
+        preserve_original_name: bool = False,
     ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Downloads the requested distributions of a dataset to disk.
 
@@ -639,6 +640,7 @@ class Fusion:
                 Defaults to download_folder as set in __init__
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
             partitioning (str, optional): Partitioning specification.
+            preserve_original_name (bool, optional): Preserve the original name of the file. Defaults to False.
 
         Returns:
 
@@ -674,74 +676,46 @@ class Fusion:
             if not self.fs.exists(d):
                 self.fs.mkdir(d, create_parents=True)
 
-        if len(required_series) == 1 and type(self.fs).__name__ == "LocalFileSystem":
-            n_par = cpu_count(n_par, is_threading=True)
-            with Progress() as pbar:
-                task = pbar.add_task("Downloading: ", total=1)
-                output_file = distribution_to_filename(
-                    download_folders[0],
-                    required_series[0][1],
-                    required_series[0][2],
-                    required_series[0][3],
-                    required_series[0][0],
+        n_par = cpu_count(n_par)
+        download_spec = [
+            {
+                # "credentials": self.credentials,
+                "lfs": self.fs,
+                "rpath": distribution_to_url(
+                    self.root_url,
+                    series[1],
+                    series[2],
+                    series[3],
+                    series[0],
+                    is_download=True,
+                ),
+                "lpath": distribution_to_filename(
+                    download_folders[i],
+                    series[1],
+                    series[2],
+                    series[3],
+                    series[0],
                     partitioning=partitioning,
-                )
-                res = download_single_file_threading(
-                    self.credentials,
-                    distribution_to_url(
-                        self.root_url,
-                        required_series[0][1],
-                        required_series[0][2],
-                        required_series[0][3],
-                        required_series[0][0],
-                        is_download=True,
-                    ),
-                    output_file,
-                    fs=self.fs,
-                    max_threads=n_par,
-                )
-                if (len(res) > 0) and all(r[0] for r in res):
-                    pbar.update(task, advance=1)
-                    res = [(res[0][0], output_file, res[0][2])]
+                ),
+                "overwrite": force_download,
+                "preserve_original_name": preserve_original_name,
+            }
+            for i, series in enumerate(required_series)
+        ]
 
+        logger.log(
+            VERBOSE_LVL,
+            f"Beginning {len(download_spec)} downloads in batches of {n_par}",
+        )
+        if show_progress:
+            with joblib_progress("Downloading", total=len(download_spec)):
+                res = Parallel(n_jobs=n_par)(
+            delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
+        )
         else:
-            n_par = cpu_count(n_par)
-            download_spec = [
-                {
-                    "credentials": self.credentials,
-                    "url": distribution_to_url(
-                        self.root_url,
-                        series[1],
-                        series[2],
-                        series[3],
-                        series[0],
-                        is_download=True,
-                    ),
-                    "output_file": distribution_to_filename(
-                        download_folders[i],
-                        series[1],
-                        series[2],
-                        series[3],
-                        series[0],
-                        partitioning=partitioning,
-                    ),
-                    "overwrite": force_download,
-                    "fs": self.fs,
-                }
-                for i, series in enumerate(required_series)
-            ]
-
-            logger.log(
-                VERBOSE_LVL,
-                f"Beginning {len(download_spec)} downloads in batches of {n_par}",
-            )
-            if show_progress:
-                with joblib_progress("Downloading", total=len(download_spec)):
-                    res = Parallel(n_jobs=n_par)(
-                        delayed(stream_single_file_new_session)(**spec) for spec in download_spec
-                    )
-            else:
-                res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(**spec) for spec in download_spec)
+            res = Parallel(n_jobs=n_par)(
+            delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
+        )
 
         if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
