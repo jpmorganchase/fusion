@@ -283,7 +283,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
 
         try:
-            # session = await self.set_session()
             async with session.get(url + f"?downloadRange=bytes={start}-{end-1}", **self.kwargs) as response:
                 if response.status in [200, 206]:
                     chunk = await response.read()
@@ -371,12 +370,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                         break
                     byte_cnt += len(chunk)
                     output_file.write(chunk)
-                    
-                # r.raise_for_status()
-                # byte_cnt = 0
-                # for chunk in r.iter_content(block_size):
-                #     byte_cnt += len(chunk)
-                #     output_file.write(chunk)
                 output_file.close()
             logger.log(
                 VERBOSE_LVL,
@@ -480,7 +473,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if n_threads == 1 or not is_local_fs:
             return sync(self.loop, self.stream_single_file, str(rpath), lpath, block_size=chunk_size)
         else:
-            rpath = str(rpath) if "operationType/download" in str(rpath) else str(rpath) + "/operationType/download" 
+            rpath = str(rpath) if "operationType/download" in str(rpath) else str(rpath) + "/operationType/download"
             return sync(
                 self.loop, self._download_single_file_async, str(rpath), lpath, file_size, chunk_size, n_threads
             )
@@ -688,9 +681,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
         operation_id = sync(self.loop, _get_operation_id)["operationId"]
-        # resps = sync(super().loop, put_data, *args, **kwargs)
         resps = list(put_data())
-
         hash_sha256 = hash_sha256_lst[0]
         headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
         kw = self.kwargs.copy()

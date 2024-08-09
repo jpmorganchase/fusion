@@ -646,6 +646,7 @@ def get_session(
     session.mount(mount_url, auth_handler)
     return session
 
+
 def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) -> list[bool]:
     """Validate if the file name format adheres to the standard.
 
@@ -757,7 +758,7 @@ def upload_files(  # noqa: PLR0913
 
     """
 
-    def _upload(p_url: str, path: str) -> tuple[bool, str, Optional[str]]:
+    def _upload(p_url: str, path: str, file_name: Optional[str] = None) -> tuple[bool, str, Optional[str]]:
         try:
             mp = multipart and fs_local.size(path) > chunk_size
 
@@ -770,6 +771,7 @@ def upload_files(  # noqa: PLR0913
                     multipart=mp,
                     from_date=from_date,
                     to_date=to_date,
+                    file_name=file_name,
                 )
             else:
                 with fs_local.open(path, "rb") as file_local:
@@ -781,6 +783,7 @@ def upload_files(  # noqa: PLR0913
                         multipart=mp,
                         from_date=from_date,
                         to_date=to_date,
+                        file_name=file_name,
                     )
             return (True, path, None)
         except Exception as ex:  # noqa: BLE001
@@ -795,22 +798,22 @@ def upload_files(  # noqa: PLR0913
         if show_progress:
             with joblib_progress("Uploading", total=len(loop)):
                 res = Parallel(n_jobs=n_par, backend="threading")(
-                    delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows()
+                    delayed(_upload)(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()
                 )
         else:
             res = Parallel(n_jobs=n_par, backend="threading")(
-                delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows()
+                delayed(_upload)(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()
             )
     else:
         res = [None] * len(loop)
         if show_progress:
             with tqdm(total=len(loop)) as p:
                 for i, (_, row) in enumerate(loop.iterrows()):
-                    r = _upload(row["url"], row["path"])
+                    r = _upload(row["url"], row["path"], row.get("file_name", None))
                     res[i] = r
                     if r[0] is True:
                         p.update(1)
         else:
-            res = [_upload(row["url"], row["path"]) for _, row in loop.iterrows()]
+            res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
     return res  # type: ignore

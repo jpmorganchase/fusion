@@ -14,7 +14,6 @@ from typing import Optional
 import fsspec
 import pandas as pd
 from joblib import Parallel, delayed
-from rich.progress import Progress
 
 from .utils import (
     cpu_count,
@@ -48,12 +47,14 @@ def _download(
         if show_progress:
             with joblib_progress("Downloading", total=len(df)):
                 res = Parallel(n_jobs=n_par)(
-            delayed(fs_fusion.download)(fs_local, row["url"], local_path + row["path_fusion"]) for i, row in df.iterrows()
-        )
+                    delayed(fs_fusion.download)(fs_local, row["url"], local_path + row["path_fusion"])
+                    for i, row in df.iterrows()
+                )
         else:
             res = Parallel(n_jobs=n_par)(
-            delayed(fs_fusion.download)(fs_local, row["url"], local_path + row["path_fusion"]) for i, row in df.iterrows()
-        )
+                delayed(fs_fusion.download)(fs_local, row["url"], local_path + row["path_fusion"])
+                for i, row in df.iterrows()
+            )
     else:
         return []
 

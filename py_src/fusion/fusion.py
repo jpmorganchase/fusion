@@ -15,7 +15,6 @@ import pandas as pd
 import pyarrow as pa
 import requests
 from joblib import Parallel, delayed
-from rich.progress import Progress
 from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
@@ -679,7 +678,6 @@ class Fusion:
         n_par = cpu_count(n_par)
         download_spec = [
             {
-                # "credentials": self.credentials,
                 "lfs": self.fs,
                 "rpath": distribution_to_url(
                     self.root_url,
@@ -710,12 +708,12 @@ class Fusion:
         if show_progress:
             with joblib_progress("Downloading", total=len(download_spec)):
                 res = Parallel(n_jobs=n_par)(
-            delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
-        )
+                    delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
+                )
         else:
             res = Parallel(n_jobs=n_par)(
-            delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
-        )
+                delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
+            )
 
         if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
@@ -1081,8 +1079,9 @@ class Fusion:
                     )
                     warnings.warn(msg, stacklevel=2)
                     return [(False, path, msg)]
-                is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
-                file_format = path.split(".")[-1] if not is_raw else "raw"
+                file_format = path.split(".")[-1]
+                file_format = "raw" if file_format not in RECOGNIZED_FORMATS else "raw"
+                
                 local_url_eqiv = [
                     "/".join(distribution_to_url("", dataset, dt_str, file_format, catalog, False).split("/")[1:])
                 ]
@@ -1159,8 +1158,8 @@ class Fusion:
         is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
         local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)
 
-        data_map_df = pd.DataFrame(["", local_url_eqiv]).T
-        data_map_df.columns = ["path", "url"]  # type: ignore
+        data_map_df = pd.DataFrame(["", local_url_eqiv, file_name]).T
+        data_map_df.columns = ["path", "url", "file_name"]  # type: ignore
 
         res = upload_files(
             fs_fusion,
