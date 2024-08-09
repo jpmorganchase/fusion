@@ -21,7 +21,7 @@ from fsspec.utils import nullcontext
 
 from fusion._fusion import FusionCredentials
 
-from .utils import get_client
+from .utils import get_client, get_default_fs
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -448,7 +448,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
     def get(  # noqa: arguments-differ
         self,
         rpath: Union[str, io.IOBase],
-        lpath: io.IOBase,
+        lpath: Union[str, io.IOBase],
         chunk_size: int = 5 * 2**20,
         **kwargs: Any,
     ) -> Any:
@@ -458,12 +458,16 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             rpath: Rpath. Download url.
             lpath: Lpath. Destination path.
             chunk_size: Chunk size.
-            callback: Callback function.
             **kwargs: Kwargs.
 
         Returns:
 
         """
+
+        if isinstance(lpath, str):
+            default_fs = get_default_fs()
+            lpath = default_fs.open(lpath, "wb")
+
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
         n_threads = kwargs.get("n_threads", 1)
         file_size = 0
@@ -540,7 +544,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 operation_id = await resp.json()
 
             operation_id = operation_id["operationId"]
-            # TODO: make this async
             resps = [resp async for resp in put_data()]
             kw = self.kwargs.copy()
             kw.update({"headers": headers})

@@ -8,12 +8,11 @@ import logging
 import multiprocessing as mp
 import os
 import re
-from collections.abc import Generator
 from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
@@ -40,7 +39,11 @@ from urllib3.util.retry import Retry
 from fusion._fusion import FusionCredentials
 
 from .authentication import FusionAiohttpSession, FusionOAuthAdapter
-from .types import PyArrowFilterT
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from .types import PyArrowFilterT
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25

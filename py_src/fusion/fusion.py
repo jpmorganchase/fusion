@@ -1081,7 +1081,7 @@ class Fusion:
                     return [(False, path, msg)]
                 file_format = path.split(".")[-1]
                 file_format = "raw" if file_format not in RECOGNIZED_FORMATS else "raw"
-                
+
                 local_url_eqiv = [
                     "/".join(distribution_to_url("", dataset, dt_str, file_format, catalog, False).split("/")[1:])
                 ]
@@ -1125,7 +1125,7 @@ class Fusion:
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
         file_name: Optional[str] = None,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ARG002
     ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Uploads data from an object in memory.
 

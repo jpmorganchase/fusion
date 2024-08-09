@@ -1,22 +1,17 @@
 import io
 import multiprocessing as mp
 import tempfile
-import threading
 from collections.abc import Generator
 from pathlib import Path
-from queue import Queue
-from typing import Any, Optional
-from unittest.mock import MagicMock, Mock, patch
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 import fsspec
 import joblib
 import pandas as pd
 import polars as pl
 import pytest
-import requests
-import requests_mock
 from pytest_mock import MockerFixture
-from tqdm import tqdm
 
 from fusion._fusion import FusionCredentials
 from fusion.authentication import FusionOAuthAdapter
@@ -26,16 +21,15 @@ from fusion.utils import (
     _filename_to_distribution,
     cpu_count,
     csv_to_table,
-    distribution_to_url,
     get_session,
     is_dataset_raw,
+    joblib_progress,
     json_to_table,
     normalise_dt_param_str,
     parquet_to_table,
     path_to_url,
     read_csv,
     read_json,
-    joblib_progress,
     upload_files,
     validate_file_names,
 )
@@ -575,55 +569,6 @@ def test_distribution_to_filename() -> None:
     exp_res = f"{root_dir}\\{dataset}__{catalog}__{datasetseries}.{file_format}"
     res = distribution_to_filename(root_dir, dataset, datasetseries, file_format, catalog)
     assert res == exp_res
-
-
-# @pytest.mark.parametrize(
-#     ("overwrite", "exists", "expected_result"),
-#     [
-#         (True, True, 0),  # Overwrite enabled, file exists
-#         (False, True, 0),  # Overwrite disabled, file exists
-#         (True, False, 0),  # Overwrite enabled, file does not exist
-#         (False, False, 0),  # Overwrite disabled, file does not exist
-#     ],
-# )
-# def test_stream_file(overwrite: bool, exists: bool, expected_result: int) -> None:
-#     session = Mock(spec=requests.Session)
-#     url = "http://example.com/data"
-#     output_file = Mock(spec=fsspec.spec.AbstractBufferedFile)
-#     start, end = 0, 10
-#     lock = threading.Lock()
-#     results: list[tuple[bool, str, Optional[str]]] = [(False, "", "")] * 1  # single element list
-#     idx = 0
-#     fs = Mock(spec=fsspec.AbstractFileSystem)
-#     fs.exists.return_value = exists
-
-#     # Create a mock response object with the necessary context manager methods
-#     mock_response = Mock()
-#     mock_response.raise_for_status = Mock()
-#     mock_response.content = b"0123456789"
-#     # Mock the __enter__ method to return the mock response itself
-#     mock_response.__enter__ = Mock(return_value=mock_response)
-#     # Mock the __exit__ method to do nothing
-#     mock_response.__exit__ = Mock()
-
-#     with (
-#         patch("fsspec.filesystem", return_value=fs),
-#         patch.object(session, "get", return_value=mock_response),
-#     ):
-#         # The actual function to test might need to be imported if it exists elsewhere
-#         result = stream_single_file_new_session_chunks(
-#             session, url, output_file, start, end, lock, results, idx, overwrite=overwrite, fs=fs
-#         )
-
-#         # Assertions to verify the behavior
-#         assert result == expected_result
-#         if not overwrite and exists:
-#             fs.exists.assert_called_once_with(output_file)
-#             assert results[idx] == (True, output_file, None)
-#         else:
-#             output_file.seek.assert_called_once_with(start)
-#             output_file.write.assert_called_once_with(b"0123456789")
-#             assert results[idx] == (True, output_file, None)
 
 
 # def test_stream_single_file_new_session_dry_run(

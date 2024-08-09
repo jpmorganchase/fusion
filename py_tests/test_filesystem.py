@@ -1,9 +1,11 @@
+# from fsspec.implementations.http import sync
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from unittest import mock
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import fsspec
 import pytest
 from aiohttp import ClientResponse
 
@@ -110,3 +112,52 @@ async def test_isdir_false(http_fs_instance: FusionHTTPFileSystem) -> None:
     http_fs_instance._info = AsyncMock(return_value={"type": "file"})
     result = await http_fs_instance._isdir("path_file")
     assert not result
+
+
+@pytest.mark.parametrize(
+    ("overwrite", "exists", "expected_result"),
+    [
+        (True, True, 0),  # Overwrite enabled, file exists
+        (True, False, 0),  # Overwrite enabled, file does not exist
+    ],
+)
+@pytest.mark.asyncio()
+@patch("aiohttp.ClientSession")  # type: ignore
+async def test_stream_file(MockClientSession, overwrite: bool, exists: bool, expected_result: int) -> None:
+    url = "http://example.com/data"
+    output_file = AsyncMock(spec=fsspec.spec.AbstractBufferedFile)
+    start, end = 0, 10
+    results: list[tuple[bool, str, Optional[str]]] = [(False, "", "")] * 1  # single element list
+    idx = 0
+    fs = AsyncMock(spec=fsspec.AbstractFileSystem)
+    fs.exists.return_value = exists
+
+    # Create a mock response object with the necessary context manager methods
+    mock_response = AsyncMock()
+    mock_response.raise_for_status = AsyncMock()
+    mock_response.content.iter_chunked = AsyncMock(return_value=iter([b"0123456789"]))
+    # Mock the __enter__ method to return the mock response itself
+    mock_response.__aenter__.return_value = mock_response
+    # Mock the __exit__ method to do nothing
+    mock_response.__aexit__.return_value = None
+
+    # Set up the mock session to return the mock response
+    mock_session = MagicMock()
+    mock_session.get.return_value.__aenter__.return_value = mock_response
+    MockClientSession.return_value.__aenter__.return_value = mock_session
+
+    # Create an instance of FusionHTTPFileSystem
+    http_fs_instance = FusionHTTPFileSystem()
+
+    # Run the async function
+    result = await http_fs_instance.stream_single_file(url, output_file)
+
+    # Assertions to verify the behavior
+    assert result[0] == expected_result
+    if not overwrite and exists:
+        fs.exists.assert_called_once_with(output_file)
+        assert results[idx] == (True, output_file, None)
+    else:
+        output_file.seek.assert_called_once_with(start)
+        output_file.write.assert_called_once_with(b"0123456789")
+        assert results[idx] == (True, output_file, None)
