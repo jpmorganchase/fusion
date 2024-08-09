@@ -35,7 +35,6 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
-from tqdm import tqdm
 from urllib3.util.retry import Retry
 
 from fusion._fusion import FusionCredentials
@@ -807,12 +806,13 @@ def upload_files(  # noqa: PLR0913
     else:
         res = [None] * len(loop)
         if show_progress:
-            with tqdm(total=len(loop)) as p:
+            with Progress() as p:
+                task = p.add_task("Uploading", total=len(loop))
                 for i, (_, row) in enumerate(loop.iterrows()):
                     r = _upload(row["url"], row["path"], row.get("file_name", None))
                     res[i] = r
                     if r[0] is True:
-                        p.update(1)
+                        p.update(task, 1)
         else:
             res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
