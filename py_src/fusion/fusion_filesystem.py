@@ -273,13 +273,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """Fetch a range of bytes from a URL and write it to a file.
 
         Args:
-            url (str): _description_
-            start (int): _description_
-            end (int): _description_
-            output_file (io.IOBase): _description_
+            url (str): URL to fetch.
+            start (int): Start byte.
+            end (int): End byte.
+            output_file (io.IOBase): File to write to.
 
         Returns:
-            _type_: _description_
+            None: None.
         """
 
         try:

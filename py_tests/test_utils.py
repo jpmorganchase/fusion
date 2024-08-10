@@ -484,12 +484,15 @@ def test_path_to_url() -> None:
     assert result == "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv"
 
     result = path_to_url("path/to/dataset__catalog__datasetseries.csv", is_raw=True)
-    assert result == "catalog/datasets/dataset/datasetseries/datasetseries/distributions/raw"
+    assert result == "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv"
 
     result = path_to_url("path/to/dataset__catalog__datasetseries.csv", is_download=True)
     assert result == "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv/operationType/download"
 
     result = path_to_url("path/to/dataset__catalog__datasetseries.csv", is_raw=True, is_download=True)
+    assert result == "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv/operationType/download"
+
+    result = path_to_url("path/to/dataset__catalog__datasetseries.pt", is_raw=True, is_download=True)
     assert result == "catalog/datasets/dataset/datasetseries/datasetseries/distributions/raw/operationType/download"
 
 
@@ -571,47 +574,6 @@ def test_distribution_to_filename() -> None:
     assert res == exp_res
 
 
-# def test_stream_single_file_new_session_dry_run(
-#     credentials: FusionCredentials, requests_mock: requests_mock.Mocker, fusion_obj: Fusion
-# ) -> None:
-#     catalog = "my_catalog"
-#     dataset = "my_dataset"
-#     datasetseries = "2020-04-04"
-#     file_format = "csv"
-#     out_f = "/tmp/tmp.tmp"
-#     url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
-#     requests_mock.head(url)
-#     assert (True, out_f, None) == _stream_single_file_new_session_dry_run(credentials, url, "/tmp/tmp.tmp")
-
-#     requests_mock.head(url, status_code=500)
-#     res = _stream_single_file_new_session_dry_run(credentials, url, "/tmp/tmp.tmp")
-#     assert not res[0]
-#     assert res[1] == out_f
-
-
-# def test_stream_file_exception() -> None:
-#     session = Mock(spec=requests.Session)
-#     url = "http://example.com/data"
-#     output_file = Mock(spec=fsspec.spec.AbstractBufferedFile)
-#     start, end = 0, 10
-#     lock = threading.Lock()
-#     results: list[tuple[bool, str, Optional[str]]] = [(False, "", "")] * 1  # single element list
-
-#     idx = 0
-#     fs = Mock(spec=fsspec.AbstractFileSystem)
-
-#     with (
-#         patch("fsspec.filesystem", return_value=fs),
-#         patch.object(session, "get", side_effect=requests.HTTPError("Error")),  # type: ignore
-#     ):
-#         result = stream_single_file_new_session_chunks(  # noqa: F821
-#             session, url, output_file, start, end, lock, results, idx, overwrite=True, fs=fs
-#         )
-
-#         assert result == 1
-#         assert results[idx] == (False, output_file, "Error")
-
-
 TmpFsT = tuple[fsspec.spec.AbstractFileSystem, str]
 
 
@@ -626,100 +588,8 @@ def temp_fs() -> Generator[TmpFsT, None, None]:
         yield mock_fs, tmpdirname
 
 
-# def test_stream_file_with_temp_fs(temp_fs: TmpFsT, requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-#     _, tmpdirname = temp_fs
-
-#     output_file_path = Path(tmpdirname) / "output.dat"
-#     output_file = fsspec.open(output_file_path, mode="wb").open()  # Open a writable file for test
-
-#     start, end = 0, 10
-#     lock = threading.Lock()
-#     results: list[tuple[bool, str, Optional[str]]] = [(False, "", "")]
-
-#     idx = 0
-
-#     catalog = "my_catalog"
-#     dataset = "my_dataset"
-#     datasetseries = "2020-04-04"
-#     file_format = "csv"
-#     url = distribution_to_url(fusion_obj.root_url, catalog, dataset, datasetseries, file_format)
-
-#     requests_mock.get(url, content=b"0123456789")
-
-#     try:
-#         result = stream_single_file_new_session_chunks(
-#             requests.Session(),
-#             url,
-#             output_file,
-#             start,
-#             end,
-#             lock,
-#             results,
-#             idx,
-#             overwrite=True,
-#             fs=None,  # Pass None to simulate the condition you want to test
-#         )
-#         output_file.flush()
-#         # Read back what was written to ensure correctness
-#         with output_file_path.open("rb") as f:
-#             file_contents = f.read()
-#         assert file_contents == b"0123456789"
-#         assert result == 0, "Function should return 0 on success"
-#         assert results[idx] == (True, output_file, None), "Results should be updated correctly"
-#     finally:
-#         output_file.close()
-
-
 def gen_binary_data(n: int, pad_len: int) -> list[bytes]:
     return [bin(i)[2:].zfill(pad_len).encode() for i in range(n)]
-
-
-# def test_worker(requests_mock: requests_mock.Mocker, temp_fs: TmpFsT, fusion_obj: Fusion) -> None:
-#     catalog = "my_catalog"
-#     dataset = "my_dataset"
-#     datasetseries = "2020-04-04"
-#     file_format = "csv"
-#     url = distribution_to_url(fusion_obj.root_url, dataset, datasetseries, file_format, catalog)
-#     splits = 10
-#     chunk_sz = 10
-#     bin_data = gen_binary_data(splits, chunk_sz)
-#     mock_fs, tmpdirname = temp_fs
-
-#     output_file_path = Path(tmpdirname) / "output.dat"
-#     output_file = fsspec.open(output_file_path, mode="wb").open()  # Open a writable file for test
-
-#     # generate all the get mocks
-#     for i in range(splits):
-#         start = i * chunk_sz
-#         end = start + chunk_sz - 1
-#         requests_mock.get(f"{url}?downloadRange=bytes={start}-{end-1}", content=bin_data[i])
-
-#     max_threads = 5
-#     results = [None] * splits
-#     queue: Queue[tuple[int, int, int]] = Queue(max_threads)
-#     lock = threading.Lock()
-
-#     threads = []
-#     for _ in range(max_threads):
-#         t = threading.Thread(target=_worker, args=(queue, requests.Session(), url, output_file, lock, results))
-#         t.start()
-#         threads.append(t)
-
-#     for i in range(splits):
-#         queue.put((i, i * chunk_sz, i * chunk_sz + chunk_sz - 1))
-#     queue.join()
-
-#     for _ in range(max_threads):
-#         queue.put((-1, -1, -1))
-#     for t in threads:
-#         t.join()
-
-#     output_file.close()
-
-#     with output_file_path.open("rb") as f:
-#         file_contents = f.read()
-#     for ix, line in enumerate(bin_data):
-#         assert line == file_contents[ix * chunk_sz : (ix + 1) * chunk_sz]
 
 
 def test_progress_update() -> None:
@@ -729,7 +599,7 @@ def test_progress_update() -> None:
     def true_if_even(x: int) -> tuple[bool, int]:
         return (x % 2 == 0, x)
 
-    with joblib_progress(tqdm(total=num_inputs)):
+    with joblib_progress("Uploading:", total=num_inputs):
         res = joblib.Parallel(n_jobs=10)(joblib.delayed(true_if_even)(i) for i in inputs)
 
     assert len(res) == num_inputs
