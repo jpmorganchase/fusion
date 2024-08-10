@@ -177,13 +177,13 @@ async def test_stream_file_exception(MockClientSession) -> None:
 
     # Run the async function and catch the exception
     results = await http_fs_instance.stream_single_file(url, output_file)
-    
+
     # Assertions to verify the behavior
     output_file.close.assert_called_once()
     assert results == (False, output_file.path, "Test exception")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 @patch("fsspec.asyn._run_coros_in_chunks", new_callable=AsyncMock)
 async def test_download_single_file_async(mock_run_coros_in_chunks):
     # Define the mock return value
@@ -219,7 +219,7 @@ async def test_download_single_file_async(mock_run_coros_in_chunks):
     output_file.close.assert_called()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")
 async def test_fetch_range_exception(MockClientSession) -> None:
     output_file = MagicMock(spec=io.IOBase)
@@ -251,7 +251,7 @@ async def test_fetch_range_exception(MockClientSession) -> None:
     output_file.write.assert_not_called()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")
 async def test_fetch_range_success(MockClientSession) -> None:
     url = "http://example.com/data"
@@ -283,7 +283,7 @@ async def test_fetch_range_success(MockClientSession) -> None:
 
     # Run the async function and ensure it completes successfully
     await http_fs_instance._fetch_range(mock_session, url, start, end, output_file)
-    
+
     # Assertions to verify the behavior
     output_file.seek.assert_called_once_with(0)
     output_file.write.assert_called_once_with(b"some data")
@@ -291,23 +291,34 @@ async def test_fetch_range_success(MockClientSession) -> None:
     mock_session.get.assert_called_once_with(url + f"?downloadRange=bytes={start}-{end-1}", **http_fs_instance.kwargs)
 
 
-@pytest.mark.parametrize("n_threads, is_local_fs, expected_method", [
-    (1, False, "stream_single_file"),
-    (1, True, "stream_single_file"),
-    (2, False, "stream_single_file"),
-    (2, True, "_download_single_file_async"),
-])
+@pytest.mark.parametrize(
+    "n_threads, is_local_fs, expected_method",
+    [
+        (1, False, "stream_single_file"),
+        (1, True, "stream_single_file"),
+        (2, False, "stream_single_file"),
+        (2, True, "_download_single_file_async"),
+    ],
+)
 @patch("fusion.utils.get_default_fs")
 @patch("fsspec.asyn.sync")
 @patch.object(FusionHTTPFileSystem, "stream_single_file", new_callable=AsyncMock)
 @patch.object(FusionHTTPFileSystem, "_download_single_file_async", new_callable=AsyncMock)
-def test_get(mock_download_single_file_async, mock_stream_single_file, mock_sync, mock_get_default_fs, n_threads, is_local_fs, expected_method):
+def test_get(
+    mock_download_single_file_async,
+    mock_stream_single_file,
+    mock_sync,
+    mock_get_default_fs,
+    n_threads,
+    is_local_fs,
+    expected_method,
+):
     # Arrange
     fs = FusionHTTPFileSystem()
     rpath = "http://example.com/data"
     chunk_size = 5 * 2**20
     kwargs = {"n_threads": n_threads, "is_local_fs": is_local_fs, "headers": {"Content-Length": "100"}}
-    
+
     mock_file = AsyncMock(spec=fsspec.spec.AbstractBufferedFile)
     mock_default_fs = MagicMock()
     mock_default_fs.open.return_value = mock_file
@@ -322,27 +333,37 @@ def test_get(mock_download_single_file_async, mock_stream_single_file, mock_sync
         mock_stream_single_file.assert_called_once_with(str(rpath), mock_file, block_size=chunk_size)
         mock_download_single_file_async.assert_not_called()
     else:
-        mock_download_single_file_async.assert_called_once_with(str(rpath) + "/operationType/download", mock_file, 100, chunk_size, n_threads)
+        mock_download_single_file_async.assert_called_once_with(
+            str(rpath) + "/operationType/download", mock_file, 100, chunk_size, n_threads
+        )
         mock_stream_single_file.assert_not_called()
 
     mock_get_default_fs.return_value.open.assert_not_called()
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize("overwrite, preserve_original_name, expected_lpath", [
-    (True, False, "local_file.txt"),
-    (False, False, "local_file.txt"),
-    (True, True, "original_file.txt"),
-    (False, True, "original_file.txt"),
-])
-@patch.object(FusionHTTPFileSystem, 'get', return_value=("mocked_return", "mocked_lpath", "mocked_extra"))
-@patch.object(FusionHTTPFileSystem, 'set_session', new_callable=AsyncMock)
-@patch('fsspec.AbstractFileSystem.exists', return_value=False)
-@patch('fsspec.AbstractFileSystem.mkdir')
-@patch('fsspec.AbstractFileSystem.open', new_callable=MagicMock)
-@patch('fsspec.AbstractFileSystem', autospec=True)
+@pytest.mark.asyncio()
+@pytest.mark.parametrize(
+    "overwrite, preserve_original_name, expected_lpath",
+    [
+        (True, False, "local_file.txt"),
+        (False, False, "local_file.txt"),
+        (True, True, "original_file.txt"),
+        (False, True, "original_file.txt"),
+    ],
+)
+@patch.object(FusionHTTPFileSystem, "get", return_value=("mocked_return", "mocked_lpath", "mocked_extra"))
+@patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
+@patch("fsspec.AbstractFileSystem", autospec=True)
 @patch("aiohttp.ClientSession")
-def test_download(mock_client_session, mock_fs_class, mock_open, mock_mkdir, mock_exists, mock_set_session, mock_get, overwrite, preserve_original_name, expected_lpath):
+def test_download(
+    mock_client_session,
+    mock_fs_class,
+    mock_set_session,
+    mock_get,
+    overwrite,
+    preserve_original_name,
+    expected_lpath,
+):
     # Arrange
     fs = FusionHTTPFileSystem()
     lfs = mock_fs_class.return_value
@@ -365,15 +386,13 @@ def test_download(mock_client_session, mock_fs_class, mock_open, mock_mkdir, moc
     if overwrite:
         assert result == ("mocked_return", "mocked_lpath", "mocked_extra")
         mock_get.assert_called_once_with(
-        str(rpath),
-        lfs.open(expected_lpath, "wb"),
-        chunk_size=chunk_size,
-        headers={"Content-Length": "100", "x-jpmc-file-name": "original_file.txt"},
-        is_local_fs=False,
+            str(rpath),
+            lfs.open(expected_lpath, "wb"),
+            chunk_size=chunk_size,
+            headers={"Content-Length": "100", "x-jpmc-file-name": "original_file.txt"},
+            is_local_fs=False,
         )
+    elif preserve_original_name:
+        assert result == (True, Path(expected_lpath), None)
     else:
-        if preserve_original_name:
-            assert result == (True, Path(expected_lpath), None)
-        else:
-            assert result == (True, lpath, None)
-
+        assert result == (True, lpath, None)
