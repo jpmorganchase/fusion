@@ -11,6 +11,7 @@ from typing import Any, Optional, Union
 from urllib.parse import quote, urljoin
 
 import aiohttp
+import asyncio
 import fsspec
 import fsspec.asyn
 import pandas as pd
@@ -282,7 +283,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             None: None.
         """
 
-        try:
+        async def fetch() -> None:
             async with session.get(url + f"?downloadRange=bytes={start}-{end-1}", **self.kwargs) as response:
                 if response.status in [200, 206]:
                     chunk = await response.read()
@@ -294,13 +295,28 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     )
                 else:
                     response.raise_for_status()
-        except Exception as ex:  # noqa: BLE001
-            logger.log(
-                VERBOSE_LVL,
-                f"Failed to write to {output_file.path}.",
-                exc_info=True,
-            )
-            raise ex
+
+        retries = 5
+        for attempt in range(retries):
+            try:
+                await fetch()
+                return
+            except Exception as ex:  # noqa: BLE001, PERF203
+                if attempt < retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff
+                    logger.log(
+                        VERBOSE_LVL,
+                        f"Attempt {attempt + 1} failed, retrying in {wait_time} seconds...",
+                        exc_info=True,
+                    )
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.log(
+                        VERBOSE_LVL,
+                        f"Failed to write to {output_file.path}.",
+                        exc_info=True,
+                    )
+                    raise ex
 
     async def _download_single_file_async(
         self,
@@ -376,17 +392,28 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 f"Wrote {byte_cnt:,} bytes to {output_file.name}",
             )
 
-        try:
-            await get_file()
-            return (True, output_file.path, None)
-        except Exception as ex:  # noqa: BLE001
-            output_file.close()
-            logger.log(
-                VERBOSE_LVL,
-                f"Failed to write to {output_file}.",
-                exc_info=True,
-            )
-            return False, output_file.path, str(ex)
+        retries = 5
+        for attempt in range(retries):
+            try:
+                await get_file()
+                return (True, output_file.path, None)
+            except Exception as ex:  # noqa: BLE001, PERF203
+                if attempt < retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff
+                    logger.log(
+                        VERBOSE_LVL,
+                        f"Attempt {attempt + 1} failed, retrying in {wait_time} seconds...",
+                        exc_info=True,
+                    )
+                    await asyncio.sleep(wait_time)
+                else:
+                    output_file.close()
+                    logger.log(
+                        VERBOSE_LVL,
+                        f"Failed to write to {output_file.path}.",
+                        exc_info=True,
+                    )
+                    return False, output_file.path, str(ex)
 
     def download(
         self,
