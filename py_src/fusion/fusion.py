@@ -1080,7 +1080,7 @@ class Fusion:
                     warnings.warn(msg, stacklevel=2)
                     return [(False, path, msg)]
                 file_format = path.split(".")[-1]
-                file_format = "raw" if file_format not in RECOGNIZED_FORMATS else "raw"
+                file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
 
                 local_url_eqiv = [
                     "/".join(distribution_to_url("", dataset, dt_str, file_format, catalog, False).split("/")[1:])
