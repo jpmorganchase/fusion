@@ -282,7 +282,7 @@ async def test_fetch_range_success(mock_client_session: mock.AsyncMock) -> None:
     http_fs_instance.kwargs = {}  # Add any necessary kwargs here
 
     # Run the async function and ensure it completes successfully
-    await http_fs_instance._fetch_range(mock_session, url, start, end, output_file) # noqa: W0212
+    await http_fs_instance._fetch_range(mock_session, url, start, end, output_file)  # noqa: W0212
 
     # Assertions to verify the behavior
     output_file.seek.assert_called_once_with(0)

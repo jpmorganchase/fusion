@@ -306,7 +306,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     wait_time = 2**attempt  # Exponential backoff
                     logger.log(
                         VERBOSE_LVL,
-                        "Attempt %s failed, retrying in %s seconds..." % (attempt + 1, wait_time),
+                        f"Attempt {attempt + 1} failed, retrying in {wait_time} seconds...",  # disable: W1202, C0209
                         exc_info=True,
                     )
                     await asyncio.sleep(wait_time)
@@ -358,7 +358,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return True, output_file.path, None  # noqa: UP031  # type: ignore
 
-    async def stream_single_file(  # noqa: no-return
+    async def stream_single_file(
         self,
         url: str,
         output_file: io.IOBase,
@@ -392,7 +392,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 VERBOSE_LVL,
                 "Wrote %d bytes to %s",
                 byte_cnt,
-                getattr(output_file, 'name', 'unknown')  # noqa: Q000
+                getattr(output_file, "name", "unknown"),  # noqa: Q000
             )
 
         retries = 5
@@ -479,7 +479,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             **kwargs,
         )
 
-    def get(  # noqa: arguments-differ
+    def get(  # disable: W0221
         self,
         rpath: Union[str, io.IOBase],
         lpath: Union[str, io.IOBase],
