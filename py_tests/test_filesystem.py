@@ -1,10 +1,11 @@
 import io
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Literal
 from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import aiohttp
 import fsspec
 import pytest
 from aiohttp import ClientResponse
@@ -116,7 +117,7 @@ async def test_isdir_false(http_fs_instance: FusionHTTPFileSystem) -> None:
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")  # type: ignore
-async def test_stream_file(MockClientSession) -> None:
+async def test_stream_file(mock_client_session: aiohttp.ClientSession) -> None:
     url = "http://example.com/data"
     output_file = AsyncMock(spec=fsspec.spec.AbstractBufferedFile)
     output_file.path = "./output_file_path/file.txt"
@@ -135,7 +136,7 @@ async def test_stream_file(MockClientSession) -> None:
     # Set up the mock session to return the mock response
     mock_session = MagicMock()
     mock_session.get.return_value = mock_response
-    MockClientSession.return_value.__aenter__.return_value = mock_session
+    mock_client_session.return_value.__aenter__.return_value = mock_session
 
     # Create an instance of FusionHTTPFileSystem
     http_fs_instance = FusionHTTPFileSystem()
@@ -150,7 +151,7 @@ async def test_stream_file(MockClientSession) -> None:
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")  # type: ignore
-async def test_stream_file_exception(MockClientSession) -> None:
+async def test_stream_file_exception(mock_client_session: aiohttp.ClientSession) -> None:
     url = "http://example.com/data"
     output_file = AsyncMock(spec=fsspec.spec.AbstractBufferedFile)
     output_file.path = "./output_file_path/file.txt"
@@ -169,7 +170,7 @@ async def test_stream_file_exception(MockClientSession) -> None:
     # Set up the mock session to return the mock response
     mock_session = MagicMock()
     mock_session.get.return_value = mock_response
-    MockClientSession.return_value.__aenter__.return_value = mock_session
+    mock_client_session.return_value.__aenter__.return_value = mock_session
 
     # Create an instance of FusionHTTPFileSystem
     http_fs_instance = FusionHTTPFileSystem()
@@ -185,7 +186,7 @@ async def test_stream_file_exception(MockClientSession) -> None:
 
 @pytest.mark.asyncio()
 @patch("fsspec.asyn._run_coros_in_chunks", new_callable=AsyncMock)
-async def test_download_single_file_async(mock_run_coros_in_chunks):
+async def test_download_single_file_async(mock_run_coros_in_chunks: Callable) -> None:
     # Define the mock return value
     mock_run_coros_in_chunks.return_value = [True, True, True]
 
@@ -221,7 +222,7 @@ async def test_download_single_file_async(mock_run_coros_in_chunks):
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")
-async def test_fetch_range_exception(MockClientSession) -> None:
+async def test_fetch_range_exception(mock_client_session: aiohttp.ClientSession) -> None:
     output_file = MagicMock(spec=io.IOBase)
     output_file.path = "./output_file_path/file.txt"
     output_file.seek = MagicMock()
@@ -240,7 +241,7 @@ async def test_fetch_range_exception(MockClientSession) -> None:
     # Set up the mock session to return the mock response
     mock_session = MagicMock()
     mock_session.get.return_value = mock_response
-    MockClientSession.return_value.__aenter__.return_value = mock_session
+    mock_client_session.return_value.__aenter__.return_value = mock_session
 
     # Create an instance of FusionHTTPFileSystem
     http_fs_instance = FusionHTTPFileSystem()
@@ -292,7 +293,7 @@ async def test_fetch_range_success(MockClientSession) -> None:
 
 
 @pytest.mark.parametrize(
-    "n_threads, is_local_fs, expected_method",
+    ("n_threads", "is_local_fs", "expected_method"),
     [
         (1, False, "stream_single_file"),
         (1, True, "stream_single_file"),
@@ -305,14 +306,14 @@ async def test_fetch_range_success(MockClientSession) -> None:
 @patch.object(FusionHTTPFileSystem, "stream_single_file", new_callable=AsyncMock)
 @patch.object(FusionHTTPFileSystem, "_download_single_file_async", new_callable=AsyncMock)
 def test_get(
-    mock_download_single_file_async,
-    mock_stream_single_file,
-    mock_sync,
-    mock_get_default_fs,
-    n_threads,
-    is_local_fs,
-    expected_method,
-):
+    mock_download_single_file_async: Callable,
+    mock_stream_single_file: Callable,
+    mock_sync: Callable,
+    mock_get_default_fs: Callable,
+    n_threads: int,
+    is_local_fs: bool,
+    expected_method: Literal["stream_single_file", "_download_single_file_async"],
+) -> None:
     # Arrange
     fs = FusionHTTPFileSystem()
     rpath = "http://example.com/data"
@@ -323,10 +324,10 @@ def test_get(
     mock_default_fs = MagicMock()
     mock_default_fs.open.return_value = mock_file
     mock_get_default_fs.return_value = mock_default_fs
-    mock_sync.side_effect = lambda loop, func, *args, **kwargs: func(*args, **kwargs)
+    mock_sync.side_effect = lambda _, func, *args, **kwargs: func(*args, **kwargs)
 
     # Act
-    result = fs.get(rpath, mock_file, chunk_size, **kwargs)
+    _ = fs.get(rpath, mock_file, chunk_size, **kwargs)
 
     # Assert
     if expected_method == "stream_single_file":
@@ -356,14 +357,14 @@ def test_get(
 @patch("fsspec.AbstractFileSystem", autospec=True)
 @patch("aiohttp.ClientSession")
 def test_download(
-    mock_client_session,
-    mock_fs_class,
-    mock_set_session,
-    mock_get,
-    overwrite,
-    preserve_original_name,
-    expected_lpath,
-):
+    mock_client_session: aiohttp.ClientSession,
+    mock_fs_class: FusionHTTPFileSystem,
+    mock_set_session: Callable,
+    mock_get: Callable,
+    overwrite: bool,
+    preserve_original_name: bool,
+    expected_lpath: Literal["local_file.txt", "original_file.txt"],
+) -> None:
     # Arrange
     fs = FusionHTTPFileSystem()
     lfs = mock_fs_class.return_value

@@ -12,7 +12,7 @@ from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Union
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
@@ -36,12 +36,12 @@ from rich.progress import (
 )
 from urllib3.util.retry import Retry
 
-from fusion._fusion import FusionCredentials
-
 from .authentication import FusionAiohttpSession, FusionOAuthAdapter
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+    from fusion._fusion import FusionCredentials
 
     from .types import PyArrowFilterT
 
@@ -109,7 +109,7 @@ def get_default_fs() -> fsspec.filesystem:
 
 
 @contextlib.contextmanager
-def joblib_progress(description: str, total: Optional[int]) -> Generator[Progress, None, None]:
+def joblib_progress(description: str, total: int | None) -> Generator[Progress, None, None]:
     show_speed = not total
     progress = Progress(
         TextColumn("[progress.description]{task.description}"),
@@ -139,7 +139,7 @@ def joblib_progress(description: str, total: Optional[int]) -> Generator[Progres
         joblib.parallel.BatchCompletionCallBack = old_callback
 
 
-def cpu_count(thread_pool_size: Optional[int] = None, is_threading: bool = False) -> int:
+def cpu_count(thread_pool_size: int | None = None, is_threading: bool = False) -> int:
     """Determine the number of cpus/threads for parallelization.
 
     Args:
@@ -162,9 +162,9 @@ def cpu_count(thread_pool_size: Optional[int] = None, is_threading: bool = False
 
 def csv_to_table(
     path: str,
-    fs: Optional[fsspec.filesystem] = None,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
+    fs: fsspec.filesystem | None = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
 ) -> pa.Table:
     """Reads csv data to pyarrow table.
 
@@ -189,9 +189,9 @@ def csv_to_table(
 
 def json_to_table(
     path: str,
-    fs: Optional[fsspec.filesystem] = None,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
+    fs: fsspec.filesystem | None = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
 ) -> pa.Table:
     """Reads json data to pyarrow table.
 
@@ -218,10 +218,10 @@ PathLikeT = Union[str, Path]
 
 
 def parquet_to_table(
-    path: Union[PathLikeT, list[PathLikeT]],
-    fs: Optional[fsspec.filesystem] = None,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
+    path: PathLikeT | list[PathLikeT],
+    fs: fsspec.filesystem | None = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
 ) -> pa.Table:
     """Reads parquet data to pyarrow table.
 
@@ -270,11 +270,11 @@ def parquet_to_table(
 
 def read_csv(  # noqa: PLR0912
     path: str,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
-    fs: Optional[fsspec.filesystem] = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
+    fs: fsspec.filesystem | None = None,
     dataframe_type: str = "pandas",
-) -> Union[pd.DataFrame, pa.Table]:
+) -> pd.DataFrame | pa.Table:
     """Reads csv with possibility of selecting columns and filtering the data.
 
     Args:
@@ -303,15 +303,17 @@ def read_csv(  # noqa: PLR0912
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
-                f"Failed to read {path}, with comma delimiter.",
+                "Failed to read %s, with comma delimiter.",
+                path,
                 exc_info=True,
             )
-            raise Exception from err
+            raise ValueError from err
 
     except Exception:  # noqa: BLE001
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. Trying with pandas csv reader.",
+            "Could not parse %s properly. Trying with pandas csv reader.",
+            path,
             exc_info=True,
         )
         try:  # pragma: no cover
@@ -323,12 +325,13 @@ def read_csv(  # noqa: PLR0912
 
                     res = pl.read_csv(f, columns=columns)
                 else:
-                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")  # noqa: W0707
 
         except Exception as err:  # noqa: BLE001
             logger.log(
                 VERBOSE_LVL,
-                f"Could not parse {path} properly. " f"Trying with pandas csv reader pandas engine.",
+                "Could not parse %s properly. Trying with pandas csv reader pandas engine.",
+                path,
                 exc_info=True,
             )
             with fs.open(path) if fs else nullcontext(path) as f:
@@ -347,11 +350,11 @@ def read_csv(  # noqa: PLR0912
 
 def read_json(
     path: str,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
-    fs: Optional[fsspec.filesystem] = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
+    fs: fsspec.filesystem | None = None,
     dataframe_type: str = "pandas",
-) -> Union[pd.DataFrame, pa.Table]:
+) -> pd.DataFrame | pa.Table:
     """Read json files(s) to pandas.
 
     Args:
@@ -379,14 +382,17 @@ def read_json(
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
-                f"Failed to read {path}, with arrow reader. {err}",
+                "Failed to read %s, with arrow reader. %s",
+                path,
+                err,
             )
             raise err
 
     except Exception:  # noqa: BLE001
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. " f"Trying with pandas json reader.",
+            "Could not parse %s properly. Trying with pandas json reader.",
+            path,
             exc_info=True,
         )
         try:  # pragma: no cover
@@ -408,11 +414,11 @@ def read_json(
 
 def read_parquet(
     path: PathLikeT,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
-    fs: Optional[fsspec.filesystem] = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
+    fs: fsspec.filesystem | None = None,
     dataframe_type: str = "pandas",
-) -> Union[pd.DataFrame, pa.Table]:
+) -> pd.DataFrame | pa.Table:
     """Read parquet files(s) to pandas.
 
     Args:
@@ -438,7 +444,7 @@ def read_parquet(
         raise ValueError(f"Unknown DataFrame type {dataframe_type}")
 
 
-def _normalise_dt_param(dt: Union[str, int, datetime, date]) -> str:
+def _normalise_dt_param(dt: str | int | datetime | date) -> str:
     """Convert dates into a normalised string representation.
 
     Args:
@@ -499,7 +505,7 @@ def distribution_to_filename(
     datasetseries: str,
     file_format: str,
     catalog: str = "common",
-    partitioning: Optional[str] = None,
+    partitioning: str | None = None,
 ) -> str:
     """Returns a filename representing a dataset distribution.
 
@@ -621,12 +627,12 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
 
 
 def get_session(
-    credentials: FusionCredentials, root_url: str, get_retries: Optional[Union[int, Retry]] = None
+    credentials: FusionCredentials, root_url: str, get_retries: int | Retry | None = None
 ) -> requests.Session:
     """Create a new http session and set parameters.
 
     Args:
-        credentials (FusionCredentials): Valid user credentials to provide an acces token
+        credentials (FusionCredentials): Valid user credentials to provide an access token
         root_url (str): The URL to call.
 
     Returns:
@@ -680,8 +686,10 @@ def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) 
             validation.append(False)
         if not validation[-1] and len(tmp) == file_seg_cnt:
             logger.warning(
-                f"You might not have access to the catalog {tmp[1]} or dataset {tmp[0]}."
-                "Please check you permission on the platform."
+                "You might not have access to the catalog %s or dataset %s. "
+                "Please check your permission on the platform.",
+                tmp[1],
+                tmp[0],
             )
         if not validation[-1] and len(tmp) != file_seg_cnt:
             logger.warning(
@@ -739,9 +747,9 @@ def upload_files(  # noqa: PLR0913
     multipart: bool = True,
     chunk_size: int = 5 * 2**20,
     show_progress: bool = True,
-    from_date: Optional[str] = None,
-    to_date: Optional[str] = None,
-) -> list[tuple[bool, str, Optional[str]]]:
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> list[tuple[bool, str, str | None]]:
     """Upload file into Fusion.
 
     Args:
@@ -760,7 +768,7 @@ def upload_files(  # noqa: PLR0913
 
     """
 
-    def _upload(p_url: str, path: str, file_name: Optional[str] = None) -> tuple[bool, str, Optional[str]]:
+    def _upload(p_url: str, path: str, file_name: str | None = None) -> tuple[bool, str, str | None]:
         try:
             mp = multipart and fs_local.size(path) > chunk_size
 

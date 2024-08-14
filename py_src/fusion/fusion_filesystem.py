@@ -1,5 +1,6 @@
 """Fusion FileSystem."""
 
+import asyncio
 import base64
 import hashlib
 import io
@@ -11,7 +12,6 @@ from typing import Any, Optional, Union
 from urllib.parse import quote, urljoin
 
 import aiohttp
-import asyncio
 import fsspec
 import fsspec.asyn
 import pandas as pd
@@ -303,7 +303,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 return
             except Exception as ex:  # noqa: BLE001, PERF203
                 if attempt < retries - 1:
-                    wait_time = 2 ** attempt  # Exponential backoff
+                    wait_time = 2**attempt  # Exponential backoff
                     logger.log(
                         VERBOSE_LVL,
                         f"Attempt {attempt + 1} failed, retrying in {wait_time} seconds...",
@@ -379,6 +379,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         async def get_file() -> None:
             session = await self.set_session()
             async with session.get(url, **self.kwargs) as r:
+                r.raise_for_status()
                 byte_cnt = 0
                 while True:
                     chunk = await r.content.read(block_size)
@@ -399,7 +400,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 return (True, output_file.path, None)
             except Exception as ex:  # noqa: BLE001, PERF203
                 if attempt < retries - 1:
-                    wait_time = 2 ** attempt  # Exponential backoff
+                    wait_time = 2**attempt  # Exponential backoff
                     logger.log(
                         VERBOSE_LVL,
                         f"Attempt {attempt + 1} failed, retrying in {wait_time} seconds...",

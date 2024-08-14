@@ -1018,6 +1018,7 @@ class Fusion:
         chunk_size: int = 5 * 2**20,
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
+        preserve_original_name: Optional[bool] = False,
     ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Uploads the requested files/files to Fusion.
 
@@ -1040,6 +1041,7 @@ class Fusion:
                 defaults to upoad date
             to_date (str, optional): end of the data date range contained in the distribution,
                 defaults to upload date.
+            preserve_original_name (bool, optional): Preserve the original name of the file. Defaults to False.
 
         Returns:
 
@@ -1055,6 +1057,7 @@ class Fusion:
             file_path_lst = self.fs.find(path)
             local_file_validation = validate_file_names(file_path_lst, fs_fusion)
             file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
+            file_name = [f.split("/")[-1].split(".")[0] for f in file_path_lst]
             is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
             local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
         else:
@@ -1064,6 +1067,8 @@ class Fusion:
                 file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
                 is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
                 local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
+                if preserve_original_name:
+                    raise ValueError("preserve_original_name can only be used when catalog and dataset are provided.")
             else:
                 date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
                 if date_identifier.match(dt_str):
@@ -1080,14 +1085,19 @@ class Fusion:
                     warnings.warn(msg, stacklevel=2)
                     return [(False, path, msg)]
                 file_format = path.split(".")[-1]
+                file_name = path.split("/")[-1].split(".")[0]
                 file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
 
                 local_url_eqiv = [
                     "/".join(distribution_to_url("", dataset, dt_str, file_format, catalog, False).split("/")[1:])
                 ]
 
-        data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
-        data_map_df.columns = ["path", "url"]  # type: ignore
+        if not preserve_original_name:
+            data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
+            data_map_df.columns = ["path", "url"]  # type: ignore
+        else:
+            data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv, file_name]).T
+            data_map_df.columns = ["path", "url", "file_name"]  # type: ignore
 
         n_par = cpu_count(n_par)
         parallel = len(data_map_df) > 1
