@@ -344,7 +344,7 @@ def test_get(
 
 @pytest.mark.asyncio()
 @pytest.mark.parametrize(
-    ("overwrite, preserve_original_name, expected_lpath"),
+    ("overwrite", "preserve_original_name", "expected_lpath"),
     [
         (True, False, "local_file.txt"),
         (False, False, "local_file.txt"),
