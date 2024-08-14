@@ -291,7 +291,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     output_file.write(chunk)
                     logger.log(
                         VERBOSE_LVL,
-                        f"Wrote {start} - {end} bytes to {output_file.path}",
+                        "Wrote %s - %s bytes to %s" % (start, end, output_file.path),  # noqa: UP031
                     )
                 else:
                     response.raise_for_status()
@@ -306,14 +306,14 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     wait_time = 2**attempt  # Exponential backoff
                     logger.log(
                         VERBOSE_LVL,
-                        f"Attempt {attempt + 1} failed, retrying in {wait_time} seconds...",
+                        "Attempt %s failed, retrying in %s seconds..." % (attempt + 1, wait_time),
                         exc_info=True,
                     )
                     await asyncio.sleep(wait_time)
                 else:
                     logger.log(
                         VERBOSE_LVL,
-                        f"Failed to write to {output_file.path}.",
+                        f"Failed to write to {output_file.path}.",  # noqa: UP031
                         exc_info=True,
                     )
                     raise ex
@@ -354,11 +354,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if on_error == "raise":
             ex = next(filter(fsspec.asyn.is_exception, out), False)
             if ex:
-                return False, output_file.path, str(ex)
+                return False, output_file.path, str(ex)  # noqa: UP031  # type: ignore
 
-        return True, output_file.path, None
+        return True, output_file.path, None  # noqa: UP031  # type: ignore
 
-    async def stream_single_file(
+    async def stream_single_file(  # noqa: no-return
         self,
         url: str,
         output_file: io.IOBase,
@@ -390,20 +390,24 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 output_file.close()
             logger.log(
                 VERBOSE_LVL,
-                f"Wrote {byte_cnt:,} bytes to {output_file.name}",
+                "Wrote %d bytes to %s",
+                byte_cnt,
+                getattr(output_file, 'name', 'unknown')  # noqa: Q000
             )
 
         retries = 5
         for attempt in range(retries):
             try:
                 await get_file()
-                return (True, output_file.path, None)
+                return (True, output_file.path, None)  # noqa: UP031
             except Exception as ex:  # noqa: BLE001, PERF203
                 if attempt < retries - 1:
                     wait_time = 2**attempt  # Exponential backoff
                     logger.log(
                         VERBOSE_LVL,
-                        f"Attempt {attempt + 1} failed, retrying in {wait_time} seconds...",
+                        "Attempt %d failed, retrying in %d seconds...",
+                        attempt + 1,
+                        wait_time,
                         exc_info=True,
                     )
                     await asyncio.sleep(wait_time)
@@ -411,10 +415,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     output_file.close()
                     logger.log(
                         VERBOSE_LVL,
-                        f"Failed to write to {output_file.path}.",
+                        "Failed to write to %s.",
+                        output_file.path,  # noqa: UP031
                         exc_info=True,
                     )
-                    return False, output_file.path, str(ex)
+                    return False, output_file.path, str(ex)  # noqa: UP031
+        return False, output_file.path, None  # noqa: UP031
 
     def download(
         self,

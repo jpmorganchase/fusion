@@ -1,11 +1,10 @@
 import io
 import json
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Literal, Optional
 from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import aiohttp
 import fsspec
 import pytest
 from aiohttp import ClientResponse
@@ -116,8 +115,8 @@ async def test_isdir_false(http_fs_instance: FusionHTTPFileSystem) -> None:
 
 
 @pytest.mark.asyncio()
-@patch("aiohttp.ClientSession")  # type: ignore
-async def test_stream_file(mock_client_session: aiohttp.ClientSession) -> None:
+@patch("aiohttp.ClientSession")
+async def test_stream_file(mock_client_session: mock.AsyncMock) -> None:
     url = "http://example.com/data"
     output_file = AsyncMock(spec=fsspec.spec.AbstractBufferedFile)
     output_file.path = "./output_file_path/file.txt"
@@ -151,7 +150,7 @@ async def test_stream_file(mock_client_session: aiohttp.ClientSession) -> None:
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")  # type: ignore
-async def test_stream_file_exception(mock_client_session: aiohttp.ClientSession) -> None:
+async def test_stream_file_exception(mock_client_session: mock.AsyncMock) -> None:
     url = "http://example.com/data"
     output_file = AsyncMock(spec=fsspec.spec.AbstractBufferedFile)
     output_file.path = "./output_file_path/file.txt"
@@ -186,7 +185,7 @@ async def test_stream_file_exception(mock_client_session: aiohttp.ClientSession)
 
 @pytest.mark.asyncio()
 @patch("fsspec.asyn._run_coros_in_chunks", new_callable=AsyncMock)
-async def test_download_single_file_async(mock_run_coros_in_chunks: Callable) -> None:
+async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMock) -> None:
     # Define the mock return value
     mock_run_coros_in_chunks.return_value = [True, True, True]
 
@@ -208,7 +207,7 @@ async def test_download_single_file_async(mock_run_coros_in_chunks: Callable) ->
     result = await http_fs_instance._download_single_file_async(url, output_file, file_size, chunk_size, n_threads)
 
     # Assertions to verify the behavior
-    assert result == (True, output_file.path, None)
+    assert result == (True, output_file.path, None)  # type: ignore
     output_file.close.assert_called_once()
 
     # Simulate an exception in the mock return value
@@ -216,13 +215,13 @@ async def test_download_single_file_async(mock_run_coros_in_chunks: Callable) ->
     result = await http_fs_instance._download_single_file_async(url, output_file, file_size, chunk_size, n_threads)
 
     # Assertions to verify the behavior on exception
-    assert result == (False, output_file.path, "Test exception")
+    assert result == (False, output_file.path, "Test exception")  # type: ignore
     output_file.close.assert_called()
 
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")
-async def test_fetch_range_exception(mock_client_session: aiohttp.ClientSession) -> None:
+async def test_fetch_range_exception(mock_client_session: mock.AsyncMock) -> None:
     output_file = MagicMock(spec=io.IOBase)
     output_file.path = "./output_file_path/file.txt"
     output_file.seek = MagicMock()
@@ -254,7 +253,7 @@ async def test_fetch_range_exception(mock_client_session: aiohttp.ClientSession)
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")
-async def test_fetch_range_success(mock_client_session: aiohttp.ClientSession) -> None:
+async def test_fetch_range_success(mock_client_session: mock.AsyncMock) -> None:
     url = "http://example.com/data"
     output_file = MagicMock(spec=io.IOBase)
     output_file.path = "./output_file_path/file.txt"
@@ -283,7 +282,7 @@ async def test_fetch_range_success(mock_client_session: aiohttp.ClientSession) -
     http_fs_instance.kwargs = {}  # Add any necessary kwargs here
 
     # Run the async function and ensure it completes successfully
-    await http_fs_instance._fetch_range(mock_session, url, start, end, output_file)
+    await http_fs_instance._fetch_range(mock_session, url, start, end, output_file) # noqa: W0212
 
     # Assertions to verify the behavior
     output_file.seek.assert_called_once_with(0)
@@ -306,10 +305,10 @@ async def test_fetch_range_success(mock_client_session: aiohttp.ClientSession) -
 @patch.object(FusionHTTPFileSystem, "stream_single_file", new_callable=AsyncMock)
 @patch.object(FusionHTTPFileSystem, "_download_single_file_async", new_callable=AsyncMock)
 def test_get(
-    mock_download_single_file_async: Callable,
-    mock_stream_single_file: Callable,
-    mock_sync: Callable,
-    mock_get_default_fs: Callable,
+    mock_download_single_file_async: mock.AsyncMock,
+    mock_stream_single_file: mock.AsyncMock,
+    mock_sync: mock.AsyncMock,
+    mock_get_default_fs: MagicMock,
     n_threads: int,
     is_local_fs: bool,
     expected_method: Literal["stream_single_file", "_download_single_file_async"],
@@ -357,10 +356,10 @@ def test_get(
 @patch("fsspec.AbstractFileSystem", autospec=True)
 @patch("aiohttp.ClientSession")
 def test_download(
-    mock_client_session: aiohttp.ClientSession,
-    mock_fs_class: FusionHTTPFileSystem,
-    mock_set_session: Callable,
-    mock_get: Callable,
+    mock_client_session: mock.AsyncMock,
+    mock_fs_class: mock.AsyncMock,
+    mock_set_session: mock.AsyncMock,
+    mock_get: mock.AsyncMock,
     overwrite: bool,
     preserve_original_name: bool,
     expected_lpath: Literal["local_file.txt", "original_file.txt"],
