@@ -269,7 +269,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         url: str,
         start: int,
         end: int,
-        output_file: io.IOBase,
+        output_file: fsspec.spec.AbstractBufferedFile,
     ) -> Any:
         """Fetch a range of bytes from a URL and write it to a file.
 
@@ -277,7 +277,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             url (str): URL to fetch.
             start (int): Start byte.
             end (int): End byte.
-            output_file (io.IOBase): File to write to.
+            output_file (fsspec.spec.AbstractBufferedFile): File to write to.
 
         Returns:
             None: None.
@@ -313,7 +313,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 else:
                     logger.log(
                         VERBOSE_LVL,
-                        f"Failed to write to {output_file.path}.",  # noqa: UP031
+                        f"Failed to write to {output_file.path}.",
                         exc_info=True,
                     )
                     raise ex
@@ -321,7 +321,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
     async def _download_single_file_async(
         self,
         url: str,
-        output_file: io.IOBase,
+        output_file: fsspec.spec.AbstractBufferedFile,
         file_size: int,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         n_threads: int = 10,
@@ -330,7 +330,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         Args:
             url (str): _description_
-            output_file (io.IOBase): _description_
+            output_file (fsspec.spec.AbstractBufferedFile): _description_
             results (list[tuple[bool, str, Optional[str]]]): _description_
             file_size (int): _description_
             chunk_size (int, optional): _description_. Defaults to DEFAULT_CHUNK_SIZE.
@@ -354,21 +354,21 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if on_error == "raise":
             ex = next(filter(fsspec.asyn.is_exception, out), False)
             if ex:
-                return False, output_file.path, str(ex)  # noqa: UP031  # type: ignore
+                return False, output_file.path, str(ex)  # type: ignore
 
-        return True, output_file.path, None  # noqa: UP031  # type: ignore
+        return True, output_file.path, None  # type: ignore
 
     async def stream_single_file(
         self,
         url: str,
-        output_file: io.IOBase,
+        output_file: fsspec.spec.AbstractBufferedFile,
         block_size: int = DEFAULT_CHUNK_SIZE,
     ) -> tuple[bool, str, Optional[str]]:
         """Function to stream a single file from the API to a file on disk.
 
         Args:
             url (str): The URL to call.
-            output_file (io.IOBase): The filename handle that the data will be saved into.
+            output_file (fsspec.spec.AbstractBufferedFile): The filename handle that the data will be saved into.
             block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
 
         Returns:
@@ -416,11 +416,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     logger.log(
                         VERBOSE_LVL,
                         "Failed to write to %s.",
-                        output_file.path,  # noqa: UP031
+                        output_file.path,
                         exc_info=True,
                     )
-                    return False, output_file.path, str(ex)  # noqa: UP031
-        return False, output_file.path, None  # noqa: UP031
+                    return False, output_file.path, str(ex)
+        return False, output_file.path, None
 
     def download(
         self,
@@ -436,8 +436,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         Args:
             lfs (fsspec.AbstractFileSystem): Local filesystem.
-            rpath (Union[str, io.IOBase, Path]): Remote path.
-            lpath (Union[str, io.IOBase, Path]): Local path.
+            rpath (Union[str, Path]): Remote path.
+            lpath (Union[str, Path]): Local path.
             chunk_size (int, optional): Chunk size. Defaults to 5 * 2**20.
             overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
             preserve_original_name (bool, optional): True if the original name should be preserved. Defaults to False.
@@ -518,7 +518,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     async def _put_file(
         self,
-        lpath: Union[str, io.IOBase],
+        lpath: Union[str, io.IOBase, fsspec.spec.AbstractBufferedFile],
         rpath: str,
         chunk_size: int = 5 * 2**20,
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,

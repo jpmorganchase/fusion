@@ -142,14 +142,14 @@ async def test_stream_file(mock_client_session: mock.AsyncMock) -> None:
     http_fs_instance.set_session = AsyncMock(return_value=mock_session)
 
     # Run the async function
-    results = await http_fs_instance.stream_single_file(url, output_file)
+    results = await http_fs_instance.stream_single_file(url, output_file)  # type: ignore
     # Assertions to verify the behavior
     output_file.write.assert_called_once_with(b"0123456789")
-    assert results == (True, output_file.path, None)
+    assert results == (True, output_file.path, None)  # type: ignore
 
 
 @pytest.mark.asyncio()
-@patch("aiohttp.ClientSession")  # type: ignore
+@patch("aiohttp.ClientSession")
 async def test_stream_file_exception(mock_client_session: mock.AsyncMock) -> None:
     url = "http://example.com/data"
     output_file = AsyncMock(spec=fsspec.spec.AbstractBufferedFile)
@@ -176,11 +176,11 @@ async def test_stream_file_exception(mock_client_session: mock.AsyncMock) -> Non
     http_fs_instance.set_session = AsyncMock(return_value=mock_session)
 
     # Run the async function and catch the exception
-    results = await http_fs_instance.stream_single_file(url, output_file)
+    results = await http_fs_instance.stream_single_file(url, output_file)  # type: ignore
 
     # Assertions to verify the behavior
     output_file.close.assert_called_once()
-    assert results == (False, output_file.path, "Test exception")
+    assert results == (False, output_file.path, "Test exception")  # type: ignore
 
 
 @pytest.mark.asyncio()
@@ -201,7 +201,7 @@ async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMo
     http_fs_instance.set_session = AsyncMock(return_value=AsyncMock())
 
     # Mock the _fetch_range method
-    http_fs_instance._fetch_range = AsyncMock()
+    http_fs_instance._fetch_range = AsyncMock()  # type: ignore
 
     # Run the async function
     result = await http_fs_instance._download_single_file_async(url, output_file, file_size, chunk_size, n_threads)

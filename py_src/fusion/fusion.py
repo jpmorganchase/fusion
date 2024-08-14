@@ -1085,7 +1085,7 @@ class Fusion:
                     warnings.warn(msg, stacklevel=2)
                     return [(False, path, msg)]
                 file_format = path.split(".")[-1]
-                file_name = path.split("/")[-1].split(".")[0]
+                file_name = path.split("/")[-1].split(".")[0]  # type: ignore
                 file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
 
                 local_url_eqiv = [
