@@ -1,7 +1,7 @@
 import io
 import json
 from pathlib import Path
-from typing import Any, Callable, Optional, Literal
+from typing import Any, Callable, Literal, Optional
 from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -254,7 +254,7 @@ async def test_fetch_range_exception(mock_client_session: aiohttp.ClientSession)
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")
-async def test_fetch_range_success(MockClientSession) -> None:
+async def test_fetch_range_success(mock_client_session: aiohttp.ClientSession) -> None:
     url = "http://example.com/data"
     output_file = MagicMock(spec=io.IOBase)
     output_file.path = "./output_file_path/file.txt"
@@ -276,7 +276,7 @@ async def test_fetch_range_success(MockClientSession) -> None:
     # Set up the mock session to return the mock response
     mock_session = MagicMock()
     mock_session.get.return_value = mock_response
-    MockClientSession.return_value.__aenter__.return_value = mock_session
+    mock_client_session.return_value.__aenter__.return_value = mock_session
 
     # Create an instance of FusionHTTPFileSystem
     http_fs_instance = FusionHTTPFileSystem()
@@ -344,7 +344,7 @@ def test_get(
 
 @pytest.mark.asyncio()
 @pytest.mark.parametrize(
-    "overwrite, preserve_original_name, expected_lpath",
+    ("overwrite, preserve_original_name, expected_lpath"),
     [
         (True, False, "local_file.txt"),
         (False, False, "local_file.txt"),
