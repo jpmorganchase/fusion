@@ -1085,7 +1085,7 @@ class Fusion:
                     warnings.warn(msg, stacklevel=2)
                     return [(False, path, msg)]
                 file_format = path.split(".")[-1]
-                file_name = path.split("/")[-1].split(".")[0]  # type: ignore
+                file_name = [path.split("/")[-1].split(".")[0]]
                 file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
 
                 local_url_eqiv = [
@@ -1094,10 +1094,10 @@ class Fusion:
 
         if not preserve_original_name:
             data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
-            data_map_df.columns = ["path", "url"]  # type: ignore
+            data_map_df.columns = pd.Index(["path", "url"])
         else:
             data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv, file_name]).T
-            data_map_df.columns = ["path", "url", "file_name"]  # type: ignore
+            data_map_df.columns = pd.Index(["path", "url", "file_name"])
 
         n_par = cpu_count(n_par)
         parallel = len(data_map_df) > 1

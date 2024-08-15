@@ -460,7 +460,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 r.raise_for_status()
                 return r.headers
 
-        headers = sync(self.loop, get_headers)
+        try:
+            headers = sync(self.loop, get_headers)
+        except Exception as ex:  # noqa: BLE001
+            logger.error(f"Failed to get headers for {rpath}", ex)
+            return False, lpath, str(ex)
+
         if "x-jpmc-file-name" in headers.keys() and preserve_original_name:  # noqa: SIM118
             file_name = headers.get("x-jpmc-file-name")
             lpath = Path(lpath).parent.joinpath(file_name)
