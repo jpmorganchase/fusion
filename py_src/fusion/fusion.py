@@ -16,7 +16,6 @@ import pyarrow as pa
 import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
-from tqdm import tqdm
 
 from fusion._fusion import FusionCredentials
 
@@ -24,14 +23,16 @@ from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .types import PyArrowFilterT
 from .utils import (
+    RECOGNIZED_FORMATS,
     cpu_count,
     csv_to_table,
     distribution_to_filename,
     distribution_to_url,
-    download_single_file_threading,
+    # download_single_file_threading,
     get_default_fs,
     get_session,
     is_dataset_raw,
+    joblib_progress,
     json_to_table,
     normalise_dt_param_str,
     parquet_to_table,
@@ -39,8 +40,7 @@ from .utils import (
     read_csv,
     read_json,
     read_parquet,
-    stream_single_file_new_session,
-    tqdm_joblib,
+    # stream_single_file_new_session,
     upload_files,
     validate_file_names,
 )
@@ -591,10 +591,16 @@ class Fusion:
             parsed_dates = (parsed_dates[0], parsed_dates[0])
 
         if parsed_dates[0]:
-            datasetseries_list = datasetseries_list[pd.to_datetime(datasetseries_list["identifier"]) >= parsed_dates[0]]
+            datasetseries_list = datasetseries_list[
+                pd.Series([pd.to_datetime(i) for i in datasetseries_list["identifier"]])
+                >= pd.to_datetime(parsed_dates[0])
+            ].reset_index()
 
         if parsed_dates[1]:
-            datasetseries_list = datasetseries_list[pd.to_datetime(datasetseries_list["identifier"]) <= parsed_dates[1]]
+            datasetseries_list = datasetseries_list[
+                pd.Series([pd.to_datetime(i) for i in datasetseries_list["identifier"]])
+                <= pd.to_datetime(parsed_dates[1])
+            ].reset_index()
 
         if len(datasetseries_list) == 0:
             raise APIResponseError(  # pragma: no cover
@@ -619,6 +625,7 @@ class Fusion:
         download_folder: Optional[str] = None,
         return_paths: bool = False,
         partitioning: Optional[str] = None,
+        preserve_original_name: bool = False,
     ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Downloads the requested distributions of a dataset to disk.
 
@@ -638,6 +645,7 @@ class Fusion:
                 Defaults to download_folder as set in __init__
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
             partitioning (str, optional): Partitioning specification.
+            preserve_original_name (bool, optional): Preserve the original name of the file. Defaults to False.
 
         Returns:
 
@@ -653,6 +661,9 @@ class Fusion:
             if dt_str == "sample":
                 dataset_format = "csv"
             required_series = [(catalog, dataset, dt_str, dataset_format)]
+
+        if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
+            raise ValueError(f"Dataset format {dataset_format} is not supported")
 
         if not download_folder:
             download_folder = self.download_folder
@@ -670,73 +681,45 @@ class Fusion:
             if not self.fs.exists(d):
                 self.fs.mkdir(d, create_parents=True)
 
-        if len(required_series) == 1 and type(self.fs).__name__ == "LocalFileSystem":
-            n_par = cpu_count(n_par, is_threading=True)
-            with tqdm(total=1) as pbar:
-                output_file = distribution_to_filename(
-                    download_folders[0],
-                    required_series[0][1],
-                    required_series[0][2],
-                    required_series[0][3],
-                    required_series[0][0],
+        n_par = cpu_count(n_par)
+        download_spec = [
+            {
+                "lfs": self.fs,
+                "rpath": distribution_to_url(
+                    self.root_url,
+                    series[1],
+                    series[2],
+                    series[3],
+                    series[0],
+                    is_download=True,
+                ),
+                "lpath": distribution_to_filename(
+                    download_folders[i],
+                    series[1],
+                    series[2],
+                    series[3],
+                    series[0],
                     partitioning=partitioning,
-                )
-                res = download_single_file_threading(
-                    self.credentials,
-                    distribution_to_url(
-                        self.root_url,
-                        required_series[0][1],
-                        required_series[0][2],
-                        required_series[0][3],
-                        required_series[0][0],
-                        is_download=True,
-                    ),
-                    output_file,
-                    fs=self.fs,
-                    max_threads=n_par,
-                )
-                if (len(res) > 0) and all(r[0] for r in res):
-                    pbar.update(1)
-                    res = [(res[0][0], output_file, res[0][2])]
+                ),
+                "overwrite": force_download,
+                "preserve_original_name": preserve_original_name,
+            }
+            for i, series in enumerate(required_series)
+        ]
 
+        logger.log(
+            VERBOSE_LVL,
+            f"Beginning {len(download_spec)} downloads in batches of {n_par}",
+        )
+        if show_progress:
+            with joblib_progress("Downloading", total=len(download_spec)):
+                res = Parallel(n_jobs=n_par)(
+                    delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
+                )
         else:
-            n_par = cpu_count(n_par)
-            download_spec = [
-                {
-                    "credentials": self.credentials,
-                    "url": distribution_to_url(
-                        self.root_url,
-                        series[1],
-                        series[2],
-                        series[3],
-                        series[0],
-                        is_download=True,
-                    ),
-                    "output_file": distribution_to_filename(
-                        download_folders[i],
-                        series[1],
-                        series[2],
-                        series[3],
-                        series[0],
-                        partitioning=partitioning,
-                    ),
-                    "overwrite": force_download,
-                    "fs": self.fs,
-                }
-                for i, series in enumerate(required_series)
-            ]
-
-            logger.log(
-                VERBOSE_LVL,
-                f"Beginning {len(download_spec)} downloads in batches of {n_par}",
+            res = Parallel(n_jobs=n_par)(
+                delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
             )
-            if show_progress:
-                with tqdm_joblib(tqdm(total=len(download_spec))) as _:
-                    res = Parallel(n_jobs=n_par)(
-                        delayed(stream_single_file_new_session)(**spec) for spec in download_spec
-                    )
-            else:
-                res = Parallel(n_jobs=n_par)(delayed(stream_single_file_new_session)(**spec) for spec in download_spec)
 
         if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
@@ -1041,6 +1024,7 @@ class Fusion:
         chunk_size: int = 5 * 2**20,
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
+        preserve_original_name: Optional[bool] = False,
     ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Uploads the requested files/files to Fusion.
 
@@ -1063,6 +1047,7 @@ class Fusion:
                 defaults to upoad date
             to_date (str, optional): end of the data date range contained in the distribution,
                 defaults to upload date.
+            preserve_original_name (bool, optional): Preserve the original name of the file. Defaults to False.
 
         Returns:
 
@@ -1078,6 +1063,7 @@ class Fusion:
             file_path_lst = self.fs.find(path)
             local_file_validation = validate_file_names(file_path_lst, fs_fusion)
             file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
+            file_name = [f.split("/")[-1] for f in file_path_lst]
             is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
             local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
         else:
@@ -1087,6 +1073,8 @@ class Fusion:
                 file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
                 is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
                 local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
+                if preserve_original_name:
+                    raise ValueError("preserve_original_name can only be used when catalog and dataset are provided.")
             else:
                 date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
                 if date_identifier.match(dt_str):
@@ -1102,14 +1090,20 @@ class Fusion:
                     )
                     warnings.warn(msg, stacklevel=2)
                     return [(False, path, msg)]
-                is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
-                file_format = path.split(".")[-1] if not is_raw else "raw"
+                file_format = path.split(".")[-1]
+                file_name = [path.split("/")[-1]]
+                file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
+
                 local_url_eqiv = [
                     "/".join(distribution_to_url("", dataset, dt_str, file_format, catalog, False).split("/")[1:])
                 ]
 
-        data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
-        data_map_df.columns = ["path", "url"]  # type: ignore
+        if not preserve_original_name:
+            data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
+            data_map_df.columns = pd.Index(["path", "url"])
+        else:
+            data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv, file_name]).T
+            data_map_df.columns = pd.Index(["path", "url", "file_name"])
 
         n_par = cpu_count(n_par)
         parallel = len(data_map_df) > 1
@@ -1146,6 +1140,8 @@ class Fusion:
         chunk_size: int = 5 * 2**20,
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
+        file_name: Optional[str] = None,
+        **kwargs: Any,  # noqa: ARG002
     ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Uploads data from an object in memory.
 
@@ -1163,6 +1159,7 @@ class Fusion:
             from_date (str, optional): start of the data date range contained in the distribution,
                 defaults to upload date
             to_date (str, optional): end of the data date range contained in the distribution, defaults to upload date.
+            file_name (str, optional): file name to be used for the uploaded file. Defaults to Fusion standard naming.
 
         Returns:
 
@@ -1171,12 +1168,14 @@ class Fusion:
         catalog = self._use_catalog(catalog)
 
         fs_fusion = self.get_fusion_filesystem()
+        if distribution not in RECOGNIZED_FORMATS + ["raw"]:
+            raise ValueError(f"Dataset format {distribution} is not supported")
 
         is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
         local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)
 
-        data_map_df = pd.DataFrame(["", local_url_eqiv]).T
-        data_map_df.columns = ["path", "url"]  # type: ignore
+        data_map_df = pd.DataFrame(["", local_url_eqiv, file_name]).T
+        data_map_df.columns = ["path", "url", "file_name"]  # type: ignore
 
         res = upload_files(
             fs_fusion,

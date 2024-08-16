@@ -14,14 +14,13 @@ from typing import Optional
 import fsspec
 import pandas as pd
 from joblib import Parallel, delayed
-from tqdm import tqdm
 
 from .utils import (
     cpu_count,
     distribution_to_filename,
     is_dataset_raw,
+    joblib_progress,
     path_to_url,
-    tqdm_joblib,
     upload_files,
     validate_file_names,
 )
@@ -44,42 +43,18 @@ def _download(
     show_progress: bool = True,
     local_path: str = "",
 ) -> list[tuple[bool, str, Optional[str]]]:
-    def _download_files(row: pd.Series) -> tuple[bool, str, Optional[str]]:  # type: ignore
-        p_path = local_path + row["path_fusion"]
-        if not fs_local.exists(p_path):
-            try:
-                fs_local.mkdir(Path(p_path).parent, exist_ok=True, create_parents=True)
-            except Exception as ex:  # noqa: BLE001
-                logger.info(f"Path {p_path} exists already", ex)
-        try:
-            fs_fusion.get(row["url"], p_path, chunk_size=DEFAULT_CHUNK_SIZE)
-            return (True, p_path, None)
-        except BaseException as ex:
-            logger.exception(
-                VERBOSE_LVL,
-                f"Failed to write to {p_path}. ex - {ex}",
+    if len(df) > 0:
+        if show_progress:
+            with joblib_progress("Downloading", total=len(df)):
+                res = Parallel(n_jobs=n_par)(
+                    delayed(fs_fusion.download)(fs_local, row["url"], local_path + row["path_fusion"])
+                    for i, row in df.iterrows()
+                )
+        else:
+            res = Parallel(n_jobs=n_par)(
+                delayed(fs_fusion.download)(fs_local, row["url"], local_path + row["path_fusion"])
+                for i, row in df.iterrows()
             )
-            msg = str(ex)
-
-            return (False, p_path, msg)
-
-    if n_par > 1 and len(df) > 0:
-        if show_progress:
-            with tqdm_joblib(tqdm(total=len(df))) as _:
-                res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for _, row in df.iterrows())
-        else:
-            res = Parallel(n_jobs=n_par)(delayed(_download_files)(row) for _, row in df.iterrows())
-    elif len(df) > 0:
-        if show_progress:
-            res = [None] * len(df)
-            with tqdm(total=len(df)) as p:
-                for i, row in df.iterrows():
-                    r = _download_files(row)
-                    res[i] = r
-                    if r[0] is True:
-                        p.update(1)
-        else:
-            res = [_download_files(row) for _, row in df.iterrows()]
     else:
         return []
 

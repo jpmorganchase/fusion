@@ -1,6 +1,6 @@
 [project]
 name = "pyfusion"
-version = "1.2.2"
+version = "1.3.0"
 
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
@@ -30,10 +30,10 @@ dependencies = [
     "pandas >= 1.1",
     "joblib >= 1.1",
     "tabulate >= 0.8",
-    "tqdm >= 4",
     "pyarrow >= 11",
     "fsspec >= 2021",
     "aiohttp >= 3.7.1",
+    "rich >= 11.0.0",
 ]
 
 [build-system]
@@ -109,6 +109,7 @@ dev-dependencies = [
     "pytest-random-order>=1.1.1",
     "pyzmq>25.1",
     "requests-mock>=1.12.1",
+    "rich",
     "ruff",
     "toml",
     "tox",
@@ -222,7 +223,7 @@ omit = [
 
 
 [tool.bumpversion]
-current_version = "1.2.2"
+current_version = "1.3.0"
 parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[a-z]+)(?P<candidate>\d+))?'
 serialize = [
     '{major}.{minor}.{patch}-{release}{candidate}',

@@ -1,21 +1,18 @@
 """Fusion utilities."""
 
+from __future__ import annotations
+
 import contextlib
 import json as js
 import logging
-import math
 import multiprocessing as mp
 import os
 import re
-import threading
-from collections.abc import Generator
 from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-from queue import Queue
-from threading import Lock, Thread
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Union
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
@@ -28,13 +25,25 @@ import requests
 from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
-from tqdm import tqdm
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 from urllib3.util.retry import Retry
 
-from fusion._fusion import FusionCredentials
-
 from .authentication import FusionAiohttpSession, FusionOAuthAdapter
-from .types import PyArrowFilterT, WorkerQueueT
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from fusion._fusion import FusionCredentials
+
+    from .types import PyArrowFilterT
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -43,6 +52,40 @@ DT_YYYYMMDDTHHMM_RE = re.compile(r"(\d{4})(\d{2})(\d{2})T(\d{4})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
 DEFAULT_CHUNK_SIZE = 2**16
 DEFAULT_THREAD_POOL_SIZE = 5
+RECOGNIZED_FORMATS = [
+    "csv",
+    "parquet",
+    "psv",
+    "json",
+    "pdf",
+    "txt",
+    "doc",
+    "docx",
+    "htm",
+    "html",
+    "xls",
+    "xlsx",
+    "xlsm",
+    "dot",
+    "dotx",
+    "docm",
+    "dotm",
+    "rtf",
+    "odt",
+    "xltx",
+    "xlsb",
+    "jpg",
+    "jpeg",
+    "bmp",
+    "png",
+    "tif",
+    "gif",
+    "mp3",
+    "wav",
+    "mp4",
+    "mov",
+    "mkv",
+]
 
 
 def get_default_fs() -> fsspec.filesystem:
@@ -66,21 +109,22 @@ def get_default_fs() -> fsspec.filesystem:
 
 
 @contextlib.contextmanager
-def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # type: ignore
-    # pragma: no cover
-    """Progress bar sensitive to exceptions during the batch processing.
+def joblib_progress(description: str, total: int | None) -> Generator[Progress, None, None]:
+    show_speed = not total
+    progress = Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TaskProgressColumn(show_speed=show_speed),
+        "R:",
+        TimeRemainingColumn(),
+        "E:",
+        TimeElapsedColumn(),
+    )
+    task_id = progress.add_task(f"[cyan]{description}", total=total)
 
-    Args:
-        tqdm_object (tqdm.tqdm): tqdm object.
-
-    Yields: tqdm.tqdm object
-
-    """
-
-    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):  # type: ignore
-        """Tqdm execution wrapper."""
-
-        def __call__(self, *args: Any, **kwargs: Any) -> Any:
+    class BatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):  # type: ignore
+        def __call__(self: BatchCompletionCallback, *args: Any, **kwargs: Any) -> Any:
             n = 0
             lst = args[0]._result if hasattr(args[0], "_result") else args[0]
             for i in lst:
@@ -89,19 +133,21 @@ def tqdm_joblib(tqdm_object: tqdm) -> Generator[tqdm, None, None]:  # type: igno
                         n += 1
                 except Exception as _:  # noqa: F841, PERF203, BLE001
                     n += 1
-            tqdm_object.update(n=n)
+            progress.update(task_id, advance=n, refresh=True)
             return super().__call__(*args, **kwargs)
 
-    old_batch_callback: type[joblib.parallel.BatchCompletionCallBack] = joblib.parallel.BatchCompletionCallBack
-    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
+    old_callback = joblib.parallel.BatchCompletionCallBack
+
     try:
-        yield tqdm_object
+        joblib.parallel.BatchCompletionCallBack = BatchCompletionCallback
+        progress.start()
+        yield progress
     finally:
-        joblib.parallel.BatchCompletionCallBack = old_batch_callback
-        tqdm_object.close()
+        progress.stop()
+        joblib.parallel.BatchCompletionCallBack = old_callback
 
 
-def cpu_count(thread_pool_size: Optional[int] = None, is_threading: bool = False) -> int:
+def cpu_count(thread_pool_size: int | None = None, is_threading: bool = False) -> int:
     """Determine the number of cpus/threads for parallelization.
 
     Args:
@@ -124,9 +170,9 @@ def cpu_count(thread_pool_size: Optional[int] = None, is_threading: bool = False
 
 def csv_to_table(
     path: str,
-    fs: Optional[fsspec.filesystem] = None,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
+    fs: fsspec.filesystem | None = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
 ) -> pa.Table:
     """Reads csv data to pyarrow table.
 
@@ -151,9 +197,9 @@ def csv_to_table(
 
 def json_to_table(
     path: str,
-    fs: Optional[fsspec.filesystem] = None,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
+    fs: fsspec.filesystem | None = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
 ) -> pa.Table:
     """Reads json data to pyarrow table.
 
@@ -180,10 +226,10 @@ PathLikeT = Union[str, Path]
 
 
 def parquet_to_table(
-    path: Union[PathLikeT, list[PathLikeT]],
-    fs: Optional[fsspec.filesystem] = None,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
+    path: PathLikeT | list[PathLikeT],
+    fs: fsspec.filesystem | None = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
 ) -> pa.Table:
     """Reads parquet data to pyarrow table.
 
@@ -232,11 +278,11 @@ def parquet_to_table(
 
 def read_csv(  # noqa: PLR0912
     path: str,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
-    fs: Optional[fsspec.filesystem] = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
+    fs: fsspec.filesystem | None = None,
     dataframe_type: str = "pandas",
-) -> Union[pd.DataFrame, pa.Table]:
+) -> pd.DataFrame | pa.Table:
     """Reads csv with possibility of selecting columns and filtering the data.
 
     Args:
@@ -265,15 +311,17 @@ def read_csv(  # noqa: PLR0912
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
-                f"Failed to read {path}, with comma delimiter.",
+                "Failed to read %s, with comma delimiter.",
+                path,
                 exc_info=True,
             )
-            raise Exception from err
+            raise ValueError from err
 
     except Exception:  # noqa: BLE001
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. Trying with pandas csv reader.",
+            "Could not parse %s properly. Trying with pandas csv reader.",
+            path,
             exc_info=True,
         )
         try:  # pragma: no cover
@@ -285,12 +333,13 @@ def read_csv(  # noqa: PLR0912
 
                     res = pl.read_csv(f, columns=columns)
                 else:
-                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")  # noqa: W0707
 
         except Exception as err:  # noqa: BLE001
             logger.log(
                 VERBOSE_LVL,
-                f"Could not parse {path} properly. " f"Trying with pandas csv reader pandas engine.",
+                "Could not parse %s properly. Trying with pandas csv reader pandas engine.",
+                path,
                 exc_info=True,
             )
             with fs.open(path) if fs else nullcontext(path) as f:
@@ -309,11 +358,11 @@ def read_csv(  # noqa: PLR0912
 
 def read_json(
     path: str,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
-    fs: Optional[fsspec.filesystem] = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
+    fs: fsspec.filesystem | None = None,
     dataframe_type: str = "pandas",
-) -> Union[pd.DataFrame, pa.Table]:
+) -> pd.DataFrame | pa.Table:
     """Read json files(s) to pandas.
 
     Args:
@@ -341,14 +390,17 @@ def read_json(
         except Exception as err:
             logger.log(
                 VERBOSE_LVL,
-                f"Failed to read {path}, with arrow reader. {err}",
+                "Failed to read %s, with arrow reader. %s",
+                path,
+                err,
             )
             raise err
 
     except Exception:  # noqa: BLE001
         logger.log(
             VERBOSE_LVL,
-            f"Could not parse {path} properly. " f"Trying with pandas json reader.",
+            "Could not parse %s properly. Trying with pandas json reader.",
+            path,
             exc_info=True,
         )
         try:  # pragma: no cover
@@ -370,11 +422,11 @@ def read_json(
 
 def read_parquet(
     path: PathLikeT,
-    columns: Optional[list[str]] = None,
-    filters: Optional[PyArrowFilterT] = None,
-    fs: Optional[fsspec.filesystem] = None,
+    columns: list[str] | None = None,
+    filters: PyArrowFilterT | None = None,
+    fs: fsspec.filesystem | None = None,
     dataframe_type: str = "pandas",
-) -> Union[pd.DataFrame, pa.Table]:
+) -> pd.DataFrame | pa.Table:
     """Read parquet files(s) to pandas.
 
     Args:
@@ -400,7 +452,7 @@ def read_parquet(
         raise ValueError(f"Unknown DataFrame type {dataframe_type}")
 
 
-def _normalise_dt_param(dt: Union[str, int, datetime, date]) -> str:
+def _normalise_dt_param(dt: str | int | datetime | date) -> str:
     """Convert dates into a normalised string representation.
 
     Args:
@@ -461,7 +513,7 @@ def distribution_to_filename(
     datasetseries: str,
     file_format: str,
     catalog: str = "common",
-    partitioning: Optional[str] = None,
+    partitioning: str | None = None,
 ) -> str:
     """Returns a filename representing a dataset distribution.
 
@@ -583,12 +635,12 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
 
 
 def get_session(
-    credentials: FusionCredentials, root_url: str, get_retries: Optional[Union[int, Retry]] = None
+    credentials: FusionCredentials, root_url: str, get_retries: int | Retry | None = None
 ) -> requests.Session:
     """Create a new http session and set parameters.
 
     Args:
-        credentials (FusionCredentials): Valid user credentials to provide an acces token
+        credentials (FusionCredentials): Valid user credentials to provide an access token
         root_url (str): The URL to call.
 
     Returns:
@@ -609,213 +661,6 @@ def get_session(
     auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url)
     session.mount(mount_url, auth_handler)
     return session
-
-
-def _stream_single_file_new_session_dry_run(
-    credentials: FusionCredentials, url: str, output_file: str
-) -> tuple[bool, str, Optional[str]]:
-    """Function to test that a distribution is available without downloading.
-
-    Args:
-        credentials (FusionCredentials): Valid user credentials to provide an acces token
-        root_url (str): The URL to call.
-        output_file: The filename that the data will be saved into.
-
-    Returns:
-        requests.Session(): A HTTP Session object
-
-    """
-    try:
-        resp = get_session(credentials, url).head(url)
-        resp.raise_for_status()
-        return (True, output_file, None)
-    except BaseException as ex:  # noqa: BLE001
-        logger.log(VERBOSE_LVL, f"Failed to download url {url} to {output_file}", exc_info=True)
-        return (False, output_file, str(ex))
-
-
-def stream_single_file_new_session_chunks(  # noqa: PLR0913
-    session: requests.Session,
-    url: str,
-    output_file: fsspec.spec.AbstractBufferedFile,
-    start: int,
-    end: int,
-    lock: threading.Lock,
-    results: list[tuple[bool, str, Optional[str]]],
-    idx: int,
-    overwrite: bool = True,
-    fs: Optional[fsspec.AbstractFileSystem] = None,
-) -> int:
-    """Function to stream a single file from the API to a file on disk.
-
-    Args:
-        session (class `requests.Session`): HTTP session.
-        url (str): The URL to call.
-        output_file: The file handle for the target write file.
-        start (int): Start byte.
-        end(int): End byte.
-        lock (Threading.Lock): Lock.
-        results (list): Results list.
-        idx (int): Results list index.
-        overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
-        fs (fsspec.filesystem): Filesystem.
-
-    Returns:
-        int: Exit status
-
-    """
-    if fs is None:
-        fs = fsspec.filesystem("file")
-    if not overwrite and fs.exists(output_file):
-        results[idx] = True, output_file, None
-        return 0
-
-    try:
-        url = url + f"?downloadRange=bytes={start}-{end-1}"
-        with session.get(url, stream=False) as r:
-            r.raise_for_status()
-            with lock:
-                output_file.seek(start)
-                output_file.write(r.content)
-
-        logger.log(
-            VERBOSE_LVL,
-            f"Wrote {start} - {end} bytes to {output_file}",
-        )
-        results[idx] = (True, output_file, None)
-        return 0
-    except Exception as ex:  # noqa: BLE001
-        logger.log(
-            VERBOSE_LVL,
-            f"Failed to write to {output_file}.",
-            exc_info=True,
-        )
-        results[idx] = (False, output_file, str(ex))
-        return 1
-
-
-def _worker(
-    queue: WorkerQueueT,
-    session: requests.Session,
-    url: str,
-    output_file: str,
-    lock: threading.Lock,
-    results: list[tuple[bool, str, Optional[str]]],
-) -> None:
-    while True:
-        idx, start, end = queue.get()
-        if idx == -1 and start == -1 and end == -1:
-            break
-        stream_single_file_new_session_chunks(session, url, output_file, start, end, lock, results, idx)
-        queue.task_done()
-
-
-def download_single_file_threading(
-    credentials: FusionCredentials,
-    url: str,
-    output_file: fsspec.spec.AbstractBufferedFile,
-    chunk_size: int = 5 * 2**20,
-    fs: Optional[fsspec.AbstractFileSystem] = None,
-    max_threads: int = 10,
-) -> list[tuple[bool, str, Optional[str]]]:
-    """Download single file using range requests.
-
-    Args:
-        credentials (FusionCredentials): Valid user credentials to provide an access token
-        url (str): The URL to call.
-        output_file (str): The filename that the data will be saved into.
-        chunk_size (int): Chunk size for parallelization.
-        fs (fsspec.filesystem): Filesystem.
-        max_threads (int, optional): Number of threads to use. Defaults to 10.
-
-    Returns: List[Tuple]
-
-    """
-    if fs is None:
-        fs = fsspec.filesystem("file")
-    session = get_session(credentials, url)
-    header = session.head(url).headers
-    content_length = int(header["Content-Length"])
-    n_chunks = int(math.ceil(content_length / chunk_size))
-    starts = [i * chunk_size for i in range(n_chunks)]
-    ends = [min((i + 1) * chunk_size, content_length) for i in range(n_chunks)]
-    lock = Lock()
-    output_file_h: fsspec.spec.AbstractBufferedFile = fs.open(output_file, "wb")
-    results = [None] * n_chunks
-    queue: WorkerQueueT = Queue(max_threads)
-    threads = []
-    for _ in range(max_threads):
-        t = Thread(target=_worker, args=(queue, session, url, output_file_h, lock, results))
-        t.start()
-        threads.append(t)
-
-    for idx, (start, end) in enumerate(zip(starts, ends)):
-        queue.put((idx, start, end))
-
-    queue.join()
-
-    for _ in range(max_threads):
-        queue.put((-1, -1, -1))
-    for t in threads:
-        t.join()
-
-    output_file_h.close()
-    return results  # type: ignore
-
-
-def stream_single_file_new_session(
-    credentials: FusionCredentials,
-    url: str,
-    output_file: str,
-    overwrite: bool = True,
-    block_size: int = DEFAULT_CHUNK_SIZE,
-    dry_run: bool = False,
-    fs: Optional[fsspec.AbstractFileSystem] = None,
-) -> tuple[bool, str, Optional[str]]:
-    """Function to stream a single file from the API to a file on disk.
-
-    Args:
-        credentials (FusionCredentials): Valid user credentials to provide an access token
-        url (str): The URL to call.
-        output_file (str): The filename that the data will be saved into.
-        overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
-        block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE
-        dry_run (bool, optional): Test that a file can be downloaded and return the filename without
-            downloading the data. Defaults to False.
-        fs (fsspec.filesystem): Filesystem.
-
-    Returns:
-        tuple: A tuple
-
-    """
-    if fs is None:
-        fs = fsspec.filesystem("file")
-    if dry_run:
-        return _stream_single_file_new_session_dry_run(credentials, url, output_file)
-
-    if not overwrite and fs.exists(output_file):
-        return True, output_file, None
-
-    try:
-        with get_session(credentials, url).get(url, stream=True) as r:
-            r.raise_for_status()
-            byte_cnt = 0
-            with fs.open(output_file, "wb") as outfile:
-                for chunk in r.iter_content(block_size):
-                    byte_cnt += len(chunk)
-                    outfile.write(chunk)
-        logger.log(
-            VERBOSE_LVL,
-            f"Wrote {byte_cnt:,} bytes to {output_file}",
-        )
-        return (True, output_file, None)
-    except Exception as ex:  # noqa: BLE001
-        logger.log(
-            VERBOSE_LVL,
-            f"Failed to write to {output_file}.",
-            exc_info=True,
-        )
-        return (False, output_file, str(ex))
 
 
 def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) -> list[bool]:
@@ -849,8 +694,10 @@ def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) 
             validation.append(False)
         if not validation[-1] and len(tmp) == file_seg_cnt:
             logger.warning(
-                f"You might not have access to the catalog {tmp[1]} or dataset {tmp[0]}."
-                "Please check you permission on the platform."
+                "You might not have access to the catalog %s or dataset %s. "
+                "Please check your permission on the platform.",
+                tmp[1],
+                tmp[0],
             )
         if not validation[-1] and len(tmp) != file_seg_cnt:
             logger.warning(
@@ -895,7 +742,7 @@ def path_to_url(x: str, is_raw: bool = False, is_download: bool = False) -> str:
 
     """
     catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
-    ext = "raw" if is_raw else ext
+    ext = "raw" if is_raw and ext not in RECOGNIZED_FORMATS else ext
     return "/".join(distribution_to_url("", dataset, date, ext, catalog, is_download).split("/")[1:])
 
 
@@ -908,9 +755,9 @@ def upload_files(  # noqa: PLR0913
     multipart: bool = True,
     chunk_size: int = 5 * 2**20,
     show_progress: bool = True,
-    from_date: Optional[str] = None,
-    to_date: Optional[str] = None,
-) -> list[tuple[bool, str, Optional[str]]]:
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> list[tuple[bool, str, str | None]]:
     """Upload file into Fusion.
 
     Args:
@@ -929,7 +776,7 @@ def upload_files(  # noqa: PLR0913
 
     """
 
-    def _upload(p_url: str, path: str) -> tuple[bool, str, Optional[str]]:
+    def _upload(p_url: str, path: str, file_name: str | None = None) -> tuple[bool, str, str | None]:
         try:
             mp = multipart and fs_local.size(path) > chunk_size
 
@@ -942,6 +789,7 @@ def upload_files(  # noqa: PLR0913
                     multipart=mp,
                     from_date=from_date,
                     to_date=to_date,
+                    file_name=file_name,
                 )
             else:
                 with fs_local.open(path, "rb") as file_local:
@@ -953,6 +801,7 @@ def upload_files(  # noqa: PLR0913
                         multipart=mp,
                         from_date=from_date,
                         to_date=to_date,
+                        file_name=file_name,
                     )
             return (True, path, None)
         except Exception as ex:  # noqa: BLE001
@@ -965,24 +814,25 @@ def upload_files(  # noqa: PLR0913
 
     if parallel:
         if show_progress:
-            with tqdm_joblib(tqdm(total=len(loop))) as _:
+            with joblib_progress("Uploading", total=len(loop)):
                 res = Parallel(n_jobs=n_par, backend="threading")(
-                    delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows()
+                    delayed(_upload)(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()
                 )
         else:
             res = Parallel(n_jobs=n_par, backend="threading")(
-                delayed(_upload)(row["url"], row["path"]) for _, row in loop.iterrows()
+                delayed(_upload)(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()
             )
     else:
         res = [None] * len(loop)
         if show_progress:
-            with tqdm(total=len(loop)) as p:
+            with Progress() as p:
+                task = p.add_task("Uploading", total=len(loop))
                 for i, (_, row) in enumerate(loop.iterrows()):
-                    r = _upload(row["url"], row["path"])
+                    r = _upload(row["url"], row["path"], row.get("file_name", None))
                     res[i] = r
                     if r[0] is True:
-                        p.update(1)
+                        p.update(task, advance=1)
         else:
-            res = [_upload(row["url"], row["path"]) for _, row in loop.iterrows()]
+            res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
     return res  # type: ignore
