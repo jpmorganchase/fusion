@@ -55,7 +55,8 @@ def test_from_file_relative_path_walkup_exists(tmp_path: Path, good_json: str) -
     # Create a temporary credentials file
     dir_down_path = Path(tmp_path / "level_1" / "level_2" / "level_3")
     dir_down_path.mkdir(parents=True)
-    credentials_file = dir_down_path.parent.parent / "client_credentials.json"
+    (Path(tmp_path / "level_1" / "config")).mkdir()
+    credentials_file = dir_down_path.parent.parent / "config" / "client_credentials.json"
     credentials_file.write_text(good_json)
 
     with change_dir(dir_down_path):
