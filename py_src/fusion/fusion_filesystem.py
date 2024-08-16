@@ -611,7 +611,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             "Digest": "",  # to be changed to x-jpmc-digest
         }
         if file_name:
-            headers["file-name"] = file_name
+            headers["x-jpmc-file-name"] = file_name
         headers["Content-Type"] = "application/json" if multipart else headers["Content-Type"]
         headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
 
