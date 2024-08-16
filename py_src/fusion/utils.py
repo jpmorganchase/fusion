@@ -125,7 +125,15 @@ def joblib_progress(description: str, total: int | None) -> Generator[Progress, 
 
     class BatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):  # type: ignore
         def __call__(self: BatchCompletionCallback, *args: Any, **kwargs: Any) -> Any:
-            progress.update(task_id, advance=self.batch_size, refresh=True)
+            n = 0
+            lst = args[0]._result if hasattr(args[0], "_result") else args[0]
+            for i in lst:
+                try:
+                    if i[0] is True:
+                        n += 1
+                except Exception as _:  # noqa: F841, PERF203, BLE001
+                    n += 1
+            progress.update(task_id, advance=n, refresh=True)
             return super().__call__(*args, **kwargs)
 
     old_callback = joblib.parallel.BatchCompletionCallBack

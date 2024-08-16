@@ -591,10 +591,16 @@ class Fusion:
             parsed_dates = (parsed_dates[0], parsed_dates[0])
 
         if parsed_dates[0]:
-            datasetseries_list = datasetseries_list[pd.to_datetime(datasetseries_list["identifier"]) >= parsed_dates[0]]
+            datasetseries_list = datasetseries_list[
+                pd.Series([pd.to_datetime(i) for i in datasetseries_list["identifier"]])
+                >= pd.to_datetime(parsed_dates[0])
+            ].reset_index()
 
         if parsed_dates[1]:
-            datasetseries_list = datasetseries_list[pd.to_datetime(datasetseries_list["identifier"]) <= parsed_dates[1]]
+            datasetseries_list = datasetseries_list[
+                pd.Series([pd.to_datetime(i) for i in datasetseries_list["identifier"]])
+                <= pd.to_datetime(parsed_dates[1])
+            ].reset_index()
 
         if len(datasetseries_list) == 0:
             raise APIResponseError(  # pragma: no cover
