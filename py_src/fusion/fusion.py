@@ -1063,7 +1063,7 @@ class Fusion:
             file_path_lst = self.fs.find(path)
             local_file_validation = validate_file_names(file_path_lst, fs_fusion)
             file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
-            file_name = [f.split("/")[-1].split(".")[0] for f in file_path_lst]
+            file_name = [f.split("/")[-1] for f in file_path_lst]
             is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
             local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
         else:
@@ -1091,7 +1091,7 @@ class Fusion:
                     warnings.warn(msg, stacklevel=2)
                     return [(False, path, msg)]
                 file_format = path.split(".")[-1]
-                file_name = [path.split("/")[-1].split(".")[0]]
+                file_name = [path.split("/")[-1]]
                 file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
 
                 local_url_eqiv = [
