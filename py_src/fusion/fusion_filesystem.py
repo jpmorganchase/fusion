@@ -728,8 +728,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         kw.update({"headers": headers})
         kw_op = self.kwargs.copy()
         if "File-Name" in headers:  # noqa: SIM102 
-            kw.setdefault("headers", {})
-            kw["headers"]["File-Name"] = headers["File-Name"]
+            kw_op.setdefault("headers", {})
+            kw_op["headers"]["File-Name"] = headers["File-Name"]
         operation_id = sync(self.loop, _get_operation_id, kw_op)["operationId"]
         resps = list(put_data())
         hash_sha256 = hash_sha256_lst[0]
