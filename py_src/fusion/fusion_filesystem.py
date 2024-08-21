@@ -578,7 +578,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             async with meth(rpath, data=lpath.read(), **kw) as resp:  # type: ignore
                 await self._async_raise_not_found_for_status(resp, rpath)
         else:
-            async with session.post(rpath + "/operationType/upload") as resp:
+            kw = self.kwargs.copy()
+            if "file-name" in headers:
+                kw.update({"file_name": headers["file-name"]})
+            async with session.post(rpath + "/operationType/upload", **kw) as resp:
                 await self._async_raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
 
@@ -611,7 +614,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             "Digest": "",  # to be changed to x-jpmc-digest
         }
         if file_name:
-            headers["x-jpmc-file-name"] = file_name
+            headers["File-Name"] = file_name
         headers["Content-Type"] = "application/json" if multipart else headers["Content-Type"]
         headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
 
