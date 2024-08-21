@@ -580,8 +580,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         else:
             kw = self.kwargs.copy()
             if "File-Name" in headers:
-                kw.setdefault("headers", {}).update({"File-Name": headers["File-Name"]})
-                kw["File-Name"] = headers["File-Name"]
+                kw.setdefault("headers", {})
+                kw["headers"]["File-Name"] = headers["File-Name"]
             async with session.post(rpath + "/operationType/upload", **kw) as resp:
                 await self._async_raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
@@ -728,8 +728,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         kw.update({"headers": headers})
         kw_op = self.kwargs.copy()
         if "File-Name" in headers:
-            kw_op.setdefault("headers", {}).update({"File-Name": headers["File-Name"]})
-            kw_op["File-Name"] = headers["File-Name"]
+            if "File-Name" in headers:
+                kw.setdefault("headers", {})
+                kw["headers"]["File-Name"] = headers["File-Name"]
         operation_id = sync(self.loop, _get_operation_id, kw_op)["operationId"]
         resps = list(put_data())
         hash_sha256 = hash_sha256_lst[0]
