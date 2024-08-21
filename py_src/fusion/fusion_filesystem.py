@@ -779,7 +779,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         dt_created = pd.Timestamp.now().strftime("%Y-%m-%d")
         rpath = self._decorate_url(rpath)
         if type(lpath).__name__ in ["S3File"]:
-            return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method)
+            return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method, file_name)
         headers, chunk_headers_lst = self._construct_headers(
             lpath, dt_from, dt_to, dt_created, chunk_size, multipart, file_name
         )
