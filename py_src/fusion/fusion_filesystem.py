@@ -579,8 +579,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 await self._async_raise_not_found_for_status(resp, rpath)
         else:
             kw = self.kwargs.copy()
-            if "file-name" in headers:
-                kw.update({"file_name": headers["file-name"]})
+            if "File-Name" in headers:
+                kw.setdefault("headers", {}).update({"File-Name": headers["File-Name"]})
+                kw["file_name"] = headers["file-name"]
             async with session.post(rpath + "/operationType/upload", **kw) as resp:
                 await self._async_raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
@@ -650,9 +651,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         method: str = "put",
         file_name: Optional[str] = None,
     ) -> None:
-        async def _get_operation_id() -> dict[str, Any]:
+        async def _get_operation_id(kw) -> dict[str, Any]:
             session = await self.set_session()
-            async with session.post(rpath + "/operationType/upload", **self.kwargs) as r:
+            async with session.post(rpath + "/operationType/upload", **kw) as r:
                 await self._async_raise_not_found_for_status(r, rpath + "/operationType/upload")
                 res: dict[str, Any] = await r.json()
                 return res
@@ -721,11 +722,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             "Digest": "",  # to be changed to x-jpmc-digest
         }
         if file_name:
-            headers["file-name"] = file_name
+            headers["File-Name"] = file_name
         lpath.seek(0)
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
-        operation_id = sync(self.loop, _get_operation_id)["operationId"]
+        kw_op = self.kwargs.copy()
+        if "File-Name" in headers:
+            kw_op.setdefault("headers", {}).update({"File-Name": headers["File-Name"]})
+            kw_op["file_name"] = headers["file-name"]
+        operation_id = sync(self.loop, _get_operation_id, kw_op)["operationId"]
         resps = list(put_data())
         hash_sha256 = hash_sha256_lst[0]
         headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
