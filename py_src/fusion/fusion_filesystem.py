@@ -521,7 +521,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 self.loop, self._download_single_file_async, str(rpath), lpath, file_size, chunk_size, n_threads
             )
 
-    async def _put_file(
+    async def _put_file(  # noqa: PLR0915
         self,
         lpath: Union[str, io.IOBase, fsspec.spec.AbstractBufferedFile],
         rpath: str,
@@ -578,7 +578,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             async with meth(rpath, data=lpath.read(), **kw) as resp:  # type: ignore
                 await self._async_raise_not_found_for_status(resp, rpath)
         else:
-            async with session.post(rpath + "/operationType/upload") as resp:
+            kw = self.kwargs.copy()
+            if "File-Name" in headers:  # noqa: PLR0915
+                kw.setdefault("headers", {})
+                kw["headers"]["File-Name"] = headers["File-Name"]
+            async with session.post(rpath + "/operationType/upload", **kw) as resp:
                 await self._async_raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
 
@@ -611,7 +615,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             "Digest": "",  # to be changed to x-jpmc-digest
         }
         if file_name:
-            headers["x-jpmc-file-name"] = file_name
+            headers["File-Name"] = file_name
         headers["Content-Type"] = "application/json" if multipart else headers["Content-Type"]
         headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
 
@@ -647,9 +651,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         method: str = "put",
         file_name: Optional[str] = None,
     ) -> None:
-        async def _get_operation_id() -> dict[str, Any]:
+        async def _get_operation_id(kw: dict[str, str]) -> dict[str, Any]:
             session = await self.set_session()
-            async with session.post(rpath + "/operationType/upload", **self.kwargs) as r:
+            async with session.post(rpath + "/operationType/upload", **kw) as r:
                 await self._async_raise_not_found_for_status(r, rpath + "/operationType/upload")
                 res: dict[str, Any] = await r.json()
                 return res
@@ -718,11 +722,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             "Digest": "",  # to be changed to x-jpmc-digest
         }
         if file_name:
-            headers["file-name"] = file_name
+            headers["File-Name"] = file_name
         lpath.seek(0)
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
-        operation_id = sync(self.loop, _get_operation_id)["operationId"]
+        kw_op = self.kwargs.copy()
+        if "File-Name" in headers:  # noqa: SIM102 
+            kw_op.setdefault("headers", {})
+            kw_op["headers"]["File-Name"] = headers["File-Name"]
+        operation_id = sync(self.loop, _get_operation_id, kw_op)["operationId"]
         resps = list(put_data())
         hash_sha256 = hash_sha256_lst[0]
         headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
@@ -771,7 +779,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         dt_created = pd.Timestamp.now().strftime("%Y-%m-%d")
         rpath = self._decorate_url(rpath)
         if type(lpath).__name__ in ["S3File"]:
-            return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method)
+            return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method, file_name)
         headers, chunk_headers_lst = self._construct_headers(
             lpath, dt_from, dt_to, dt_created, chunk_size, multipart, file_name
         )
