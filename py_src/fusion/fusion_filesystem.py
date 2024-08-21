@@ -651,7 +651,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         method: str = "put",
         file_name: Optional[str] = None,
     ) -> None:
-        async def _get_operation_id(kw: dict) -> dict[str, Any]:
+        async def _get_operation_id(kw: dict[str, str]) -> dict[str, Any]:
             session = await self.set_session()
             async with session.post(rpath + "/operationType/upload", **kw) as r:
                 await self._async_raise_not_found_for_status(r, rpath + "/operationType/upload")
