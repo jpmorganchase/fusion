@@ -521,7 +521,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 self.loop, self._download_single_file_async, str(rpath), lpath, file_size, chunk_size, n_threads
             )
 
-    async def _put_file(
+    async def _put_file(  # noqa: PLR0915
         self,
         lpath: Union[str, io.IOBase, fsspec.spec.AbstractBufferedFile],
         rpath: str,
