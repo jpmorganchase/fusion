@@ -34,6 +34,7 @@ dependencies = [
     "fsspec >= 2021",
     "aiohttp >= 3.7.1",
     "rich >= 11.0.0",
+    "certifi",
 ]
 
 [build-system]
