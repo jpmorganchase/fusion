@@ -8,11 +8,11 @@ import logging
 import multiprocessing as mp
 import os
 import re
+import ssl
 from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-import ssl
 from typing import TYPE_CHECKING, Any, Union
 from urllib.parse import urlparse, urlunparse
 
@@ -634,8 +634,7 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
 
     ssl_context = ssl.create_default_context(cafile=certifi.where())
     session = FusionAiohttpSession(
-        trace_configs=[trace_config], trust_env=True, timeout=timeout,
-        connector=aiohttp.TCPConnector(ssl=ssl_context)
+        trace_configs=[trace_config], trust_env=True, timeout=timeout, connector=aiohttp.TCPConnector(ssl=ssl_context)
     )
     session.post_init(credentials=credentials)
     return session
