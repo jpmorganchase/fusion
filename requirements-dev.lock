@@ -87,6 +87,7 @@ cachetools==5.3.3
     # via google-auth
     # via tox
 certifi==2024.2.2
+    # via pyfusion
     # via requests
 cffi==1.16.0
     # via argon2-cffi-bindings
@@ -611,6 +612,7 @@ rfc3986-validator==0.1.1
     # via jupyter-events
 rich==13.7.1
     # via bump-my-version
+    # via pyfusion
     # via rich-click
     # via twine
     # via typer
@@ -690,8 +692,6 @@ tox==4.15.0
     # via tox-uv
 tox-gh-actions==3.2.0
 tox-uv==1.7.0
-tqdm==4.66.2
-    # via pyfusion
 traitlets==5.14.3
     # via comm
     # via ipykernel

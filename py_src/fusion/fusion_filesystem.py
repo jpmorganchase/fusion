@@ -462,13 +462,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         try:
             headers = sync(self.loop, get_headers)
+            if "x-jpmc-file-name" in headers.keys() and preserve_original_name:  # noqa: SIM118
+                file_name = headers.get("x-jpmc-file-name")
+                lpath = Path(lpath).parent.joinpath(file_name)
         except Exception as ex:  # noqa: BLE001
-            logger.error(f"Failed to get headers for {rpath}", ex)
-            return False, lpath, str(ex)
-
-        if "x-jpmc-file-name" in headers.keys() and preserve_original_name:  # noqa: SIM118
-            file_name = headers.get("x-jpmc-file-name")
-            lpath = Path(lpath).parent.joinpath(file_name)
+            headers = {}
+            logger.info(f"Failed to get headers for {rpath}", ex)
 
         is_local_fs = type(lfs).__name__ == "LocalFileSystem"
 
@@ -509,11 +508,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
         n_threads = kwargs.get("n_threads", 1)
-        file_size = 0
-        if "headers" in kwargs:
+        file_size = None
+        if "headers" in kwargs and "Content-Length" in kwargs["headers"]:
             file_size = int(kwargs["headers"].get("Content-Length"))
         is_local_fs = kwargs.get("is_local_fs", False)
-        if n_threads == 1 or not is_local_fs:
+        if n_threads == 1 or not is_local_fs or file_size is None:
             return sync(self.loop, self.stream_single_file, str(rpath), lpath, block_size=chunk_size)
         else:
             rpath = str(rpath) if "operationType/download" in str(rpath) else str(rpath) + "/operationType/download"
@@ -727,7 +726,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
         kw_op = self.kwargs.copy()
-        if "File-Name" in headers:  # noqa: SIM102 
+        if "File-Name" in headers:  # noqa: SIM102
             kw_op.setdefault("headers", {})
             kw_op["headers"]["File-Name"] = headers["File-Name"]
         operation_id = sync(self.loop, _get_operation_id, kw_op)["operationId"]
