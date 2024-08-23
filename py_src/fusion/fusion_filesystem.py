@@ -466,6 +466,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 file_name = headers.get("x-jpmc-file-name")
                 lpath = Path(lpath).parent.joinpath(file_name)
         except Exception as ex:  # noqa: BLE001
+            headers = {}
             logger.warn(f"Failed to get headers for {rpath}", ex)
 
         is_local_fs = type(lfs).__name__ == "LocalFileSystem"
