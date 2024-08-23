@@ -69,6 +69,7 @@ bracex==2.4
 cachetools==5.3.3
     # via google-auth
 certifi==2024.2.2
+    # via pyfusion
     # via requests
 cffi==1.16.0
     # via argon2-cffi-bindings
@@ -249,6 +250,7 @@ markdown==3.6
 markdown-it-py==3.0.0
     # via jupytext
     # via mdit-py-plugins
+    # via rich
 markupsafe==2.1.5
     # via jinja2
     # via mkdocs
@@ -405,6 +407,7 @@ pygments==2.17.2
     # via mkdocs-jupyter
     # via mkdocs-material
     # via nbconvert
+    # via rich
 pyjwt==2.8.0
     # via msal
 pymdown-extensions==10.8.1
@@ -464,6 +467,8 @@ rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
     # via jsonschema
     # via jupyter-events
+rich==13.7.1
+    # via pyfusion
 rpds-py==0.18.0
     # via jsonschema
     # via referencing
@@ -516,8 +521,6 @@ tornado==6.4
     # via nbclassic
     # via notebook
     # via terminado
-tqdm==4.66.2
-    # via pyfusion
 traitlets==5.14.3
     # via comm
     # via ipykernel

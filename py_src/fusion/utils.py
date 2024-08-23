@@ -8,6 +8,7 @@ import logging
 import multiprocessing as mp
 import os
 import re
+import ssl
 from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
@@ -16,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Union
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
+import certifi
 import fsspec
 import joblib
 import pandas as pd
@@ -581,7 +583,7 @@ def distribution_to_url(
         datasetseries = datasetseries[0:-1]
 
     if datasetseries == "sample":
-        return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
+        return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/{file_format}"
     if is_download:
         return (
             f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
@@ -629,7 +631,11 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
         timeout = aiohttp.ClientTimeout(total=kwargs["timeout"])
     else:
         timeout = aiohttp.ClientTimeout(total=60 * 60)  # default 60min timeout
-    session = FusionAiohttpSession(trace_configs=[trace_config], trust_env=True, timeout=timeout)
+
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    session = FusionAiohttpSession(
+        trace_configs=[trace_config], trust_env=True, timeout=timeout, connector=aiohttp.TCPConnector(ssl=ssl_context)
+    )
     session.post_init(credentials=credentials)
     return session
 
