@@ -592,13 +592,13 @@ class Fusion:
 
         if parsed_dates[0]:
             datasetseries_list = datasetseries_list[
-                pd.Series([pd.to_datetime(i) for i in datasetseries_list["identifier"]])
+                pd.Series([pd.to_datetime(i, errors="ignore") for i in datasetseries_list["identifier"]])
                 >= pd.to_datetime(parsed_dates[0])
             ].reset_index()
 
         if parsed_dates[1]:
             datasetseries_list = datasetseries_list[
-                pd.Series([pd.to_datetime(i) for i in datasetseries_list["identifier"]])
+                pd.Series([pd.to_datetime(i, errors="ignore") for i in datasetseries_list["identifier"]])
                 <= pd.to_datetime(parsed_dates[1])
             ].reset_index()
 
