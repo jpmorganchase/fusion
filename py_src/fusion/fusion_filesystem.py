@@ -462,13 +462,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         try:
             headers = sync(self.loop, get_headers)
+            if "x-jpmc-file-name" in headers.keys() and preserve_original_name:  # noqa: SIM118
+                file_name = headers.get("x-jpmc-file-name")
+                lpath = Path(lpath).parent.joinpath(file_name)
         except Exception as ex:  # noqa: BLE001
-            logger.error(f"Failed to get headers for {rpath}", ex)
-            return False, lpath, str(ex)
-
-        if "x-jpmc-file-name" in headers.keys() and preserve_original_name:  # noqa: SIM118
-            file_name = headers.get("x-jpmc-file-name")
-            lpath = Path(lpath).parent.joinpath(file_name)
+            logger.warn(f"Failed to get headers for {rpath}", ex)
 
         is_local_fs = type(lfs).__name__ == "LocalFileSystem"
 
@@ -509,11 +507,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
         n_threads = kwargs.get("n_threads", 1)
-        file_size = 0
+        file_size = None
         if "headers" in kwargs:
             file_size = int(kwargs["headers"].get("Content-Length"))
         is_local_fs = kwargs.get("is_local_fs", False)
-        if n_threads == 1 or not is_local_fs:
+        if n_threads == 1 or not is_local_fs or file_size is None:
             return sync(self.loop, self.stream_single_file, str(rpath), lpath, block_size=chunk_size)
         else:
             rpath = str(rpath) if "operationType/download" in str(rpath) else str(rpath) + "/operationType/download"
