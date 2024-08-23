@@ -509,7 +509,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
         n_threads = kwargs.get("n_threads", 1)
         file_size = None
-        if "headers" in kwargs:
+        if "headers" in kwargs and "Content-Length" in kwargs["headers"]:
             file_size = int(kwargs["headers"].get("Content-Length"))
         is_local_fs = kwargs.get("is_local_fs", False)
         if n_threads == 1 or not is_local_fs or file_size is None:
