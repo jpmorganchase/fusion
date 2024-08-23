@@ -583,7 +583,7 @@ def distribution_to_url(
         datasetseries = datasetseries[0:-1]
 
     if datasetseries == "sample":
-        return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
+        return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/{file_format}"
     if is_download:
         return (
             f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"

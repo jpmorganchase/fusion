@@ -659,7 +659,7 @@ class Fusion:
         else:
             # sample data is limited to csv
             if dt_str == "sample":
-                dataset_format = "csv"
+                dataset_format = self.list_distributions(dataset, "latest", catalog)["identifier"].iloc[0]
             required_series = [(catalog, dataset, dt_str, dataset_format)]
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
