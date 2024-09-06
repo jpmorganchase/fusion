@@ -140,7 +140,7 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
 fn fusion_url_to_auth_url(url: String) -> PyResult<Option<(String, String, String)>> {
     debug!("Trying to form fusion auth url from: {}", url);
     let url_parsed = Url::parse(&url)
-        .map_err(|e| CredentialError::new_err(format!("Could not parse URL: {:?}", e)))?;
+        .map_err(|e| CredentialError::new_err(format!("Could not parse URL: {e:?}")))?;
 
     let path = url_parsed.path();
     let segments: Vec<&str> = path.split('/').collect();
@@ -185,7 +185,7 @@ fn fusion_url_to_auth_url(url: String) -> PyResult<Option<(String, String, Strin
         url_parsed.host_str().unwrap_or_default(),
         url_parsed
             .port()
-            .map_or(String::new(), |p| format!(":{}", p)),
+            .map_or(String::new(), |p| format!(":{p}")),
         new_path
     );
     debug!("Fusion token URL: {}", fusion_tk_url);
@@ -287,7 +287,7 @@ impl Default for AuthToken {
 fn build_client(proxies: &Option<HashMap<String, String>>) -> PyResult<reqwest::Client> {
     client_builder_from_proxies(proxies.as_ref().unwrap_or(&HashMap::new()))
         .build()
-        .map_err(|err| CredentialError::new_err(format!("Error creating HTTP client: {}", err)))
+        .map_err(|err| CredentialError::new_err(format!("Error creating HTTP client: {err}")))
 }
 
 #[pyclass(module = "fusion._fusion")]
@@ -584,14 +584,14 @@ impl FusionCredentials {
                 .send()
                 .await
                 .map_err(|e| {
-                    CredentialError::new_err(format!("Could not post request: {:?}", e))
+                    CredentialError::new_err(format!("Could not post request: {e:?}"))
                 })?;
 
             let res_text = res.text().await.map_err(|e| {
-                CredentialError::new_err(format!("Could not get response text: {:?}", e))
+                CredentialError::new_err(format!("Could not get response text: {e:?}"))
             })?;
             let res_json = json::parse(&res_text).map_err(|e| {
-                CredentialError::new_err(format!("Could not parse test to json: {:?}", e))
+                CredentialError::new_err(format!("Could not parse test to json: {e:?}"))
             })?;
             debug!("Called for Bearer token. Response: {:?}", res_json);
             Ok(res_json)
@@ -648,26 +648,24 @@ impl FusionCredentials {
             debug!("Calling for Fusion token: {:?}", req);
 
             let res_maybe = req.send().await.map_err(|e| {
-                CredentialError::new_err(format!("Could not post request: {:?}", e))
+                CredentialError::new_err(format!("Could not post request: {e:?}"))
             })?;
 
             let res = res_maybe
                 .error_for_status()
-                .map_err(|e| CredentialError::new_err(format!("Error from endpoint: {:?}", e)))?;
+                .map_err(|e| CredentialError::new_err(format!("Error from endpoint: {e:?}")))?;
 
             match res.text().await {
                 Ok(text) => {
                     let res_json = json::parse(&text).map_err(|e| {
                         CredentialError::new_err(format!(
-                            "Could not parse response to json: {:?}",
-                            e
+                            "Could not parse response to json: {e:?}"
                         ))
                     })?;
                     Ok(res_json)
                 }
                 Err(e) => Err(CredentialError::new_err(format!(
-                    "Could not get response text: {:?}",
-                    e
+                    "Could not get response text: {e:?}"
                 ))),
             }
         });
@@ -714,7 +712,7 @@ impl FusionCredentials {
 
         let (fusion_tk_url, catalog_name, dataset_name) = fusion_tk_url_info.unwrap();
 
-        let token_key = format!("{}_{}", catalog_name, dataset_name);
+        let token_key = format!("{catalog_name}_{dataset_name}");
 
         // Check if the token exists and if it's expired
         let token_entry = self.fusion_token.entry(token_key.clone());
@@ -773,8 +771,7 @@ impl FusionCredentials {
                 file.read_to_string(&mut contents)
                     .map_err(|_| PyFileNotFoundError::new_err("Could not read file contents"))?;
                 return Err(CredentialError::new_err(format!(
-                    "Invalid JSON: {}\nContents:\n{}",
-                    err, contents
+                    "Invalid JSON: {err}\nContents:\n{contents}"
                 )));
             }
         };
