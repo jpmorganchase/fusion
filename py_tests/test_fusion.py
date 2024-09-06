@@ -282,9 +282,9 @@ def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fus
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
     server_mock_data = {
         "resources": [
-            {"identifier": "1", "description": "some desc", "category": ["FX"], "region": ["US"], "status": "active"},
+            {"identifier": "ONE", "description": "some desc", "category": ["FX"], "region": ["US"], "status": "active"},
             {
-                "identifier": "2",
+                "identifier": "TWO",
                 "description": "some desc",
                 "category": ["FX"],
                 "region": ["US", "EU"],
@@ -294,7 +294,7 @@ def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fus
     }
     expected_data = {
         "resources": [
-            {"identifier": "1", "region": "US", "category": "FX", "description": "some desc", "status": "active"}
+            {"identifier": "ONE", "region": "US", "category": "FX", "description": "some desc", "status": "active"}
         ]
     }
 
@@ -306,22 +306,22 @@ def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fus
     prod_url = f"{fusion_obj.root_url}catalogs/{new_catalog}/productDatasets"
     server_prod_mock_data = {
         "resources": [
-            {"product": select_prod, "dataset": "1"},
-            {"product": "prod_b", "dataset": "2"},
+            {"product": select_prod, "dataset": "one"},
+            {"product": "prod_b", "dataset": "two"},
         ]
     }
     requests_mock.get(prod_url, json=server_prod_mock_data)
 
     # Call the catalog_resources method
-    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["1"])
+    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["ONE"])
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, expected_df)
 
-    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains="1")
+    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains="ONE")
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, expected_df)
 
-    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains="1", id_contains=True)
+    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains="ONE", id_contains=True)
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, expected_df)
 
