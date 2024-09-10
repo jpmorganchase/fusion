@@ -528,6 +528,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         method: str = "post",
         multipart: bool = False,
+        additional_headers: Optional[dict[str, str]] = None,
         **kwargs: Any,
     ) -> None:
         async def put_data() -> AsyncGenerator[dict[Any, Any], None]:
@@ -572,6 +573,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if not multipart:
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
+            if additional_headers:
+                kw.update({"headers": additional_headers})
             if isinstance(lpath, io.BytesIO):
                 lpath.seek(0)
             async with meth(rpath, data=lpath.read(), **kw) as resp:  # type: ignore
@@ -581,6 +584,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             if "File-Name" in headers:  # noqa: PLR0915
                 kw.setdefault("headers", {})
                 kw["headers"]["File-Name"] = headers["File-Name"]
+            if additional_headers:
+                kw.update({"headers": additional_headers})
+
             async with session.post(rpath + "/operationType/upload", **kw) as resp:
                 await self._async_raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
@@ -615,6 +621,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         }
         if file_name:
             headers["File-Name"] = file_name
+
         headers["Content-Type"] = "application/json" if multipart else headers["Content-Type"]
         headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
 
@@ -649,6 +656,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         method: str = "put",
         file_name: Optional[str] = None,
+        additional_headers: Optional[dict[str, str]] = None,
     ) -> None:
         async def _get_operation_id(kw: dict[str, str]) -> dict[str, Any]:
             session = await self.set_session()
@@ -722,6 +730,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         }
         if file_name:
             headers["File-Name"] = file_name
+        for k, v in additional_headers.items():
+            headers[k] = v
+
         lpath.seek(0)
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
@@ -729,6 +740,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if "File-Name" in headers:  # noqa: SIM102
             kw_op.setdefault("headers", {})
             kw_op["headers"]["File-Name"] = headers["File-Name"]
+
+        if additional_headers:
+            kw_op.update({"headers": additional_headers})
+
         operation_id = sync(self.loop, _get_operation_id, kw_op)["operationId"]
         resps = list(put_data())
         hash_sha256 = hash_sha256_lst[0]
@@ -748,6 +763,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
         file_name: Optional[str] = None,
+        additional_headers: Optional[dict[str, str]] = None,
         **kwargs: Any,
     ) -> Any:
         """Copy file(s) from local.
@@ -762,6 +778,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             from_date: earliest date of data in upload file
             to_date: latest date of data in upload file
             file_name: Name of the file.
+            additional_headers: Additional headers.
             **kwargs: Kwargs.
 
         Returns:
@@ -778,16 +795,16 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         dt_created = pd.Timestamp.now().strftime("%Y-%m-%d")
         rpath = self._decorate_url(rpath)
         if type(lpath).__name__ in ["S3File"]:
-            return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method, file_name)
+            return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method, file_name, additional_headers)
         headers, chunk_headers_lst = self._construct_headers(
             lpath, dt_from, dt_to, dt_created, chunk_size, multipart, file_name
         )
         kwargs.update({"headers": headers})
         if multipart:
             kwargs.update({"chunk_headers_lst": chunk_headers_lst})
-            args = [lpath, rpath, chunk_size, callback, method, multipart]
+            args = [lpath, rpath, chunk_size, callback, method, multipart, additional_headers]
         else:
-            args = [lpath, rpath, None, callback, method, multipart]
+            args = [lpath, rpath, None, callback, method, multipart, additional_headers]
 
         return sync(super().loop, self._put_file, *args, **kwargs)
 

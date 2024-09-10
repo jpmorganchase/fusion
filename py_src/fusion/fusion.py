@@ -1025,12 +1025,13 @@ class Fusion:
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
         preserve_original_name: Optional[bool] = False,
+        additional_headers: Optional[dict[str, str]] = None,
     ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
         """Uploads the requested files/files to Fusion.
 
         Args:
             path (str): path to a file or a folder with files
-            dataset (str, optional): Dataset name to which the file will be uplaoded (for single file only).
+            dataset (str, optional): Dataset name to which the file will be uploaded (for single file only).
                                     If not provided the dataset will be implied from file's name.
             dt_str (str, optional): A file name. Can be any string but is usually a date.
                                     Defaults to 'latest' which will return the most recent.
@@ -1118,6 +1119,7 @@ class Fusion:
             show_progress=show_progress,
             from_date=from_date,
             to_date=to_date,
+            additional_headers
         )
 
         if not all(r[0] for r in res):
