@@ -372,7 +372,7 @@ class Fusion:
                 if isinstance(product, str)
                 else prd_df[prd_df["product"].isin(product)]
             )
-            ds_df = ds_df[ds_df["identifier"].isin(prd_df["dataset"])].reset_index(drop=True)
+            ds_df = ds_df[ds_df["identifier"].str.lower().isin(prd_df["dataset"].str.lower())].reset_index(drop=True)
 
         if max_results > -1:
             ds_df = ds_df[0:max_results]
