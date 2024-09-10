@@ -1314,3 +1314,22 @@ class Fusion:
                 return None  # noqa: B012, SIM107
         else:
             return self.events
+        
+    def list_dataset_lineage(self, dataset: str, catalog: Optional[str] = None) -> Response:
+        """List the upstream and downstream lineage of the dataset.
+
+        Args:
+            dataset (str): A dataset identifier
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+
+        Returns:
+            class:`pandas.DataFrame`: A dataframe with a row for each resource
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/lineage"
+        resp = self.session.get(url)
+        data = resp.json()['relations']
+
+        return data
