@@ -14,6 +14,7 @@ from urllib.parse import quote, urljoin
 import aiohttp
 import fsspec
 import fsspec.asyn
+from numpy import add
 import pandas as pd
 import requests
 from fsspec.callbacks import _DEFAULT_CALLBACK
@@ -730,8 +731,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         }
         if file_name:
             headers["File-Name"] = file_name
-        for k, v in additional_headers.items():
-            headers[k] = v
+
+        if additional_headers:
+            for k, v in additional_headers.items():
+                headers[k] = v
 
         lpath.seek(0)
         kw = self.kwargs.copy()
