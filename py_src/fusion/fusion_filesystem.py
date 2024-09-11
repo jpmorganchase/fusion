@@ -14,7 +14,6 @@ from urllib.parse import quote, urljoin
 import aiohttp
 import fsspec
 import fsspec.asyn
-from numpy import add
 import pandas as pd
 import requests
 from fsspec.callbacks import _DEFAULT_CALLBACK
@@ -798,8 +797,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         dt_created = pd.Timestamp.now().strftime("%Y-%m-%d")
         rpath = self._decorate_url(rpath)
         if type(lpath).__name__ in ["S3File"]:
-            return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, 
-                                    callback, method, file_name, additional_headers)
+            return self._cloud_copy(
+                lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method, file_name, additional_headers
+            )
         headers, chunk_headers_lst = self._construct_headers(
             lpath, dt_from, dt_to, dt_created, chunk_size, multipart, file_name
         )
