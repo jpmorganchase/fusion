@@ -520,7 +520,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 self.loop, self._download_single_file_async, str(rpath), lpath, file_size, chunk_size, n_threads
             )
 
-    async def _put_file(  # noqa: PLR0915
+    async def _put_file(  # noqa: PLR0915, PLR0913
         self,
         lpath: Union[str, io.IOBase, fsspec.spec.AbstractBufferedFile],
         rpath: str,
@@ -795,7 +795,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         dt_created = pd.Timestamp.now().strftime("%Y-%m-%d")
         rpath = self._decorate_url(rpath)
         if type(lpath).__name__ in ["S3File"]:
-            return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method, file_name, additional_headers)
+            return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, 
+                                    callback, method, file_name, additional_headers)
         headers, chunk_headers_lst = self._construct_headers(
             lpath, dt_from, dt_to, dt_created, chunk_size, multipart, file_name
         )

@@ -1119,7 +1119,7 @@ class Fusion:
             show_progress=show_progress,
             from_date=from_date,
             to_date=to_date,
-            additional_headers
+            additional_headers=additional_headers
         )
 
         if not all(r[0] for r in res):
