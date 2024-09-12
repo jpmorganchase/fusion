@@ -736,8 +736,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 headers[k] = v
 
         lpath.seek(0)
-        kw = self.kwargs.copy()
-        kw.update({"headers": headers})
+
         kw_op = self.kwargs.copy()
         if "File-Name" in headers:  # noqa: SIM102
             kw_op.setdefault("headers", {})
@@ -752,6 +751,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
+        if additional_headers:
+            kw["headers"].update(additional_headers)
         sync(self.loop, _finish_operation, operation_id, kw)
 
     def put(  # noqa: PLR0913
