@@ -520,6 +520,17 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 self.loop, self._download_single_file_async, str(rpath), lpath, file_size, chunk_size, n_threads
             )
 
+    @staticmethod
+    def _update_kwargs(
+        kw: dict[str, Any], headers: dict[str, str], additional_headers: Optional[dict[str, str]]
+    ) -> dict[str, Any]:
+        if "File-Name" in headers:  # noqa: PLR0915
+            kw.setdefault("headers", {})
+            kw["headers"]["File-Name"] = headers["File-Name"]
+        if additional_headers:
+            kw["headers"].update(additional_headers)
+        return kw
+
     async def _put_file(  # noqa: PLR0915, PLR0913
         self,
         lpath: Union[str, io.IOBase, fsspec.spec.AbstractBufferedFile],
@@ -554,6 +565,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     kw = self.kwargs.copy()
                     url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
                     kw.update({"headers": kwargs["chunk_headers_lst"][i]})
+                    kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
                     async with meth(url=url, data=chunk, **kw) as resp:
                         await self._async_raise_not_found_for_status(resp, rpath)
                         yield await resp.json()
@@ -581,11 +593,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 await self._async_raise_not_found_for_status(resp, rpath)
         else:
             kw = self.kwargs.copy()
-            if "File-Name" in headers:  # noqa: PLR0915
-                kw.setdefault("headers", {})
-                kw["headers"]["File-Name"] = headers["File-Name"]
-            if additional_headers:
-                kw["headers"].update(additional_headers)
+            kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
 
             async with session.post(rpath + "/operationType/upload", **kw) as resp:
                 await self._async_raise_not_found_for_status(resp, rpath)
@@ -595,6 +603,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             resps = [resp async for resp in put_data()]
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
+            kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
             async with session.post(
                 url=rpath + f"/operations/upload?operationId={operation_id}",
                 json={"parts": resps},
@@ -710,6 +719,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 headers_chunks["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
                 kw = self.kwargs.copy()
                 kw.update({"headers": headers_chunks})
+                kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
                 url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
                 yield sync(self.loop, _meth, url, kw)
                 i += 1
@@ -738,12 +748,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         lpath.seek(0)
 
         kw_op = self.kwargs.copy()
-        if "File-Name" in headers:  # noqa: SIM102
-            kw_op.setdefault("headers", {})
-            kw_op["headers"]["File-Name"] = headers["File-Name"]
-
-        if additional_headers:
-            kw_op["headers"].update(additional_headers)
+        kw_op = FusionHTTPFileSystem._update_kwargs(kw_op, headers, additional_headers)
 
         operation_id = sync(self.loop, _get_operation_id, kw_op)["operationId"]
         resps = list(put_data())
@@ -751,8 +756,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
-        if additional_headers:
-            kw["headers"].update(additional_headers)
+        kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
         sync(self.loop, _finish_operation, operation_id, kw)
 
     def put(  # noqa: PLR0913
