@@ -213,7 +213,7 @@ jobs:
         name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
         path: dist
 
-  linux-arm:
+  linux-arm-aarch64:
     #needs: tests
     runs-on: ubuntu-latest
     strategy:
@@ -284,46 +284,45 @@ jobs:
         path: dist
 
 
-linux-arm-armv7:
-    #needs: tests
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12"]
-        platform:
-          # - target: "aarch64-unknown-linux-gnu"
-          #   arch: aarch64
-          - target: "armv7-unknown-linux-gnueabihf"
-            arch: armv7
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-  
-    - uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-versions }}
-    - run: pip install uv
+  linux-arm-armv7:
+      #needs: tests
+      runs-on: ubuntu-latest
+      strategy:
+        fail-fast: false
+        matrix:
+          python-versions: ["3.9", "3.10", "3.11", "3.12"]
+          platform:
+            # - target: "aarch64-unknown-linux-gnu"
+            #   arch: aarch64
+            - target: "armv7-unknown-linux-gnueabihf"
+              arch: armv7
+      steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+    
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-versions }}
+      - run: pip install uv
 
-    - name: Build Wheels
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.platform.target }}
-        manylinux: "auto"
-        args: --locked --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
-        sccache: 'true'
-        docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu -e OPENSSL_INCLUDE_DIR=/usr/include/openssl
-        before-script-linux: |
-          apt update
-          apt install -y libssl-dev
+      - name: Build Wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          manylinux: "auto"
+          args: --locked --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
+          sccache: 'true'
+          docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu -e OPENSSL_INCLUDE_DIR=/usr/include/openssl
+          before-script-linux: |
+            apt update
+            apt install -y libssl-dev
 
-    - name: Upload Wheels
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
-        path: dist
-
+      - name: Upload Wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
+          path: dist
 
   linux-powerpc:
     runs-on: ubuntu-latest
@@ -692,7 +691,7 @@ linux-arm-armv7:
 
   # Define the artifact check job that runs on ubuntu-latest
   artifact-check:
-    needs: [sdist-n-tests, linux-x86, linux-arm, linux-powerpc, linux-musllinux, windows, macos-x86_64, macos-aarch64]
+    needs: [sdist-n-tests, linux-x86, linux-arm-aarch64, linux-arm-armv7, linux-powerpc, linux-musllinux, windows, macos-x86_64, macos-aarch64]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/download-artifact@v4
