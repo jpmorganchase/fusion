@@ -286,6 +286,7 @@ impl Default for AuthToken {
 
 fn build_client(proxies: &Option<HashMap<String, String>>) -> PyResult<reqwest::Client> {
     client_builder_from_proxies(proxies.as_ref().unwrap_or(&HashMap::new()))
+        .use_rustls_tls()
         .build()
         .map_err(|err| CredentialError::new_err(format!("Error creating HTTP client: {}", err)))
 }
