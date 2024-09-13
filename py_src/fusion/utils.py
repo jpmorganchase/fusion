@@ -763,6 +763,7 @@ def upload_files(  # noqa: PLR0913
     show_progress: bool = True,
     from_date: str | None = None,
     to_date: str | None = None,
+    additional_headers: dict[str, str] | None = None,
 ) -> list[tuple[bool, str, str | None]]:
     """Upload file into Fusion.
 
@@ -777,6 +778,7 @@ def upload_files(  # noqa: PLR0913
         show_progress (bool): Show progress bar
         from_date (str, optional): earliest date of data contained in distribution.
         to_date (str, optional): latest date of data contained in distribution.
+        additional_headers (dict, optional): Additional headers to include in the request.
 
     Returns: List of update statuses.
 
@@ -796,6 +798,7 @@ def upload_files(  # noqa: PLR0913
                     from_date=from_date,
                     to_date=to_date,
                     file_name=file_name,
+                    additional_headers=additional_headers,
                 )
             else:
                 with fs_local.open(path, "rb") as file_local:
@@ -808,6 +811,7 @@ def upload_files(  # noqa: PLR0913
                         from_date=from_date,
                         to_date=to_date,
                         file_name=file_name,
+                        additional_headers=additional_headers,
                     )
             return (True, path, None)
         except Exception as ex:  # noqa: BLE001
