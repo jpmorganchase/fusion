@@ -1317,7 +1317,7 @@ class Fusion:
         else:
             return self.events
         
-    def list_dataset_lineage(self, dataset: str, catalog: Optional[str] = None) -> Response:
+    def list_dataset_lineage(self, dataset: str, catalog: Optional[str] = None) -> pd.DataFrame:
         """List the upstream and downstream lineage of the dataset.
 
         Args:
@@ -1334,4 +1334,26 @@ class Fusion:
         resp = self.session.get(url)
         data = resp.json()['relations']
 
-        return data
+        data_dict = {}
+
+        for entry in data:
+            source_dataset = entry['entry']['dataset']
+            source_catalog = entry['source']['catalog']
+            destination_dataset = entry['destination']['dataset']
+            destination_catalog = entry['destination']['catalog']
+
+            if destination_dataset == dataset:
+                data_dict[source_dataset] = ('source', source_catalog)
+
+            if source_dataset == dataset:
+                data_dict[destination_dataset] = ('produced', destination_catalog)
+        data_dict[dataset] = ('base', catalog)
+
+        output_data = {
+            'type' : [v[0] for v in data_dict.values()],
+            'dataset_identifier' : list(data_dict.keys()),
+            'catalog' : [v[1] for v in data_dict.values()]
+        }
+
+        df = pd.DataFrame(output_data)
+        return df
