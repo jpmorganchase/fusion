@@ -207,6 +207,7 @@ struct FusionCredsPersistent {
     grant_type: String,
     //#[serde(deserialize_with = "deserialize_fusion_e2e")]
     fusion_e2e: Option<String>,
+    headers: Option<HashMap<String, String>>,
 }
 
 #[pyclass(module = "fusion._fusion")]
@@ -286,6 +287,7 @@ impl Default for AuthToken {
 
 fn build_client(proxies: &Option<HashMap<String, String>>) -> PyResult<reqwest::Client> {
     client_builder_from_proxies(proxies.as_ref().unwrap_or(&HashMap::new()))
+        .use_rustls_tls()
         .build()
         .map_err(|err| CredentialError::new_err(format!("Error creating HTTP client: {}", err)))
 }
@@ -314,6 +316,9 @@ pub struct FusionCredentials {
     #[pyo3(get, set)]
     fusion_e2e: Option<String>,
 
+    #[pyo3(get, set)]
+    headers: HashMap<String, String>,
+
     #[pyo3(get)]
     proxies: HashMap<String, String>,
 
@@ -341,6 +346,7 @@ impl Default for FusionCredentials {
             proxies: HashMap::new(),
             grant_type: "client_credentials".to_string(),
             fusion_e2e: None,
+            headers: HashMap::new(),
             http_client: None,
         }
     }
@@ -371,6 +377,7 @@ impl FusionCredentials {
         Option<HashMap<String, String>>,
         Option<String>,
         Option<String>,
+        Option<HashMap<String, String>>,
     )> {
         Ok((
             self.client_id.clone(),
@@ -383,11 +390,12 @@ impl FusionCredentials {
             Some(self.proxies.clone()),
             Some(self.grant_type.clone()),
             self.fusion_e2e.clone(),
+            Some(self.headers.clone()),
         ))
     }
 
     #[classmethod]
-    #[pyo3(signature = (client_id=None, client_secret=None, resource=None, auth_url=None, proxies=None, fusion_e2e=None))]
+    #[pyo3(signature = (client_id=None, client_secret=None, resource=None, auth_url=None, proxies=None, fusion_e2e=None, headers=None))]
     fn from_client_id(
         _cls: &Bound<'_, PyType>,
         client_id: Option<String>,
@@ -396,6 +404,7 @@ impl FusionCredentials {
         auth_url: Option<String>,
         proxies: Option<HashMap<String, String>>,
         fusion_e2e: Option<String>,
+        headers: Option<HashMap<String, String>>,
     ) -> PyResult<Self> {
         Ok(Self {
             client_id,
@@ -405,6 +414,7 @@ impl FusionCredentials {
             proxies: proxies.unwrap_or_default(),
             grant_type: "client_credentials".to_string(),
             fusion_e2e,
+            headers: headers.unwrap_or_default(),
             fusion_token: HashMap::new(),
             bearer_token: None,
             username: None,
@@ -422,7 +432,7 @@ impl FusionCredentials {
     }
 
     #[classmethod]
-    #[pyo3(signature = (client_id=None, username=None, password=None, resource=None, auth_url=None, proxies=None, fusion_e2e=None))]
+    #[pyo3(signature = (client_id=None, username=None, password=None, resource=None, auth_url=None, proxies=None, fusion_e2e=None, headers=None))]
     fn from_user_id(
         _cls: &Bound<'_, PyType>,
         client_id: Option<String>,
@@ -432,6 +442,7 @@ impl FusionCredentials {
         auth_url: Option<String>,
         proxies: Option<HashMap<String, String>>,
         fusion_e2e: Option<String>,
+        headers: Option<HashMap<String, String>>,
     ) -> PyResult<Self> {
         Ok(Self {
             client_id,
@@ -442,6 +453,7 @@ impl FusionCredentials {
             proxies: proxies.unwrap_or_default(),
             grant_type: "password".to_string(),
             fusion_e2e,
+            headers: headers.unwrap_or_default(),
             fusion_token: HashMap::new(),
             bearer_token: None,
             client_secret: None,
@@ -450,13 +462,14 @@ impl FusionCredentials {
     }
 
     #[classmethod]
-    #[pyo3(signature = (bearer_token=None, bearer_token_expiry=None, proxies=None, fusion_e2e=None))]
+    #[pyo3(signature = (bearer_token=None, bearer_token_expiry=None, proxies=None, fusion_e2e=None, headers=None))]
     fn from_bearer_token(
         _cls: &Bound<'_, PyType>,
         bearer_token: Option<String>,
         bearer_token_expiry: Option<&Bound<PyDate>>,
         proxies: Option<HashMap<String, String>>,
         fusion_e2e: Option<String>,
+        headers: Option<HashMap<String, String>>,
     ) -> PyResult<Self> {
         Ok(Self {
             resource: None,
@@ -464,6 +477,7 @@ impl FusionCredentials {
             proxies: proxies.unwrap_or_default(),
             grant_type: "bearer".to_string(),
             fusion_e2e,
+            headers: headers.unwrap_or_default(),
             fusion_token: HashMap::new(),
             bearer_token: Some(AuthToken {
                 token: match bearer_token {
@@ -490,7 +504,7 @@ impl FusionCredentials {
 
     #[allow(clippy::too_many_arguments)]
     #[new]
-    #[pyo3(signature = (client_id=None, client_secret=None, username=None, password=None, resource=None, auth_url=None, bearer_token=None, proxies=None, grant_type=None, fusion_e2e=None))]
+    #[pyo3(signature = (client_id=None, client_secret=None, username=None, password=None, resource=None, auth_url=None, bearer_token=None, proxies=None, grant_type=None, fusion_e2e=None, headers=None))]
     fn new(
         client_id: Option<String>,
         client_secret: Option<String>,
@@ -502,6 +516,7 @@ impl FusionCredentials {
         proxies: Option<HashMap<String, String>>,
         grant_type: Option<String>,
         fusion_e2e: Option<String>,
+        headers: Option<HashMap<String, String>>,
     ) -> PyResult<Self> {
         Ok(FusionCredentials {
             client_id,
@@ -515,6 +530,7 @@ impl FusionCredentials {
             proxies: proxies.unwrap_or_default(),
             grant_type: grant_type.unwrap_or_else(|| "client_credentials".to_string()),
             fusion_e2e,
+            headers: headers.unwrap_or_default(),
             http_client: None,
         })
     }
@@ -695,6 +711,12 @@ impl FusionCredentials {
                 self.fusion_e2e.as_ref().unwrap().clone(),
             );
         }
+        // if headers are not empty add each key value pair to the headers
+        if !self.headers.is_empty() {
+            for (key, value) in self.headers.iter() {
+                ret.insert(key.clone(), value.clone());
+            }
+        }
 
         self._refresh_bearer_token(py, false, 30)?;
         let bearer_token_tup = self
@@ -797,6 +819,7 @@ impl FusionCredentials {
                 credentials.auth_url,
                 Some(untyped_proxies(credentials.proxies)),
                 credentials.fusion_e2e,
+                credentials.headers,
             )?,
             "bearer" => FusionCredentials::from_bearer_token(
                 cls,
@@ -804,6 +827,7 @@ impl FusionCredentials {
                 None,
                 Some(untyped_proxies(credentials.proxies)),
                 credentials.fusion_e2e,
+                credentials.headers,
             )?,
             "password" => FusionCredentials::from_user_id(
                 cls,
@@ -814,6 +838,7 @@ impl FusionCredentials {
                 credentials.auth_url,
                 Some(untyped_proxies(credentials.proxies)),
                 credentials.fusion_e2e,
+                credentials.headers,
             )?,
             _ => {
                 return Err(pyo3::exceptions::PyValueError::new_err(
@@ -1024,6 +1049,7 @@ mod tests {
             Some(HashMap::new()),
             Some("grant_type".to_string()),
             Some("fusion_e2e".to_string()),
+            Some(HashMap::new()),
         )
         .unwrap();
 
@@ -1050,6 +1076,7 @@ mod tests {
         assert!(creds.fusion_e2e.is_none());
         assert!(creds.bearer_token.is_none());
         assert!(creds.proxies.is_empty());
+        assert!(creds.headers.is_empty());
         assert!(creds.fusion_token.is_empty());
     }
 
@@ -1066,6 +1093,7 @@ mod tests {
             Some(HashMap::new()),
             Some("grant_type".to_string()),
             Some("fusion_e2e".to_string()),
+            Some(HashMap::new()),
         )
         .unwrap();
 
@@ -1095,6 +1123,7 @@ mod tests {
             Some(HashMap::new()),
             Some("grant_type".to_string()),
             Some("fusion_e2e".to_string()),
+            Some(HashMap::new()),
         )
         .unwrap();
 
@@ -1125,6 +1154,7 @@ mod tests {
             Some(HashMap::new()),
             Some("grant_type".to_string()),
             Some("fusion_e2e".to_string()),
+            Some(HashMap::new()),
         )
         .unwrap();
 
@@ -1139,6 +1169,7 @@ mod tests {
             proxies,
             grant_type,
             fusion_e2e,
+            headers,
         ) = creds.__getnewargs__().unwrap();
 
         assert_eq!(client_id, Some("client_id".to_string()));
@@ -1149,6 +1180,7 @@ mod tests {
         assert_eq!(auth_url, Some("auth_url".to_string()));
         assert!(bearer_token.is_none());
         assert!(proxies.is_some());
+        assert!(headers.is_some());
         assert_eq!(grant_type, Some("grant_type".to_string()));
         assert_eq!(fusion_e2e, Some("fusion_e2e".to_string()));
     }
@@ -1163,6 +1195,7 @@ mod tests {
                 Some("client_secret".to_string()),
                 Some("resource".to_string()),
                 Some("auth_url".to_string()),
+                None,
                 None,
                 None,
             )
@@ -1189,6 +1222,7 @@ mod tests {
                 Some("auth_url".to_string()),
                 None,
                 None,
+                None,
             )
             .unwrap();
 
@@ -1209,6 +1243,7 @@ mod tests {
                 &py.get_type_bound::<FusionCredentials>(),
                 Some("token".to_string()),
                 Some(&expiry_date),
+                None,
                 None,
                 None,
             )

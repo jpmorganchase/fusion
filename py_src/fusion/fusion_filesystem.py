@@ -520,7 +520,18 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 self.loop, self._download_single_file_async, str(rpath), lpath, file_size, chunk_size, n_threads
             )
 
-    async def _put_file(  # noqa: PLR0915
+    @staticmethod
+    def _update_kwargs(
+        kw: dict[str, Any], headers: dict[str, str], additional_headers: Optional[dict[str, str]]
+    ) -> dict[str, Any]:
+        if "File-Name" in headers:  # noqa: PLR0915
+            kw.setdefault("headers", {})
+            kw["headers"]["File-Name"] = headers["File-Name"]
+        if additional_headers:
+            kw["headers"].update(additional_headers)
+        return kw
+
+    async def _put_file(  # noqa: PLR0915, PLR0913
         self,
         lpath: Union[str, io.IOBase, fsspec.spec.AbstractBufferedFile],
         rpath: str,
@@ -528,6 +539,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         method: str = "post",
         multipart: bool = False,
+        additional_headers: Optional[dict[str, str]] = None,
         **kwargs: Any,
     ) -> None:
         async def put_data() -> AsyncGenerator[dict[Any, Any], None]:
@@ -553,6 +565,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     kw = self.kwargs.copy()
                     url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
                     kw.update({"headers": kwargs["chunk_headers_lst"][i]})
+                    kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
                     async with meth(url=url, data=chunk, **kw) as resp:
                         await self._async_raise_not_found_for_status(resp, rpath)
                         yield await resp.json()
@@ -572,15 +585,16 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if not multipart:
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
+            if additional_headers:
+                kw["headers"].update(additional_headers)
             if isinstance(lpath, io.BytesIO):
                 lpath.seek(0)
             async with meth(rpath, data=lpath.read(), **kw) as resp:  # type: ignore
                 await self._async_raise_not_found_for_status(resp, rpath)
         else:
             kw = self.kwargs.copy()
-            if "File-Name" in headers:  # noqa: PLR0915
-                kw.setdefault("headers", {})
-                kw["headers"]["File-Name"] = headers["File-Name"]
+            kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
+
             async with session.post(rpath + "/operationType/upload", **kw) as resp:
                 await self._async_raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
@@ -589,6 +603,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             resps = [resp async for resp in put_data()]
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
+            kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
             async with session.post(
                 url=rpath + f"/operations/upload?operationId={operation_id}",
                 json={"parts": resps},
@@ -615,6 +630,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         }
         if file_name:
             headers["File-Name"] = file_name
+
         headers["Content-Type"] = "application/json" if multipart else headers["Content-Type"]
         headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
 
@@ -649,6 +665,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         method: str = "put",
         file_name: Optional[str] = None,
+        additional_headers: Optional[dict[str, str]] = None,
     ) -> None:
         async def _get_operation_id(kw: dict[str, str]) -> dict[str, Any]:
             session = await self.set_session()
@@ -702,6 +719,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 headers_chunks["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
                 kw = self.kwargs.copy()
                 kw.update({"headers": headers_chunks})
+                kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
                 url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
                 yield sync(self.loop, _meth, url, kw)
                 i += 1
@@ -722,19 +740,23 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         }
         if file_name:
             headers["File-Name"] = file_name
+
+        if additional_headers:
+            for k, v in additional_headers.items():
+                headers[k] = v
+
         lpath.seek(0)
-        kw = self.kwargs.copy()
-        kw.update({"headers": headers})
+
         kw_op = self.kwargs.copy()
-        if "File-Name" in headers:  # noqa: SIM102
-            kw_op.setdefault("headers", {})
-            kw_op["headers"]["File-Name"] = headers["File-Name"]
+        kw_op = FusionHTTPFileSystem._update_kwargs(kw_op, headers, additional_headers)
+
         operation_id = sync(self.loop, _get_operation_id, kw_op)["operationId"]
         resps = list(put_data())
         hash_sha256 = hash_sha256_lst[0]
         headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
+        kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
         sync(self.loop, _finish_operation, operation_id, kw)
 
     def put(  # noqa: PLR0913
@@ -748,6 +770,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         from_date: Optional[str] = None,
         to_date: Optional[str] = None,
         file_name: Optional[str] = None,
+        additional_headers: Optional[dict[str, str]] = None,
         **kwargs: Any,
     ) -> Any:
         """Copy file(s) from local.
@@ -762,6 +785,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             from_date: earliest date of data in upload file
             to_date: latest date of data in upload file
             file_name: Name of the file.
+            additional_headers: Additional headers.
             **kwargs: Kwargs.
 
         Returns:
@@ -778,16 +802,18 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         dt_created = pd.Timestamp.now().strftime("%Y-%m-%d")
         rpath = self._decorate_url(rpath)
         if type(lpath).__name__ in ["S3File"]:
-            return self._cloud_copy(lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method, file_name)
+            return self._cloud_copy(
+                lpath, rpath, dt_from, dt_to, dt_created, chunk_size, callback, method, file_name, additional_headers
+            )
         headers, chunk_headers_lst = self._construct_headers(
             lpath, dt_from, dt_to, dt_created, chunk_size, multipart, file_name
         )
         kwargs.update({"headers": headers})
         if multipart:
             kwargs.update({"chunk_headers_lst": chunk_headers_lst})
-            args = [lpath, rpath, chunk_size, callback, method, multipart]
+            args = [lpath, rpath, chunk_size, callback, method, multipart, additional_headers]
         else:
-            args = [lpath, rpath, None, callback, method, multipart]
+            args = [lpath, rpath, None, callback, method, multipart, additional_headers]
 
         return sync(super().loop, self._put_file, *args, **kwargs)
 
