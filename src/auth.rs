@@ -6,9 +6,6 @@ use pyo3::import_exception;
 use pyo3::prelude::*;
 use pyo3::types::{PyDate, PyDateAccess, PyType};
 use reqwest::Proxy;
-// use reqwest_mock::config::ClientConfig;
-// use rustls::{ClientConfig, RootCertStore};
-// use rustls_native_certs::load_native_certs;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
@@ -17,9 +14,6 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-//use std::dbg;
-// use std::sync::Arc;
-// use pyo3::prepare_freethreaded_python;
 use url::Url;
 
 #[allow(unused_imports)]
