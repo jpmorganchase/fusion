@@ -291,24 +291,10 @@ impl Default for AuthToken {
 }
 
 fn build_client(proxies: &Option<HashMap<String, String>>) -> PyResult<reqwest::Client> {
-    
-    // prepare_freethreaded_python();
-    // let _ = rustls::crypto::ring::default_provider().install_default();
-    // let mut root_store = RootCertStore::empty();
-    // for cert in load_native_certs().expect("Could not load native certs") {
-    //     root_store.add(cert).expect("Could not add cert to store");
-    // }
-
-    // let config = ClientConfig::builder()
-    //     .with_root_certificates(root_store)
-    //     .with_no_client_auth();
-
-    // println!("Proxies: {:?}", proxies);
 
     client_builder_from_proxies(proxies.as_ref().unwrap_or(&HashMap::new()))
         .use_rustls_tls()
         .tls_built_in_native_certs(true)
-        // .use_preconfigured_tls(Arc::new(config))
         .build()
         .map_err(|err| CredentialError::new_err(format!("Error creating HTTP client: {}", err)))
 }
