@@ -1336,7 +1336,7 @@ class Fusion:
         data_dict = {}
 
         for entry in data:
-            source_dataset = entry["entry"]["dataset"]
+            source_dataset = entry["source"]["dataset"]
             source_catalog = entry["source"]["catalog"]
             destination_dataset = entry["destination"]["dataset"]
             destination_catalog = entry["destination"]["catalog"]
