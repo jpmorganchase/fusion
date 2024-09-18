@@ -15,6 +15,7 @@ import pandas as pd
 import pyarrow as pa
 import requests
 from joblib import Parallel, delayed
+from requests import Response
 from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
@@ -1323,8 +1324,6 @@ class Fusion:
         Args:
             dataset (str): A dataset identifier
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
-            output (bool, optional): If True then print the dataframe. Defaults to False.
-
         Returns:
             class:`pandas.DataFrame`: A dataframe with a row for each resource
         """
@@ -1357,3 +1356,38 @@ class Fusion:
 
         df = pd.DataFrame(output_data)
         return df
+
+    def create_dataset_lineage(
+            self,
+            base_dataset: str,
+            source_dataset: str,
+            source_dataset_catalog: str,
+            catalog: Optional[str] = None,
+    ) -> Response:
+        """Upload lineage to a dataset.
+
+        Args:
+            base_dataset (str): A dataset identifier to which you want to add lineage.
+            source_dataset (str): A dataset identifier from which to add lineage.
+            source_dataset_catalog (str): The catalog identifier to which the source dataset belongs.
+            catalog (Optional[str], optional): Catalog identifier. Defaults to None.
+
+        Returns:
+            Response: response object.
+        """
+        catalog = self._use_catalog(catalog)
+        
+        data = {
+            "source": [
+                {
+                    "dataset":source_dataset,
+                    "catalog": source_dataset_catalog
+                }
+            ]
+        }
+
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{base_dataset}/lineage"
+
+        resp = self.session.post(url, json=data)
+
+        return resp
