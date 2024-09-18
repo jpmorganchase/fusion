@@ -14,7 +14,6 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-//use std::dbg;
 use url::Url;
 
 #[allow(unused_imports)]
@@ -286,8 +285,10 @@ impl Default for AuthToken {
 }
 
 fn build_client(proxies: &Option<HashMap<String, String>>) -> PyResult<reqwest::Client> {
+
     client_builder_from_proxies(proxies.as_ref().unwrap_or(&HashMap::new()))
         .use_rustls_tls()
+        .tls_built_in_native_certs(true)
         .build()
         .map_err(|err| CredentialError::new_err(format!("Error creating HTTP client: {}", err)))
 }
