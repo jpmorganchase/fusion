@@ -1318,12 +1318,21 @@ class Fusion:
         else:
             return self.events
         
-    def list_dataset_lineage(self, dataset: str, catalog: Optional[str] = None) -> pd.DataFrame:
+    def list_dataset_lineage(
+            self,
+            dataset: str,
+            catalog: Optional[str] = None,
+            output: bool = False,
+            max_results: int = -1,
+    ) -> pd.DataFrame:
         """List the upstream and downstream lineage of the dataset.
 
         Args:
             dataset (str): A dataset identifier
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+            max_results (int, optional): Limit the number of rows returned in the dataframe.
+                Defaults to -1 which returns all results.
         Returns:
             class:`pandas.DataFrame`: A dataframe with a row for each resource
         """
@@ -1331,11 +1340,18 @@ class Fusion:
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/lineage"
         resp = self.session.get(url)
-        data = resp.json()["relations"]
+        data = resp.json()
+        relations_data = data["relations"]
+
+        restricted_datasets = []
+
+        for dataset_metadata in data["datasets"]:
+            if dataset_metadata["status"] == "Restricted":
+                restricted_datasets.append(dataset_metadata['identifier'])
 
         data_dict = {}
 
-        for entry in data:
+        for entry in relations_data:
             source_dataset = entry["source"]["dataset"]
             source_catalog = entry["source"]["catalog"]
             destination_dataset = entry["destination"]["dataset"]
@@ -1355,6 +1371,14 @@ class Fusion:
         }
 
         lineage_df = pd.DataFrame(output_data)
+        lineage_df.loc[lineage_df["dataset_identifier"].isin(restricted_datasets), ["dataset_identifier", "catalog"]] = "Access Restricted"
+
+        if max_results > -1:
+            lineage_df = lineage_df[0:max_results]
+
+        if output:
+            pass
+        
         return lineage_df
 
     def create_dataset_lineage(
