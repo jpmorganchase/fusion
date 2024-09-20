@@ -787,5 +787,6 @@ def test_create_dataset_lineage(requests_mock: requests_mock.Mocker, fusion_obj:
     resp = fusion_obj.create_dataset_lineage(base_dataset, source_dataset, source_dataset_catalog, catalog)
 
     # Check if the response is correct
-    assert resp.status_code == 200
+    exp_status_code = 200
+    assert resp.status_code == exp_status_code
     assert resp.json() == expected_data
