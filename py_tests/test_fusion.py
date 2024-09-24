@@ -802,7 +802,11 @@ def test_create_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fus
     df_input = pd.DataFrame(data)
 
     # Call the create_dataset_lineage method
-    resp = fusion_obj.create_dataset_lineage(base_dataset=base_dataset,source_dataset_catalog_mapping=df_input, catalog=catalog)
+    resp = fusion_obj.create_dataset_lineage(
+        base_dataset=base_dataset,
+        source_dataset_catalog_mapping=df_input,
+        catalog=catalog
+    )
 
     # Check if the response is correct
     assert resp is None
@@ -820,7 +824,11 @@ def test_create_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, f
     data = [{"dataset": "source_dataset", "catalog": "source_catalog"}]
 
     # Call the create_dataset_lineage method
-    resp = fusion_obj.create_dataset_lineage(base_dataset=base_dataset,source_dataset_catalog_mapping=data, catalog=catalog)
+    resp = fusion_obj.create_dataset_lineage(
+        base_dataset=base_dataset,
+        source_dataset_catalog_mapping=data,
+        catalog=catalog
+    )
 
     # Check if the response is correct
     assert resp is None
@@ -837,8 +845,14 @@ def test_create_dataset_lineage_valueerror(requests_mock: requests_mock.Mocker, 
 
     data = {"dataset": "source_dataset", "catalog": "source_catalog"}
 
-    with pytest.raises(ValueError, match="source_dataset_catalog_mapping must be a pandas DataFrame or a list of dictionaries."):
-        fusion_obj.create_dataset_lineage(base_dataset=base_dataset,source_dataset_catalog_mapping=data, catalog=catalog)
+    with pytest.raises(
+        ValueError, match="source_dataset_catalog_mapping must be a pandas DataFrame or a list of dictionaries."
+    ):
+        fusion_obj.create_dataset_lineage(
+            base_dataset=base_dataset,
+            source_dataset_catalog_mapping=data,
+            catalog=catalog
+        )
 
 
 def test_create_dataset_lineage_httperror(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -852,4 +866,8 @@ def test_create_dataset_lineage_httperror(requests_mock: requests_mock.Mocker, f
     requests_mock.post(url, status_code=500, json=expected_data)
 
     with pytest.raises(requests.exceptions.HTTPError):
-        fusion_obj.create_dataset_lineage(base_dataset=base_dataset, source_dataset_catalog_mapping=data, catalog=catalog)
+        fusion_obj.create_dataset_lineage(
+            base_dataset=base_dataset,
+            source_dataset_catalog_mapping=data,
+            catalog=catalog
+        )

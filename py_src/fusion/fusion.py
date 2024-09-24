@@ -1494,7 +1494,8 @@ class Fusion:
 
         Args:
             base_dataset (str): A dataset identifier to which you want to add lineage.
-            source_dataset_catalog_mapping (Union[pd.DataFrame, list[dict[str]]]): Mapping for the dataset identifier(s) and catalog(s) from which to add lineage.
+            source_dataset_catalog_mapping (Union[pd.DataFrame, list[dict[str]]]): Mapping for the dataset
+                identifier(s) and catalog(s) from which to add lineage.
             catalog (Optional[str], optional): Catalog identifier. Defaults to None.
 
         Returns:
