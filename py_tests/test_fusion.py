@@ -850,7 +850,7 @@ def test_create_dataset_lineage_valueerror(requests_mock: requests_mock.Mocker, 
     ):
         fusion_obj.create_dataset_lineage(
             base_dataset=base_dataset,
-            source_dataset_catalog_mapping=data,
+            source_dataset_catalog_mapping=data,  # type: ignore
             catalog=catalog
         )
 

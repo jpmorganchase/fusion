@@ -1421,6 +1421,8 @@ class Fusion:
                 Defaults to -1 which returns all results.
         Returns:
             class:`pandas.DataFrame`: A dataframe with a row for each resource
+        Raises:
+            HTTPError: If the dataset is not found in the catalog.
         """
         catalog = self._use_catalog(catalog)
 
@@ -1487,9 +1489,9 @@ class Fusion:
     def create_dataset_lineage(
         self,
         base_dataset: str,
-        source_dataset_catalog_mapping: Union[pd.DataFrame, list[dict[str]]],
+        source_dataset_catalog_mapping: Union[pd.DataFrame, list[dict[str, str]]],
         catalog: Optional[str] = None,
-    ) -> Response:
+    ) -> None:
         """Upload lineage to a dataset.
 
         Args:
@@ -1498,8 +1500,9 @@ class Fusion:
                 identifier(s) and catalog(s) from which to add lineage.
             catalog (Optional[str], optional): Catalog identifier. Defaults to None.
 
-        Returns:
-            Response: Response object.
+        Raises:
+            ValueError: If source_dataset_catalog_mapping is not a pandas DataFrame or a list of dictionaries
+            HTTPError: If the request is unsuccessful.
         
         Examples:
             Creating lineage from a pandas DataFrame.
@@ -1534,4 +1537,4 @@ class Fusion:
 
         resp = self.session.post(url, json=data)
 
-        return resp.raise_for_status()
+        resp.raise_for_status()
