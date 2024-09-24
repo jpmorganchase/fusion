@@ -15,7 +15,6 @@ import pandas as pd
 import pyarrow as pa
 import requests
 from joblib import Parallel, delayed
-from requests import Response
 from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
