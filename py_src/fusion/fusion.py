@@ -1487,29 +1487,50 @@ class Fusion:
     def create_dataset_lineage(
         self,
         base_dataset: str,
-        source_dataset: str,
-        source_dataset_catalog: str,
+        source_dataset_catalog_mapping: Union[pd.DataFrame, list[dict[str]]],
         catalog: Optional[str] = None,
     ) -> Response:
         """Upload lineage to a dataset.
 
         Args:
             base_dataset (str): A dataset identifier to which you want to add lineage.
-            source_dataset (str): A dataset identifier from which to add lineage.
-            source_dataset_catalog (str): The catalog identifier to which the source dataset belongs.
+            source_dataset_catalog_mapping (Union[pd.DataFrame, list[dict[str]]]): Mapping for the dataset identifier(s) and catalog(s) from which to add lineage.
             catalog (Optional[str], optional): Catalog identifier. Defaults to None.
 
         Returns:
-            Response: response object.
+            Response: Response object.
+        
+        Examples:
+            Creating lineage from a pandas DataFrame.
+            >>> data = [{"dataset": "a", "catalog": "a"}, {"dataset": "b", "catalog": "b"}]
+            >>> df = pd.DataFrame(data)
+            >>> fusion = Fusion()
+            >>> fusion.create_dataset_lineage(base_dataset="c", source_dataset_catalog_mapping=df, catalog="c")
+
+            Creating lineage from a list of dictionaries.
+            >>> data = [{"dataset": "a", "catalog": "a"}, {"dataset": "b", "catalog": "b"}]
+            >>> fusion = Fusion()
+            >>> fusion.create_dataset_lineage(base_dataset="c", source_dataset_catalog_mapping=data, catalog="c")
         """
         catalog = self._use_catalog(catalog)
 
+        if isinstance(source_dataset_catalog_mapping, pd.DataFrame):
+            dataset_mapping_list = [
+                {
+                    "dataset": row["dataset"],
+                    "catalog": row["catalog"]
+                } for _, row in source_dataset_catalog_mapping.iterrows()
+            ]
+        elif isinstance(source_dataset_catalog_mapping, list):
+            dataset_mapping_list = source_dataset_catalog_mapping
+        else:
+            raise ValueError("source_dataset_catalog_mapping must be a pandas DataFrame or a list of dictionaries.")
         data = {
-            "source": [{"dataset": source_dataset, "catalog": source_dataset_catalog}]
+            "source": dataset_mapping_list
         }
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{base_dataset}/lineage"
 
         resp = self.session.post(url, json=data)
 
-        return resp
+        return resp.raise_for_status()
