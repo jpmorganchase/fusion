@@ -1448,18 +1448,18 @@ class Fusion:
             destination_catalog = entry["destination"]["catalog"]
 
             if destination_dataset_id == dataset_id:
-                for dataset in data['datasets']:
-                    if dataset['identifier'] == source_dataset_id and dataset['status'] != 'Restricted':
-                        source_dataset_title = dataset['title']
-                    elif dataset['identifier'] == source_dataset_id and dataset['status'] == 'Restricted':
+                for dataset in data["datasets"]:
+                    if dataset["identifier"] == source_dataset_id and dataset["status"] != "Restricted":
+                        source_dataset_title = dataset["title"]
+                    elif dataset["identifier"] == source_dataset_id and dataset["status"] == "Restricted":
                         source_dataset_title = "Access Restricted"
                 data_dict[source_dataset_id] = ("source", source_catalog, source_dataset_title)
 
             if source_dataset_id == dataset_id:
-                for dataset in data['datasets']:
-                    if dataset['identifier'] == destination_dataset_id and dataset['status'] != 'Restricted':
-                        destination_dataset_title = dataset['title']
-                    elif dataset['identifier'] == destination_dataset_id and dataset['status'] == 'Restricted':
+                for dataset in data["datasets"]:
+                    if dataset["identifier"] == destination_dataset_id and dataset["status"] != "Restricted":
+                        destination_dataset_title = dataset["title"]
+                    elif dataset["identifier"] == destination_dataset_id and dataset["status"] == "Restricted":
                         destination_dataset_title = "Access Restricted"
                 data_dict[destination_dataset_id] = ("produced", destination_catalog, destination_dataset_title)
 
