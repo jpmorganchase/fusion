@@ -1406,7 +1406,7 @@ class Fusion:
 
     def list_dataset_lineage(
         self,
-        dataset: str,
+        dataset_id: str,
         catalog: Optional[str] = None,
         output: bool = False,
         max_results: int = -1,
@@ -1424,7 +1424,11 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/lineage"
+        url_dataset = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}"
+        resp_dataset = self.session.get(url_dataset)
+        resp_dataset.raise_for_status()
+
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}/lineage"
         resp = self.session.get(url)
         data = resp.json()
         relations_data = data["relations"]
@@ -1438,28 +1442,38 @@ class Fusion:
         data_dict = {}
 
         for entry in relations_data:
-            source_dataset = entry["source"]["dataset"]
+            source_dataset_id = entry["source"]["dataset"]
             source_catalog = entry["source"]["catalog"]
-            destination_dataset = entry["destination"]["dataset"]
+            destination_dataset_id = entry["destination"]["dataset"]
             destination_catalog = entry["destination"]["catalog"]
 
-            if destination_dataset == dataset:
-                data_dict[source_dataset] = ("source", source_catalog)
+            if destination_dataset_id == dataset_id:
+                for dataset in data['datasets']:
+                    if dataset['identifier'] == source_dataset_id and dataset['status'] != 'Restricted':
+                        source_dataset_title = dataset['title']
+                    elif dataset['identifier'] == source_dataset_id and dataset['status'] == 'Restricted':
+                        source_dataset_title = "Access Restricted"
+                data_dict[source_dataset_id] = ("source", source_catalog, source_dataset_title)
 
-            if source_dataset == dataset:
-                data_dict[destination_dataset] = ("produced", destination_catalog)
-        data_dict[dataset] = ("base", catalog)
+            if source_dataset_id == dataset_id:
+                for dataset in data['datasets']:
+                    if dataset['identifier'] == destination_dataset_id and dataset['status'] != 'Restricted':
+                        destination_dataset_title = dataset['title']
+                    elif dataset['identifier'] == destination_dataset_id and dataset['status'] == 'Restricted':
+                        destination_dataset_title = "Access Restricted"
+                data_dict[destination_dataset_id] = ("produced", destination_catalog, destination_dataset_title)
 
         output_data = {
             "type": [v[0] for v in data_dict.values()],
             "dataset_identifier": list(data_dict.keys()),
+            "title": [v[2] for v in data_dict.values()],
             "catalog": [v[1] for v in data_dict.values()],
         }
 
         lineage_df = pd.DataFrame(output_data)
         lineage_df.loc[
             lineage_df["dataset_identifier"].isin(restricted_datasets),
-            ["dataset_identifier", "catalog"],
+            ["dataset_identifier", "catalog", "title"],
         ] = "Access Restricted"
 
         if max_results > -1:

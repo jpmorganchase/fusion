@@ -672,6 +672,8 @@ def test_to_table(mocker: MockerFixture, tmp_path: Path, data_table_as_csv: str,
 def test_list_dataset_lineage(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     dataset = "dataset_id"
     catalog = "catalog_id"
+    url_dataset = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
+    requests_mock.get(url_dataset, status_code=200)
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/lineage"
     expected_data = {
         "relations": [
@@ -685,9 +687,8 @@ def test_list_dataset_lineage(requests_mock: requests_mock.Mocker, fusion_obj: F
             },
         ],
         "datasets": [
-            {"identifier": "source_dataset", "status": "Active"},
-            {"identifier": dataset, "status": "Active"},
-            {"identifier": "destination_dataset", "status": "Active"},
+            {"identifier": "source_dataset", "status": "Active", "title": "Source Dataset"},
+            {"identifier": "destination_dataset", "status": "Active", "title": "Destination Dataset"},
         ],
     }
     requests_mock.get(url, json=expected_data)
@@ -698,18 +699,20 @@ def test_list_dataset_lineage(requests_mock: requests_mock.Mocker, fusion_obj: F
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(
         {
-            "type": ["source", "produced", "base"],
-            "dataset_identifier": ["source_dataset", "destination_dataset", "dataset_id"],
-            "catalog": ["source_catalog", "destination_catalog", "catalog_id"],
+            "type": ["source", "produced"],
+            "dataset_identifier": ["source_dataset", "destination_dataset"],
+            "title": ["Source Dataset", "Destination Dataset"],
+            "catalog": ["source_catalog", "destination_catalog"],
         }
     )
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
-
 def test_list_dataset_lineage_max_results(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     dataset = "dataset_id"
     catalog = "catalog_id"
+    url_dataset = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
+    requests_mock.get(url_dataset, status_code=200)
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/lineage"
     expected_data = {
         "relations": [
@@ -723,9 +726,8 @@ def test_list_dataset_lineage_max_results(requests_mock: requests_mock.Mocker, f
             },
         ],
         "datasets": [
-            {"identifier": "source_dataset", "status": "Active"},
-            {"identifier": dataset, "status": "Active"},
-            {"identifier": "destination_dataset", "status": "Active"},
+            {"identifier": "source_dataset", "status": "Active", "title": "Source Dataset"},
+            {"identifier": "destination_dataset", "status": "Active", "title": "Destination Dataset"},
         ],
     }
     requests_mock.get(url, json=expected_data)
@@ -738,40 +740,53 @@ def test_list_dataset_lineage_max_results(requests_mock: requests_mock.Mocker, f
 
 
 def test_list_dataset_lineage_resticted(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    dataset = "dataset_id"
+    dataset_id = "dataset_id"
     catalog = "catalog_id"
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/lineage"
+    url_dataset = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset_id}"
+    requests_mock.get(url_dataset, status_code=200)
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset_id}/lineage"
+
     expected_data = {
         "relations": [
             {
                 "source": {"dataset": "source_dataset", "catalog": "source_catalog"},
-                "destination": {"dataset": dataset, "catalog": catalog},
+                "destination": {"dataset": dataset_id, "catalog": catalog},
             },
             {
-                "source": {"dataset": dataset, "catalog": catalog},
+                "source": {"dataset": dataset_id, "catalog": catalog},
                 "destination": {"dataset": "destination_dataset", "catalog": "destination_catalog"},
             },
         ],
         "datasets": [
             {"identifier": "source_dataset", "status": "Restricted"},
-            {"identifier": dataset, "status": "Active"},
-            {"identifier": "destination_dataset", "status": "Active"},
+            {"identifier": "destination_dataset", "status": "Active", "title": "Destination Dataset"},
         ],
     }
     requests_mock.get(url, json=expected_data)
 
     # Call the list_dataset_lineage method
-    test_df = fusion_obj.list_dataset_lineage(dataset, catalog=catalog)
+    test_df = fusion_obj.list_dataset_lineage(dataset_id, catalog=catalog)
 
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(
         {
-            "type": ["source", "produced", "base"],
-            "dataset_identifier": ["Access Restricted", "destination_dataset", "dataset_id"],
-            "catalog": ["Access Restricted", "destination_catalog", "catalog_id"],
+            "type": ["source", "produced"],
+            "dataset_identifier": ["Access Restricted", "destination_dataset"],
+            "title": ["Access Restricted", "Destination Dataset"],
+            "catalog": ["Access Restricted", "destination_catalog"],
         }
     )
     pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_dataset_lineage_dataset_not_found(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    dataset_id = "dataset_id"
+    catalog = "catalog_id"
+    url_dataset = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset_id}"
+    requests_mock.get(url_dataset, status_code=404)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_dataset_lineage(dataset_id, catalog=catalog)
 
 
 def test_create_dataset_lineage(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
