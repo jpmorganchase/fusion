@@ -811,7 +811,9 @@ def test_create_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fus
     )
 
     # Check if the response is correct
-    assert resp.status_code == status_code
+    assert resp is not None
+    if resp is not None:
+        assert resp.status_code == status_code
 
 
 def test_create_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -835,7 +837,9 @@ def test_create_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, f
     )
 
     # Check if the response is correct
-    assert resp.status_code == status_code
+    assert resp is not None
+    if resp is not None:
+        assert resp.status_code == status_code
 
 
 def test_create_dataset_lineage_valueerror(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
