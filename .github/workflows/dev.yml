@@ -190,10 +190,10 @@ jobs:
         manylinux: auto
         args: --locked --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
-        before-script-linux: |
-          yum update
-          yum install -y openssl-devel
         docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib64 -e OPENSSL_INCLUDE_DIR=/usr/lib64/openssl
+        before-script-linux: |
+          apt-get update
+          apt-get install -y libssl-dev
 
     - name: Integration test artifact
       run: |
