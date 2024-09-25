@@ -182,7 +182,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-versions }}
     - run: pip install uv
-        
+    
+    - name: Install OpenSSL
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libssl-dev
+
     - name: Build Wheels - manylinux
       uses: PyO3/maturin-action@v1
       with:
