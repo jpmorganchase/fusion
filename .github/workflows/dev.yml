@@ -182,7 +182,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-versions }}
     - run: pip install uv
-
+    
+    - name: Install OpenSSL
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libssl-dev
+        
     - name: Build Wheels - manylinux
       uses: PyO3/maturin-action@v1
       with:
@@ -190,10 +195,10 @@ jobs:
         manylinux: auto
         args: --locked --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
         sccache: 'true'
-        docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib64 -e OPENSSL_INCLUDE_DIR=/usr/lib64/openssl
         before-script-linux: |
           apt-get update
           apt-get install -y libssl-dev
+        docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib64 -e OPENSSL_INCLUDE_DIR=/usr/lib64/openssl
 
     - name: Integration test artifact
       run: |
