@@ -1490,7 +1490,8 @@ class Fusion:
         base_dataset: str,
         source_dataset_catalog_mapping: Union[pd.DataFrame, list[dict[str, str]]],
         catalog: Optional[str] = None,
-    ) -> None:
+        return_resp_obj: bool = False,
+    ) -> Optional[requests.Response]:
         """Upload lineage to a dataset.
 
         Args:
@@ -1498,6 +1499,7 @@ class Fusion:
             source_dataset_catalog_mapping (Union[pd.DataFrame, list[dict[str]]]): Mapping for the dataset
                 identifier(s) and catalog(s) from which to add lineage.
             catalog (Optional[str], optional): Catalog identifier. Defaults to None.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Raises:
             ValueError: If source_dataset_catalog_mapping is not a pandas DataFrame or a list of dictionaries
@@ -1537,3 +1539,6 @@ class Fusion:
         resp = self.session.post(url, json=data)
 
         resp.raise_for_status()
+
+        return resp if return_resp_obj else None
+

@@ -794,6 +794,7 @@ def test_create_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fus
     source_dataset = "source_dataset"
     source_dataset_catalog = "source_catalog"
     catalog = "common"
+    status_code = 200
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{base_dataset}/lineage"
     expected_data = {"source": [{"dataset": source_dataset, "catalog": source_dataset_catalog}]}
     requests_mock.post(url, json=expected_data)
@@ -805,11 +806,12 @@ def test_create_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fus
     resp = fusion_obj.create_dataset_lineage(
         base_dataset=base_dataset,
         source_dataset_catalog_mapping=df_input,
-        catalog=catalog
+        catalog=catalog, 
+        return_resp_obj=True
     )
 
     # Check if the response is correct
-    assert resp is None
+    assert resp.status_code == status_code
 
 
 def test_create_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -817,6 +819,7 @@ def test_create_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, f
     source_dataset = "source_dataset"
     source_dataset_catalog = "source_catalog"
     catalog = "common"
+    status_code = 200
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{base_dataset}/lineage"
     expected_data = {"source": [{"dataset": source_dataset, "catalog": source_dataset_catalog}]}
     requests_mock.post(url, json=expected_data)
@@ -827,11 +830,12 @@ def test_create_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, f
     resp = fusion_obj.create_dataset_lineage(
         base_dataset=base_dataset,
         source_dataset_catalog_mapping=data,
-        catalog=catalog
+        catalog=catalog,
+        return_resp_obj=True
     )
 
     # Check if the response is correct
-    assert resp is None
+    assert resp.status_code == status_code
 
 
 def test_create_dataset_lineage_valueerror(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
