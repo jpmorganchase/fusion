@@ -36,8 +36,6 @@ openssl = { version = "0.10.64", features = ["vendored"] }
 openssl = { version = "0.10.64", features = ["vendored"] }
 [target.'cfg(target_env = "musl")'.dependencies]
 openssl = { version = "0.10.64", features = ["vendored"] }
-[target.'cfg(target_env = "x86_64")'.dependencies]
-openssl = { version = "0.10.64", features = ["vendored"] }
 [package.metadata.cargo-llvm-cov]
 # End OPEN_SSL 
 
