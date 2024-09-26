@@ -193,7 +193,6 @@ jobs:
         before-script-linux: |
           yum update
           yum install -y openssl-devel
-          yum install -y compat-openssl10
         docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib64 -e OPENSSL_INCLUDE_DIR=/usr/lib64/openssl
 
     - name: Integration test artifact
