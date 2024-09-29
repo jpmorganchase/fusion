@@ -65,7 +65,7 @@ def py_bench(py_vers: Annotated[str, PyVerOpt]) -> None:
             if fullname in curr_map and benchmark["options"] == curr_map[fullname]["options"]:
                 curr_map[fullname]["prev_stats"] = benchmark["stats"]
 
-        env = Environment(loader=FileSystemLoader("."))
+        env = Environment(loader=FileSystemLoader("."), autoescape=True)
         template = env.get_template("py_tests/bench_template.html")
 
         print(curr_data)
