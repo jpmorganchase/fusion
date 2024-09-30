@@ -846,3 +846,19 @@ def upload_files(  # noqa: PLR0913
             res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
     return res  # type: ignore
+
+
+def tidy_string(x: str) -> str:
+    """Tidy string.
+
+    Args:
+        x (str): String to tidy.
+
+    Returns (str): Tidy string.
+
+    """
+    x = x.strip()
+    x = re.sub(" +", " ", x)
+    x = re.sub("/ +", "/", x)
+
+    return x

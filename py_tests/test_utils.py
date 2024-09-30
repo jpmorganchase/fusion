@@ -32,6 +32,7 @@ from fusion.utils import (
     read_json,
     upload_files,
     validate_file_names,
+    tidy_string,
 )
 
 
@@ -769,3 +770,10 @@ def test_upload_public_parallel(
     fs_local = io.BytesIO(b"some data to simulate file content" * 100)
     res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=True)
     assert res
+
+
+def test_tidy_string() -> None:
+    """Test the tidy_string function."""
+    bad_string = " string with  spaces  and  multiple  spaces  "
+
+    assert tidy_string(bad_string) == "string with spaces and multiple spaces"

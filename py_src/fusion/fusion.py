@@ -1,10 +1,12 @@
 """Main Fusion module."""
+from __future__ import annotations
 
 import json as js
 import logging
 import re
 import sys
 import warnings
+from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -1541,4 +1543,32 @@ class Fusion:
         resp.raise_for_status()
 
         return resp if return_resp_obj else None
+
+
+@dataclass
+class Product:
+    "Product class."
+
+    title: str
+    identifier: str
+    category: str | list[str] | None = None
+    shortAbstract: str = ""
+    description: str = ""
+    isActive: bool = True
+    isRestricted: bool | None = None
+    maintainer: str | list[str] | None = None
+    region: str | list[str] | None = None
+    publisher: str | None = None
+    subCategory: str | list[str] | None = None
+    tag: str | list[str] | None = None
+    deliveryChannel: str | list[str] = field(default_factory=lambda: ["API"])
+    theme:  str | None = None
+    releaseDate: str | None = None
+    language: str = "English"
+    status: str = "Available"
+    image: str = ""
+    logo: str = ""
+    dataset: str | list[str] | None = None
+
+
 
