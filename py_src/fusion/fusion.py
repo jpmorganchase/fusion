@@ -9,13 +9,11 @@ import warnings
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 from zipfile import ZipFile
 
-import fsspec
 import pandas as pd
 import pyarrow as pa
-import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
 
@@ -23,9 +21,9 @@ from fusion._fusion import FusionCredentials
 
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
-from .types import PyArrowFilterT
 from .utils import (
     RECOGNIZED_FORMATS,
+    convert_date_format,
     cpu_count,
     csv_to_table,
     distribution_to_filename,
@@ -36,16 +34,25 @@ from .utils import (
     is_dataset_raw,
     joblib_progress,
     json_to_table,
+    make_bool,
+    make_list,
     normalise_dt_param_str,
     parquet_to_table,
     path_to_url,
     read_csv,
     read_json,
     read_parquet,
+    tidy_string,
     # stream_single_file_new_session,
     upload_files,
     validate_file_names,
 )
+
+if TYPE_CHECKING:
+    import fsspec
+    import requests
+
+    from .types import PyArrowFilterT
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -1569,6 +1576,38 @@ class Product:
     image: str = ""
     logo: str = ""
     dataset: str | list[str] | None = None
+
+    def __post_init__(self: Product) -> None:
+        """Format Product metadata fields after object instantiation."""
+        self.title = tidy_string(self.title)
+        self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
+        self.shortAbstract = tidy_string(self.shortAbstract)
+        self.description = tidy_string(self.description)
+        self.category  = (
+            self.category if isinstance(self.category, list) or  self.category is None else make_list(self.category)
+        )
+        self.tag = (
+            self.tag if isinstance(self.tag, list) or self.tag is None else make_list(self.tag)
+        )
+        self.dataset = (
+            self.dataset if isinstance(self.dataset, list) or self.dataset is None else make_list(self.dataset)
+        )
+        self.subCategory = (
+            self.subCategory if isinstance(self.subCategory, list) or self.subCategory is None else make_list(self.subCategory)
+        )
+        self.isActive = self.isActive if isinstance(self.isActive, bool) else make_bool(self.isActive)
+        self.isRestricted = self.isRestricted if isinstance(self.isRestricted, bool) or self.isRestricted is None else make_bool(self.isRestricted)
+        self.maintainer = (
+            self.maintainer if isinstance(self.maintainer, list) or self.maintainer is None else make_list(self.maintainer)
+        )
+        self.region = (
+            self.region if isinstance(self.region, list) or self.region is None else make_list(self.region)
+        )
+        self.deliveryChannel = (
+            self.deliveryChannel if isinstance(self.deliveryChannel, list) else make_list(self.deliveryChannel)
+        )
+        self.releaseDate = convert_date_format(self.releaseDate) if self.releaseDate else None
+        
 
 
 
