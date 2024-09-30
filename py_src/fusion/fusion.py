@@ -1485,7 +1485,7 @@ class Fusion:
 
         return lineage_df
 
-    def create_dataset_lineage(
+    def update_dataset_lineage(
         self,
         base_dataset: str,
         source_dataset_catalog_mapping: Union[pd.DataFrame, list[dict[str, str]]],
