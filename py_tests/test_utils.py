@@ -3,7 +3,7 @@ import multiprocessing as mp
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import fsspec
@@ -25,6 +25,8 @@ from fusion.utils import (
     is_dataset_raw,
     joblib_progress,
     json_to_table,
+    make_bool,
+    make_list,
     normalise_dt_param_str,
     parquet_to_table,
     path_to_url,
@@ -777,3 +779,88 @@ def test_tidy_string() -> None:
     bad_string = " string with  spaces  and  multiple  spaces  "
 
     assert tidy_string(bad_string) == "string with spaces and multiple spaces"
+
+
+def test_make_list_from_string() -> None:
+    """Test make list from string."""
+    string_obj = "Hello, hi, hey"
+    string_to_list = make_list(string_obj)
+    assert isinstance(string_to_list, list)
+    exp_len = 3
+    assert len(string_to_list) == exp_len
+    assert string_to_list[0] == "Hello"
+    assert string_to_list[1] == "hi"
+    assert string_to_list[2] == "hey"
+
+
+def test_make_list_from_list() -> None:
+    """Test make list from list."""
+
+    list_obj = ["hi", "hi"]
+    list_to_list = make_list(list_obj)
+    assert isinstance(list_to_list, list)
+    exp_len = 2
+    assert len(list_to_list) == exp_len
+    assert list_to_list[0] == "hi"
+    assert list_to_list[1] == "hi"
+
+
+def test_make_list_from_nonstring() -> None:
+    """Test make list from non string."""
+    any_obj = 1
+    obj_to_list = make_list(any_obj)
+    assert isinstance(obj_to_list, list)
+    exp_len = 1
+    assert len(obj_to_list) == exp_len
+    assert obj_to_list[0] == cast(str, any_obj)
+
+
+def test_make_bool_string() -> None:
+    """Test make bool."""
+
+    input_ = "string"
+    output_ = make_bool(input_)
+    assert output_ is True
+
+
+def test_make_bool_hidden_false() -> None:
+    """Test make bool."""
+
+    input_1 = "False"
+    input_2 = "false"
+    input_3 = "FALSE"
+    input_4 = "0"
+
+    output_1 = make_bool(input_1)
+    output_2 = make_bool(input_2)
+    output_3 = make_bool(input_3)
+    output_4 = make_bool(input_4)
+
+    assert output_1 is False
+    assert output_2 is False
+    assert output_3 is False
+    assert output_4 is False
+
+
+def test_make_bool_bool() -> None:
+    """Test make bool."""
+
+    input_ = True
+    output_ = make_bool(input_)
+    assert output_ is True
+
+
+def test_make_bool_1() -> None:
+    """Test make bool."""
+
+    input_ = 1
+    output_ = make_bool(input_)
+    assert output_ is True
+
+
+def test_make_bool_0() -> None:
+    """Test make bool."""
+
+    input_ = 0
+    output_ = make_bool(input_)
+    assert output_ is False
