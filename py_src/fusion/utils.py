@@ -899,3 +899,12 @@ def convert_date_format(date_str:  str) -> Any:
     date_obj = parser.parse(date_str)
     formatted_date = date_obj.strftime(desired_format)
     return formatted_date
+
+
+def _is_json(data: str) -> bool:
+    """Check if the data is in JSON format."""
+    try:
+        js.loads(data)
+    except Exception:  # noqa: BLE001
+        return False
+    return True
