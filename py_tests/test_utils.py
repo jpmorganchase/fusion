@@ -19,6 +19,7 @@ from fusion.fusion import Fusion
 from fusion.utils import (
     PathLikeT,
     _filename_to_distribution,
+    convert_date_format,
     cpu_count,
     csv_to_table,
     get_session,
@@ -864,3 +865,27 @@ def test_make_bool_0() -> None:
     input_ = 0
     output_ = make_bool(input_)
     assert output_ is False
+
+
+def test_convert_date_format_month() -> None:
+    """Test convert date format."""
+    date = "May 6, 2024"
+    output_ = convert_date_format(date)
+    exp_output = "2024-05-06"
+    assert output_ == exp_output
+
+
+def test_convert_format_one_string() -> None:
+    """Test convert date format."""
+    date = "20240506"
+    output_ = convert_date_format(date)
+    exp_output = "2024-05-06"
+    assert output_ == exp_output
+
+
+def test_convert_format_slash() -> None:
+    """Test convert date format."""
+    date = "2024/05/06"
+    output_ = convert_date_format(date)
+    exp_output = "2024-05-06"
+    assert output_ == exp_output
