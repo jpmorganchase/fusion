@@ -1712,12 +1712,20 @@ class Product:
             self.dataset if isinstance(self.dataset, list) or self.dataset is None else make_list(self.dataset)
         )
         self.subCategory = (
-            self.subCategory if isinstance(self.subCategory, list) or self.subCategory is None else make_list(self.subCategory)
+            self.subCategory if isinstance(
+                self.subCategory, list
+            ) or self.subCategory is None else make_list(self.subCategory)
         )
         self.isActive = self.isActive if isinstance(self.isActive, bool) else make_bool(self.isActive)
-        self.isRestricted = self.isRestricted if isinstance(self.isRestricted, bool) or self.isRestricted is None else make_bool(self.isRestricted)
+        self.isRestricted = (
+            self.isRestricted if isinstance(
+                self.isRestricted, bool
+                ) or self.isRestricted is None else make_bool(self.isRestricted)
+        )
         self.maintainer = (
-            self.maintainer if isinstance(self.maintainer, list) or self.maintainer is None else make_list(self.maintainer)
+            self.maintainer if isinstance(
+                self.maintainer, list
+            ) or self.maintainer is None else make_list(self.maintainer)
         )
         self.region = (
             self.region if isinstance(self.region, list) or self.region is None else make_list(self.region)
@@ -1797,7 +1805,6 @@ class Product:
         """Create a Product object from a catalog."""
         list_products = client.session.get(f"{client.root_url}catalogs/{catalog}/products/").json()["resources"]
         dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == product_id][0]
-        dict_["tags"] = dict_.pop("tag")
         product_obj = Product.from_dict(dict_)
 
         return product_obj

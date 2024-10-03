@@ -1,3 +1,4 @@
+from collections.abc import Generator
 import datetime
 import json
 from pathlib import Path
@@ -10,7 +11,7 @@ import requests_mock
 from pytest_mock import MockerFixture
 
 from fusion._fusion import FusionCredentials
-from fusion.fusion import Fusion
+from fusion.fusion import Fusion, Product
 from fusion.utils import _normalise_dt_param, distribution_to_url
 
 
@@ -879,3 +880,429 @@ def test_create_dataset_lineage_httperror(requests_mock: requests_mock.Mocker, f
             source_dataset_catalog_mapping=data,
             catalog=catalog
         )
+
+
+def test_product_class() -> None:
+    """Test the Product class."""
+    test_product = Product(title="Test Product", identifier="Test Product", releaseDate="May 5, 2020")
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == ""
+    assert test_product.description == ""
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region is None
+    assert test_product.publisher is None
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ['API']
+    assert test_product.theme is None
+    assert test_product.releaseDate == "2020-05-05"
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+
+
+def test_product_class_from_series() -> None:
+    """Test the Product class."""
+    test_product = Product.from_series(
+        pd.Series(
+            {
+                "title": "Test Product",
+                "identifier": "Test Product",
+                "releaseDate": "May 5, 2020",
+            }
+        )
+    )
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == ""
+    assert test_product.description == ""
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region is None
+    assert test_product.publisher is None
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ['API']
+    assert test_product.theme is None
+    assert test_product.releaseDate == "2020-05-05"
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+
+
+def test_product_class_from_dict() -> None:
+    """Test the Product class."""
+    test_product = Product.from_dict(
+        {
+            "title": "Test Product",
+            "identifier": "TEST_PRODUCT",
+            "releaseDate": "May 5, 2020",
+        }
+    )
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == ""
+    assert test_product.description == ""
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region is None
+    assert test_product.publisher is None
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ['API']
+    assert test_product.theme is None
+    assert test_product.releaseDate == "2020-05-05"
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+
+
+def test_product_class_from_csv(mock_product_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:
+    """Test the Product class."""
+    test_product = Product.from_csv("products.csv")
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == ""
+    assert test_product.description == ""
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region is None
+    assert test_product.publisher is None
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ['API']
+    assert test_product.theme is None
+    assert test_product.releaseDate is None
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+
+
+def test_product_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list Product from_catalog method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/products/"
+
+    expected_data = {
+        "resources": [
+            {
+                "catalog": {
+                    "@id": "my_catalog/",
+                    "description": "my catalog",
+                    "title": "my catalog",
+                    "identifier": "my_catalog"
+                },
+                "title": "Test Product",
+                "identifier": "TEST_PRODUCT",
+                "category": ["category"],
+                "shortAbstract": "short abstract",
+                "description": "description",
+                "isActive": True,
+                "isRestricted": False,
+                "maintainer": "maintainer",
+                "region": ["region"],
+                "publisher": "publisher",
+                "subCategory": ["subCategory"],
+                "tag": ["tag1", "tag2"],
+                "deliveryChannel": ["API"],
+                "theme": ["theme"],
+                "releaseDate": "2020-05-05",
+                "language": "English",
+                "status": "Available",
+                "datasetCount": 1,
+                "@id": "TEST_PRODUCT/",
+
+            },
+        ],
+    }
+    requests_mock.get(url, json=expected_data)
+
+    my_product = Product.from_catalog(client=fusion_obj, product_id="TEST_PRODUCT", catalog=catalog)
+    assert isinstance(my_product, Product)
+    assert my_product.title == "Test Product"
+    assert my_product.identifier == "TEST_PRODUCT"
+    assert my_product.category == ["category"]
+    assert my_product.shortAbstract == "short abstract"
+    assert my_product.description == "description"
+    assert my_product.isActive is True
+    assert my_product.isRestricted is False
+    assert my_product.maintainer == ["maintainer"]
+    assert my_product.region == ["region"]
+    assert my_product.publisher == "publisher"
+    assert my_product.subCategory == ["subCategory"]
+    assert my_product.tag == ["tag1", "tag2"]
+    assert my_product.deliveryChannel == ["API"]
+    assert my_product.theme == ["theme"]
+    assert my_product.releaseDate == "2020-05-05"
+    assert my_product.language == "English"
+    assert my_product.status == "Available"
+    assert my_product.image == ""
+    assert my_product.logo == ""
+
+
+def test_product_class_from_object_dict() -> None:
+    """Test the Product class."""
+    test_product = Product.from_object(
+        {
+            "title": "Test Product",
+            "identifier": "TEST_PRODUCT",
+            "releaseDate": "May 5, 2020",
+        }
+    )
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == ""
+    assert test_product.description == ""
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region is None
+    assert test_product.publisher is None
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ['API']
+    assert test_product.theme is None
+    assert test_product.releaseDate == "2020-05-05"
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+
+
+def test_product_class_from_object_series() -> None:
+    """Test the Product class."""
+    test_product = Product.from_object(
+        pd.Series(
+            {
+                "title": "Test Product",
+                "identifier": "Test Product",
+                "releaseDate": "May 5, 2020",
+            }
+        )
+    )
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == ""
+    assert test_product.description == ""
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region is None
+    assert test_product.publisher is None
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ['API']
+    assert test_product.theme is None
+    assert test_product.releaseDate == "2020-05-05"
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+
+
+def test_product_class_from_object_csv(mock_product_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:
+    """Test the Product class."""
+    test_product = Product.from_object("products.csv")
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == ""
+    assert test_product.description == ""
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region is None
+    assert test_product.publisher is None
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ['API']
+    assert test_product.theme is None
+    assert test_product.releaseDate is None
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+
+
+def test_product_class_from_object_json() -> None:
+    """Test the Product class."""
+    product_json = json.dumps(
+        {
+            "title": "Test Product",
+            "identifier": "TEST_PRODUCT",
+            "releaseDate": "May 5, 2020",
+        }
+    )
+    test_product = Product.from_object(product_json)
+
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == ""
+    assert test_product.description == ""
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region is None
+    assert test_product.publisher is None
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ['API']
+    assert test_product.theme is None
+    assert test_product.releaseDate == "2020-05-05"
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+
+
+def test_product_class_type_error() -> None:
+    """Test the Product class."""
+    unsupported_obj = 123
+    with pytest.raises(TypeError) as error_info:
+        Product.from_object(unsupported_obj)
+    assert str(error_info.value) == f"Could not resolve the object provided: {unsupported_obj}"
+
+
+def test_create_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test create Product method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/products/TEST_PRODUCT"
+    expected_data = {
+        "title": "Test Product",
+        "identifier": "TEST_PRODUCT",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "isActive": True,
+        "isRestricted": False,
+        "maintainer": ["maintainer"],
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tag": ["tag1", "tag2"],
+        "deliveryChannel": ["API"],
+        "theme": "theme",
+        "releaseDate": "2020-05-05",
+        "language": "English",
+        "status": "Available",
+        "image": "",
+        "logo": "",
+    }
+    requests_mock.post(url, json=expected_data)
+
+    my_product = Product(
+        title="Test Product",
+        identifier="TEST_PRODUCT",
+        category=["category"],
+        shortAbstract="short abstract",
+        description="description",
+        isActive=True,
+        isRestricted=False,
+        maintainer=["maintainer"],
+        region=["region"],
+        publisher="publisher",
+        subCategory=["subCategory"],
+        tag=["tag1", "tag2"],
+        deliveryChannel=["API"],
+        theme="theme",
+        releaseDate="2020-05-05",
+        language="English",
+        status="Available",
+        image="",
+        logo="",
+    )
+    status_code = 200
+    resp = fusion_obj.create_product(my_product, catalog=catalog)
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def test_update_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test update Product method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/products/TEST_PRODUCT"
+    expected_data = {
+        "title": "Test Product",
+        "identifier": "TEST_PRODUCT",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "isActive": True,
+        "isRestricted": False,
+        "maintainer": ["maintainer"],
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tag": ["tag1", "tag2"],
+        "deliveryChannel": ["API"],
+        "theme": "theme",
+        "releaseDate": "2020-05-05",
+        "language": "English",
+        "status": "Available",
+        "image": "",
+        "logo": "",
+    }
+    requests_mock.put(url, json=expected_data)
+
+    my_product = Product(
+        title="Test Product",
+        identifier="TEST_PRODUCT",
+        category=["category"],
+        shortAbstract="short abstract",
+        description="description",
+        isActive=True,
+        isRestricted=False,
+        maintainer=["maintainer"],
+        region=["region"],
+        publisher="publisher",
+        subCategory=["subCategory"],
+        tag=["tag1", "tag2"],
+        deliveryChannel=["API"],
+        theme="theme",
+        releaseDate="2020-05-05",
+        language="English",
+        status="Available",
+        image="",
+        logo="",
+    )
+    status_code = 200
+    resp = fusion_obj.update_product(my_product, catalog=catalog)
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def test_delete_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test delete Product method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/products/TEST_PRODUCT"
+    status_code = 204
+    requests_mock.delete(url, status_code=status_code)
+
+    resp = fusion_obj.delete_product(product_id="TEST_PRODUCT", catalog=catalog)
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code

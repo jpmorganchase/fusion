@@ -33,9 +33,9 @@ from fusion.utils import (
     path_to_url,
     read_csv,
     read_json,
+    tidy_string,
     upload_files,
     validate_file_names,
-    tidy_string,
 )
 
 
