@@ -1642,6 +1642,29 @@ class Fusion:
             resp: requests.Response = self.session.delete(url)
             resp.raise_for_status()
             return resp
+    
+    def copy_product(
+            self: Fusion,
+            product_id: str,
+            catalog_from: str,
+            catalog_to: str,
+            client_to: Fusion | None = None,
+    ) -> requests.Response:
+        """Copy product from one catalog and/or environment to another by copy.
+
+        Args:
+            product_id (str): Product  identifier.
+            catalog_from (str): Catalog identifer from which to copy product.
+            catalog_to (str): Catalog  identifier to wich to copy product.
+            client_to (Fusion | None, optional): Fusion client object. Defaults to current instance.
+
+        Returns:
+            requests.Response: The response object from the API call.
+        """
+        if client_to is None:
+            client_to = self
+        product_obj  =  Product.from_catalog(product_id=product_id, catalog=catalog_from, client=self)
+        return client_to.create_product(product_obj, catalog=catalog_to)
 
 
 @dataclass
@@ -1803,7 +1826,7 @@ class Product:
     @classmethod
     def from_catalog(cls: type[Product], client: Fusion, product_id: str, catalog: str) -> Product:
         """Create a Product object from a catalog."""
-        list_products = client.session.get(f"{client.root_url}catalogs/{catalog}/products/").json()["resources"]
+        list_products = client.session.get(f"{client.root_url}catalogs/{catalog}/products").json()["resources"]
         dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == product_id][0]
         product_obj = Product.from_dict(dict_)
 
