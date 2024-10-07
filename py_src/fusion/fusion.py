@@ -1101,7 +1101,7 @@ class Fusion:
 
         Args:
             path (str): path to a file or a folder with files
-            dataset (str, optional): Dataset name to which the file will be uploaded (for single file only).
+            dataset (str, optional): Dataset identifier to which the file will be uploaded (for single file only).
                                     If not provided the dataset will be implied from file's name.
             dt_str (str, optional): A file name. Can be any string but is usually a date.
                                     Defaults to 'latest' which will return the most recent.
@@ -1239,7 +1239,7 @@ class Fusion:
 
         Args:
             data (str): an object in memory to upload
-            dataset (str, optional): Dataset name to which the file will be uploaded (for single file only).
+            dataset (str, optional): Dataset identifier to which the file will be uploaded (for single file only).
                                     If not provided the dataset will be implied from file's name.
             series_member (str, optional): A single date or label. Defaults to 'latest' which will return
                 the most recent.
@@ -1415,7 +1415,7 @@ class Fusion:
 
     def list_dataset_lineage(
         self,
-        dataset_id: str,
+        dataset: str,
         catalog: Optional[str] = None,
         output: bool = False,
         max_results: int = -1,
@@ -1435,11 +1435,11 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url_dataset = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}"
+        url_dataset = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}"
         resp_dataset = self.session.get(url_dataset)
         resp_dataset.raise_for_status()
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}/lineage"
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/lineage"
         resp = self.session.get(url)
         data = resp.json()
         relations_data = data["relations"]
@@ -1458,19 +1458,19 @@ class Fusion:
             destination_dataset_id = entry["destination"]["dataset"]
             destination_catalog = entry["destination"]["catalog"]
 
-            if destination_dataset_id == dataset_id:
-                for dataset in data["datasets"]:
-                    if dataset["identifier"] == source_dataset_id and dataset["status"] != "Restricted":
-                        source_dataset_title = dataset["title"]
-                    elif dataset["identifier"] == source_dataset_id and dataset["status"] == "Restricted":
+            if destination_dataset_id == dataset:
+                for ds in data["datasets"]:
+                    if ds["identifier"] == source_dataset_id and ds["status"] != "Restricted":
+                        source_dataset_title = ds["title"]
+                    elif ds["identifier"] == source_dataset_id and ds["status"] == "Restricted":
                         source_dataset_title = "Access Restricted"
                 data_dict[source_dataset_id] = ("source", source_catalog, source_dataset_title)
 
-            if source_dataset_id == dataset_id:
-                for dataset in data["datasets"]:
-                    if dataset["identifier"] == destination_dataset_id and dataset["status"] != "Restricted":
-                        destination_dataset_title = dataset["title"]
-                    elif dataset["identifier"] == destination_dataset_id and dataset["status"] == "Restricted":
+            if source_dataset_id == dataset:
+                for ds in data["datasets"]:
+                    if ds["identifier"] == destination_dataset_id and ds["status"] != "Restricted":
+                        destination_dataset_title = ds["title"]
+                    elif ds["identifier"] == destination_dataset_id and ds["status"] == "Restricted":
                         destination_dataset_title = "Access Restricted"
                 data_dict[destination_dataset_id] = ("produced", destination_catalog, destination_dataset_title)
 
@@ -1624,13 +1624,13 @@ class Fusion:
     
     def delete_product(
             self,
-            product_id: str,
+            product: str,
             catalog: Optional[str] = None,
         ) -> requests.Response:
             """Delete a product from the catalog.
 
             Args:
-                product_id (str): The identifier of the product to delete.
+                product (str): The identifier of the product to delete.
                 catalog (str, optional): A catalog identifier. Defaults to None.
 
             Returns:
@@ -1638,14 +1638,14 @@ class Fusion:
             """
             catalog = self._use_catalog(catalog)
 
-            url = f"{self.root_url}catalogs/{catalog}/products/{product_id}"
+            url = f"{self.root_url}catalogs/{catalog}/products/{product}"
             resp: requests.Response = self.session.delete(url)
             resp.raise_for_status()
             return resp
     
     def copy_product(
             self: Fusion,
-            product_id: str,
+            product: str,
             catalog_from: str,
             catalog_to: str,
             client_to: Fusion | None = None,
@@ -1653,7 +1653,7 @@ class Fusion:
         """Copy product from one catalog and/or environment to another by copy.
 
         Args:
-            product_id (str): Product  identifier.
+            product (str): Product  identifier.
             catalog_from (str): Catalog identifer from which to copy product.
             catalog_to (str): Catalog  identifier to wich to copy product.
             client_to (Fusion | None, optional): Fusion client object. Defaults to current instance.
@@ -1663,7 +1663,7 @@ class Fusion:
         """
         if client_to is None:
             client_to = self
-        product_obj  =  Product.from_catalog(product_id=product_id, catalog=catalog_from, client=self)
+        product_obj  =  Product.from_catalog(product=product, catalog=catalog_from, client=self)
         return client_to.create_product(product_obj, catalog=catalog_to)
 
 
@@ -1824,10 +1824,10 @@ class Product:
         raise TypeError(f"Could not resolve the object provided: {product_source}")
 
     @classmethod
-    def from_catalog(cls: type[Product], client: Fusion, product_id: str, catalog: str) -> Product:
+    def from_catalog(cls: type[Product], client: Fusion, product: str, catalog: str) -> Product:
         """Create a Product object from a catalog."""
         list_products = client.session.get(f"{client.root_url}catalogs/{catalog}/products").json()["resources"]
-        dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == product_id][0]
+        dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == product][0]
         product_obj = Product.from_dict(dict_)
 
         return product_obj
@@ -1836,3 +1836,236 @@ class Product:
         """Convert the Product object to a dictionary."""
         product_dict = asdict(self)
         return product_dict
+
+
+@dataclass
+class Dataset:
+    """Dataset class."""
+
+    title: str
+    identifier: str
+    category: str | list[str] | None = None
+    description: str = ""
+    frequency: str = "Once"
+    isInternalOnlyDataset: bool = False
+    isThirdPartyData: bool = True
+    isRestricted: bool | None = None
+    isRawData: bool = False
+    maintainer: str | None = "J.P. Morgan Fusion"
+    source: str | list[str] | None = None
+    region: str | list[str] | None = None
+    publisher: str = "J.P. Morgan"
+    product:  str | list[str] | None = None
+    subCategory: str | list[str] | None = None
+    tags: str | list[str] | None = None
+    createdDate: str | None = None
+    modifiedDate: str | None = None
+    deliveryChannel: str | list[str] = field(default_factory=lambda: ["API"])
+    language: str = "English"
+    status: str = "Available"
+    type_: str | None = "Source"
+    containerType: str | None = "Snapshot-Full"
+    snowflake: str | None = None
+    complexity: str | None = None
+    isImmutable: bool | None = None
+    isMnpi: bool | None = None
+    isPci: bool | None = None
+    isPii: bool | None = None
+    isClient: bool | None = None
+    isPublic: bool | None = None
+    isInternal: bool | None = None
+    isConfidential: bool | None = None
+    isHighlyConfidential: bool | None = None
+    isActive: bool | None = None
+
+    def  __repr__(self: Dataset) -> str:
+        """Format object representation."""
+        return (
+            f"Dataset(\n"
+            f"  title={self.title!r},\n"
+            f"  identifier={self.identifier!r},\n"
+            f"  category={self.category!r},\n"
+            f"  description={self.description!r},\n"
+            f"  frequency={self.frequency!r},\n"
+            f"  isInternalOnlyDataset={self.isInternalOnlyDataset!r},\n"
+            f"  isThirdPartyData={self.isThirdPartyData!r},\n"
+            f"  isRestricted={self.isRestricted!r},\n"
+            f"  isRawData={self.isRawData!r},\n"
+            f"  maintainer={self.maintainer!r},\n"
+            f"  source={self.source!r},\n"
+            f"  region={self.region!r},\n"
+            f"  publisher={self.publisher!r},\n"
+            f"  product={self.product!r},\n"
+            f"  subCategory={self.subCategory!r},\n"
+            f"  tags={self.tags!r},\n"
+            f"  createdDate={self.createdDate!r},\n"
+            f"  modifiedDate={self.modifiedDate!r},\n"
+            f"  deliveryChannel={self.deliveryChannel!r},\n"
+            f"  language={self.language!r},\n"
+            f"  status={self.status!r},\n"
+            f"  type_={self.type_!r},\n"
+            f"  containerType={self.containerType!r},\n"
+            f"  snowflake={self.snowflake!r},\n"
+            f"  complexity={self.complexity!r},\n"
+            f"  isImmutable={self.isImmutable!r},\n"
+            f"  isMnpi={self.isMnpi!r},\n"
+            f"  isPci={self.isPci!r},\n"
+            f"  isPii={self.isPii!r},\n"
+            f"  isClient={self.isClient!r},\n"
+            f"  isPublic={self.isPublic!r},\n"
+            f"  isInternal={self.isInternal!r},\n"
+            f"  isConfidential={self.isConfidential!r},\n"
+            f"  isHighlyConfidential={self.isHighlyConfidential!r},\n"
+            f"  isActive={self.isActive!r}\n"
+        )
+    
+    def __post_init__(self: Dataset) -> None:
+        """Format Dataset metadata fields after object initialization."""
+        self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
+        self.title = tidy_string(self.title)
+        self.description = tidy_string(self.description)
+        self.category = (
+            self.category if isinstance(self.category, list) or self.category is None else make_list(self.category)
+        )
+        self.deliveryChannel = (
+            self.deliveryChannel if isinstance(self.deliveryChannel, list) else make_list(self.deliveryChannel)
+        )
+        self.source = (
+            self.source if isinstance(self.source, list) or self.source is None else make_list(self.source)
+        )
+        self.region = (
+            self.region if isinstance(self.region, list) or self.region is None else make_list(self.region)
+        )
+        self.product = (
+            self.product if isinstance(self.product, list) or self.product is None else make_list(self.product)
+        )
+        self.subCategory = (
+            self.subCategory if isinstance(self.subCategory, list) or self.subCategory is None else make_list(self.subCategory)
+        )
+        self.tags = (
+            self.tags if isinstance(self.tags, list) or self.tags is None else make_list(self.tags)
+        )
+        self.isInternalOnlyDataset = self.isInternalOnlyDataset if isinstance(self.isInternalOnlyDataset, bool) else make_bool(self.isInternalOnlyDataset)
+        self.createdDate = convert_date_format(self.createdDate) if self.createdDate else None
+        self.modifiedDate = convert_date_format(self.modifiedDate) if self.modifiedDate else None
+
+    @classmethod
+    def from_series(cls: type[Dataset], series: pd.Series) -> Dataset:
+        """Create a Dataset object from a pandas Series."""
+        series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
+        series = series.rename({"tag": "tags"})
+        series = series.rename({"type_": "type"})
+        series = series.rename({"productId": "product"})
+
+        isInternalOnlyDataset = series.get("isinternalonlydataset", None)
+        isInternalOnlyDataset = make_bool(isInternalOnlyDataset) if isInternalOnlyDataset is not None else isInternalOnlyDataset
+        isRestricted = series.get("isrestricted", None)
+        isRestricted = make_bool(isRestricted) if isRestricted is not None else isRestricted
+        isImmutable = series.get("isimmutable", None)
+        isImmutable = make_bool(isImmutable) if isImmutable is not None else isImmutable
+        isMnpi = series.get("ismnpi", None)
+        isMnpi = make_bool(isMnpi) if isMnpi is not None else isMnpi
+        isPci = series.get("ispci", None)
+        isPci = make_bool(isPci) if isPci is not None else isPci
+        isPii = series.get("ispii", None)
+        isPii = make_bool(isPii) if isPii is not None else isPii
+        isClient = series.get("isclient", None)
+        isClient = make_bool(isClient) if isClient is not None else isClient
+        isPublic = series.get("ispublic", None)
+        isPublic = make_bool(isPublic) if isPublic is not None else isPublic
+        isInternal = series.get("isinternal", None)
+        isInternal = make_bool(isInternal) if isInternal is not None else isInternal
+        isConfidential = series.get("isconfidential", None)
+        isConfidential = make_bool(isConfidential) if isConfidential is not None else isConfidential
+        isHighlyConfidential = series.get("ishighlyconfidential", None)
+        isHighlyConfidential = make_bool(isHighlyConfidential) if isHighlyConfidential is not None else isHighlyConfidential
+        isActive = series.get("isactive", None)
+        isActive = make_bool(isActive) if isActive is not None else isActive
+
+        dataset = cls(
+            identifier=series.get("identifier", None),
+            category=series.get("category", None),
+            deliveryChannel=series.get("deliverychannel", ["API"]),
+            title=series.get("title", None),
+            description=series.get("description", ""),
+            frequency=series.get("frequency", "Once"),
+            isInternalOnlyDataset=isInternalOnlyDataset,
+            isThirdPartyData=series.get("isthirdpartydata", True),
+            isRestricted=isRestricted,
+            isRawData=series.get("israwdata", False),
+            maintainer=series.get("maintainer", "J.P. Morgan Fusion"),
+            source=series.get("source", None),
+            region=series.get("region", None),
+            publisher=series.get("publisher", "J.P. Morgan"),
+            product=series.get("product", None),
+            subCategory=series.get("subcategory", None),
+            tags=series.get("tags", None),
+            containerType=series.get("containertype", "Snapshot-Full"),
+            language=series.get("language", "English"),
+            status=series.get("status", "Available"),
+            type_=series.get("type", "Source"),
+            createdDate=series.get("createddate", None),
+            modifiedDate=series.get("modifieddate", None),
+            snowflake=series.get("snowflake", None),
+            complexity=series.get("complexity", None),
+            isImmutable=isImmutable,
+            isMnpi=isMnpi,
+            isPci=isPci,
+            isPii=isPii,
+            isClient=isClient,
+            isPublic=isPublic,
+            isInternal=isInternal,
+            isConfidential=isConfidential,
+            isHighlyConfidential=isHighlyConfidential,
+            isActive=isActive,
+        )
+        return dataset
+
+    @classmethod
+    def from_dict(cls: type[Dataset], data: dict[str, Any]) -> Dataset:
+        """Create a Dataset object from a dictionary."""
+        keys = [f.name for f in fields(cls)]
+        keys = ["type" if key == "type_" else key for key in keys]
+        data = {k: v for k, v in data.items() if k in keys}
+        if "type" in data:
+            data["type_"] = data.pop("type")
+        return cls(**data)
+
+    @classmethod
+    def from_csv(cls: type[Dataset], file_path: str, identifier: str | None = None) -> Dataset:
+        """Create a list of Dataset objects from a CSV file."""
+        data = pd.read_csv(file_path)
+
+        return (
+            Dataset.from_series(data[data["identifier"] == identifier].reset_index(drop=True).iloc[0])
+            if identifier
+            else Dataset.from_series(data.reset_index(drop=True).iloc[0])
+        )
+    
+    @classmethod
+    def from_object(
+        cls: type[Dataset],
+        dataset_source: Dataset | dict[str, Any] | str | pd.Series
+    ) -> Dataset:
+        """Create a Dataset object from a dictionary."""
+        if isinstance(dataset_source, Dataset):
+            return dataset_source
+        if isinstance(dataset_source, dict):
+            return Dataset.from_dict(dataset_source)
+        if isinstance(dataset_source, str):
+            if _is_json(dataset_source):
+                return Dataset.from_dict(js.loads(dataset_source))
+            return Dataset.from_csv(dataset_source)
+        if isinstance(dataset_source, pd.Series):
+            return Dataset.from_series(dataset_source)
+        
+        raise TypeError(f"Could not resolve the object provided: {dataset_source}")
+    
+    @classmethod
+    def from_catalog(cls: type[Dataset], client: Fusion, dataset_id: str, catalog: str) -> Dataset:
+        """Create a Dataset object from a catalog."""
+        list_datasets = client.session.get(f"{client.root_url}catalogs/{catalog}/datasets").json()["resources"]
+        dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset_id][0]
+        dataset_obj = Dataset.from_dict(dict_)
+
+        return dataset_obj

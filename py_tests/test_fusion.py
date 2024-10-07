@@ -1035,7 +1035,7 @@ def test_product_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj: F
     }
     requests_mock.get(url, json=expected_data)
 
-    my_product = Product.from_catalog(client=fusion_obj, product_id="TEST_PRODUCT", catalog=catalog)
+    my_product = Product.from_catalog(client=fusion_obj, product="TEST_PRODUCT", catalog=catalog)
     assert isinstance(my_product, Product)
     assert my_product.title == "Test Product"
     assert my_product.identifier == "TEST_PRODUCT"
@@ -1303,7 +1303,7 @@ def test_delete_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     status_code = 204
     requests_mock.delete(url, status_code=status_code)
 
-    resp = fusion_obj.delete_product(product_id="TEST_PRODUCT", catalog=catalog)
+    resp = fusion_obj.delete_product(product="TEST_PRODUCT", catalog=catalog)
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
 
@@ -1372,6 +1372,6 @@ def  test_copy_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) 
     requests_mock.post(post_url, json=expected_post_data)
 
     status_code = 200
-    resp = fusion_obj.copy_product(product_id="TEST_PRODUCT", catalog_from=catalog_from, catalog_to=new_catalog)
+    resp = fusion_obj.copy_product(product="TEST_PRODUCT", catalog_from=catalog_from, catalog_to=new_catalog)
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
