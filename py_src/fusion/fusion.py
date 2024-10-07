@@ -1665,6 +1665,44 @@ class Fusion:
             client_to = self
         product_obj  =  Product.from_catalog(product=product, catalog=catalog_from, client=self)
         return client_to.create_product(product_obj, catalog=catalog_to)
+    
+    def list_product_dataset_mapping(
+        self,
+        dataset: str | list[str] | None = None,
+        product: str | list[str] | None = None,
+        catalog: str | None = None,
+    ) -> pd.DataFrame:
+        """get the product to dataset linking contained in  a catalog. A product is a grouping of datasets.
+
+        Args:
+            dataset (str | list[str] | None, optional): A string or list of strings that are dataset
+            identifiers to filter the output. If a list is provided then it will return
+            datasets whose identifier matches any of the strings. Defaults to None.
+            product (str | list[str] | None, optional): A string or list of strings that are product
+            identifiers to filter the output. If a list is provided then it will return
+            products whose identifier matches any of the strings. Defaults to None.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            pd.DataFrame: a dataframe with a row  for each dataset to product mapping.
+        """
+        catalog = self._use_catalog(catalog)
+        url = f"{self.root_url}catalogs/{catalog}/productDatasets"
+        mapping_df  = pd.DataFrame(self._call_for_dataframe(url, self.session))
+
+        if dataset:
+            if isinstance(dataset, list):
+                contains = "|".join(f"{s}" for s in dataset)
+                mapping_df = mapping_df[mapping_df["dataset"].str.contains(contains, case=False)]
+            if isinstance(dataset, str):
+                mapping_df = mapping_df[mapping_df["dataset"].str.contains(dataset, case=False)]
+        if product:
+            if isinstance(product, list):
+                contains = "|".join(f"{s}" for s in product)
+                mapping_df = mapping_df[mapping_df["product"].str.contains(contains, case=False)]
+            if isinstance(product, str):
+                mapping_df = mapping_df[mapping_df["product"].str.contains(product, case=False)]
+        return mapping_df
 
 
 @dataclass
@@ -2062,10 +2100,27 @@ class Dataset:
         raise TypeError(f"Could not resolve the object provided: {dataset_source}")
     
     @classmethod
-    def from_catalog(cls: type[Dataset], client: Fusion, dataset_id: str, catalog: str) -> Dataset:
+    def from_catalog(
+        cls: type[Dataset],
+        client: Fusion,
+        dataset: str,
+        catalog: str
+    ) -> Dataset:
         """Create a Dataset object from a catalog."""
         list_datasets = client.session.get(f"{client.root_url}catalogs/{catalog}/datasets").json()["resources"]
-        dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset_id][0]
+        dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset][0]
         dataset_obj = Dataset.from_dict(dict_)
 
+        prod_df = client.list_product_dataset_mapping(catalog=catalog)
+
+        if dataset.lower() in list(prod_df.dataset.str.lower()):
+            product = [prod_df[prod_df["dataset"].str.lower() == dataset.lower()]["product"].iloc[0]]
+            dataset_obj.product = product
+
         return dataset_obj
+    
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the Dataset object to a dictionary."""
+        dataset_dict = asdict(self)
+        dataset_dict["type"] = dataset_dict.pop("type_")
+        return dataset_dict

@@ -1375,3 +1375,78 @@ def  test_copy_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) 
     resp = fusion_obj.copy_product(product="TEST_PRODUCT", catalog_from=catalog_from, catalog_to=new_catalog)
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
+
+
+def test_list_product_dataset_mapping_dataset_list(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list Product Dataset Mapping method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data = {
+        "resources": [
+            {"product": "P00001", "dataset": "D00001"}, {"product": "P00002", "dataset": "D00002"},
+        ]
+    }
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_product_dataset_mapping(dataset=["D00001"], catalog=catalog)
+    assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+
+
+def test_list_product_dataset_mapping_dataset_str(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list Product Dataset Mapping method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data = {
+        "resources": [
+            {"product": "P00001", "dataset": "D00001"}, {"product": "P00002", "dataset": "D00002"},
+        ]
+    }
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_product_dataset_mapping(dataset="D00001", catalog=catalog)
+    assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+
+
+def test_list_product_dataset_mapping_product_str(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list Product Dataset Mapping method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data = {
+        "resources": [
+            {"product": "P00001", "dataset": "D00001"}, {"product": "P00002", "dataset": "D00002"},
+        ]
+    }
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_product_dataset_mapping(product="P00001", catalog=catalog)
+    assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+
+
+def test_list_product_dataset_mapping_product_list(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list Product Dataset Mapping method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data = {
+        "resources": [
+            {"product": "P00001", "dataset": "D00001"}, {"product": "P00002", "dataset": "D00002"},
+        ]
+    }
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_product_dataset_mapping(product=["P00001"], catalog=catalog)
+    assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+
+
+def test_list_product_dataset_mapping_product_no_filter(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list Product Dataset Mapping method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data = {
+        "resources": [
+            {"product": "P00001", "dataset": "D00001"}
+        ]
+    }
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_product_dataset_mapping(catalog=catalog)
+    assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
