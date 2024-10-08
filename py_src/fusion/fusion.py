@@ -1704,6 +1704,110 @@ class Fusion:
                 mapping_df = mapping_df[mapping_df["product"].str.contains(product, case=False)]
         return mapping_df
 
+    def create_dataset(
+        self,
+        dataset_obj: str | dict[str, Any] | Dataset | pd.Series,
+        catalog: str | None = None,
+    ) -> requests.Response:
+        """Uploada dataset via API from a Dataset object.
+
+        Args:
+            dataset_obj (str | dict[str, Any] | Dataset | pd.Series): Dataset metadata.
+            catalog (str | None, optional): A catalog identifier. Defaults to "common".
+
+        Returns:
+            requests.Response: Request response.
+        """
+        catalog = self._use_catalog(catalog)
+
+        if isinstance(dataset_obj, (str, dict, pd.Series, Dataset)):
+            dataset = Dataset.from_object(dataset_obj)
+        else:
+            raise ValueError("Dataset object must be a dictionary, path to a csv, or a Fusion Dataset object")
+        
+        dataset.createdDate = dataset.createdDate if dataset.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+
+        dataset.modifiedDate = dataset.modifiedDate if dataset.modifiedDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+
+        data = dataset.to_dict()
+
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset.identifier}"
+        resp: requests.Response = self.session.post(url, json=data)
+        return resp
+    
+    def update_dataset(
+        self,
+        dataset_obj: str | dict[str, Any] | Dataset | pd.Series,
+        catalog: str | None = None,
+    ) -> requests.Response:
+        """Updates a dataset via API from dataset object.
+
+        Args:
+            dataset_obj (str | dict[str, Any] | Dataset | pd.Series): Dataset metadata.
+            catalog (str | None, optional): A catalog identifier. Defaults to "common".
+
+        Returns:
+            requests.Response: Request response.
+        """
+        catalog = self._use_catalog(catalog)
+
+        if isinstance(dataset_obj, (str, dict, pd.Series, Dataset)):
+            dataset = Dataset.from_object(dataset_obj)
+        else:
+            raise ValueError("Dataset object must be a dictionary, path to a csv, or a Fusion Dataset object")
+        
+        dataset.createdDate = dataset.createdDate if dataset.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+
+        dataset.modifiedDate = dataset.modifiedDate if dataset.modifiedDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+
+        data = dataset.to_dict()
+
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset.identifier}"
+        resp: requests.Response = self.session.put(url, json=data)
+        return resp
+    
+    def delete_dataset(
+        self,
+        dataset: str,
+        catalog: str | None = None,
+    ) -> requests.Response:
+        """Delete a dataset via API from its dataset identifier.
+
+        Args:
+            dataset (str): A dataset identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            requests.Response: Request response.
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}"
+        resp: requests.Response = self.session.delete(url)
+        return resp
+    
+    def copy_dataset(
+        self,
+        dataset: str,
+        catalog_from: str,
+        catalog_to: str,
+        client_to: Fusion | None = None,
+    ) -> requests.Response:
+        """Copy dataset and its attributes from one catalog and/or environment to another by copy.
+
+        Args:
+            dataset (str): A dataset identifier.
+            catalog_from (str): A catalog identifier from which to copy dataset.
+            catalog_to (str): A catalog identifier to which to copy dataset.
+            client_to (Fusion | None, optional): Fusion client object. Defaults to current instance.
+
+        Returns:
+            list[requests.Response]: Request response.
+        """
+        if client_to is None:
+            client_to = self
+        dataset_obj = Dataset.from_catalog(dataset=dataset, catalog=catalog_from, client=self)
+        return client_to.create_dataset(dataset_obj, catalog=catalog_to)
 
 @dataclass
 class Product:
