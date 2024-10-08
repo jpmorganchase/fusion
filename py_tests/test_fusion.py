@@ -2094,3 +2094,139 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
     assert my_dataset.isConfidential is False
     assert my_dataset.isHighlyConfidential is False
     assert my_dataset.isActive is False
+
+
+def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test create Dataset method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/TEST_DATASET"
+    expected_data = {
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": False,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+    }
+    requests_mock.post(url, json=expected_data)
+
+    dataset_dict = {
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": False,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+    }
+
+    resp = fusion_obj.create_dataset(dataset_obj=dataset_dict, catalog=catalog)
+    status_code = 200
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def create_dataset_valueerror(fusion_obj: Fusion) -> None:
+    """Test create Dataset method."""
+    catalog = "my_catalog"
+    dataset_list = [
+        {
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": False,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+    }
+    ]
+
+    with pytest.raises(
+        ValueError, match="Dataset object must be a dictionary, path to a csv, or a Fusion Dataset object"
+    ):
+        fusion_obj.create_dataset(dataset_obj=dataset_list, catalog=catalog)
