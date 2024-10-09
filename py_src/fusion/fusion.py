@@ -1447,7 +1447,7 @@ class Fusion:
         restricted_datasets = [
             dataset_metadata["identifier"]
             for dataset_metadata in data["datasets"]
-            if dataset_metadata["status"] == "Restricted"
+            if dataset_metadata.get("status", None) == "Restricted"
         ]
 
         data_dict = {}
@@ -1460,17 +1460,19 @@ class Fusion:
 
             if destination_dataset_id == dataset:
                 for ds in data["datasets"]:
-                    if ds["identifier"] == source_dataset_id and ds["status"] != "Restricted":
+                    if ds["identifier"] == source_dataset_id and ds.get("status", None) != "Restricted":
                         source_dataset_title = ds["title"]
-                    elif ds["identifier"] == source_dataset_id and ds["status"] == "Restricted":
+                    elif ds["identifier"] == source_dataset_id and ds.get("status", None) == "Restricted":
                         source_dataset_title = "Access Restricted"
                 data_dict[source_dataset_id] = ("source", source_catalog, source_dataset_title)
 
             if source_dataset_id == dataset:
                 for ds in data["datasets"]:
-                    if ds["identifier"] == destination_dataset_id and ds["status"] != "Restricted":
+                    if ds["identifier"] == destination_dataset_id and ds.get("status", None) != "Restricted":
                         destination_dataset_title = ds["title"]
-                    elif ds["identifier"] == destination_dataset_id and ds["status"] == "Restricted":
+                    elif ds[
+                        "identifier"
+                        ] == destination_dataset_id and ds.get("status", None) == "Restricted":
                         destination_dataset_title = "Access Restricted"
                 data_dict[destination_dataset_id] = ("produced", destination_catalog, destination_dataset_title)
 

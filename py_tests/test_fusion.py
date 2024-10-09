@@ -688,7 +688,7 @@ def test_list_dataset_lineage(requests_mock: requests_mock.Mocker, fusion_obj: F
             },
         ],
         "datasets": [
-            {"identifier": "source_dataset", "status": "Active", "title": "Source Dataset"},
+            {"identifier": "source_dataset", "title": "Source Dataset"},
             {"identifier": "destination_dataset", "status": "Active", "title": "Destination Dataset"},
         ],
     }
