@@ -1437,7 +1437,7 @@ class Fusion:
         restricted_datasets = [
             dataset_metadata["identifier"]
             for dataset_metadata in data["datasets"]
-            if dataset_metadata["status"] == "Restricted"
+            if dataset_metadata.get("status", None) == "Restricted"
         ]
 
         data_dict = {}
@@ -1450,17 +1450,17 @@ class Fusion:
 
             if destination_dataset_id == dataset_id:
                 for dataset in data["datasets"]:
-                    if dataset["identifier"] == source_dataset_id and dataset["status"] != "Restricted":
+                    if dataset["identifier"] == source_dataset_id and dataset.get("status", None) != "Restricted":
                         source_dataset_title = dataset["title"]
-                    elif dataset["identifier"] == source_dataset_id and dataset["status"] == "Restricted":
+                    elif dataset["identifier"] == source_dataset_id and dataset.get("status", None) == "Restricted":
                         source_dataset_title = "Access Restricted"
                 data_dict[source_dataset_id] = ("source", source_catalog, source_dataset_title)
 
             if source_dataset_id == dataset_id:
                 for dataset in data["datasets"]:
-                    if dataset["identifier"] == destination_dataset_id and dataset["status"] != "Restricted":
+                    if dataset["identifier"] == destination_dataset_id and dataset.get("status", None) != "Restricted":
                         destination_dataset_title = dataset["title"]
-                    elif dataset["identifier"] == destination_dataset_id and dataset["status"] == "Restricted":
+                    elif dataset["identifier"] == destination_dataset_id and dataset.get("status", None) == "Restricted":
                         destination_dataset_title = "Access Restricted"
                 data_dict[destination_dataset_id] = ("produced", destination_catalog, destination_dataset_title)
 
@@ -1485,7 +1485,7 @@ class Fusion:
 
         return lineage_df
 
-    def update_dataset_lineage(
+    def create_dataset_lineage(
         self,
         base_dataset: str,
         source_dataset_catalog_mapping: Union[pd.DataFrame, list[dict[str, str]]],

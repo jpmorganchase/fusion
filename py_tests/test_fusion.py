@@ -687,7 +687,7 @@ def test_list_dataset_lineage(requests_mock: requests_mock.Mocker, fusion_obj: F
             },
         ],
         "datasets": [
-            {"identifier": "source_dataset", "status": "Active", "title": "Source Dataset"},
+            {"identifier": "source_dataset", "title": "Source Dataset"},
             {"identifier": "destination_dataset", "status": "Active", "title": "Destination Dataset"},
         ],
     }
@@ -789,7 +789,7 @@ def test_list_dataset_lineage_dataset_not_found(requests_mock: requests_mock.Moc
         fusion_obj.list_dataset_lineage(dataset_id, catalog=catalog)
 
 
-def test_update_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_create_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     base_dataset = "base_dataset"
     source_dataset = "source_dataset"
     source_dataset_catalog = "source_catalog"
@@ -802,8 +802,8 @@ def test_update_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fus
     data = [{"dataset": "source_dataset", "catalog": "source_catalog"}]
     df_input = pd.DataFrame(data)
 
-    # Call the update_dataset_lineage method
-    resp = fusion_obj.update_dataset_lineage(
+    # Call the create_dataset_lineage method
+    resp = fusion_obj.create_dataset_lineage(
         base_dataset=base_dataset,
         source_dataset_catalog_mapping=df_input,
         catalog=catalog, 
@@ -816,7 +816,7 @@ def test_update_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fus
         assert resp.status_code == status_code
 
 
-def test_update_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_create_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     base_dataset = "base_dataset"
     source_dataset = "source_dataset"
     source_dataset_catalog = "source_catalog"
@@ -828,8 +828,8 @@ def test_update_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, f
 
     data = [{"dataset": "source_dataset", "catalog": "source_catalog"}]
 
-    # Call the update_dataset_lineage method
-    resp = fusion_obj.update_dataset_lineage(
+    # Call the create_dataset_lineage method
+    resp = fusion_obj.create_dataset_lineage(
         base_dataset=base_dataset,
         source_dataset_catalog_mapping=data,
         catalog=catalog,
@@ -842,7 +842,7 @@ def test_update_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, f
         assert resp.status_code == status_code
 
 
-def test_update_dataset_lineage_valueerror(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_create_dataset_lineage_valueerror(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     base_dataset = "base_dataset"
     source_dataset = "source_dataset"
     source_dataset_catalog = "source_catalog"
@@ -856,14 +856,14 @@ def test_update_dataset_lineage_valueerror(requests_mock: requests_mock.Mocker, 
     with pytest.raises(
         ValueError, match="source_dataset_catalog_mapping must be a pandas DataFrame or a list of dictionaries."
     ):
-        fusion_obj.update_dataset_lineage(
+        fusion_obj.create_dataset_lineage(
             base_dataset=base_dataset,
             source_dataset_catalog_mapping=data,  # type: ignore
             catalog=catalog
         )
 
 
-def test_update_dataset_lineage_httperror(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_create_dataset_lineage_httperror(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     base_dataset = "base_dataset"
     source_dataset = "source_dataset"
     source_dataset_catalog = "source_catalog"
@@ -874,7 +874,7 @@ def test_update_dataset_lineage_httperror(requests_mock: requests_mock.Mocker, f
     requests_mock.post(url, status_code=500, json=expected_data)
 
     with pytest.raises(requests.exceptions.HTTPError):
-        fusion_obj.update_dataset_lineage(
+        fusion_obj.create_dataset_lineage(
             base_dataset=base_dataset,
             source_dataset_catalog_mapping=data,
             catalog=catalog
