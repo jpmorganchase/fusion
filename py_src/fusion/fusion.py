@@ -1460,7 +1460,9 @@ class Fusion:
                 for dataset in data["datasets"]:
                     if dataset["identifier"] == destination_dataset_id and dataset.get("status", None) != "Restricted":
                         destination_dataset_title = dataset["title"]
-                    elif dataset["identifier"] == destination_dataset_id and dataset.get("status", None) == "Restricted":
+                    elif dataset[
+                        "identifier"
+                        ] == destination_dataset_id and dataset.get("status", None) == "Restricted":
                         destination_dataset_title = "Access Restricted"
                 data_dict[destination_dataset_id] = ("produced", destination_catalog, destination_dataset_title)
 
