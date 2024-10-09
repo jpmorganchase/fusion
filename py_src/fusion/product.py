@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import json as js
 from dataclasses import asdict, dataclass, field, fields
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
 from fusion.utils import _is_json, convert_date_format, make_bool, make_list, tidy_string
-import requests
 
 if TYPE_CHECKING:
+    import requests
+
     from fusion import Fusion
 
 
@@ -112,8 +113,8 @@ class Product:
             short_abstract = series.get("shortabstract", "")
 
         return cls(
-            title=series.get("title", None),
-            identifier=series.get("identifier", None),
+            title=series.get("title", ""),
+            identifier=series.get("identifier", ""),
             category=series.get("category", None),
             shortAbstract=short_abstract,
             description=series.get("description", ""),
@@ -179,94 +180,94 @@ class Product:
         """Convert the Product object to a dictionary."""
         product_dict = asdict(self)
         return product_dict
-    
+
     def create(
-            self,
-            client: Fusion,
-            catalog: str | None = None,
-        ) -> requests.Response:
-            """Create a new product in the catalog.
+        self,
+        client: Fusion,
+        catalog: str | None = None,
+    ) -> requests.Response:
+        """Create a new product in the catalog.
 
-            Args:
-                client (Fusion): A Fusion client object.
-                catalog (str, optional): A catalog identifier. Defaults to None.
+        Args:
+            client (Fusion): A Fusion client object.
+            catalog (str, optional): A catalog identifier. Defaults to None.
 
-            Returns:
-                requests.Response: The response object from the API call.
-            """
-            catalog = client._use_catalog(catalog)
+        Returns:
+            requests.Response: The response object from the API call.
+        """
+        catalog = client._use_catalog(catalog)
 
-            releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
-            deliveryChannel = self.deliveryChannel if self.deliveryChannel else ["API"]
+        releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+        deliveryChannel = self.deliveryChannel if self.deliveryChannel else ["API"]
 
-            self.releaseDate = releaseDate
-            self.deliveryChannel = deliveryChannel
+        self.releaseDate = releaseDate
+        self.deliveryChannel = deliveryChannel
 
-            data = self.to_dict()
+        data = self.to_dict()
 
-            url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
-            resp: requests.Response = client.session.post(url, json=data)
-            resp.raise_for_status()
-            return resp
-    
+        url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
+        resp: requests.Response = client.session.post(url, json=data)
+        resp.raise_for_status()
+        return resp
+
     def update(
-            self,
-            client: Fusion,
-            catalog: str | None = None,
-        ) -> requests.Response:
-            """Update an existing product in the catalog.
+        self,
+        client: Fusion,
+        catalog: str | None = None,
+    ) -> requests.Response:
+        """Update an existing product in the catalog.
 
-            Args:
-                client (Fusion): A Fusion client object.
-                catalog (str, optional): A catalog identifier. Defaults to None.
+        Args:
+            client (Fusion): A Fusion client object.
+            catalog (str, optional): A catalog identifier. Defaults to None.
 
-            Returns:
-                requests.Response: The response object from the API call.
-            """
-            catalog = client._use_catalog(catalog)
+        Returns:
+            requests.Response: The response object from the API call.
+        """
+        catalog = client._use_catalog(catalog)
 
-            releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
-            deliveryChannel = self.deliveryChannel if self.deliveryChannel else ["API"]
+        releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+        deliveryChannel = self.deliveryChannel if self.deliveryChannel else ["API"]
 
-            self.releaseDate = releaseDate
-            self.deliveryChannel = deliveryChannel
+        self.releaseDate = releaseDate
+        self.deliveryChannel = deliveryChannel
 
-            data = self.to_dict()
+        data = self.to_dict()
 
-            url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
-            resp: requests.Response = client.session.put(url, json=data)
-            resp.raise_for_status()
-            return resp
-    
+        url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
+        resp: requests.Response = client.session.put(url, json=data)
+        resp.raise_for_status()
+        return resp
+
     @staticmethod
-    def delete(  
-            product: str,
-            client: Fusion,
-            catalog: str | None = None,
-        ) -> requests.Response:
-            """Delete a product from the catalog.
+    def delete(
+        product: str,
+        client: Fusion,
+        catalog: str | None = None,
+    ) -> requests.Response:
+        """Delete a product from the catalog.
 
-            Args:
-                product (str): The identifier of the product to delete.
-                catalog (str, optional): A catalog identifier. Defaults to None.
+        Args:
+            product (str): The identifier of the product to delete.
+            catalog (str, optional): A catalog identifier. Defaults to None.
 
-            Returns:
-                requests.Response: The response object from the API call.
-            """
-            catalog = client._use_catalog(catalog)
+        Returns:
+            requests.Response: The response object from the API call.
+        """
+        catalog = client._use_catalog(catalog)
 
-            url = f"{client.root_url}catalogs/{catalog}/products/{product}"
-            resp: requests.Response = client.session.delete(url)
-            resp.raise_for_status()
-            return resp
-    
+        url = f"{client.root_url}catalogs/{catalog}/products/{product}"
+        resp: requests.Response = client.session.delete(url)
+        resp.raise_for_status()
+        return resp
+
     @staticmethod
     def copy(
-            client: Fusion,
-            product: str,
-            catalog_from: str,
-            catalog_to: str,
-            client_to: Fusion | None = None,
+        client: Fusion,
+        product: str,
+        catalog_from: str,
+        catalog_to: str,
+        client_to: Fusion | None = None,
     ) -> requests.Response:
         """Copy product from one catalog and/or environment to another by copy.
 
@@ -281,5 +282,5 @@ class Product:
         """
         if client_to is None:
             client_to = client
-        product_obj  =  Product.from_catalog(product=product, catalog=catalog_from, client=client)
+        product_obj = Product.from_catalog(product=product, catalog=catalog_from, client=client)
         return product_obj.create(client=client_to, catalog=catalog_to)

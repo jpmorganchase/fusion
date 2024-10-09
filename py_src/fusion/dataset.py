@@ -11,6 +11,8 @@ import pandas as pd
 from fusion.utils import _is_json, convert_date_format, make_bool, make_list, tidy_string
 
 if TYPE_CHECKING:
+    import requests
+
     from fusion import Fusion
 
 
@@ -261,3 +263,100 @@ class Dataset:
         dataset_dict = asdict(self)
         dataset_dict["type"] = dataset_dict.pop("type_")
         return dataset_dict
+
+    def create(
+        self,
+        client: Fusion,
+        catalog: str | None = None,
+    ) -> requests.Response:
+        """Uploada dataset via API from a Dataset object.
+
+        Args:
+            client (Fusion): A Fusion client object.
+            catalog (str | None, optional): A catalog identifier. Defaults to "common".
+
+        Returns:
+            requests.Response: Request response.
+        """
+        catalog = client._use_catalog(catalog)
+
+        self.createdDate = self.createdDate if self.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+
+        self.modifiedDate = self.modifiedDate if self.modifiedDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+
+        data = self.to_dict()
+
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
+        resp: requests.Response = client.session.post(url, json=data)
+        return resp
+
+    def update(
+        self,
+        client: Fusion,
+        catalog: str | None = None,
+    ) -> requests.Response:
+        """Updates a dataset via API from dataset object.
+
+        Args:
+            client (Fusion): A Fusion client object.
+            catalog (str | None, optional): A catalog identifier. Defaults to "common".
+
+        Returns:
+            requests.Response: Request response.
+        """
+        catalog = client._use_catalog(catalog)
+
+        self.createdDate = self.createdDate if self.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+
+        self.modifiedDate = self.modifiedDate if self.modifiedDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+
+        data = self.to_dict()
+
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
+        resp: requests.Response = client.session.put(url, json=data)
+        return resp
+
+    @staticmethod
+    def delete(
+        client: Fusion,
+        dataset: str,
+        catalog: str | None = None,
+    ) -> requests.Response:
+        """Delete a dataset via API from its dataset identifier.
+
+        Args:
+            dataset (str): A dataset identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            requests.Response: Request response.
+        """
+        catalog = client._use_catalog(catalog)
+
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}"
+        resp: requests.Response = client.session.delete(url)
+        return resp
+
+    @staticmethod
+    def copy(
+        client: Fusion,
+        dataset: str,
+        catalog_from: str,
+        catalog_to: str,
+        client_to: Fusion | None = None,
+    ) -> requests.Response:
+        """Copy dataset and its attributes from one catalog and/or environment to another by copy.
+
+        Args:
+            dataset (str): A dataset identifier.
+            catalog_from (str): A catalog identifier from which to copy dataset.
+            catalog_to (str): A catalog identifier to which to copy dataset.
+            client_to (Fusion | None, optional): Fusion client object. Defaults to current instance.
+
+        Returns:
+            list[requests.Response]: Request response.
+        """
+        if client_to is None:
+            client_to = client
+        dataset_obj = Dataset.from_catalog(dataset=dataset, catalog=catalog_from, client=client)
+        return dataset_obj.create(client=client_to, catalog=catalog_to)

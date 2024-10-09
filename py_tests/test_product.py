@@ -6,6 +6,7 @@ from typing import Any
 
 import pandas as pd
 import pytest
+import requests
 import requests_mock
 
 from fusion import Fusion
@@ -153,7 +154,7 @@ def test_product_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj: F
                 "subCategory": ["subCategory"],
                 "tag": ["tag1", "tag2"],
                 "deliveryChannel": ["API"],
-                "theme": ["theme"],
+                "theme": "theme",
                 "releaseDate": "2020-05-05",
                 "language": "English",
                 "status": "Available",
@@ -179,7 +180,7 @@ def test_product_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj: F
     assert my_product.subCategory == ["subCategory"]
     assert my_product.tag == ["tag1", "tag2"]
     assert my_product.deliveryChannel == ["API"]
-    assert my_product.theme == ["theme"]
+    assert my_product.theme == "theme"
     assert my_product.releaseDate == "2020-05-05"
     assert my_product.language == "English"
     assert my_product.status == "Available"
@@ -315,3 +316,193 @@ def test_product_class_type_error() -> None:
     with pytest.raises(TypeError) as error_info:
         Product.from_object(unsupported_obj)
     assert str(error_info.value) == f"Could not resolve the object provided: {unsupported_obj}"
+
+
+def test_create_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test create Product method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/products/TEST_PRODUCT"
+    expected_data = {
+        "title": "Test Product",
+        "identifier": "TEST_PRODUCT",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "isActive": True,
+        "isRestricted": False,
+        "maintainer": ["maintainer"],
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tag": ["tag1", "tag2"],
+        "deliveryChannel": ["API"],
+        "theme": "theme",
+        "releaseDate": "2020-05-05",
+        "language": "English",
+        "status": "Available",
+        "image": "",
+        "logo": "",
+    }
+    requests_mock.post(url, json=expected_data)
+
+    my_product = Product(
+        title="Test Product",
+        identifier="TEST_PRODUCT",
+        category=["category"],
+        shortAbstract="short abstract",
+        description="description",
+        isActive=True,
+        isRestricted=False,
+        maintainer=["maintainer"],
+        region=["region"],
+        publisher="publisher",
+        subCategory=["subCategory"],
+        tag=["tag1", "tag2"],
+        deliveryChannel=["API"],
+        theme="theme",
+        releaseDate="2020-05-05",
+        language="English",
+        status="Available",
+        image="",
+        logo="",
+    )
+    status_code = 200
+    resp = my_product.create(client=fusion_obj, catalog=catalog)
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def test_update_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test update Product method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/products/TEST_PRODUCT"
+    expected_data = {
+        "title": "Test Product",
+        "identifier": "TEST_PRODUCT",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "isActive": True,
+        "isRestricted": False,
+        "maintainer": ["maintainer"],
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tag": ["tag1", "tag2"],
+        "deliveryChannel": ["API"],
+        "theme": "theme",
+        "releaseDate": "2020-05-05",
+        "language": "English",
+        "status": "Available",
+        "image": "",
+        "logo": "",
+    }
+    requests_mock.put(url, json=expected_data)
+
+    my_product = Product(
+        title="Test Product",
+        identifier="TEST_PRODUCT",
+        category=["category"],
+        shortAbstract="short abstract",
+        description="description",
+        isActive=True,
+        isRestricted=False,
+        maintainer=["maintainer"],
+        region=["region"],
+        publisher="publisher",
+        subCategory=["subCategory"],
+        tag=["tag1", "tag2"],
+        deliveryChannel=["API"],
+        theme="theme",
+        releaseDate="2020-05-05",
+        language="English",
+        status="Available",
+        image="",
+        logo="",
+    )
+    status_code = 200
+    resp = my_product.update(client=fusion_obj, catalog=catalog)
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def test_delete_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test delete Product method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/products/TEST_PRODUCT"
+    status_code = 204
+    requests_mock.delete(url, status_code=status_code)
+
+    resp = Product.delete(client=fusion_obj, product="TEST_PRODUCT", catalog=catalog)
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def  test_copy_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test copy Product method."""
+    catalog_from = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog_from}/products"
+    expected_get_data = {
+        "resources": [
+            {
+                "catalog": {
+                    "@id": "my_catalog/",
+                    "description": "my catalog",
+                    "title": "my catalog",
+                    "identifier": "my_catalog"
+                },
+                "title": "Test Product",
+                "identifier": "TEST_PRODUCT",
+                "category": ["category"],
+                "shortAbstract": "short abstract",
+                "description": "description",
+                "isActive": True,
+                "isRestricted": False,
+                "maintainer": ["maintainer"],
+                "region": ["region"],
+                "publisher": "publisher",
+                "subCategory": ["subCategory"],
+                "tag": ["tag1", "tag2"],
+                "deliveryChannel": ["API"],
+                "theme": "theme",
+                "releaseDate": "2020-05-05",
+                "language": "English",
+                "status": "Available",
+                "image": "",
+                "logo": "",
+            },
+        ]
+    }
+    requests_mock.get(url, json=expected_get_data)
+
+    new_catalog = "new_catalog"
+    post_url = f"{fusion_obj.root_url}catalogs/{new_catalog}/products/TEST_PRODUCT"
+    expected_post_data = {
+        "title": "Test Product",
+        "identifier": "TEST_PRODUCT",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "isActive": True,
+        "isRestricted": False,
+        "maintainer": ["maintainer"],
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tag": ["tag1", "tag2"],
+        "deliveryChannel": ["API"],
+        "theme": "theme",
+        "releaseDate": "2020-05-05",
+        "language": "English",
+        "status": "Available",
+        "image": "",
+        "logo": "",
+    }
+
+    requests_mock.post(post_url, json=expected_post_data)
+
+    status_code = 200
+    resp = Product.copy(client=fusion_obj, product="TEST_PRODUCT", catalog_from=catalog_from, catalog_to=new_catalog)
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
