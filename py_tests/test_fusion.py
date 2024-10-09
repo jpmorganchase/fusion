@@ -2230,3 +2230,213 @@ def create_dataset_valueerror(fusion_obj: Fusion) -> None:
         ValueError, match="Dataset object must be a dictionary, path to a csv, or a Fusion Dataset object"
     ):
         fusion_obj.create_dataset(dataset_obj=dataset_list, catalog=catalog)
+
+
+def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test update Dataset method."""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
+    expected_data = {
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": False,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+    }
+    requests_mock.put(url, json=expected_data)
+
+    dataset_dict = {
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": False,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+    }
+
+    resp = fusion_obj.update_dataset(dataset_obj=dataset_dict, catalog=catalog)
+    status_code = 200
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def test_delete_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test delete Dataset method."""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
+    requests_mock.delete(url)
+
+    resp = fusion_obj.delete_dataset(dataset=dataset, catalog=catalog)
+    status_code = 200
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def  test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test copy Dataset method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets"
+
+    expected_data = {
+        "resources": [
+            {
+                "catalog": {
+                    "@id": "my_catalog/",
+                    "description": "my catalog",
+                    "title": "my catalog",
+                    "identifier": "my_catalog"
+                },
+                "title": "Test Dataset",
+                "identifier": "TEST_DATASET",
+                "category": ["category"],
+                "shortAbstract": "short abstract",
+                "description": "description",
+                "frequency": "Once",
+                "isInternalOnlyDataset": False,
+                "isThirdPartyData": True,
+                "isRestricted": False,
+                "isRawData": False,
+                "maintainer": "maintainer",
+                "source": "source",
+                "region": ["region"],
+                "publisher": "publisher",
+                "subCategory": ["subCategory"],
+                "tags": ["tag1", "tag2"],
+                "createdDate": "2020-05-05",
+                "modifiedDate": "2020-05-05",
+                "deliveryChannel": ["API"],
+                "language": "English",
+                "status": "Available",
+                "type": "Source",
+                "containerType": "Snapshot-Full",
+                "snowflake": "snowflake",
+                "complexity": "complexity",
+                "isImmutable": False,
+                "isMnpi": False,
+                "isPii": False,
+                "isPci": False,
+                "isClient": False,
+                "isPublic": False,
+                "isInternal": False,
+                "isConfidential": False,
+                "isHighlyConfidential": False,
+                "isActive": False,
+                "@id": "TEST_DATASET/",
+            },
+        ],
+    }
+    requests_mock.get(url, json=expected_data)
+
+    url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data2 = {
+        "resources": [
+            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
+            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
+        ]
+    }
+    requests_mock.get(url2, json=expected_data2)
+    catalog_new = "catalog_new"
+    url3 = f"{fusion_obj.root_url}catalogs/{catalog_new}/datasets/TEST_DATASET"
+    expected_data3 = {
+        "title": "Test Dataset",
+                "identifier": "TEST_DATASET",
+                "category": ["category"],
+                "shortAbstract": "short abstract",
+                "description": "description",
+                "frequency": "Once",
+                "isInternalOnlyDataset": False,
+                "isThirdPartyData": True,
+                "isRestricted": False,
+                "isRawData": False,
+                "maintainer": "maintainer",
+                "source": "source",
+                "region": ["region"],
+                "publisher": "publisher",
+                "subCategory": ["subCategory"],
+                "tags": ["tag1", "tag2"],
+                "createdDate": "2020-05-05",
+                "modifiedDate": "2020-05-05",
+                "deliveryChannel": ["API"],
+                "language": "English",
+                "status": "Available",
+                "type": "Source",
+                "containerType": "Snapshot-Full",
+                "snowflake": "snowflake",
+                "complexity": "complexity",
+                "isImmutable": False,
+                "isMnpi": False,
+                "isPii": False,
+                "isPci": False,
+                "isClient": False,
+                "isPublic": False,
+                "isInternal": False,
+                "isConfidential": False,
+                "isHighlyConfidential": False,
+                "isActive": False,
+    }
+    requests_mock.post(url3, json=expected_data3)
+    resp = fusion_obj.copy_dataset(dataset="TEST_DATASET", catalog_from=catalog, catalog_to=catalog_new)
+    status_code = 200
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
