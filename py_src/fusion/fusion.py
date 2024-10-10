@@ -1213,7 +1213,7 @@ class Fusion:
     def from_bytes(  # noqa: PLR0913
         self,
         data: BytesIO,
-        dataset: Optional[str] = None,
+        dataset: str,
         series_member: str = "latest",
         catalog: Optional[str] = None,
         distribution: str = "parquet",
@@ -1229,8 +1229,7 @@ class Fusion:
 
         Args:
             data (str): an object in memory to upload
-            dataset (str, optional): Dataset name to which the file will be uploaded (for single file only).
-                                    If not provided the dataset will be implied from file's name.
+            dataset (str): Dataset name to which the bytes will be uploaded.
             series_member (str, optional): A single date or label. Defaults to 'latest' which will return
                 the most recent.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
@@ -1244,7 +1243,7 @@ class Fusion:
             file_name (str, optional): file name to be used for the uploaded file. Defaults to Fusion standard naming.
 
         Returns:
-
+            Optional[list[tuple[bool, str, Optional[str]]]: a list of tuples, one for each distribution
 
         """
         catalog = self._use_catalog(catalog)
