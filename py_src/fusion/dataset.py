@@ -56,6 +56,8 @@ class Dataset:
     isHighlyConfidential: bool | None = None
     isActive: bool | None = None
 
+    _client: Any = field(init=False, repr=False, compare=False, default=None)
+
     def __repr__(self: Dataset) -> str:
         """Format object representation."""
         return (
@@ -127,8 +129,12 @@ class Dataset:
         self.createdDate = convert_date_format(self.createdDate) if self.createdDate else None
         self.modifiedDate = convert_date_format(self.modifiedDate) if self.modifiedDate else None
 
+    def set_client(self, client: Any) -> None:
+        """Set the client for the Dataset."""
+        self._client = client
+
     @classmethod
-    def from_series(cls: type[Dataset], series: pd.Series) -> Dataset:
+    def from_series(cls: type[Dataset], series: pd.Series[Any]) -> Dataset:
         """Create a Dataset object from a pandas Series."""
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
         series = series.rename({"tag": "tags"})
@@ -165,13 +171,13 @@ class Dataset:
         isActive = make_bool(isActive) if isActive is not None else isActive
 
         dataset = cls(
-            identifier=series.get("identifier", None),
+            identifier=series.get("identifier", ""),
             category=series.get("category", None),
             deliveryChannel=series.get("deliverychannel", ["API"]),
-            title=series.get("title", None),
+            title=series.get("title", ""),
             description=series.get("description", ""),
             frequency=series.get("frequency", "Once"),
-            isInternalOnlyDataset=isInternalOnlyDataset,
+            isInternalOnlyDataset=isInternalOnlyDataset,  # type: ignore
             isThirdPartyData=series.get("isthirdpartydata", True),
             isRestricted=isRestricted,
             isRawData=series.get("israwdata", False),
@@ -262,22 +268,25 @@ class Dataset:
         """Convert the Dataset object to a dictionary."""
         dataset_dict = asdict(self)
         dataset_dict["type"] = dataset_dict.pop("type_")
+        dataset_dict.pop("_client")
         return dataset_dict
 
     def create(
         self,
-        client: Fusion,
         catalog: str | None = None,
+        client: Fusion | None = None,
     ) -> requests.Response:
         """Uploada dataset via API from a Dataset object.
 
         Args:
-            client (Fusion): A Fusion client object.
             catalog (str | None, optional): A catalog identifier. Defaults to "common".
+            client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
 
         Returns:
             requests.Response: Request response.
         """
+        if client is None:
+            client = self._client
         catalog = client._use_catalog(catalog)
 
         self.createdDate = self.createdDate if self.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -292,18 +301,20 @@ class Dataset:
 
     def update(
         self,
-        client: Fusion,
         catalog: str | None = None,
+        client: Fusion | None = None,
     ) -> requests.Response:
         """Updates a dataset via API from dataset object.
 
         Args:
-            client (Fusion): A Fusion client object.
             catalog (str | None, optional): A catalog identifier. Defaults to "common".
+            client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
 
         Returns:
             requests.Response: Request response.
         """
+        if client is None:
+            client = self._client
         catalog = client._use_catalog(catalog)
 
         self.createdDate = self.createdDate if self.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -359,4 +370,5 @@ class Dataset:
         if client_to is None:
             client_to = client
         dataset_obj = Dataset.from_catalog(dataset=dataset, catalog=catalog_from, client=client)
+        dataset_obj.set_client(client_to)
         return dataset_obj.create(client=client_to, catalog=catalog_to)

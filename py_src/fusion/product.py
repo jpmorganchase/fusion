@@ -106,11 +106,11 @@ class Product:
         self.releaseDate = convert_date_format(self.releaseDate) if self.releaseDate else None
 
     def set_client(self, client: Any) -> None:
-        """Set the client for the Dataset."""
+        """Set the client for the Product."""
         self._client = client
 
     @classmethod
-    def from_series(cls: type[Product], series: pd.Series) -> Product:
+    def from_series(cls: type[Product], series: pd.Series[Any]) -> Product:
         """Create a Product object from a pandas Series."""
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
         series = series.rename({"tag": "tags", "dataset": "datasets"})
@@ -185,22 +185,27 @@ class Product:
     def to_dict(self: Product) -> dict[str, Any]:
         """Convert the Product object to a dictionary."""
         product_dict = asdict(self)
+        product_dict.pop("_client")
         return product_dict
 
     def create(
         self,
         catalog: str | None = None,
+        client: Fusion | None = None,
     ) -> requests.Response:
         """Create a new product in the catalog.
 
         Args:
-            client (Fusion): A Fusion client object.
+            client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
             catalog (str, optional): A catalog identifier. Defaults to None.
 
         Returns:
             requests.Response: The response object from the API call.
         """
-        catalog = self._client._use_catalog(catalog)
+        if client is None:
+            client = self._client
+
+        catalog = client._use_catalog(catalog)
 
         releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
         deliveryChannel = self.deliveryChannel if self.deliveryChannel else ["API"]
@@ -210,14 +215,15 @@ class Product:
 
         data = self.to_dict()
 
-        url = f"{self._client.root_url}catalogs/{catalog}/products/{self.identifier}"
-        resp: requests.Response = self._client.session.post(url, json=data)
+        url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
+        resp: requests.Response = client.session.post(url, json=data)
         resp.raise_for_status()
         return resp
 
     def update(
         self,
         catalog: str | None = None,
+        client: Fusion | None = None,
     ) -> requests.Response:
         """Update an existing product in the catalog.
 
@@ -228,7 +234,9 @@ class Product:
         Returns:
             requests.Response: The response object from the API call.
         """
-        catalog = self._client._use_catalog(catalog)
+        if client is None:
+            client = self._client
+        catalog = client._use_catalog(catalog)
 
         releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
         deliveryChannel = self.deliveryChannel if self.deliveryChannel else ["API"]
@@ -238,8 +246,8 @@ class Product:
 
         data = self.to_dict()
 
-        url = f"{self._client.root_url}catalogs/{catalog}/products/{self.identifier}"
-        resp: requests.Response = self._client.session.put(url, json=data)
+        url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
+        resp: requests.Response = client.session.put(url, json=data)
         resp.raise_for_status()
         return resp
 
@@ -260,13 +268,13 @@ class Product:
         """
         catalog = client._use_catalog(catalog)
 
-        url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
+        url = f"{client.root_url}catalogs/{catalog}/products/{product}"
         resp: requests.Response = client.session.delete(url)
         resp.raise_for_status()
         return resp
 
     @staticmethod
-    def copy(# change back  to regular method so that you can use Fusion().product('MY_PROD').delete()
+    def copy(
         client: Fusion,
         product: str,
         catalog_from: str,
@@ -287,4 +295,5 @@ class Product:
         if client_to is None:
             client_to = client
         product_obj = Product.from_catalog(product=product, catalog=catalog_from, client=client)
+        product_obj.set_client(client_to)
         return product_obj.create(catalog=catalog_to)

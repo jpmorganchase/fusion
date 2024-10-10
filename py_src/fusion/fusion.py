@@ -18,6 +18,7 @@ from joblib import Parallel, delayed
 from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
+from fusion.dataset import Dataset
 from fusion.product import Product
 
 from .exceptions import APIResponseError
@@ -1502,10 +1503,14 @@ class Fusion:
                 mapping_df = mapping_df[mapping_df["product"].str.contains(product, case=False)]
         return mapping_df
 
-    def product(self, product: Product | dict[str, object] | pd.Series | None = None, **kwargs: Any) -> Product:
+    def product(self, product: Product | dict[str, object] | pd.Series[Any] | None = None, **kwargs: Any) -> Product:
         """Instantiate a Product object with this client."""
-        if source == "catalog"
-            product_obj = Product.from_catalog(product)
         product_obj = Product.from_object(product) if product else Product(**kwargs)
         product_obj.set_client(self)
         return product_obj
+
+    def dataset(self, dataset: Dataset | dict[str, object] | pd.Series[Any] | None = None, **kwargs: Any) -> Dataset:
+        """Instantiate a Dataset object with this client."""
+        dataset_obj = Dataset.from_object(dataset) if dataset else Dataset(**kwargs)
+        dataset_obj.set_client(self)
+        return dataset_obj

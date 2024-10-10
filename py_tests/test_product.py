@@ -367,7 +367,7 @@ def test_create_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
         logo="",
     )
     status_code = 200
-    resp = my_product.create(client=fusion_obj, catalog=catalog)
+    resp = my_product.create(catalog=catalog, client=fusion_obj)
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
 
