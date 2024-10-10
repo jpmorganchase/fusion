@@ -41,6 +41,8 @@ class Product:
     logo: str = ""
     dataset: str | list[str] | None = None
 
+    _client: Any = field(init=False, repr=False, compare=False, default=None)
+
     def __repr__(self: Product) -> str:
         """Return a string representation of the Product object."""
         return (
@@ -102,6 +104,10 @@ class Product:
             self.deliveryChannel if isinstance(self.deliveryChannel, list) else make_list(self.deliveryChannel)
         )
         self.releaseDate = convert_date_format(self.releaseDate) if self.releaseDate else None
+
+    def set_client(self, client: Any) -> None:
+        """Set the client for the Dataset."""
+        self._client = client
 
     @classmethod
     def from_series(cls: type[Product], series: pd.Series) -> Product:
@@ -168,7 +174,7 @@ class Product:
         raise TypeError(f"Could not resolve the object provided: {product_source}")
 
     @classmethod
-    def from_catalog(cls: type[Product], client: Fusion, product: str, catalog: str) -> Product:
+    def from_catalog(cls: type[Product], client: Fusion, product: str, catalog: str) -> Product: # change back  to regular method so that you can use Fusion().product('MY_PROD').from_catalog('common')
         """Create a Product object from a catalog."""
         list_products = client.session.get(f"{client.root_url}catalogs/{catalog}/products").json()["resources"]
         dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == product][0]
@@ -183,7 +189,6 @@ class Product:
 
     def create(
         self,
-        client: Fusion,
         catalog: str | None = None,
     ) -> requests.Response:
         """Create a new product in the catalog.
@@ -195,7 +200,7 @@ class Product:
         Returns:
             requests.Response: The response object from the API call.
         """
-        catalog = client._use_catalog(catalog)
+        catalog = self._client._use_catalog(catalog)
 
         releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
         deliveryChannel = self.deliveryChannel if self.deliveryChannel else ["API"]
@@ -205,14 +210,13 @@ class Product:
 
         data = self.to_dict()
 
-        url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
-        resp: requests.Response = client.session.post(url, json=data)
+        url = f"{self._client.root_url}catalogs/{catalog}/products/{self.identifier}"
+        resp: requests.Response = self._client.session.post(url, json=data)
         resp.raise_for_status()
         return resp
 
     def update(
         self,
-        client: Fusion,
         catalog: str | None = None,
     ) -> requests.Response:
         """Update an existing product in the catalog.
@@ -224,7 +228,7 @@ class Product:
         Returns:
             requests.Response: The response object from the API call.
         """
-        catalog = client._use_catalog(catalog)
+        catalog = self._client._use_catalog(catalog)
 
         releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
         deliveryChannel = self.deliveryChannel if self.deliveryChannel else ["API"]
@@ -234,13 +238,13 @@ class Product:
 
         data = self.to_dict()
 
-        url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
-        resp: requests.Response = client.session.put(url, json=data)
+        url = f"{self._client.root_url}catalogs/{catalog}/products/{self.identifier}"
+        resp: requests.Response = self._client.session.put(url, json=data)
         resp.raise_for_status()
         return resp
 
     @staticmethod
-    def delete(
+    def delete(  # change back  to regular method so that you can use Fusion().product('MY_PROD').delete()
         product: str,
         client: Fusion,
         catalog: str | None = None,
@@ -256,13 +260,13 @@ class Product:
         """
         catalog = client._use_catalog(catalog)
 
-        url = f"{client.root_url}catalogs/{catalog}/products/{product}"
+        url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
         resp: requests.Response = client.session.delete(url)
         resp.raise_for_status()
         return resp
 
     @staticmethod
-    def copy(
+    def copy(# change back  to regular method so that you can use Fusion().product('MY_PROD').delete()
         client: Fusion,
         product: str,
         catalog_from: str,
@@ -283,4 +287,4 @@ class Product:
         if client_to is None:
             client_to = client
         product_obj = Product.from_catalog(product=product, catalog=catalog_from, client=client)
-        return product_obj.create(client=client_to, catalog=catalog_to)
+        return product_obj.create(catalog=catalog_to)
