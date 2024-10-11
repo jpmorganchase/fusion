@@ -954,3 +954,77 @@ def test_list_product_dataset_mapping_product_no_filter(requests_mock: requests_
 
     resp = fusion_obj.list_product_dataset_mapping(catalog=catalog)
     assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+
+
+def test_fusion_product(fusion_obj: Fusion) -> None:
+    """Test Fusion Product class from client."""
+    test_product = fusion_obj.product(title="Test Product", identifier="Test Product", releaseDate="May 5, 2020")
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == ""
+    assert test_product.description == ""
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region is None
+    assert test_product.publisher is None
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ["API"]
+    assert test_product.theme is None
+    assert test_product.releaseDate == "2020-05-05"
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+
+
+def test_fusion_dataset(fusion_obj: Fusion) -> None:
+    """Test Fusion Dataset class from client"""
+    test_dataset = fusion_obj.dataset(
+        title="Test Dataset",
+        identifier="Test Dataset",
+        category="Test",
+        product="TEST_PRODUCT",
+    )
+
+    assert str(test_dataset)
+    assert repr(test_dataset)
+    assert test_dataset.title == "Test Dataset"
+    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.category == ["Test"]
+    assert test_dataset.description == ""
+    assert test_dataset.frequency == "Once"
+    assert test_dataset.isInternalOnlyDataset is False
+    assert test_dataset.isThirdPartyData is True
+    assert test_dataset.isRestricted is None
+    assert test_dataset.isRawData is False
+    assert test_dataset.maintainer == "J.P. Morgan Fusion"
+    assert test_dataset.source is None
+    assert test_dataset.region is None
+    assert test_dataset.publisher == "J.P. Morgan"
+    assert test_dataset.product == ["TEST_PRODUCT"]
+    assert test_dataset.subCategory is None
+    assert test_dataset.tags is None
+    assert test_dataset.createdDate is None
+    assert test_dataset.modifiedDate is None
+    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.language == "English"
+    assert test_dataset.status == "Available"
+    assert test_dataset.type_ == "Source"
+    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.snowflake is None
+    assert test_dataset.complexity is None
+    assert test_dataset.isImmutable is None
+    assert test_dataset.isMnpi is None
+    assert test_dataset.isPii is None
+    assert test_dataset.isPci is None
+    assert test_dataset.isClient is None
+    assert test_dataset.isPublic is None
+    assert test_dataset.isInternal is None
+    assert test_dataset.isConfidential is None
+    assert test_dataset.isHighlyConfidential is None
+    assert test_dataset.isActive is None
+
