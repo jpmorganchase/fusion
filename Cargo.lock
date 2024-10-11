@@ -1410,7 +1410,7 @@ dependencies = [
 
 [[package]]
 name = "pyfusion"
-version = "1.4.0-dev0"
+version = "1.4.0"
 dependencies = [
  "bincode",
  "chrono",
