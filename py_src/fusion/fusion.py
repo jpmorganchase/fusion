@@ -1417,10 +1417,13 @@ class Fusion:
             output (bool, optional): If True then print the dataframe. Defaults to False.
             max_results (int, optional): Limit the number of rows returned in the dataframe.
                 Defaults to -1 which returns all results.
+
         Returns:
             class:`pandas.DataFrame`: A dataframe with a row for each resource
+
         Raises:
             HTTPError: If the dataset is not found in the catalog.
+
         """
         catalog = self._use_catalog(catalog)
 
@@ -1517,6 +1520,7 @@ class Fusion:
             >>> data = [{"dataset": "a", "catalog": "a"}, {"dataset": "b", "catalog": "b"}]
             >>> fusion = Fusion()
             >>> fusion.create_dataset_lineage(base_dataset="c", source_dataset_catalog_mapping=data, catalog="c")
+
         """
         catalog = self._use_catalog(catalog)
 
