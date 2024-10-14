@@ -288,8 +288,7 @@ class Dataset:
         Returns:
             requests.Response: Request response.
         """
-        if client is None:
-            client = self._client
+        client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
 
         self.createdDate = self.createdDate if self.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -316,8 +315,7 @@ class Dataset:
         Returns:
             requests.Response: Request response.
         """
-        if client is None:
-            client = self._client
+        client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
 
         self.createdDate = self.createdDate if self.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -344,8 +342,7 @@ class Dataset:
         Returns:
             requests.Response: Request response.
         """
-        if client is None:
-            client = self._client
+        client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
 
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
@@ -370,8 +367,7 @@ class Dataset:
         Returns:
             list[requests.Response]: Request response.
         """
-        if client is None:
-            client = self._client
+        client = self._client if client is None else client
         catalog_from = client._use_catalog(catalog_from)
 
         if client_to is None:

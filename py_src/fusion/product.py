@@ -206,9 +206,7 @@ class Product:
         Returns:
             requests.Response: The response object from the API call.
         """
-        if client is None:
-            client = self._client
-
+        client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
 
         releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -238,8 +236,7 @@ class Product:
         Returns:
             requests.Response: The response object from the API call.
         """
-        if client is None:
-            client = self._client
+        client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
 
         releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -269,9 +266,7 @@ class Product:
         Returns:
             requests.Response: The response object from the API call.
         """
-        if client is None:
-            client = self._client
-
+        client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
 
         url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
@@ -281,8 +276,8 @@ class Product:
 
     def copy(
         self,
-        catalog_from: str,
         catalog_to: str,
+        catalog_from: str | None = None,
         client: Fusion | None = None,
         client_to: Fusion | None = None,
     ) -> requests.Response:
@@ -290,16 +285,15 @@ class Product:
 
         Args:
             product (str): Product  identifier.
-            catalog_from (str): Catalog identifer from which to copy product.
             catalog_to (str): Catalog  identifier to wich to copy product.
+            catalog_from (str, optional): A catalog identifier from which to copy product. Defaults to "common".
             client_to (Fusion | None, optional): Fusion client object. Defaults to current instance.
 
         Returns:
             requests.Response: The response object from the API call.
         """
-        if client is None:
-            client = self._client
-
+        client = self._client if client is None else client
+        catalog_from = client._use_catalog(catalog_from)
         if client_to is None:
             client_to = client
         product_obj = self.from_catalog(catalog=catalog_from, client=client)
