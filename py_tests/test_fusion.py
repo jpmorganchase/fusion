@@ -1028,3 +1028,143 @@ def test_fusion_dataset(fusion_obj: Fusion) -> None:
     assert test_dataset.isHighlyConfidential is None
     assert test_dataset.isActive is None
 
+
+def test_fusion_create_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test create product from client."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/products/TEST_PRODUCT"
+    expected_data = {
+        "title": "Test Product",
+        "identifier": "TEST_PRODUCT",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "isActive": True,
+        "isRestricted": False,
+        "maintainer": ["maintainer"],
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tag": ["tag1", "tag2"],
+        "deliveryChannel": ["API"],
+        "theme": "theme",
+        "releaseDate": "2020-05-05",
+        "language": "English",
+        "status": "Available",
+        "image": "",
+        "logo": "",
+    }
+    requests_mock.post(url, json=expected_data)
+
+    my_product = fusion_obj.product(
+        title="Test Product",
+        identifier="TEST_PRODUCT",
+        category=["category"],
+        shortAbstract="short abstract",
+        description="description",
+        isActive=True,
+        isRestricted=False,
+        maintainer=["maintainer"],
+        region=["region"],
+        publisher="publisher",
+        subCategory=["subCategory"],
+        tag=["tag1", "tag2"],
+        deliveryChannel=["API"],
+        theme="theme",
+        releaseDate="2020-05-05",
+        language="English",
+        status="Available",
+        image="",
+        logo="",
+    )
+    status_code = 200
+    resp = my_product.create(catalog=catalog, client=fusion_obj)
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def test_fusion_create_dataset_dict(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test create dataset from client."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/TEST_DATASET"
+    expected_data = {
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": False,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+    }
+    requests_mock.post(url, json=expected_data)
+
+    dataset_dict = {
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": False,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+    }
+    dataset_obj = fusion_obj.dataset(dataset_dict)
+    resp = dataset_obj.create(client=fusion_obj, catalog=catalog)
+    status_code = 200
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
