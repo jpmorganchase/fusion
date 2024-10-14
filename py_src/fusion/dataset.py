@@ -20,15 +20,15 @@ if TYPE_CHECKING:
 class Dataset:
     """Dataset class."""
 
-    title: str
     identifier: str
+    title: str = ""
     category: str | list[str] | None = None
     description: str = ""
     frequency: str = "Once"
     isInternalOnlyDataset: bool = False
     isThirdPartyData: bool = True
     isRestricted: bool | None = None
-    isRawData: bool = False
+    isRawData: bool = True
     maintainer: str | None = "J.P. Morgan Fusion"
     source: str | list[str] | None = None
     region: str | list[str] | None = None
@@ -180,7 +180,7 @@ class Dataset:
             isInternalOnlyDataset=isInternalOnlyDataset,  # type: ignore
             isThirdPartyData=series.get("isthirdpartydata", True),
             isRestricted=isRestricted,
-            isRawData=series.get("israwdata", False),
+            isRawData=series.get("israwdata", True),
             maintainer=series.get("maintainer", "J.P. Morgan Fusion"),
             source=series.get("source", None),
             region=series.get("region", None),
@@ -249,9 +249,12 @@ class Dataset:
 
         raise TypeError(f"Could not resolve the object provided: {dataset_source}")
 
-    @classmethod
-    def from_catalog(cls: type[Dataset], client: Fusion, dataset: str, catalog: str) -> Dataset:
+    def from_catalog(self, client: Fusion, catalog: str) -> Dataset:
         """Create a Dataset object from a catalog."""
+        if client is None:
+            client = self._client
+        catalog = client._use_catalog(catalog)
+        dataset = self.identifier
         list_datasets = client.session.get(f"{client.root_url}catalogs/{catalog}/datasets").json()["resources"]
         dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset][0]
         dataset_obj = Dataset.from_dict(dict_)
@@ -327,48 +330,52 @@ class Dataset:
         resp: requests.Response = client.session.put(url, json=data)
         return resp
 
-    @staticmethod
     def delete(
-        client: Fusion,
-        dataset: str,
+        self,
         catalog: str | None = None,
+        client: Fusion | None = None,
     ) -> requests.Response:
         """Delete a dataset via API from its dataset identifier.
 
         Args:
-            dataset (str): A dataset identifier.
-            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            catalog (str | None, optional): A catalog identifier. Defaults to "common".
+            client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
 
         Returns:
             requests.Response: Request response.
         """
+        if client is None:
+            client = self._client
         catalog = client._use_catalog(catalog)
 
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}"
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
         resp: requests.Response = client.session.delete(url)
         return resp
 
-    @staticmethod
     def copy(
-        client: Fusion,
-        dataset: str,
-        catalog_from: str,
+        self,
         catalog_to: str,
+        catalog_from: str | None = None,
+        client: Fusion | None = None,
         client_to: Fusion | None = None,
     ) -> requests.Response:
         """Copy dataset and its attributes from one catalog and/or environment to another by copy.
 
         Args:
-            dataset (str): A dataset identifier.
-            catalog_from (str): A catalog identifier from which to copy dataset.
             catalog_to (str): A catalog identifier to which to copy dataset.
+            catalog_from (str, optional): A catalog identifier from which to copy dataset. Defaults to "common".
+            client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
             client_to (Fusion | None, optional): Fusion client object. Defaults to current instance.
 
         Returns:
             list[requests.Response]: Request response.
         """
+        if client is None:
+            client = self._client
+        catalog_from = client._use_catalog(catalog_from)
+
         if client_to is None:
             client_to = client
-        dataset_obj = Dataset.from_catalog(dataset=dataset, catalog=catalog_from, client=client)
+        dataset_obj = self.from_catalog(catalog=catalog_from, client=client)
         dataset_obj.set_client(client_to)
         return dataset_obj.create(client=client_to, catalog=catalog_to)

@@ -438,7 +438,7 @@ def test_delete_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     assert resp.status_code == status_code
 
 
-def  test_copy_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_copy_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test copy Product method."""
     catalog_from = "my_catalog"
     url = f"{fusion_obj.root_url}catalogs/{catalog_from}/products"
@@ -449,7 +449,7 @@ def  test_copy_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) 
                     "@id": "my_catalog/",
                     "description": "my catalog",
                     "title": "my catalog",
-                    "identifier": "my_catalog"
+                    "identifier": "my_catalog",
                 },
                 "title": "Test Product",
                 "identifier": "TEST_PRODUCT",
@@ -505,4 +505,3 @@ def  test_copy_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) 
     resp = Product(identifier="TEST_PRODUCT").copy(client=fusion_obj, catalog_from=catalog_from, catalog_to=new_catalog)
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
-

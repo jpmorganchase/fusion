@@ -1000,7 +1000,7 @@ def test_fusion_dataset(fusion_obj: Fusion) -> None:
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
     assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is False
+    assert test_dataset.isRawData is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None

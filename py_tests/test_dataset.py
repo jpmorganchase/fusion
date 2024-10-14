@@ -32,7 +32,7 @@ def test_dataset_class() -> None:
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
     assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is False
+    assert test_dataset.isRawData is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
@@ -84,7 +84,7 @@ def test_dataset_class_from_series() -> None:
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
     assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is False
+    assert test_dataset.isRawData is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
@@ -134,7 +134,7 @@ def test_dataset_class_from_dict() -> None:
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
     assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is False
+    assert test_dataset.isRawData is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
@@ -177,7 +177,7 @@ def test_dataset_class_from_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
     assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is False
+    assert test_dataset.isRawData is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
@@ -225,7 +225,7 @@ def test_dataset_class_from_object_dataset() -> None:
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
     assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is False
+    assert test_dataset.isRawData is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
@@ -274,7 +274,7 @@ def test_dataset_class_from_object_dict() -> None:
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
     assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is False
+    assert test_dataset.isRawData is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
@@ -325,7 +325,7 @@ def test_dataset_class_from_object_json() -> None:
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
     assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is False
+    assert test_dataset.isRawData is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
@@ -368,7 +368,7 @@ def test_dataset_class_from_object_csv(mock_dataset_pd_read_csv: Generator[pd.Da
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
     assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is False
+    assert test_dataset.isRawData is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
@@ -419,7 +419,7 @@ def test_dataset_class_from_object_series() -> None:
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
     assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is False
+    assert test_dataset.isRawData is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
@@ -479,7 +479,7 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
                 "isInternalOnlyDataset": False,
                 "isThirdPartyData": True,
                 "isRestricted": False,
-                "isRawData": False,
+                "isRawData": True,
                 "maintainer": "maintainer",
                 "source": "source",
                 "region": ["region"],
@@ -520,7 +520,7 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
     }
     requests_mock.get(url2, json=expected_data2)
 
-    my_dataset = Dataset.from_catalog(client=fusion_obj, dataset="TEST_DATASET", catalog=catalog)
+    my_dataset = Dataset(identifier="TEST_DATASET").from_catalog(client=fusion_obj, catalog=catalog)
     assert isinstance(my_dataset, Dataset)
     assert my_dataset.title == "Test Dataset"
     assert my_dataset.identifier == "TEST_DATASET"
@@ -530,7 +530,7 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
     assert my_dataset.isInternalOnlyDataset is False
     assert my_dataset.isThirdPartyData is True
     assert my_dataset.isRestricted is False
-    assert my_dataset.isRawData is False
+    assert my_dataset.isRawData is True
     assert my_dataset.maintainer == "maintainer"
     assert my_dataset.source == ["source"]
     assert my_dataset.region == ["region"]
@@ -582,7 +582,7 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
                 "isInternalOnlyDataset": False,
                 "isThirdPartyData": True,
                 "isRestricted": False,
-                "isRawData": False,
+                "isRawData": True,
                 "maintainer": "maintainer",
                 "source": "source",
                 "region": ["region"],
@@ -622,7 +622,7 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
     }
     requests_mock.get(url2, json=expected_data2)
 
-    my_dataset = Dataset.from_catalog(client=fusion_obj, dataset="TEST_DATASET", catalog=catalog)
+    my_dataset = Dataset(identifier="TEST_DATASET").from_catalog(client=fusion_obj, catalog=catalog)
     assert isinstance(my_dataset, Dataset)
     assert my_dataset.title == "Test Dataset"
     assert my_dataset.identifier == "TEST_DATASET"
@@ -632,7 +632,7 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
     assert my_dataset.isInternalOnlyDataset is False
     assert my_dataset.isThirdPartyData is True
     assert my_dataset.isRestricted is False
-    assert my_dataset.isRawData is False
+    assert my_dataset.isRawData is True
     assert my_dataset.maintainer == "maintainer"
     assert my_dataset.source == ["source"]
     assert my_dataset.region == ["region"]
@@ -675,7 +675,7 @@ def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_ob
         "isInternalOnlyDataset": False,
         "isThirdPartyData": True,
         "isRestricted": False,
-        "isRawData": False,
+        "isRawData": True,
         "maintainer": "maintainer",
         "source": "source",
         "region": ["region"],
@@ -714,7 +714,7 @@ def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_ob
         "isInternalOnlyDataset": False,
         "isThirdPartyData": True,
         "isRestricted": False,
-        "isRawData": False,
+        "isRawData": True,
         "maintainer": "maintainer",
         "source": "source",
         "region": ["region"],
@@ -763,7 +763,7 @@ def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
         "isInternalOnlyDataset": False,
         "isThirdPartyData": True,
         "isRestricted": False,
-        "isRawData": False,
+        "isRawData": True,
         "maintainer": "maintainer",
         "source": "source",
         "region": ["region"],
@@ -802,7 +802,7 @@ def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
         "isInternalOnlyDataset": False,
         "isThirdPartyData": True,
         "isRestricted": False,
-        "isRawData": False,
+        "isRawData": True,
         "maintainer": "maintainer",
         "source": "source",
         "region": ["region"],
@@ -843,7 +843,7 @@ def test_delete_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
     requests_mock.delete(url)
 
-    resp = Dataset.delete(client=fusion_obj, dataset=dataset, catalog=catalog)
+    resp = Dataset(identifier=dataset).delete(client=fusion_obj, catalog=catalog)
     status_code = 200
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
@@ -872,7 +872,7 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
                 "isInternalOnlyDataset": False,
                 "isThirdPartyData": True,
                 "isRestricted": False,
-                "isRawData": False,
+                "isRawData": True,
                 "maintainer": "maintainer",
                 "source": "source",
                 "region": ["region"],
@@ -924,7 +924,7 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
         "isInternalOnlyDataset": False,
         "isThirdPartyData": True,
         "isRestricted": False,
-        "isRawData": False,
+        "isRawData": True,
         "maintainer": "maintainer",
         "source": "source",
         "region": ["region"],
@@ -952,7 +952,7 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
         "isActive": False,
     }
     requests_mock.post(url3, json=expected_data3)
-    resp = Dataset.copy(client=fusion_obj, dataset="TEST_DATASET", catalog_from=catalog, catalog_to=catalog_new)
+    resp = Dataset(identifier="TEST_DATASET").copy(client=fusion_obj, catalog_from=catalog, catalog_to=catalog_new)
     status_code = 200
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
