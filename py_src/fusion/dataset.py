@@ -249,7 +249,7 @@ class Dataset:
 
         raise TypeError(f"Could not resolve the object provided: {dataset_source}")
 
-    def from_catalog(self, client: Fusion, catalog: str) -> Dataset:
+    def from_catalog(self, catalog: str, client: Fusion | None = None) -> Dataset:
         """Create a Dataset object from a catalog."""
         if client is None:
             client = self._client
