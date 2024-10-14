@@ -557,6 +557,7 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
     assert my_dataset.isConfidential is False
     assert my_dataset.isHighlyConfidential is False
     assert my_dataset.isActive is False
+    assert isinstance(my_dataset._client, Fusion)
 
 
 def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:

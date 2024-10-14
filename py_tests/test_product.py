@@ -186,6 +186,7 @@ def test_product_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj: F
     assert my_product.status == "Available"
     assert my_product.image == ""
     assert my_product.logo == ""
+    assert isinstance(my_product._client, Fusion)
 
 
 def test_product_class_from_object_dict() -> None:

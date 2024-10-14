@@ -183,6 +183,7 @@ class Product:
         list_products = client.session.get(f"{client.root_url}catalogs/{catalog}/products").json()["resources"]
         dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == self.identifier][0]
         product_obj = Product.from_dict(dict_)
+        product_obj.set_client(client)
 
         return product_obj
 

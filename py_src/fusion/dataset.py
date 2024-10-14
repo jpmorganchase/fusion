@@ -97,6 +97,7 @@ class Dataset:
             f"  isConfidential={self.isConfidential!r},\n"
             f"  isHighlyConfidential={self.isHighlyConfidential!r},\n"
             f"  isActive={self.isActive!r}\n"
+            f")"
         )
 
     def __post_init__(self: Dataset) -> None:
@@ -258,6 +259,7 @@ class Dataset:
         list_datasets = client.session.get(f"{client.root_url}catalogs/{catalog}/datasets").json()["resources"]
         dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset][0]
         dataset_obj = Dataset.from_dict(dict_)
+        dataset_obj.set_client(client)
 
         prod_df = client.list_product_dataset_mapping(catalog=catalog)
 
