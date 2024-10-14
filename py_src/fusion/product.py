@@ -20,8 +20,8 @@ if TYPE_CHECKING:
 class Product:
     "Product class."
 
-    title: str
     identifier: str
+    title: str = ""
     category: str | list[str] | None = None
     shortAbstract: str = ""
     description: str = ""
@@ -173,11 +173,15 @@ class Product:
 
         raise TypeError(f"Could not resolve the object provided: {product_source}")
 
-    @classmethod
-    def from_catalog(cls: type[Product], client: Fusion, product: str, catalog: str) -> Product: # change back  to regular method so that you can use Fusion().product('MY_PROD').from_catalog('common')
+    def from_catalog(self, catalog: str, client: Fusion | None = None) -> Product:
         """Create a Product object from a catalog."""
+        if client is None:
+            client = self._client
+
+        catalog = client._use_catalog(catalog)
+
         list_products = client.session.get(f"{client.root_url}catalogs/{catalog}/products").json()["resources"]
-        dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == product][0]
+        dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == self.identifier][0]
         product_obj = Product.from_dict(dict_)
 
         return product_obj
@@ -251,34 +255,35 @@ class Product:
         resp.raise_for_status()
         return resp
 
-    @staticmethod
-    def delete(  # change back  to regular method so that you can use Fusion().product('MY_PROD').delete()
-        product: str,
-        client: Fusion,
+    def delete(
+        self,
         catalog: str | None = None,
+        client: Fusion | None = None,
     ) -> requests.Response:
         """Delete a product from the catalog.
 
         Args:
-            product (str): The identifier of the product to delete.
+            client (Fusion): A Fusion client object.
             catalog (str, optional): A catalog identifier. Defaults to None.
 
         Returns:
             requests.Response: The response object from the API call.
         """
+        if client is None:
+            client = self._client
+
         catalog = client._use_catalog(catalog)
 
-        url = f"{client.root_url}catalogs/{catalog}/products/{product}"
+        url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
         resp: requests.Response = client.session.delete(url)
         resp.raise_for_status()
         return resp
 
-    @staticmethod
     def copy(
-        client: Fusion,
-        product: str,
+        self,
         catalog_from: str,
         catalog_to: str,
+        client: Fusion | None = None,
         client_to: Fusion | None = None,
     ) -> requests.Response:
         """Copy product from one catalog and/or environment to another by copy.
@@ -292,8 +297,11 @@ class Product:
         Returns:
             requests.Response: The response object from the API call.
         """
+        if client is None:
+            client = self._client
+
         if client_to is None:
             client_to = client
-        product_obj = Product.from_catalog(product=product, catalog=catalog_from, client=client)
+        product_obj = self.from_catalog(catalog=catalog_from, client=client)
         product_obj.set_client(client_to)
         return product_obj.create(catalog=catalog_to)
