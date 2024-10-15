@@ -1509,13 +1509,13 @@ class Fusion:
         return mapping_df
 
     def product(self, product: Product | dict[str, object] | pd.Series[Any] | None = None, **kwargs: Any) -> Product:
-        """Instantiate a Product object with this client."""
+        """Instantiate a Product object with this client for metadata creation."""
         product_obj = Product.from_object(product) if product else Product(**kwargs)
         product_obj.set_client(self)
         return product_obj
 
     def dataset(self, dataset: Dataset | dict[str, object] | pd.Series[Any] | None = None, **kwargs: Any) -> Dataset:
-        """Instantiate a Dataset object with this client."""
+        """Instantiate a Dataset object with this client for metadata creation."""
         dataset_obj = Dataset.from_object(dataset) if dataset else Dataset(**kwargs)
         dataset_obj.set_client(self)
         return dataset_obj

@@ -20,7 +20,7 @@ def test_product_class() -> None:
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
     assert test_product.shortAbstract == ""
-    assert test_product.description == ""
+    assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
@@ -53,7 +53,7 @@ def test_product_class_from_series() -> None:
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
     assert test_product.shortAbstract == ""
-    assert test_product.description == ""
+    assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
@@ -84,7 +84,7 @@ def test_product_class_from_dict() -> None:
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
     assert test_product.shortAbstract == ""
-    assert test_product.description == ""
+    assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
@@ -109,7 +109,7 @@ def test_product_class_from_csv(mock_product_pd_read_csv: Generator[pd.DataFrame
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
     assert test_product.shortAbstract == ""
-    assert test_product.description == ""
+    assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
@@ -202,7 +202,7 @@ def test_product_class_from_object_dict() -> None:
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
     assert test_product.shortAbstract == ""
-    assert test_product.description == ""
+    assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
@@ -235,7 +235,7 @@ def test_product_class_from_object_series() -> None:
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
     assert test_product.shortAbstract == ""
-    assert test_product.description == ""
+    assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
@@ -260,7 +260,7 @@ def test_product_class_from_object_csv(mock_product_pd_read_csv: Generator[pd.Da
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
     assert test_product.shortAbstract == ""
-    assert test_product.description == ""
+    assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
@@ -293,7 +293,7 @@ def test_product_class_from_object_json() -> None:
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
     assert test_product.shortAbstract == ""
-    assert test_product.description == ""
+    assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
@@ -368,7 +368,7 @@ def test_create_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
         logo="",
     )
     status_code = 200
-    resp = my_product.create(catalog=catalog, client=fusion_obj)
+    resp = my_product.create(catalog=catalog, client=fusion_obj, return_resp_obj=True)
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
 
@@ -434,7 +434,7 @@ def test_delete_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     status_code = 204
     requests_mock.delete(url, status_code=status_code)
 
-    resp = Product(identifier="TEST_PRODUCT").delete(client=fusion_obj, catalog=catalog)
+    resp = Product(identifier="TEST_PRODUCT").delete(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
 
@@ -503,6 +503,6 @@ def test_copy_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
     requests_mock.post(post_url, json=expected_post_data)
 
     status_code = 200
-    resp = Product(identifier="TEST_PRODUCT").copy(client=fusion_obj, catalog_from=catalog_from, catalog_to=new_catalog)
+    resp = Product(identifier="TEST_PRODUCT").copy(client=fusion_obj, catalog_from=catalog_from, catalog_to=new_catalog, return_resp_obj=True)
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code

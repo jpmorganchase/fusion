@@ -72,8 +72,9 @@ class Product:
 
     def __post_init__(self: Product) -> None:
         """Format Product metadata fields after object instantiation."""
-        self.title = tidy_string(self.title)
         self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
+        self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
+        self.description = tidy_string(self.description) if self.description != "" else self.title
         self.shortAbstract = tidy_string(self.shortAbstract)
         self.description = tidy_string(self.description)
         self.category = (
@@ -197,15 +198,17 @@ class Product:
         self,
         catalog: str | None = None,
         client: Fusion | None = None,
-    ) -> requests.Response:
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Create a new product in the catalog.
 
         Args:
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
             catalog (str, optional): A catalog identifier. Defaults to None.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
-            requests.Response: The response object from the API call.
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -221,21 +224,23 @@ class Product:
         url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
         resp: requests.Response = client.session.post(url, json=data)
         resp.raise_for_status()
-        return resp
+        return resp if return_resp_obj else None
 
     def update(
         self,
         catalog: str | None = None,
         client: Fusion | None = None,
-    ) -> requests.Response:
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Update an existing product in the catalog.
 
         Args:
             client (Fusion): A Fusion client object.
             catalog (str, optional): A catalog identifier. Defaults to None.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
-            requests.Response: The response object from the API call.
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -251,21 +256,23 @@ class Product:
         url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
         resp: requests.Response = client.session.put(url, json=data)
         resp.raise_for_status()
-        return resp
+        return resp if return_resp_obj else None
 
     def delete(
         self,
         catalog: str | None = None,
         client: Fusion | None = None,
-    ) -> requests.Response:
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Delete a product from the catalog.
 
         Args:
             client (Fusion): A Fusion client object.
             catalog (str, optional): A catalog identifier. Defaults to None.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
-            requests.Response: The response object from the API call.
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -273,7 +280,7 @@ class Product:
         url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
         resp: requests.Response = client.session.delete(url)
         resp.raise_for_status()
-        return resp
+        return resp if return_resp_obj else None
 
     def copy(
         self,
@@ -281,17 +288,19 @@ class Product:
         catalog_from: str | None = None,
         client: Fusion | None = None,
         client_to: Fusion | None = None,
-    ) -> requests.Response:
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Copy product from one catalog and/or environment to another by copy.
 
         Args:
-            product (str): Product  identifier.
-            catalog_to (str): Catalog  identifier to wich to copy product.
+            product (str): Product identifier.
+            catalog_to (str): Catalog identifier to which to copy product.
             catalog_from (str, optional): A catalog identifier from which to copy product. Defaults to "common".
             client_to (Fusion | None, optional): Fusion client object. Defaults to current instance.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
-            requests.Response: The response object from the API call.
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
         """
         client = self._client if client is None else client
         catalog_from = client._use_catalog(catalog_from)
@@ -299,4 +308,5 @@ class Product:
             client_to = client
         product_obj = self.from_catalog(catalog=catalog_from, client=client)
         product_obj.set_client(client_to)
-        return product_obj.create(catalog=catalog_to)
+        resp = product_obj.create(catalog=catalog_to, return_resp_obj=True)
+        return resp if return_resp_obj else None

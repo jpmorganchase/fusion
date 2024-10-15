@@ -103,8 +103,8 @@ class Dataset:
     def __post_init__(self: Dataset) -> None:
         """Format Dataset metadata fields after object initialization."""
         self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
-        self.title = tidy_string(self.title)
-        self.description = tidy_string(self.description)
+        self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
+        self.description = tidy_string(self.description) if self.description != "" else self.title
         self.category = (
             self.category if isinstance(self.category, list) or self.category is None else make_list(self.category)
         )
@@ -280,15 +280,18 @@ class Dataset:
         self,
         catalog: str | None = None,
         client: Fusion | None = None,
-    ) -> requests.Response:
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Uploada dataset via API from a Dataset object.
 
         Args:
             catalog (str | None, optional): A catalog identifier. Defaults to "common".
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response: Request response.
+
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -301,18 +304,22 @@ class Dataset:
 
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
         resp: requests.Response = client.session.post(url, json=data)
-        return resp
+        resp.raise_for_status()
+
+        return resp if return_resp_obj else None
 
     def update(
         self,
         catalog: str | None = None,
         client: Fusion | None = None,
-    ) -> requests.Response:
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Updates a dataset via API from dataset object.
 
         Args:
             catalog (str | None, optional): A catalog identifier. Defaults to "common".
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response: Request response.
@@ -321,25 +328,26 @@ class Dataset:
         catalog = client._use_catalog(catalog)
 
         self.createdDate = self.createdDate if self.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
-
         self.modifiedDate = self.modifiedDate if self.modifiedDate else pd.Timestamp("today").strftime("%Y-%m-%d")
 
         data = self.to_dict()
 
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
         resp: requests.Response = client.session.put(url, json=data)
-        return resp
+        return resp if return_resp_obj else None
 
     def delete(
         self,
         catalog: str | None = None,
         client: Fusion | None = None,
-    ) -> requests.Response:
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Delete a dataset via API from its dataset identifier.
 
         Args:
             catalog (str | None, optional): A catalog identifier. Defaults to "common".
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response: Request response.
@@ -349,7 +357,7 @@ class Dataset:
 
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
         resp: requests.Response = client.session.delete(url)
-        return resp
+        return resp if return_resp_obj else None
 
     def copy(
         self,
@@ -357,7 +365,8 @@ class Dataset:
         catalog_from: str | None = None,
         client: Fusion | None = None,
         client_to: Fusion | None = None,
-    ) -> requests.Response:
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Copy dataset and its attributes from one catalog and/or environment to another by copy.
 
         Args:
@@ -365,9 +374,10 @@ class Dataset:
             catalog_from (str, optional): A catalog identifier from which to copy dataset. Defaults to "common".
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
             client_to (Fusion | None, optional): Fusion client object. Defaults to current instance.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
-            list[requests.Response]: Request response.
+            requests.Response: Request response.
         """
         client = self._client if client is None else client
         catalog_from = client._use_catalog(catalog_from)
@@ -376,4 +386,5 @@ class Dataset:
             client_to = client
         dataset_obj = self.from_catalog(catalog=catalog_from, client=client)
         dataset_obj.set_client(client_to)
-        return dataset_obj.create(client=client_to, catalog=catalog_to)
+        resp = dataset_obj.create(client=client_to, catalog=catalog_to, return_resp_obj=True)
+        return resp if return_resp_obj else None

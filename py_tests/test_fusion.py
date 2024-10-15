@@ -958,7 +958,7 @@ def test_fusion_product(fusion_obj: Fusion) -> None:
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
     assert test_product.shortAbstract == ""
-    assert test_product.description == ""
+    assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
@@ -990,7 +990,7 @@ def test_fusion_dataset(fusion_obj: Fusion) -> None:
     assert test_dataset.title == "Test Dataset"
     assert test_dataset.identifier == "TEST_DATASET"
     assert test_dataset.category == ["Test"]
-    assert test_dataset.description == ""
+    assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
@@ -1073,7 +1073,7 @@ def test_fusion_create_product(requests_mock: requests_mock.Mocker, fusion_obj: 
         logo="",
     )
     status_code = 200
-    resp = my_product.create(catalog=catalog, client=fusion_obj)
+    resp = my_product.create(catalog=catalog, client=fusion_obj, return_resp_obj=True)
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
 
@@ -1159,7 +1159,7 @@ def test_fusion_create_dataset_dict(requests_mock: requests_mock.Mocker, fusion_
         "isActive": False,
     }
     dataset_obj = fusion_obj.dataset(dataset_dict)
-    resp = dataset_obj.create(client=fusion_obj, catalog=catalog)
+    resp = dataset_obj.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code

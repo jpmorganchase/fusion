@@ -16,7 +16,6 @@ from fusion.dataset import Dataset
 def test_dataset_class() -> None:
     """Test Dataset class."""
     test_dataset = Dataset(
-        title="Test Dataset",
         identifier="Test Dataset",
         category="Test",
         product="TEST_PRODUCT",
@@ -27,7 +26,7 @@ def test_dataset_class() -> None:
     assert test_dataset.title == "Test Dataset"
     assert test_dataset.identifier == "TEST_DATASET"
     assert test_dataset.category == ["Test"]
-    assert test_dataset.description == ""
+    assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
@@ -79,7 +78,7 @@ def test_dataset_class_from_series() -> None:
     assert test_dataset.title == "Test Dataset"
     assert test_dataset.identifier == "TEST_DATASET"
     assert test_dataset.category == ["Test"]
-    assert test_dataset.description == ""
+    assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
@@ -129,7 +128,7 @@ def test_dataset_class_from_dict() -> None:
     assert test_dataset.title == "Test Dataset"
     assert test_dataset.identifier == "TEST_DATASET"
     assert test_dataset.category == ["Test"]
-    assert test_dataset.description == ""
+    assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
@@ -172,7 +171,7 @@ def test_dataset_class_from_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame
     assert test_dataset.title == "Test Dataset"
     assert test_dataset.identifier == "TEST_DATASET"
     assert test_dataset.category == ["Test"]
-    assert test_dataset.description == ""
+    assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
@@ -220,7 +219,7 @@ def test_dataset_class_from_object_dataset() -> None:
     assert test_dataset.title == "Test Dataset"
     assert test_dataset.identifier == "TEST_DATASET"
     assert test_dataset.category == ["Test"]
-    assert test_dataset.description == ""
+    assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
@@ -269,7 +268,7 @@ def test_dataset_class_from_object_dict() -> None:
     assert test_dataset.title == "Test Dataset"
     assert test_dataset.identifier == "TEST_DATASET"
     assert test_dataset.category == ["Test"]
-    assert test_dataset.description == ""
+    assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
@@ -320,7 +319,7 @@ def test_dataset_class_from_object_json() -> None:
     assert test_dataset.title == "Test Dataset"
     assert test_dataset.identifier == "TEST_DATASET"
     assert test_dataset.category == ["Test"]
-    assert test_dataset.description == ""
+    assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
@@ -363,7 +362,7 @@ def test_dataset_class_from_object_csv(mock_dataset_pd_read_csv: Generator[pd.Da
     assert test_dataset.title == "Test Dataset"
     assert test_dataset.identifier == "TEST_DATASET"
     assert test_dataset.category == ["Test"]
-    assert test_dataset.description == ""
+    assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
@@ -414,7 +413,7 @@ def test_dataset_class_from_object_series() -> None:
     assert test_dataset.title == "Test Dataset"
     assert test_dataset.identifier == "TEST_DATASET"
     assert test_dataset.category == ["Test"]
-    assert test_dataset.description == ""
+    assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
     assert test_dataset.isInternalOnlyDataset is False
     assert test_dataset.isThirdPartyData is True
@@ -743,7 +742,7 @@ def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_ob
         "isActive": False,
     }
     dataset_obj = Dataset.from_dict(dataset_dict)
-    resp = dataset_obj.create(client=fusion_obj, catalog=catalog)
+    resp = dataset_obj.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
@@ -831,7 +830,7 @@ def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
         "isActive": False,
     }
     dataset_obj = Dataset.from_dict(dataset_dict)
-    resp = dataset_obj.update(client=fusion_obj, catalog=catalog)
+    resp = dataset_obj.update(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
@@ -844,7 +843,7 @@ def test_delete_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
     requests_mock.delete(url)
 
-    resp = Dataset(identifier=dataset).delete(client=fusion_obj, catalog=catalog)
+    resp = Dataset(identifier=dataset).delete(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
@@ -953,7 +952,9 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
         "isActive": False,
     }
     requests_mock.post(url3, json=expected_data3)
-    resp = Dataset(identifier="TEST_DATASET").copy(client=fusion_obj, catalog_from=catalog, catalog_to=catalog_new)
+    resp = Dataset(
+        identifier="TEST_DATASET"
+        ).copy(client=fusion_obj, catalog_from=catalog, catalog_to=catalog_new, return_resp_obj=True)
     status_code = 200
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
