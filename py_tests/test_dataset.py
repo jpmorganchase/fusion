@@ -163,7 +163,7 @@ def test_dataset_class_from_dict() -> None:
     assert test_dataset.isActive is None
 
 
-def test_dataset_class_from_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:
+def test_dataset_class_from_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test Dataset class."""
     test_dataset = Dataset.from_csv("datasets.csv")
 
@@ -354,7 +354,7 @@ def test_dataset_class_from_object_json() -> None:
     assert test_dataset.isActive is None
 
 
-def test_dataset_class_from_object_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:
+def test_dataset_class_from_object_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test Dataset class."""
     test_dataset = Dataset.from_object("datasets.csv")
 

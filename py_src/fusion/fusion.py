@@ -95,7 +95,7 @@ class Fusion:
 
     def __init__(
         self,
-        credentials: Union[str, FusionCredentials] = "config/client_credentials.json",
+        credentials: str | FusionCredentials = "config/client_credentials.json",
         root_url: str = "https://fusion.jpmorgan.com/api/v1/",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
@@ -144,7 +144,7 @@ class Fusion:
 
         self.session = get_session(self.credentials, self.root_url)
         self.fs = fs if fs else get_default_fs()
-        self.events: Optional[pd.DataFrame] = None
+        self.events: pd.DataFrame | None = None
 
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
@@ -199,7 +199,7 @@ class Fusion:
         """
         self._default_catalog = catalog
 
-    def _use_catalog(self, catalog: Optional[str]) -> str:
+    def _use_catalog(self, catalog: str | None) -> str:
         """Determine which catalog to use in an API call.
 
         Args:
@@ -241,7 +241,7 @@ class Fusion:
         return cat_df
 
     def catalog_resources(
-        self, catalog: Optional[str] = None, output: bool = False
+        self, catalog: str | None = None, output: bool = False
     ) -> pd.DataFrame:
         """List the resources contained within the catalog, for example products and datasets.
 
@@ -264,9 +264,9 @@ class Fusion:
 
     def list_products(
         self,
-        contains: Optional[Union[str, list[str]]] = None,
+        contains: str | list[str] | None = None,
         id_contains: bool = False,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
         max_results: int = -1,
         display_all_columns: bool = False,
@@ -335,14 +335,14 @@ class Fusion:
 
     def list_datasets(  # noqa: PLR0913
         self,
-        contains: Optional[Union[str, list[str]]] = None,
+        contains: str | list[str] | None = None,
         id_contains: bool = False,
-        product: Optional[Union[str, list[str]]] = None,
-        catalog: Optional[str] = None,
+        product: str | list[str] | None = None,
+        catalog: str | None = None,
         output: bool = False,
         max_results: int = -1,
         display_all_columns: bool = False,
-        status: Optional[str] = None,
+        status: str | None = None,
     ) -> pd.DataFrame:
         """Get the datasets contained in a catalog.
 
@@ -422,7 +422,7 @@ class Fusion:
         return ds_df
 
     def dataset_resources(
-        self, dataset: str, catalog: Optional[str] = None, output: bool = False
+        self, dataset: str, catalog: str | None = None, output: bool = False
     ) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
 
@@ -447,7 +447,7 @@ class Fusion:
     def list_dataset_attributes(
         self,
         dataset: str,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
         display_all_columns: bool = False,
     ) -> pd.DataFrame:
@@ -494,7 +494,7 @@ class Fusion:
     def list_datasetmembers(
         self,
         dataset: str,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
         max_results: int = -1,
     ) -> pd.DataFrame:
@@ -527,7 +527,7 @@ class Fusion:
         self,
         dataset: str,
         series: str,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
     ) -> pd.DataFrame:
         """List the available resources for a datasetseries member.
@@ -556,7 +556,7 @@ class Fusion:
         self,
         dataset: str,
         series: str,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
     ) -> pd.DataFrame:
         """List the available distributions (downloadable instances of the dataset with a format type).
@@ -585,7 +585,7 @@ class Fusion:
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
     ) -> list[tuple[str, str, str, str]]:
         """Resolve distribution tuples given specification params.
 
@@ -667,15 +667,15 @@ class Fusion:
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: Optional[str] = None,
-        n_par: Optional[int] = None,
+        catalog: str | None = None,
+        n_par: int | None = None,
         show_progress: bool = True,
         force_download: bool = False,
-        download_folder: Optional[str] = None,
+        download_folder: str | None = None,
         return_paths: bool = False,
-        partitioning: Optional[str] = None,
+        partitioning: str | None = None,
         preserve_original_name: bool = False,
-    ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
+    ) -> list[tuple[bool, str, str | None]] | None:
         """Downloads the requested distributions of a dataset to disk.
 
         Args:
@@ -791,13 +791,13 @@ class Fusion:
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: Optional[str] = None,
-        n_par: Optional[int] = None,
+        catalog: str | None = None,
+        n_par: int | None = None,
         show_progress: bool = True,
-        columns: Optional[list[str]] = None,
-        filters: Optional[PyArrowFilterT] = None,
+        columns: list[str] | None = None,
+        filters: PyArrowFilterT | None = None,
         force_download: bool = False,
-        download_folder: Optional[str] = None,
+        download_folder: str | None = None,
         dataframe_type: str = "pandas",
         **kwargs: Any,
     ) -> pd.DataFrame:
@@ -943,7 +943,7 @@ class Fusion:
         dataset: str,
         series_member: str,
         dataset_format: str = "parquet",
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
     ) -> BytesIO:
         """Returns an instance of dataset (the distribution) as a bytes object.
 
@@ -971,13 +971,13 @@ class Fusion:
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: Optional[str] = None,
-        n_par: Optional[int] = None,
+        catalog: str | None = None,
+        n_par: int | None = None,
         show_progress: bool = True,
-        columns: Optional[list[str]] = None,
-        filters: Optional[PyArrowFilterT] = None,
+        columns: list[str] | None = None,
+        filters: PyArrowFilterT | None = None,
         force_download: bool = False,
-        download_folder: Optional[str] = None,
+        download_folder: str | None = None,
         **kwargs: Any,
     ) -> pa.Table:
         """Gets distributions for a specified date or date range and returns the data as an arrow table.
@@ -1079,19 +1079,19 @@ class Fusion:
     def upload(  # noqa: PLR0913
         self,
         path: str,
-        dataset: Optional[str] = None,
+        dataset: str | None = None,
         dt_str: str = "latest",
-        catalog: Optional[str] = None,
-        n_par: Optional[int] = None,
+        catalog: str | None = None,
+        n_par: int | None = None,
         show_progress: bool = True,
         return_paths: bool = False,
         multipart: bool = True,
         chunk_size: int = 5 * 2**20,
-        from_date: Optional[str] = None,
-        to_date: Optional[str] = None,
-        preserve_original_name: Optional[bool] = False,
-        additional_headers: Optional[dict[str, str]] = None,
-    ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
+        from_date: str | None = None,
+        to_date: str | None = None,
+        preserve_original_name: bool | None = False,
+        additional_headers: dict[str, str] | None = None,
+    ) -> list[tuple[bool, str, str | None]] | None:
         """Uploads the requested files/files to Fusion.
 
         Args:
@@ -1220,16 +1220,16 @@ class Fusion:
         data: BytesIO,
         dataset: str,
         series_member: str = "latest",
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         distribution: str = "parquet",
         show_progress: bool = True,
         return_paths: bool = False,
         chunk_size: int = 5 * 2**20,
-        from_date: Optional[str] = None,
-        to_date: Optional[str] = None,
-        file_name: Optional[str] = None,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        file_name: str | None = None,
         **kwargs: Any,  # noqa: ARG002
-    ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
+    ) -> list[tuple[bool, str, str | None]] | None:
         """Uploads data from an object in memory.
 
         Args:
@@ -1288,10 +1288,10 @@ class Fusion:
 
     def listen_to_events(
         self,
-        last_event_id: Optional[str] = None,
-        catalog: Optional[str] = None,
+        last_event_id: str | None = None,
+        catalog: str | None = None,
         url: str = "https://fusion.jpmorgan.com/api/v1/",
-    ) -> Union[None, pd.DataFrame]:
+    ) -> None | pd.DataFrame:
         """Run server sent event listener in the background. Retrieve results by running get_events.
 
         Args:
@@ -1362,11 +1362,11 @@ class Fusion:
 
     def get_events(
         self,
-        last_event_id: Optional[str] = None,
-        catalog: Optional[str] = None,
+        last_event_id: str | None = None,
+        catalog: str | None = None,
         in_background: bool = True,
         url: str = "https://fusion.jpmorgan.com/api/v1/",
-    ) -> Union[None, pd.DataFrame]:
+    ) -> None | pd.DataFrame:
         """Run server sent event listener and print out the new events. Keyboard terminate to stop.
 
         Args:
@@ -1410,7 +1410,7 @@ class Fusion:
     def list_dataset_lineage(
         self,
         dataset_id: str,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
         max_results: int = -1,
     ) -> pd.DataFrame:
@@ -1497,10 +1497,10 @@ class Fusion:
     def create_dataset_lineage(
         self,
         base_dataset: str,
-        source_dataset_catalog_mapping: Union[pd.DataFrame, list[dict[str, str]]],
-        catalog: Optional[str] = None,
+        source_dataset_catalog_mapping: pd.DataFrame | list[dict[str, str]],
+        catalog: str | None = None,
         return_resp_obj: bool = False,
-    ) -> Optional[requests.Response]:
+    ) -> requests.Response | None:
         """Upload lineage to a dataset.
 
         Args:

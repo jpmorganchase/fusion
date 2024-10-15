@@ -102,7 +102,7 @@ def test_product_class_from_dict() -> None:
     assert test_product.dataset is None
 
 
-def test_product_class_from_csv(mock_product_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:
+def test_product_class_from_csv(mock_product_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test the Product class."""
     test_product = Product.from_csv("products.csv")
     assert test_product.title == "Test Product"
@@ -253,7 +253,7 @@ def test_product_class_from_object_series() -> None:
     assert test_product.dataset is None
 
 
-def test_product_class_from_object_csv(mock_product_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:
+def test_product_class_from_object_csv(mock_product_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test the Product class."""
     test_product = Product.from_object("products.csv")
     assert test_product.title == "Test Product"

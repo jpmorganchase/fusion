@@ -186,7 +186,16 @@ extend-select = [
     'NPY',   # NumPy-specific rules
     'PERF',  # Perflint
 ]
-extend-ignore = ["S101", "FA100", "F541", "ANN101", "ANN401"]
+extend-ignore = [
+    "S101",
+    "FA100",
+    "F541",
+    "ANN101",
+    "ANN401",
+    "N815",  # Allow mixedCase variables for request body construction
+    "N806",  # Allow mixedCase variables for request body construction
+
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["fusion"]

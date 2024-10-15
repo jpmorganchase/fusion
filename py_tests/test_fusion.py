@@ -941,7 +941,10 @@ def test_list_product_dataset_mapping_product_list(requests_mock: requests_mock.
     assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
 
 
-def test_list_product_dataset_mapping_product_no_filter(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_list_product_dataset_mapping_product_no_filter(
+        requests_mock: requests_mock.Mocker,
+        fusion_obj: Fusion
+) -> None:
     """Test list Product Dataset Mapping method."""
     catalog = "my_catalog"
     url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
