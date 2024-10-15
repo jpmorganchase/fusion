@@ -1158,7 +1158,7 @@ def test_fusion_create_dataset_dict(requests_mock: requests_mock.Mocker, fusion_
         "isHighlyConfidential": False,
         "isActive": False,
     }
-    dataset_obj = fusion_obj.dataset(dataset_dict)
+    dataset_obj = fusion_obj.dataset(identifier="TEST_DATASET").from_object(dataset_dict)
     resp = dataset_obj.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
     assert isinstance(resp, requests.models.Response)
