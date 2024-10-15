@@ -87,6 +87,7 @@ def test_res_plural(ref_int: int, pluraliser: str) -> None:
 
 def test_is_url() -> None:
     from fusion.authentication import _is_url
+
     assert _is_url("https://www.google.com")
     assert _is_url("http://www.google.com/some/path?qp1=1&qp2=2")
     assert not _is_url("www.google.com")
@@ -804,10 +805,7 @@ def test_create_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fus
 
     # Call the create_dataset_lineage method
     resp = fusion_obj.create_dataset_lineage(
-        base_dataset=base_dataset,
-        source_dataset_catalog_mapping=df_input,
-        catalog=catalog, 
-        return_resp_obj=True
+        base_dataset=base_dataset, source_dataset_catalog_mapping=df_input, catalog=catalog, return_resp_obj=True
     )
 
     # Check if the response is correct
@@ -830,10 +828,7 @@ def test_create_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, f
 
     # Call the create_dataset_lineage method
     resp = fusion_obj.create_dataset_lineage(
-        base_dataset=base_dataset,
-        source_dataset_catalog_mapping=data,
-        catalog=catalog,
-        return_resp_obj=True
+        base_dataset=base_dataset, source_dataset_catalog_mapping=data, catalog=catalog, return_resp_obj=True
     )
 
     # Check if the response is correct
@@ -859,7 +854,7 @@ def test_create_dataset_lineage_valueerror(requests_mock: requests_mock.Mocker, 
         fusion_obj.create_dataset_lineage(
             base_dataset=base_dataset,
             source_dataset_catalog_mapping=data,  # type: ignore
-            catalog=catalog
+            catalog=catalog,
         )
 
 
@@ -875,9 +870,7 @@ def test_create_dataset_lineage_httperror(requests_mock: requests_mock.Mocker, f
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.create_dataset_lineage(
-            base_dataset=base_dataset,
-            source_dataset_catalog_mapping=data,
-            catalog=catalog
+            base_dataset=base_dataset, source_dataset_catalog_mapping=data, catalog=catalog
         )
 
 
@@ -887,13 +880,14 @@ def test_list_product_dataset_mapping_dataset_list(requests_mock: requests_mock.
     url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
     expected_data = {
         "resources": [
-            {"product": "P00001", "dataset": "D00001"}, {"product": "P00002", "dataset": "D00002"},
+            {"product": "P00001", "dataset": "D00001"},
+            {"product": "P00002", "dataset": "D00002"},
         ]
     }
     requests_mock.get(url, json=expected_data)
 
     resp = fusion_obj.list_product_dataset_mapping(dataset=["D00001"], catalog=catalog)
-    assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+    assert all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
 
 
 def test_list_product_dataset_mapping_dataset_str(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -902,13 +896,14 @@ def test_list_product_dataset_mapping_dataset_str(requests_mock: requests_mock.M
     url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
     expected_data = {
         "resources": [
-            {"product": "P00001", "dataset": "D00001"}, {"product": "P00002", "dataset": "D00002"},
+            {"product": "P00001", "dataset": "D00001"},
+            {"product": "P00002", "dataset": "D00002"},
         ]
     }
     requests_mock.get(url, json=expected_data)
 
     resp = fusion_obj.list_product_dataset_mapping(dataset="D00001", catalog=catalog)
-    assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+    assert all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
 
 
 def test_list_product_dataset_mapping_product_str(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -917,13 +912,14 @@ def test_list_product_dataset_mapping_product_str(requests_mock: requests_mock.M
     url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
     expected_data = {
         "resources": [
-            {"product": "P00001", "dataset": "D00001"}, {"product": "P00002", "dataset": "D00002"},
+            {"product": "P00001", "dataset": "D00001"},
+            {"product": "P00002", "dataset": "D00002"},
         ]
     }
     requests_mock.get(url, json=expected_data)
 
     resp = fusion_obj.list_product_dataset_mapping(product="P00001", catalog=catalog)
-    assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+    assert all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
 
 
 def test_list_product_dataset_mapping_product_list(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -932,31 +928,27 @@ def test_list_product_dataset_mapping_product_list(requests_mock: requests_mock.
     url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
     expected_data = {
         "resources": [
-            {"product": "P00001", "dataset": "D00001"}, {"product": "P00002", "dataset": "D00002"},
+            {"product": "P00001", "dataset": "D00001"},
+            {"product": "P00002", "dataset": "D00002"},
         ]
     }
     requests_mock.get(url, json=expected_data)
 
     resp = fusion_obj.list_product_dataset_mapping(product=["P00001"], catalog=catalog)
-    assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+    assert all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
 
 
 def test_list_product_dataset_mapping_product_no_filter(
-        requests_mock: requests_mock.Mocker,
-        fusion_obj: Fusion
+    requests_mock: requests_mock.Mocker, fusion_obj: Fusion
 ) -> None:
     """Test list Product Dataset Mapping method."""
     catalog = "my_catalog"
     url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
-    expected_data = {
-        "resources": [
-            {"product": "P00001", "dataset": "D00001"}
-        ]
-    }
+    expected_data = {"resources": [{"product": "P00001", "dataset": "D00001"}]}
     requests_mock.get(url, json=expected_data)
 
     resp = fusion_obj.list_product_dataset_mapping(catalog=catalog)
-    assert  all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+    assert all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
 
 
 def test_fusion_product(fusion_obj: Fusion) -> None:
