@@ -230,6 +230,10 @@ omit = [
     "py_src/fusion/_legacy/authentication.py",
     "py_src/fusion/_legacy/__init__.py"
 ]
+exclude_lines = [
+    "if typing.TYPE_CHECKING:",
+    "if TYPE_CHECKING:",
+]
 
 
 [tool.bumpversion]
