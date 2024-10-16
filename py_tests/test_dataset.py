@@ -952,9 +952,9 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
         "isActive": False,
     }
     requests_mock.post(url3, json=expected_data3)
-    resp = Dataset(
-        identifier="TEST_DATASET"
-        ).copy(client=fusion_obj, catalog_from=catalog, catalog_to=catalog_new, return_resp_obj=True)
+    resp = Dataset(identifier="TEST_DATASET").copy(
+        client=fusion_obj, catalog_from=catalog, catalog_to=catalog_new, return_resp_obj=True
+    )
     status_code = 200
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code

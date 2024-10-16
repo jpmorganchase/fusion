@@ -866,8 +866,7 @@ def tidy_string(x: str) -> str:
 
 
 def make_list(obj: Any) -> list[str]:
-    """Make list.
-    """
+    """Make list."""
     if isinstance(obj, list):
         lst = obj
     elif isinstance(obj, str):
@@ -875,14 +874,13 @@ def make_list(obj: Any) -> list[str]:
         for i, _ in enumerate(lst):
             lst[i] = lst[i].strip()
     else:
-        lst  = [cast(str, obj)]
+        lst = [cast(str, obj)]
 
     return lst
 
 
 def make_bool(obj: Any) -> bool:
-    """Make boolean.
-    """
+    """Make boolean."""
     if isinstance(obj, str):
         false_strings = ["F", "FALSE", "0"]
         obj = obj.strip().upper()
@@ -893,7 +891,7 @@ def make_bool(obj: Any) -> bool:
     return bool_obj
 
 
-def convert_date_format(date_str:  str) -> Any:
+def convert_date_format(date_str: str) -> Any:
     """Convert date to YYYY-MM-DD format."""
     desired_format = "%Y-%m-%d"
     date_obj = parser.parse(date_str)

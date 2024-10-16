@@ -194,7 +194,7 @@ extend-ignore = [
     "ANN401",
     "N815",  # Allow mixedCase variables for request body construction
     "N806",  # Allow mixedCase variables for request body construction
-
+    "N803",  # Allow mixedCase variables for request body construction
 ]
 
 [tool.ruff.lint.isort]

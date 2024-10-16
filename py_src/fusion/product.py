@@ -45,30 +45,8 @@ class Product:
 
     def __repr__(self: Product) -> str:
         """Return a string representation of the Product object."""
-        return (
-            f"Product(\n"
-            f"  title={self.title!r},\n"
-            f"  identifier={self.identifier!r},\n"
-            f"  category={self.category!r},\n"
-            f"  shortAbstract={self.shortAbstract!r},\n"
-            f"  description={self.description!r},\n"
-            f"  isActive={self.isActive!r},\n"
-            f"  isRestricted={self.isRestricted!r},\n"
-            f"  maintainer={self.maintainer!r},\n"
-            f"  region={self.region!r},\n"
-            f"  publisher={self.publisher!r},\n"
-            f"  subCategory={self.subCategory!r},\n"
-            f"  tag={self.tag!r},\n"
-            f"  deliveryChannel={self.deliveryChannel!r},\n"
-            f"  theme={self.theme!r},\n"
-            f"  releaseDate={self.releaseDate!r},\n"
-            f"  language={self.language!r},\n"
-            f"  status={self.status!r},\n"
-            f"  image={self.image!r},\n"
-            f"  logo={self.logo!r},\n"
-            f"  dataset={self.dataset!r}\n"
-            f")"
-        )
+        attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+        return f"Product(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
 
     def __post_init__(self: Product) -> None:
         """Format Product metadata fields after object instantiation."""
