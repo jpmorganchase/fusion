@@ -55,6 +55,7 @@ class Dataset:
     isConfidential: bool | None = None
     isHighlyConfidential: bool | None = None
     isActive: bool | None = None
+    owners: list[str] | None = None
 
     _client: Any = field(init=False, repr=False, compare=False, default=None)
 
@@ -92,6 +93,8 @@ class Dataset:
         )
         self.createdDate = convert_date_format(self.createdDate) if self.createdDate else None
         self.modifiedDate = convert_date_format(self.modifiedDate) if self.modifiedDate else None
+        self.owners = self.owners if isinstance(self.owners, list) or self.owners is None else make_list(self.owners)
+
 
     def set_client(self, client: Any) -> None:
         """Set the client for the Dataset."""
@@ -160,6 +163,7 @@ class Dataset:
             modifiedDate=series.get("modifieddate", None),
             snowflake=series.get("snowflake", None),
             complexity=series.get("complexity", None),
+            owners=series.get("owners", None),
             isImmutable=isImmutable,
             isMnpi=isMnpi,
             isPci=isPci,
@@ -213,7 +217,7 @@ class Dataset:
 
         raise TypeError(f"Could not resolve the object provided: {dataset_source}")
 
-    def from_catalog(self, catalog: str, client: Fusion | None = None) -> Dataset:
+    def from_catalog(self, catalog: str | None = None, client: Fusion | None = None) -> Dataset:
         """Create a Dataset object from a catalog."""
         if client is None:
             client = self._client

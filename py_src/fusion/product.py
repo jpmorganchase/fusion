@@ -152,10 +152,9 @@ class Product:
 
         raise TypeError(f"Could not resolve the object provided: {product_source}")
 
-    def from_catalog(self, catalog: str, client: Fusion | None = None) -> Product:
+    def from_catalog(self, catalog: str | None = None, client: Fusion | None = None) -> Product:
         """Create a Product object from a catalog."""
-        if client is None:
-            client = self._client
+        client = self._client if client is None else client
 
         catalog = client._use_catalog(catalog)
 
