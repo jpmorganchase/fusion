@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import json as js
 from dataclasses import asdict, dataclass, field, fields
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
+from fusion.fusion_types import Types
+from fusion.units import register_units
+from pint import UnitRegistry
 import numpy as np
 import pandas as pd
 
@@ -16,6 +19,8 @@ if TYPE_CHECKING:
 
     from fusion import Fusion
 
+ureg = UnitRegistry()
+register_units(ureg)
 
 @dataclass
 class Attribute:
@@ -23,7 +28,7 @@ class Attribute:
 
     identifier: str
     index: int
-    dataType: str # add fusion types handling
+    dataType: Types = cast(Types, Types.String)
     title: str = ""
     description: str = ""
     isDatatsetKey: bool = False
@@ -66,9 +71,13 @@ class Attribute:
         self.sourceFieldId = tidy_string(self.sourceFieldId).lower().replace(" ", "_") if self.sourceFieldId else self.identifier
         self.availableFrom = convert_date_format(self.availableFrom) if self.availableFrom else None
         self.deprecatedFrom = convert_date_format(self.deprecatedFrom) if self.deprecatedFrom else None
+        self.dataType = Types[str(self.dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
+        self.unit = (
+            ureg(self.unit) if self.unit != "None" and self.unit is not None and not pd.isna(self.unit) else None
+        )
 
     @classmethod
-    def from_series(cls, series: pd.Series, *, is_internal: bool = False) -> Attribute:
+    def from_series(cls, series: pd.Series[Any], *, is_internal: bool = False) -> Attribute:
         """Create an Attribute object from a pandas Series."""
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower()).replace(
             to_replace=np.nan, value=None
@@ -98,7 +107,7 @@ class Attribute:
         return cls(
             identifier=series.get("identifier", None).strip(),
             index=series.get("index", None),
-            dataType=dataType,
+            dataType=Types[dataType.strip().split(".")[-1].title()],
             title=series.get("title", None),
             description=series.get("description", None),
             isDatatsetKey=series.get("isdatasetkey", False),
@@ -122,13 +131,17 @@ class Attribute:
         """Create an Attribute object from a dictionary."""
         keys = [f.name for f in fields(cls)]
         data = {k: (None if pd.isna(v) else v) for k, v in data.items() if k in keys}
-        # add units and dataType handling
+        if "unit" in data and data["unit"] is not None:
+            data["unit"] = ureg(data["unit"])
+        if "dataType" in data:
+            data["dataType"] = Types[data["dataType"].strip().rsplit(".", maxsplit=1)[-1].title()]
         return cls(**data)
     
     def to_dict(self: Attribute) -> dict:
         """Convert object to dictionary."""
         result = asdict(self)
-        # add units and dataType handling
+        result['unit'] = str(self.unit) if self.unit is not None else None
+        result['dataType'] = self.dataType.name
         result.pop("_client")
         return result
     
