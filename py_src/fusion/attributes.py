@@ -35,7 +35,7 @@ class Attribute:
     source: str | None = None
     sourceFieldId: str | None = None
     isInternalDatasetKey: bool | None = None
-    isExternallyVisible: bool | None = None
+    isExternallyVisible: bool | None = True
     unit: Any | None = None # add units handling
     multiplier: float = 1.0
     isPropogationEligible: bool | None = None

@@ -421,6 +421,7 @@ packaging==24.0
     # via msal-extensions
     # via nbconvert
     # via nox
+    # via pint
     # via pyproject-api
     # via pytest
     # via tox
@@ -438,6 +439,8 @@ pathspec==0.12.1
     # via mkdocs
 pexpect==4.9.0
     # via ipython
+pint==0.18
+    # via pyfusion
 pip==24.0
 pkginfo==1.10.0
     # via twine
@@ -478,6 +481,8 @@ py-cpuinfo==9.0.0
     # via pytest-benchmark
 py-partiql-parser==0.5.4
     # via moto
+py4j==0.10.9.7
+    # via pyspark
 pyarrow==16.0.0
     # via pyfusion
 pyasn1==0.6.0
@@ -510,6 +515,7 @@ pyparsing==3.1.2
     # via mike
 pyproject-api==1.6.1
     # via tox
+pyspark==3.5.3
 pytest==8.1.2
     # via pytest-aiohttp
     # via pytest-asyncio

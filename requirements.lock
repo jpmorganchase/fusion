@@ -356,6 +356,7 @@ packaging==24.0
     # via mkdocs
     # via msal-extensions
     # via nbconvert
+    # via pint
 paginate==0.5.6
     # via mkdocs-material
 pandas==2.2.2
@@ -368,6 +369,8 @@ pathspec==0.12.1
     # via mkdocs
 pexpect==4.9.0
     # via ipython
+pint==0.18
+    # via pyfusion
 platformdirs==4.2.1
     # via jupyter-core
     # via mkdocs-get-deps

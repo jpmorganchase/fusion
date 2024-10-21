@@ -42,7 +42,7 @@ def func_prefix(s: str) -> str:
         str: Unit encoded in a string.
     """
     for w in s.split(" "):
-        if w in ureg.prefixes:
+        if w in ureg._prefixes:
             return s.replace(f"{w} ", w)
     return s
 
@@ -55,12 +55,12 @@ def func_order(s: str) -> str:
     Returns:
         str: Unit encoded in a string.
     """
-    if re.split(r" |/|\n", s)[-1] in ureg.prefixes:
+    if re.split(r" |/|\n", s)[-1] in ureg._prefixes:
         return " ".join(s.split(" ")[:-2] + [s.split(" ")[-1]] + [s.split(" ")[-2]])
     return s
 
 ureg = UnitRegistry(
-    prepprocessors = [lambda s: s.replace("%", " percent "), func_special_cases, func_metric, func_prefix, func_order]
+    preprocessors = [lambda s: s.replace("%", " percent "), func_special_cases, func_metric, func_prefix, func_order]
 )
 
 def register_units(unit_registry: UnitRegistry) -> None:

@@ -44,4 +44,3 @@ def test_attribute_class() -> None:
     assert test_attribute.term == "bizterm1"
     assert test_attribute.dataset is None
     assert test_attribute.attributeType is None
-

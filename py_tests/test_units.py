@@ -46,11 +46,11 @@ def test_func_prefix() -> None:
     sample2 = "the zetta byte"
     sample3 = "zepto gram"
     sample4 = "1111 kilo meter 1111"
-    sample5 = "1111 kilo meter 1111"
+    sample5 = "1111 kilometer 1111"
     sample6 = "y byte"
     sample7 = "the semicircle"
 
-    assert units.func_prefix(sample1) == "yyy picquart yyyy"
+    assert units.func_prefix(sample1) == "yyy picoquart yyyy"
     assert units.func_prefix(sample2) == "the zettabyte"
     assert units.func_prefix(sample3) == "zeptogram"
     assert units.func_prefix(sample4) == "1111 kilometer 1111"
@@ -70,6 +70,6 @@ def test_func_order() -> None:
 def test_ureg() -> None:
     """Test register_units."""
     ureg = UnitRegistry(
-        prepprocessors = [lambda s: s.replace("%", " percent "), units.func_special_cases, units.func_metric, units.func_prefix, units.func_order]
+        preprocessors = [lambda s: s.replace("%", " percent "), units.func_special_cases, units.func_metric, units.func_prefix, units.func_order]
     )
     assert ureg is not None
