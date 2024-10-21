@@ -62,7 +62,7 @@ def test_dataset_class() -> None:
 
 def test_dataset_class_from_series() -> None:
     """Test Dataset class."""
-    test_dataset = Dataset.from_series(
+    test_dataset = Dataset._from_series(
         pd.Series(
             {
                 "title": "Test Dataset",
@@ -114,7 +114,7 @@ def test_dataset_class_from_series() -> None:
 
 def test_dataset_class_from_dict() -> None:
     """Test Dataset class."""
-    test_dataset = Dataset.from_dict(
+    test_dataset = Dataset._from_dict(
         {
             "title": "Test Dataset",
             "identifier": "Test Dataset",
@@ -164,7 +164,7 @@ def test_dataset_class_from_dict() -> None:
 
 def test_dataset_class_from_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test Dataset class."""
-    test_dataset = Dataset.from_csv("datasets.csv")
+    test_dataset = Dataset._from_csv("datasets.csv")
 
     assert str(test_dataset)
     assert repr(test_dataset)
@@ -213,7 +213,7 @@ def test_dataset_class_from_object_dataset() -> None:
         category="Test",
         product="TEST_PRODUCT",
     )
-    test_dataset = Dataset.from_object(dataset_obj)
+    test_dataset = Dataset(identifier='test').from_object(dataset_obj)
     assert str(dataset_obj)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
@@ -261,7 +261,7 @@ def test_dataset_class_from_object_dict() -> None:
         "category": "Test",
         "product": "TEST_PRODUCT",
     }
-    test_dataset = Dataset.from_object(test_dict)
+    test_dataset = Dataset(identifier='test').from_object(test_dict)
 
     assert str(test_dataset)
     assert repr(test_dataset)
@@ -312,7 +312,7 @@ def test_dataset_class_from_object_json() -> None:
             "product": "TEST_PRODUCT",
         }
     )
-    test_dataset = Dataset.from_object(test_json)
+    test_dataset = Dataset(identifier='test').from_object(test_json)
 
     assert str(test_dataset)
     assert repr(test_dataset)
@@ -355,7 +355,7 @@ def test_dataset_class_from_object_json() -> None:
 
 def test_dataset_class_from_object_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test Dataset class."""
-    test_dataset = Dataset.from_object("datasets.csv")
+    test_dataset = Dataset(identifier='test').from_object("datasets.csv")
 
     assert str(test_dataset)
     assert repr(test_dataset)
@@ -406,7 +406,7 @@ def test_dataset_class_from_object_series() -> None:
             "product": "TEST_PRODUCT",
         }
     )
-    test_dataset = Dataset.from_object(test_series)
+    test_dataset = Dataset(identifier='test').from_object(test_series)
 
     assert str(test_dataset)
     assert repr(test_dataset)
@@ -451,7 +451,7 @@ def test_dataset_class_from_object_failure() -> None:
     """Test Dataset class."""
     unsupported_obj = 123
     with pytest.raises(TypeError) as error_info:
-        Dataset.from_object(unsupported_obj)
+        Dataset(identifier='test').from_object(unsupported_obj)
     assert str(error_info.value) == f"Could not resolve the object provided: {unsupported_obj}"
 
 
@@ -741,7 +741,7 @@ def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_ob
         "isHighlyConfidential": False,
         "isActive": False,
     }
-    dataset_obj = Dataset.from_dict(dataset_dict)
+    dataset_obj = Dataset._from_dict(dataset_dict)
     resp = dataset_obj.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
     assert isinstance(resp, requests.models.Response)
@@ -829,7 +829,7 @@ def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
         "isHighlyConfidential": False,
         "isActive": False,
     }
-    dataset_obj = Dataset.from_dict(dataset_dict)
+    dataset_obj = Dataset._from_dict(dataset_dict)
     resp = dataset_obj.update(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
     assert isinstance(resp, requests.models.Response)

@@ -56,6 +56,7 @@ class Dataset:
     isHighlyConfidential: bool | None = None
     isActive: bool | None = None
     owners: list[str] | None = None
+    applicationId: str | None = None
 
     _client: Any = field(init=False, repr=False, compare=False, default=None)
 
@@ -101,7 +102,7 @@ class Dataset:
         self._client = client
 
     @classmethod
-    def from_series(cls: type[Dataset], series: pd.Series[Any]) -> Dataset:
+    def _from_series(cls: type[Dataset], series: pd.Series[Any]) -> Dataset:
         """Create a Dataset object from a pandas Series."""
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
         series = series.rename({"tag": "tags"})
@@ -164,6 +165,7 @@ class Dataset:
             snowflake=series.get("snowflake", None),
             complexity=series.get("complexity", None),
             owners=series.get("owners", None),
+            applicationId=series.get("applicationid", None),
             isImmutable=isImmutable,
             isMnpi=isMnpi,
             isPci=isPci,
@@ -178,7 +180,7 @@ class Dataset:
         return dataset
 
     @classmethod
-    def from_dict(cls: type[Dataset], data: dict[str, Any]) -> Dataset:
+    def _from_dict(cls: type[Dataset], data: dict[str, Any]) -> Dataset:
         """Create a Dataset object from a dictionary."""
         keys = [f.name for f in fields(cls)]
         keys = ["type" if key == "type_" else key for key in keys]
@@ -188,34 +190,39 @@ class Dataset:
         return cls(**data)
 
     @classmethod
-    def from_csv(cls: type[Dataset], file_path: str, identifier: str | None = None) -> Dataset:
+    def _from_csv(cls: type[Dataset], file_path: str, identifier: str | None = None) -> Dataset:
         """Create a list of Dataset objects from a CSV file."""
         data = pd.read_csv(file_path)
 
         return (
-            Dataset.from_series(data[data["identifier"] == identifier].reset_index(drop=True).iloc[0])
+            Dataset._from_series(data[data["identifier"] == identifier].reset_index(drop=True).iloc[0])
             if identifier
-            else Dataset.from_series(data.reset_index(drop=True).iloc[0])
+            else Dataset._from_series(data.reset_index(drop=True).iloc[0])
         )
 
-    @classmethod
     def from_object(
-        cls: type[Dataset],
-        dataset_source: Dataset | dict[str, Any] | str | pd.Series,
+        self,
+        dataset_source: Dataset | dict[str, Any] | str | pd.Series[Any],
     ) -> Dataset:
         """Create a Dataset object from a dictionary."""
         if isinstance(dataset_source, Dataset):
-            return dataset_source
-        if isinstance(dataset_source, dict):
-            return Dataset.from_dict(dataset_source)
-        if isinstance(dataset_source, str):
+            dataset = dataset_source
+        elif isinstance(dataset_source, dict):
+            dataset = Dataset._from_dict(dataset_source)
+        elif isinstance(dataset_source, str):
             if _is_json(dataset_source):
-                return Dataset.from_dict(js.loads(dataset_source))
-            return Dataset.from_csv(dataset_source)
-        if isinstance(dataset_source, pd.Series):
-            return Dataset.from_series(dataset_source)
+                dataset = Dataset._from_dict(js.loads(dataset_source))
+            else:
+                dataset = Dataset._from_csv(dataset_source)
+        elif isinstance(dataset_source, pd.Series):
+            dataset = Dataset._from_series(dataset_source)
+        else:
+            raise TypeError(f"Could not resolve the object provided: {dataset_source}")
+            
+        dataset.set_client(self._client)
+        # dataset.identifier = self.identifier
 
-        raise TypeError(f"Could not resolve the object provided: {dataset_source}")
+        return dataset
 
     def from_catalog(self, catalog: str | None = None, client: Fusion | None = None) -> Dataset:
         """Create a Dataset object from a catalog."""
@@ -225,7 +232,7 @@ class Dataset:
         dataset = self.identifier
         list_datasets = client.session.get(f"{client.root_url}catalogs/{catalog}/datasets").json()["resources"]
         dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset][0]
-        dataset_obj = Dataset.from_dict(dict_)
+        dataset_obj = Dataset._from_dict(dict_)
         dataset_obj.set_client(client)
 
         prod_df = client.list_product_dataset_mapping(catalog=catalog)
