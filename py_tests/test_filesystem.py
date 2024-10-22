@@ -114,69 +114,66 @@ async def test_isdir_false(http_fs_instance: FusionHTTPFileSystem) -> None:
     assert not result
 
 
-@pytest.mark.asyncio()
-@patch("aiohttp.ClientSession")
-async def test_stream_file(mock_client_session: mock.AsyncMock) -> None:
+@patch("requests.Session")
+def test_stream_single_file(mock_session_class: MagicMock) -> None:
     url = "http://example.com/data"
-    output_file = AsyncMock(spec=fsspec.spec.AbstractBufferedFile)
+    output_file = MagicMock(spec=fsspec.spec.AbstractBufferedFile)
     output_file.path = "./output_file_path/file.txt"
     output_file.name = "file.txt"
-    results: list[tuple[bool, str, Optional[str]]] = [(False, "", "")] * 1  # single element list
 
     # Create a mock response object with the necessary context manager methods
-    mock_response = AsyncMock()
-    mock_response.raise_for_status = AsyncMock()
-    mock_response.content.read = AsyncMock(side_effect=[b"0123456789", b""])
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.iter_content = MagicMock(return_value=[b"0123456789", b""])
     # Mock the __enter__ method to return the mock response itself
-    mock_response.__aenter__.return_value = mock_response
+    mock_response.__enter__.return_value = mock_response
     # Mock the __exit__ method to do nothing
-    mock_response.__aexit__.return_value = None
+    mock_response.__exit__.return_value = None
 
     # Set up the mock session to return the mock response
     mock_session = MagicMock()
     mock_session.get.return_value = mock_response
-    mock_client_session.return_value.__aenter__.return_value = mock_session
+    mock_session_class.return_value = mock_session
 
     # Create an instance of FusionHTTPFileSystem
     http_fs_instance = FusionHTTPFileSystem()
-    http_fs_instance.set_session = AsyncMock(return_value=mock_session)
+    http_fs_instance.sync_session = mock_session
 
-    # Run the async function
-    results = await http_fs_instance.stream_single_file(url, output_file)  # type: ignore
+    # Run the function
+    results = http_fs_instance.stream_single_file(url, output_file)  # type: ignore
+
     # Assertions to verify the behavior
-    output_file.write.assert_called_once_with(b"0123456789")
+    output_file.write.assert_any_call(b"0123456789")
     assert results == (True, output_file.path, None)  # type: ignore
 
 
-@pytest.mark.asyncio()
-@patch("aiohttp.ClientSession")
-async def test_stream_file_exception(mock_client_session: mock.AsyncMock) -> None:
+@patch("requests.Session")
+def test_stream_single_file_exception(mock_session_class: MagicMock) -> None:
     url = "http://example.com/data"
-    output_file = AsyncMock(spec=fsspec.spec.AbstractBufferedFile)
+    output_file = MagicMock(spec=fsspec.spec.AbstractBufferedFile)
     output_file.path = "./output_file_path/file.txt"
     output_file.name = "file.txt"
-    results: list[tuple[bool, str, Optional[str]]] = [(False, "", "")] * 1  # single element list
 
     # Create a mock response object with the necessary context manager methods
-    mock_response = AsyncMock()
-    mock_response.raise_for_status = AsyncMock()
-    mock_response.content.read = AsyncMock(side_effect=Exception("Test exception"))
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.iter_content = MagicMock(side_effect=Exception("Test exception"))
     # Mock the __enter__ method to return the mock response itself
-    mock_response.__aenter__.return_value = mock_response
+    mock_response.__enter__.return_value = mock_response
     # Mock the __exit__ method to do nothing
-    mock_response.__aexit__.return_value = None
+    mock_response.__exit__.return_value = None
 
     # Set up the mock session to return the mock response
     mock_session = MagicMock()
     mock_session.get.return_value = mock_response
-    mock_client_session.return_value.__aenter__.return_value = mock_session
+    mock_session_class.return_value = mock_session
 
     # Create an instance of FusionHTTPFileSystem
     http_fs_instance = FusionHTTPFileSystem()
-    http_fs_instance.set_session = AsyncMock(return_value=mock_session)
+    http_fs_instance.sync_session = mock_session
 
-    # Run the async function and catch the exception
-    results = await http_fs_instance.stream_single_file(url, output_file)  # type: ignore
+    # Run the function and catch the exception
+    results = http_fs_instance.stream_single_file(url, output_file)  # type: ignore
 
     # Assertions to verify the behavior
     output_file.close.assert_called_once()

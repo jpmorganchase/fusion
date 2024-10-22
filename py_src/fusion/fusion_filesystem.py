@@ -8,6 +8,7 @@ import logging
 from collections.abc import AsyncGenerator, Generator
 from copy import deepcopy
 from pathlib import Path
+import time
 from typing import Any, Optional, Union
 from urllib.parse import quote, urljoin
 
@@ -22,7 +23,7 @@ from fsspec.utils import nullcontext
 
 from fusion._fusion import FusionCredentials
 
-from .utils import get_client, get_default_fs
+from .utils import get_client, get_default_fs, get_session
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -70,7 +71,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         if "headers" not in kwargs:
             kwargs["headers"] = {"Accept-Encoding": "identity"}
-
+        self.sync_session = get_session(self.credentials, kwargs["client_kwargs"].get("root_url"))
         super().__init__(*args, **kwargs)
 
     async def _async_raise_not_found_for_status(self, response: Any, url: str) -> None:
@@ -358,7 +359,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return True, output_file.path, None  # type: ignore
 
-    async def stream_single_file(
+    def stream_single_file(
         self,
         url: str,
         output_file: fsspec.spec.AbstractBufferedFile,
@@ -376,17 +377,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
 
-        async def get_file() -> None:
-            session = await self.set_session()
-            async with session.get(url, **self.kwargs) as r:
+        def get_file() -> None:
+            session = self.sync_session
+            with session.get(url, **self.kwargs) as r:
                 r.raise_for_status()
                 byte_cnt = 0
-                while True:
-                    chunk = await r.content.read(block_size)
-                    if not chunk:
-                        break
-                    byte_cnt += len(chunk)
-                    output_file.write(chunk)
+                for chunk in r.iter_content(block_size):
+                    if chunk:
+                        byte_cnt += len(chunk)
+                        output_file.write(chunk)
                 output_file.close()
             logger.log(
                 VERBOSE_LVL,
@@ -398,7 +397,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         retries = 5
         for attempt in range(retries):
             try:
-                await get_file()
+                get_file()
                 return (True, output_file.path, None)  # noqa: UP031
             except Exception as ex:  # noqa: BLE001, PERF203
                 if attempt < retries - 1:
@@ -410,7 +409,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                         wait_time,
                         exc_info=True,
                     )
-                    await asyncio.sleep(wait_time)
+                    time.sleep(wait_time)
                 else:
                     output_file.close()
                     logger.log(
@@ -513,7 +512,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             file_size = int(kwargs["headers"].get("Content-Length"))
         is_local_fs = kwargs.get("is_local_fs", False)
         if n_threads == 1 or not is_local_fs or file_size is None:
-            return sync(self.loop, self.stream_single_file, str(rpath), lpath, block_size=chunk_size)
+            return self.stream_single_file(str(rpath), lpath, block_size=chunk_size)
         else:
             rpath = str(rpath) if "operationType/download" in str(rpath) else str(rpath) + "/operationType/download"
             return sync(
