@@ -1,7 +1,7 @@
 import io
 import json
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
