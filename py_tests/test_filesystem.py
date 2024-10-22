@@ -140,11 +140,11 @@ def test_stream_single_file(mock_session_class: MagicMock) -> None:
     http_fs_instance.sync_session = mock_session
 
     # Run the function
-    results = http_fs_instance.stream_single_file(url, output_file)  # type: ignore
+    results = http_fs_instance.stream_single_file(url, output_file)
 
     # Assertions to verify the behavior
     output_file.write.assert_any_call(b"0123456789")
-    assert results == (True, output_file.path, None)  # type: ignore
+    assert results == (True, output_file.path, None)
 
 
 @patch("requests.Session")
@@ -173,11 +173,11 @@ def test_stream_single_file_exception(mock_session_class: MagicMock) -> None:
     http_fs_instance.sync_session = mock_session
 
     # Run the function and catch the exception
-    results = http_fs_instance.stream_single_file(url, output_file)  # type: ignore
+    results = http_fs_instance.stream_single_file(url, output_file)
 
     # Assertions to verify the behavior
     output_file.close.assert_called_once()
-    assert results == (False, output_file.path, "Test exception")  # type: ignore
+    assert results == (False, output_file.path, "Test exception")
 
 
 @pytest.mark.asyncio()
