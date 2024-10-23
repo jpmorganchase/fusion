@@ -1177,3 +1177,39 @@ def test_fusion_create_dataset_dict(requests_mock: requests_mock.Mocker, fusion_
     status_code = 200
     assert isinstance(resp, requests.models.Response)
     assert resp.status_code == status_code
+
+
+def test_fusion_delete_datasetmembers(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test delete datasetmembers"""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    datasetseries = "20200101"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}"
+    requests_mock.delete(url, status_code=200)
+
+    resp = fusion_obj.delete_datasetmembers(dataset, datasetseries, catalog=catalog, return_resp_obj=True)
+    status_code = 200
+    assert isinstance(resp[0], requests.Response)
+    assert resp[0].status_code == status_code
+    resp_len = 1
+    assert len(resp) == resp_len
+
+def test_fusion_delete_datasetmembers_multiple(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test delete datasetmembers"""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    datasetseries = ["20200101", "20200101"]
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries[0]}"
+    requests_mock.delete(url, status_code=200)
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries[1]}"
+    requests_mock.delete(url, status_code=200)
+
+    resp = fusion_obj.delete_datasetmembers(dataset, datasetseries, catalog=catalog, return_resp_obj=True)
+    status_code = 200
+    assert isinstance(resp[0], requests.Response)
+    assert resp[0].status_code == status_code
+    assert isinstance(resp[1], requests.Response)
+    assert resp[1].status_code == status_code
+    resp_len = 2
+    assert len(resp) == resp_len

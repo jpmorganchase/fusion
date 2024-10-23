@@ -206,6 +206,14 @@ class Attributes:
     
     _client: Fusion | None = None
 
+    def __str__(self) -> str:
+        """String representation of the Attributes collection."""
+        return f"[\n" + ",\n ".join(f"{attr.__repr__()}" for attr in self.attributes) + "\n]" if self.attributes else "[]"
+    
+    def __repr__(self) -> str:
+        """Object representation of the Attributes collection."""
+        return self.__str__()
+
     def set_client(self, client: Any) -> None:
         """Set the client for the Product."""
         self._client = client
@@ -278,7 +286,7 @@ class Attributes:
             dataset (str): Dataset identifier.
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
             catalog (str, optional): A catalog identifier. Defaults to None.
-            return_resp_obj (bool, optional): _description_. Defaults to False.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.

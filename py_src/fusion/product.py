@@ -136,21 +136,25 @@ class Product:
             else Product.from_series(data.reset_index(drop=True).iloc[0])
         )
 
-    @classmethod
-    def from_object(cls: type[Product], product_source: Any) -> Product:
+    def from_object(
+            self,
+            product_source: Product | dict[str, Any] | str | pd.Series[Any],
+    ) -> Product:
         """Create a Product object from a dictionary."""
         if isinstance(product_source, Product):
-            return product_source
-        if isinstance(product_source, dict):
-            return Product.from_dict(product_source)
-        if isinstance(product_source, str):
+            product = product_source
+        elif isinstance(product_source, dict):
+            product = Product.from_dict(product_source)
+        elif isinstance(product_source, str):
             if _is_json(product_source):
-                return Product.from_dict(js.loads(product_source))
-            return Product.from_csv(product_source)
-        if isinstance(product_source, pd.Series):
-            return Product.from_series(product_source)
-
-        raise TypeError(f"Could not resolve the object provided: {product_source}")
+                product = Product.from_dict(js.loads(product_source))
+            product = Product.from_csv(product_source)
+        elif isinstance(product_source, pd.Series):
+            product = Product.from_series(product_source)
+        else:
+            raise TypeError(f"Could not resolve the object provided: {product_source}")
+        product.set_client(self._client)
+        return product
 
     def from_catalog(self, catalog: str | None = None, client: Fusion | None = None) -> Product:
         """Create a Product object from a catalog."""

@@ -1707,3 +1707,55 @@ class Fusion:
         attributes_obj = Attributes(attributes=attributes or [])
         attributes_obj.set_client(self)
         return attributes_obj
+    
+    def delete_datasetmembers(
+            self,
+            dataset: str,
+            series_members: str | list[str],
+            catalog: str | None = None,
+            return_resp_obj: bool = False,
+    ) -> list[requests.Response] | None:
+        """Delete dataset members.
+
+        Args:
+            dataset (str): A dataset identifier
+            series_members (str | list[str]): A string or list of strings that are dataset series member
+            identifiers to delete.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
+
+        Returns:
+            list[requests.Response]: a list of response objects.
+
+        """
+        catalog = self._use_catalog(catalog)
+        if isinstance(series_members, str):
+            series_members = [series_members]
+        responses = []
+        for series_member in series_members:
+            url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series_member}"
+            resp = self.session.delete(url)
+            responses.append(resp)
+        return responses if return_resp_obj else None
+    
+    def delete_all_datasetmembers(
+            self,
+            dataset: str,
+            catalog: str | None = None,
+            return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Delete all dataset members.
+
+        Args:
+            dataset (str): A dataset identifier
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
+
+        Returns:
+            list[requests.Response]: a list of response objects.
+
+        """
+        catalog = self._use_catalog(catalog)
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+        resp = self.session.delete(url)
+        return resp if return_resp_obj else None
