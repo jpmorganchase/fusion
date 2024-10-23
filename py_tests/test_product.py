@@ -191,7 +191,7 @@ def test_product_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj: F
 
 def test_product_class_from_object_dict() -> None:
     """Test the Product class."""
-    test_product = Product.from_object(
+    test_product = Product(identifier="TEST_PRODUCT").from_object(
         {
             "title": "Test Product",
             "identifier": "TEST_PRODUCT",
@@ -222,7 +222,7 @@ def test_product_class_from_object_dict() -> None:
 
 def test_product_class_from_object_series() -> None:
     """Test the Product class."""
-    test_product = Product.from_object(
+    test_product = Product(identifier="TEST_PRODUCT").from_object(
         pd.Series(
             {
                 "title": "Test Product",
@@ -255,7 +255,7 @@ def test_product_class_from_object_series() -> None:
 
 def test_product_class_from_object_csv(mock_product_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test the Product class."""
-    test_product = Product.from_object("products.csv")
+    test_product = Product(identifier="TEST_PRODUCT").from_object("products.csv")
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
@@ -287,7 +287,7 @@ def test_product_class_from_object_json() -> None:
             "releaseDate": "May 5, 2020",
         }
     )
-    test_product = Product.from_object(product_json)
+    test_product = Product(identifier="TEST_PRODUCT").from_object(product_json)
 
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
@@ -315,7 +315,7 @@ def test_product_class_type_error() -> None:
     """Test the Product class."""
     unsupported_obj = 123
     with pytest.raises(TypeError) as error_info:
-        Product.from_object(unsupported_obj)
+        Product(identifier="TEST_PRODUCT").from_object(unsupported_obj)
     assert str(error_info.value) == f"Could not resolve the object provided: {unsupported_obj}"
 
 

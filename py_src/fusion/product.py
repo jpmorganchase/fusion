@@ -148,7 +148,8 @@ class Product:
         elif isinstance(product_source, str):
             if _is_json(product_source):
                 product = Product.from_dict(js.loads(product_source))
-            product = Product.from_csv(product_source)
+            else:
+                product = Product.from_csv(product_source)
         elif isinstance(product_source, pd.Series):
             product = Product.from_series(product_source)
         else:

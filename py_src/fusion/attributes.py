@@ -7,8 +7,6 @@ from dataclasses import asdict, dataclass, field, fields
 from typing import TYPE_CHECKING, Any, cast
 
 from fusion.fusion_types import Types
-from fusion.units import register_units
-from pint import UnitRegistry
 import numpy as np
 import pandas as pd
 
@@ -19,8 +17,7 @@ if TYPE_CHECKING:
 
     from fusion import Fusion
 
-ureg = UnitRegistry()
-register_units(ureg)
+
 
 @dataclass
 class Attribute:
@@ -72,9 +69,6 @@ class Attribute:
         self.availableFrom = convert_date_format(self.availableFrom) if self.availableFrom else None
         self.deprecatedFrom = convert_date_format(self.deprecatedFrom) if self.deprecatedFrom else None
         self.dataType = Types[str(self.dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
-        self.unit = (
-            ureg(self.unit) if self.unit != "None" and self.unit is not None and not pd.isna(self.unit) else None
-        )
 
     @classmethod
     def from_series(cls, series: pd.Series[Any], *, is_internal: bool = False) -> Attribute:
@@ -131,8 +125,6 @@ class Attribute:
         """Create an Attribute object from a dictionary."""
         keys = [f.name for f in fields(cls)]
         data = {k: (None if pd.isna(v) else v) for k, v in data.items() if k in keys}
-        if "unit" in data and data["unit"] is not None:
-            data["unit"] = ureg(data["unit"])
         if "dataType" in data:
             data["dataType"] = Types[data["dataType"].strip().rsplit(".", maxsplit=1)[-1].title()]
         return cls(**data)

@@ -194,6 +194,24 @@ def test_attribute_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
     assert resp.status_code == status_code
 
 
+def test_attribute_delete(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test deletion of individual attribute."""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    attribute = "test_attribute"
+    url = f"{fusion_obj.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes/{attribute}"
+
+    requests_mock.delete(url, status_code=204)
+
+    test_attribute = Attribute(
+        identifier= "test_attribute",
+        index=0,
+    )
+    resp = test_attribute.delete(client=fusion_obj, catalog=catalog, dataset=dataset, return_resp_obj=True)
+    status_code = 204
+    assert isinstance(resp, requests.Response)
+    assert resp.status_code == status_code
+
 
 def test_attributes_class() -> None:
     """Test attributes class."""
