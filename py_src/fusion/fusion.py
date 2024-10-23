@@ -613,36 +613,36 @@ class Fusion:
                 f"Check that a valid dataset identifier and date/date range has been set."
             )
 
+     
         if dt_str == "latest":
-            dt_str = datasetseries_list.iloc[
-                datasetseries_list["createdDate"].to_numpy().argmax()
-            ]["identifier"]
+            dt_str = datasetseries_list.iloc[datasetseries_list["createdDate"].to_numpy().argmax()]["identifier"].iloc[-1]
+            datasetseries_list = datasetseries_list[datasetseries_list["identifier"] == dt_str]
+        else:
+            parsed_dates = normalise_dt_param_str(dt_str)
+            if len(parsed_dates) == 1:
+                parsed_dates = (parsed_dates[0], parsed_dates[0])
 
-        parsed_dates = normalise_dt_param_str(dt_str)
-        if len(parsed_dates) == 1:
-            parsed_dates = (parsed_dates[0], parsed_dates[0])
+            if parsed_dates[0]:
+                datasetseries_list = datasetseries_list[
+                    pd.Series(
+                        [
+                            pd.to_datetime(i, errors="coerce")
+                            for i in datasetseries_list["identifier"]
+                        ]
+                    )
+                    >= pd.to_datetime(parsed_dates[0])
+                ].reset_index()
 
-        if parsed_dates[0]:
-            datasetseries_list = datasetseries_list[
-                pd.Series(
-                    [
-                        pd.to_datetime(i, errors="coerce")
-                        for i in datasetseries_list["identifier"]
-                    ]
-                )
-                >= pd.to_datetime(parsed_dates[0])
-            ].reset_index()
-
-        if parsed_dates[1]:
-            datasetseries_list = datasetseries_list[
-                pd.Series(
-                    [
-                        pd.to_datetime(i, errors="coerce")
-                        for i in datasetseries_list["identifier"]
-                    ]
-                )
-                <= pd.to_datetime(parsed_dates[1])
-            ].reset_index()
+            if parsed_dates[1]:
+                datasetseries_list = datasetseries_list[
+                    pd.Series(
+                        [
+                            pd.to_datetime(i, errors="coerce")
+                            for i in datasetseries_list["identifier"]
+                        ]
+                    )
+                    <= pd.to_datetime(parsed_dates[1])
+                ].reset_index()
 
         if len(datasetseries_list) == 0:
             raise APIResponseError(  # pragma: no cover
