@@ -744,7 +744,7 @@ def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_ob
     dataset_obj = Dataset._from_dict(dataset_dict)
     resp = dataset_obj.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
-    assert isinstance(resp, requests.models.Response)
+    assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code
 
 
@@ -832,7 +832,7 @@ def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     dataset_obj = Dataset._from_dict(dataset_dict)
     resp = dataset_obj.update(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
-    assert isinstance(resp, requests.models.Response)
+    assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code
 
 
@@ -845,7 +845,7 @@ def test_delete_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
 
     resp = Dataset(identifier=dataset).delete(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
-    assert isinstance(resp, requests.models.Response)
+    assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code
 
 
@@ -956,5 +956,5 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
         client=fusion_obj, catalog_from=catalog, catalog_to=catalog_new, return_resp_obj=True
     )
     status_code = 200
-    assert isinstance(resp, requests.models.Response)
+    assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code

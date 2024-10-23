@@ -31,7 +31,7 @@ class Attribute:
     dataType: Types = cast(Types, Types.String)
     title: str = ""
     description: str = ""
-    isDatatsetKey: bool = False
+    isDatasetKey: bool = False
     source: str | None = None
     sourceFieldId: str | None = None
     isInternalDatasetKey: bool | None = None
@@ -64,10 +64,10 @@ class Attribute:
     
     def __post_init__(self: Attribute) -> None:
         """Post-initialization steps."""
-        self.isDatatsetKey = make_bool(self.isDatatsetKey)
+        self.isDatasetKey = make_bool(self.isDatasetKey)
         self.identifier = tidy_string(self.identifier).lower().replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
-        self.description = tidy_string(self.description) if self.description != "" else self.title
+        self.description = tidy_string(self.description) if self.description and self.description != "" else self.title
         self.sourceFieldId = tidy_string(self.sourceFieldId).lower().replace(" ", "_") if self.sourceFieldId else self.identifier
         self.availableFrom = convert_date_format(self.availableFrom) if self.availableFrom else None
         self.deprecatedFrom = convert_date_format(self.deprecatedFrom) if self.deprecatedFrom else None
@@ -99,7 +99,7 @@ class Attribute:
         isInternalDatasetKey = (
             make_bool(isInternalDatasetKey) if isInternalDatasetKey is not None else isInternalDatasetKey
         )
-        isExternallyVisible = series.get("isexternallyvisible", None)
+        isExternallyVisible = series.get("isexternallyvisible", True)
         isExternallyVisible = (
             make_bool(isExternallyVisible) if isExternallyVisible is not None else isExternallyVisible
         )
@@ -110,7 +110,7 @@ class Attribute:
             dataType=Types[dataType.strip().split(".")[-1].title()],
             title=series.get("title", None),
             description=series.get("description", None),
-            isDatatsetKey=series.get("isdatasetkey", False),
+            isDatasetKey=series.get("isdatasetkey", False),
             source=source,
             sourceFieldId=series.get("sourcefieldid", None),
             isInternalDatasetKey=isInternalDatasetKey,

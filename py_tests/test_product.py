@@ -369,7 +369,7 @@ def test_create_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     )
     status_code = 200
     resp = my_product.create(catalog=catalog, client=fusion_obj, return_resp_obj=True)
-    assert isinstance(resp, requests.models.Response)
+    assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code
 
 
@@ -423,7 +423,7 @@ def test_update_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     )
     status_code = 200
     resp = my_product.update(client=fusion_obj, catalog=catalog, return_resp_obj=True)
-    assert isinstance(resp, requests.models.Response)
+    assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code
 
 
@@ -435,7 +435,7 @@ def test_delete_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     requests_mock.delete(url, status_code=status_code)
 
     resp = Product(identifier="TEST_PRODUCT").delete(client=fusion_obj, catalog=catalog, return_resp_obj=True)
-    assert isinstance(resp, requests.models.Response)
+    assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code
 
 
@@ -509,5 +509,5 @@ def test_copy_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
         catalog_to=new_catalog,
         return_resp_obj=True,
     )
-    assert isinstance(resp, requests.models.Response)
+    assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code

@@ -9,9 +9,11 @@ import sys
 import warnings
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from zipfile import ZipFile
 
+from fusion.attributes import Attribute, Attributes
+from fusion.fusion_types import Types
 import pandas as pd
 import pyarrow as pa
 from joblib import Parallel, delayed
@@ -1647,3 +1649,61 @@ class Fusion:
         )
         dataset_obj.set_client(self)
         return dataset_obj
+    
+    def attribute(  # noqa: PLR0913
+        self,
+        identifier: str,
+        index: int,
+        dataType: str | Types = cast(Types, Types.String),
+        title: str = "",
+        description: str = "",
+        isDatasetKey: bool = False,
+        source: str | None = None,
+        sourceFieldId: str | None = None,
+        isInternalDatasetKey: bool | None = None,
+        isExternallyVisible: bool | None = True,
+        unit: Any | None = None,
+        multiplier: float = 1.0,
+        isPropogationEligible: bool | None = None,
+        isMetric: bool | None = None,
+        availableFrom: str | None = None,
+        deprecatedFrom: str | None = None,
+        term: str = "bizterm1",
+        dataset: int | None = None,
+        attributeType: str | None = None,
+        **kwargs: Any,
+    ) -> Attribute:
+        """Instantiate a Attribute object with this client for metadata creation."""
+        attribute_obj = Attribute(
+            identifier=identifier,
+            index=index,
+            dataType=dataType,
+            title=title,
+            description=description,
+            isDatasetKey=isDatasetKey,
+            source=source,
+            sourceFieldId=sourceFieldId,
+            isInternalDatasetKey=isInternalDatasetKey,
+            isExternallyVisible=isExternallyVisible,
+            unit=unit,
+            multiplier=multiplier,
+            isPropogationEligible=isPropogationEligible,
+            isMetric=isMetric,
+            availableFrom=availableFrom,
+            deprecatedFrom=deprecatedFrom,
+            term=term,
+            dataset=dataset,
+            attributeType=attributeType,
+            **kwargs,
+        )
+        attribute_obj.set_client(self)
+        return attribute_obj
+    
+    def attributes(
+            self,
+            attributes: list[Attribute] | None = None,
+    ) -> Attributes:
+        """Instantiate a Attributes object with this client for metadata creation."""
+        attributes_obj = Attributes(attributes=attributes or [])
+        attributes_obj.set_client(self)
+        return attributes_obj
