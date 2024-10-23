@@ -615,7 +615,7 @@ class Fusion:
 
      
         if dt_str == "latest":
-            dt_str = datasetseries_list.iloc[datasetseries_list["createdDate"].to_numpy().argmax()]["identifier"].iloc[-1]
+            dt_str = datasetseries_list[datasetseries_list["createdDate"]==datasetseries_list["createdDate"].to_numpy().max()].iloc[-1]["identifier"]
             datasetseries_list = datasetseries_list[datasetseries_list["identifier"] == dt_str]
         else:
             parsed_dates = normalise_dt_param_str(dt_str)
