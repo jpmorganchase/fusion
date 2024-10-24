@@ -87,6 +87,7 @@ def test_res_plural(ref_int: int, pluraliser: str) -> None:
 
 def test_is_url() -> None:
     from fusion.authentication import _is_url
+
     assert _is_url("https://www.google.com")
     assert _is_url("http://www.google.com/some/path?qp1=1&qp2=2")
     assert not _is_url("www.google.com")
@@ -804,10 +805,7 @@ def test_create_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fus
 
     # Call the create_dataset_lineage method
     resp = fusion_obj.create_dataset_lineage(
-        base_dataset=base_dataset,
-        source_dataset_catalog_mapping=df_input,
-        catalog=catalog, 
-        return_resp_obj=True
+        base_dataset=base_dataset, source_dataset_catalog_mapping=df_input, catalog=catalog, return_resp_obj=True
     )
 
     # Check if the response is correct
@@ -830,10 +828,7 @@ def test_create_dataset_lineage_from_list(requests_mock: requests_mock.Mocker, f
 
     # Call the create_dataset_lineage method
     resp = fusion_obj.create_dataset_lineage(
-        base_dataset=base_dataset,
-        source_dataset_catalog_mapping=data,
-        catalog=catalog,
-        return_resp_obj=True
+        base_dataset=base_dataset, source_dataset_catalog_mapping=data, catalog=catalog, return_resp_obj=True
     )
 
     # Check if the response is correct
@@ -859,7 +854,7 @@ def test_create_dataset_lineage_valueerror(requests_mock: requests_mock.Mocker, 
         fusion_obj.create_dataset_lineage(
             base_dataset=base_dataset,
             source_dataset_catalog_mapping=data,  # type: ignore
-            catalog=catalog
+            catalog=catalog,
         )
 
 
@@ -875,7 +870,5 @@ def test_create_dataset_lineage_httperror(requests_mock: requests_mock.Mocker, f
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.create_dataset_lineage(
-            base_dataset=base_dataset,
-            source_dataset_catalog_mapping=data,
-            catalog=catalog
+            base_dataset=base_dataset, source_dataset_catalog_mapping=data, catalog=catalog
         )
