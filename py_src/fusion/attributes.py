@@ -159,7 +159,7 @@ class Attribute:
             raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
         data = self.to_dict()
-        url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
         resp = client.session.put(url, json=data)
         resp.raise_for_status()
         return resp if return_resp_obj else None
@@ -186,7 +186,7 @@ class Attribute:
         if client is None:
             raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
-        url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
         resp = client.session.delete(url)
         resp.raise_for_status()
         return resp if return_resp_obj else None
@@ -232,9 +232,10 @@ class Attributes:
                 return attr
         return None
 
-    def to_dict(self) -> list[dict[str, Any]]:
+    def to_dict(self) -> dict[str, list[dict[str, Any]]]:
         """Convert the collection of Attribute instances to a list of dictionaries."""
-        return [attr.to_dict() for attr in self.attributes]
+        dict_out = {"attributes": [attr.to_dict() for attr in self.attributes]}
+        return dict_out
 
     @classmethod
     def from_dict_list(cls: type[Attributes], data: list[dict[str, Any]]) -> Attributes:
@@ -255,13 +256,13 @@ class Attributes:
         data = [attr.to_dict() for attr in self.attributes]
         return pd.DataFrame(data)
 
-    def from_catalog(self, dataset: str, catalog: str | None = None, client: Fusion | None = None) -> None:
+    def from_catalog(self, dataset: str, catalog: str | None = None, client: Fusion | None = None) -> Attributes:
         """Get the Attributes from a Fusion catalog."""
         client = self._client if client is None else client
         if client is None:
             raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
-        url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes"
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
         response = client.session.get(url)
         response.raise_for_status()
         list_attributes = response.json()["resources"]
@@ -271,7 +272,7 @@ class Attributes:
 
         attributes_obj = Attributes(attributes=self.attributes)
 
-        return attributes_obj  # type: ignore
+        return attributes_obj
 
     def create(
         self,
@@ -295,9 +296,8 @@ class Attributes:
         if client is None:
             raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
-        data_list = [attr.to_dict() for attr in self.attributes]
-        data = {"attributes": data_list}
-        url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes"
+        data = self.to_dict()
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
         resp = client.session.put(url, json=data)
         resp.raise_for_status()
         return resp if return_resp_obj else None
@@ -328,7 +328,7 @@ class Attributes:
 
         resp = [
             client.session.delete(
-                f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes/{attr.identifier}"
+                f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{attr.identifier}"
             )
             for attr in self.attributes
         ]

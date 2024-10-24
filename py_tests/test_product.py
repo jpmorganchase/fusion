@@ -315,7 +315,7 @@ def test_product_class_type_error() -> None:
     """Test the Product class."""
     unsupported_obj = 123
     with pytest.raises(TypeError) as error_info:
-        Product(identifier="TEST_PRODUCT").from_object(unsupported_obj)
+        Product(identifier="TEST_PRODUCT").from_object(unsupported_obj)  # type: ignore
     assert str(error_info.value) == f"Could not resolve the object provided: {unsupported_obj}"
 
 
