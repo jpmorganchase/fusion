@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 
 
 [dependencies]
-pyo3 = { version = "0.22.1" }
+pyo3 = { version = "0.22.4" }
 pyo3-log = { version = "0.11.0" }
 log = { version = "~0.4.4", default-features = false, features = ["std"] }
 serde = { version = "1.0", features = ["derive"] }
