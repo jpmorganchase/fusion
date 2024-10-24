@@ -213,7 +213,7 @@ def test_dataset_class_from_object_dataset() -> None:
         category="Test",
         product="TEST_PRODUCT",
     )
-    test_dataset = Dataset(identifier='test').from_object(dataset_obj)
+    test_dataset = Dataset(identifier="test").from_object(dataset_obj)
     assert str(dataset_obj)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
@@ -261,7 +261,7 @@ def test_dataset_class_from_object_dict() -> None:
         "category": "Test",
         "product": "TEST_PRODUCT",
     }
-    test_dataset = Dataset(identifier='test').from_object(test_dict)
+    test_dataset = Dataset(identifier="test").from_object(test_dict)
 
     assert str(test_dataset)
     assert repr(test_dataset)
@@ -312,7 +312,7 @@ def test_dataset_class_from_object_json() -> None:
             "product": "TEST_PRODUCT",
         }
     )
-    test_dataset = Dataset(identifier='test').from_object(test_json)
+    test_dataset = Dataset(identifier="test").from_object(test_json)
 
     assert str(test_dataset)
     assert repr(test_dataset)
@@ -355,7 +355,7 @@ def test_dataset_class_from_object_json() -> None:
 
 def test_dataset_class_from_object_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test Dataset class."""
-    test_dataset = Dataset(identifier='test').from_object("datasets.csv")
+    test_dataset = Dataset(identifier="test").from_object("datasets.csv")
 
     assert str(test_dataset)
     assert repr(test_dataset)
@@ -406,7 +406,7 @@ def test_dataset_class_from_object_series() -> None:
             "product": "TEST_PRODUCT",
         }
     )
-    test_dataset = Dataset(identifier='test').from_object(test_series)
+    test_dataset = Dataset(identifier="test").from_object(test_series)
 
     assert str(test_dataset)
     assert repr(test_dataset)
@@ -451,7 +451,7 @@ def test_dataset_class_from_object_failure() -> None:
     """Test Dataset class."""
     unsupported_obj = 123
     with pytest.raises(TypeError) as error_info:
-        Dataset(identifier='test').from_object(unsupported_obj)
+        Dataset(identifier="test").from_object(unsupported_obj)  # type: ignore
     assert str(error_info.value) == f"Could not resolve the object provided: {unsupported_obj}"
 
 

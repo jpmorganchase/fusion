@@ -2,6 +2,7 @@
 
 from enum import Enum
 
+
 class Types(Enum):
     """Fusion types.
 
@@ -21,4 +22,4 @@ class Types(Enum):
     Integer = 12
     Short = 13
     Byte = 14
-    Datetime = 6
+    Datetime = 6  # noqa: PIE796

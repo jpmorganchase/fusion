@@ -220,7 +220,6 @@ class Dataset:
             raise TypeError(f"Could not resolve the object provided: {dataset_source}")
             
         dataset.set_client(self._client)
-        # dataset.identifier = self.identifier
 
         return dataset
 

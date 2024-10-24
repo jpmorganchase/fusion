@@ -2,21 +2,19 @@
 
 from __future__ import annotations
 
-import json as js
 from dataclasses import asdict, dataclass, field, fields
 from typing import TYPE_CHECKING, Any, cast
 
-from fusion.fusion_types import Types
 import numpy as np
 import pandas as pd
 
-from fusion.utils import _is_json, convert_date_format, make_bool, make_list, tidy_string
+from fusion.fusion_types import Types
+from fusion.utils import convert_date_format, make_bool, tidy_string
 
 if TYPE_CHECKING:
     import requests
 
     from fusion import Fusion
-
 
 
 @dataclass
@@ -33,7 +31,7 @@ class Attribute:
     sourceFieldId: str | None = None
     isInternalDatasetKey: bool | None = None
     isExternallyVisible: bool | None = True
-    unit: Any | None = None # add units handling
+    unit: Any | None = None  # add units handling
     multiplier: float = 1.0
     isPropogationEligible: bool | None = None
     isMetric: bool | None = None
@@ -52,34 +50,36 @@ class Attribute:
     def __str__(self: Attribute) -> str:
         """Format object representation."""
         attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
-        return f"Attribute(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items() ) + "\n)"
-    
+        return f"Attribute(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
+
     def __repr__(self: Attribute) -> str:
         """Format object representation."""
         s = ", ".join(f"{getattr(self, f.name)!r}" for f in fields(self) if not f.name.startswith("_"))
         return "(" + s + ")"
-    
+
     def __post_init__(self: Attribute) -> None:
         """Post-initialization steps."""
         self.isDatasetKey = make_bool(self.isDatasetKey)
         self.identifier = tidy_string(self.identifier).lower().replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description and self.description != "" else self.title
-        self.sourceFieldId = tidy_string(self.sourceFieldId).lower().replace(" ", "_") if self.sourceFieldId else self.identifier
+        self.sourceFieldId = (
+            tidy_string(self.sourceFieldId).lower().replace(" ", "_") if self.sourceFieldId else self.identifier
+        )
         self.availableFrom = convert_date_format(self.availableFrom) if self.availableFrom else None
         self.deprecatedFrom = convert_date_format(self.deprecatedFrom) if self.deprecatedFrom else None
         self.dataType = Types[str(self.dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
 
     @classmethod
-    def from_series(cls, series: pd.Series[Any], *, is_internal: bool = False) -> Attribute:
+    def from_series(cls: type[Attribute], series: pd.Series[Any],) -> Attribute:
         """Create an Attribute object from a pandas Series."""
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower()).replace(
             to_replace=np.nan, value=None
         )
-        dataType = series.get("datatype", None)
+        dataType = series.get("datatype", cast(Types, Types.String))
         if dataType is None:
-            dataType = series.get("type", None)
-        
+            dataType = series.get("type", cast(Types, Types.String))
+
         source = series.get("source", None)
         source = source.strip() if isinstance(source, str) else source
 
@@ -94,16 +94,14 @@ class Attribute:
             make_bool(isInternalDatasetKey) if isInternalDatasetKey is not None else isInternalDatasetKey
         )
         isExternallyVisible = series.get("isexternallyvisible", True)
-        isExternallyVisible = (
-            make_bool(isExternallyVisible) if isExternallyVisible is not None else isExternallyVisible
-        )
+        isExternallyVisible = make_bool(isExternallyVisible) if isExternallyVisible is not None else isExternallyVisible
 
         return cls(
-            identifier=series.get("identifier", None).strip(),
-            index=series.get("index", None),
+            identifier=series.get("identifier", "").strip(),
+            index=series.get("index", -1),
             dataType=Types[dataType.strip().split(".")[-1].title()],
-            title=series.get("title", None),
-            description=series.get("description", None),
+            title=series.get("title", ""),
+            description=series.get("description", ""),
             isDatasetKey=series.get("isdatasetkey", False),
             source=source,
             sourceFieldId=series.get("sourcefieldid", None),
@@ -119,24 +117,24 @@ class Attribute:
             dataset=series.get("dataset", None),
             attributeType=series.get("attributetype", None),
         )
-    
+
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Attribute:
+    def from_dict(cls: type[Attribute], data: dict[str, Any]) -> Attribute:
         """Create an Attribute object from a dictionary."""
         keys = [f.name for f in fields(cls)]
         data = {k: (None if pd.isna(v) else v) for k, v in data.items() if k in keys}
         if "dataType" in data:
             data["dataType"] = Types[data["dataType"].strip().rsplit(".", maxsplit=1)[-1].title()]
         return cls(**data)
-    
-    def to_dict(self: Attribute) -> dict:
+
+    def to_dict(self: Attribute) -> dict[str, Any]:
         """Convert object to dictionary."""
         result = asdict(self)
-        result['unit'] = str(self.unit) if self.unit is not None else None
-        result['dataType'] = self.dataType.name
+        result["unit"] = str(self.unit) if self.unit is not None else None
+        result["dataType"] = self.dataType.name
         result.pop("_client")
         return result
-    
+
     def create(
         self,
         dataset: str,
@@ -157,6 +155,8 @@ class Attribute:
         """
         client = self._client if client is None else client
 
+        if client is None:
+            raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
         data = self.to_dict()
         url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
@@ -183,7 +183,8 @@ class Attribute:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
         """
         client = self._client if client is None else client
-
+        if client is None:
+            raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
         resp = client.session.delete(url)
@@ -193,15 +194,17 @@ class Attribute:
 @dataclass
 class Attributes:
     """Class representing a collection of Attribute instances."""
-    
+
     attributes: list[Attribute] = field(default_factory=list)
-    
+
     _client: Fusion | None = None
 
     def __str__(self) -> str:
         """String representation of the Attributes collection."""
-        return f"[\n" + ",\n ".join(f"{attr.__repr__()}" for attr in self.attributes) + "\n]" if self.attributes else "[]"
-    
+        return (
+            f"[\n" + ",\n ".join(f"{attr.__repr__()}" for attr in self.attributes) + "\n]" if self.attributes else "[]"
+        )
+
     def __repr__(self) -> str:
         """Object representation of the Attributes collection."""
         return self.__str__()
@@ -232,37 +235,38 @@ class Attributes:
     def to_dict(self) -> list[dict[str, Any]]:
         """Convert the collection of Attribute instances to a list of dictionaries."""
         return [attr.to_dict() for attr in self.attributes]
-    
+
     @classmethod
-    def from_dict_list(cls, data: list[dict[str, Any]]) -> Attributes:
+    def from_dict_list(cls: type[Attributes], data: list[dict[str, Any]]) -> Attributes:
         """Create an Attributes instance from a list of dictionaries."""
         attributes = [Attribute.from_dict(attr_data) for attr_data in data]
         return cls(attributes=attributes)
-    
+
     @classmethod
-    def from_dataframe(cls, data: pd.DataFrame) -> Attributes:
+    def from_dataframe(cls: type[Attributes], data: pd.DataFrame) -> Attributes:
         """Create an Attributes instance from a pandas DataFrame."""
         data = data.replace(to_replace=np.nan, value=None)
         data = data.reset_index() if "index" not in data.columns else data
         attributes = [Attribute.from_series(series) for _, series in data.iterrows()]
         return cls(attributes=attributes)
-    
+
     def to_dataframe(self) -> pd.DataFrame:
         """Convert the collection of Attribute instances to a pandas DataFrame."""
         data = [attr.to_dict() for attr in self.attributes]
         return pd.DataFrame(data)
-    
+
     def from_catalog(self, dataset: str, catalog: str | None = None, client: Fusion | None = None) -> None:
         """Get the Attributes from a Fusion catalog."""
         client = self._client if client is None else client
-
+        if client is None:
+            raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes"
         response = client.session.get(url)
-        response.raise_for_status
+        response.raise_for_status()
         list_attributes = response.json()["resources"]
         list_attributes = sorted(list_attributes, key=lambda x: x["index"])
-        
+
         self.attributes = [Attribute.from_dict(attr_data) for attr_data in list_attributes]
 
         attributes_obj = Attributes(attributes=self.attributes)
@@ -288,7 +292,8 @@ class Attributes:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
         """
         client = self._client if client is None else client
-
+        if client is None:
+            raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
         data_list = [attr.to_dict() for attr in self.attributes]
         data = {"attributes": data_list}
@@ -296,7 +301,7 @@ class Attributes:
         resp = client.session.put(url, json=data)
         resp.raise_for_status()
         return resp if return_resp_obj else None
-    
+
     def delete(
         self,
         dataset: str,
@@ -317,7 +322,8 @@ class Attributes:
              otherwise None.
         """
         client = self._client if client is None else client
-
+        if client is None:
+            raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
 
         resp = [

@@ -9,18 +9,18 @@ import sys
 import warnings
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
 
-from fusion.attributes import Attribute, Attributes
-from fusion.fusion_types import Types
 import pandas as pd
 import pyarrow as pa
 from joblib import Parallel, delayed
 from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
+from fusion.attributes import Attribute, Attributes
 from fusion.dataset import Dataset
+from fusion.fusion_types import Types
 from fusion.product import Product
 
 from .exceptions import APIResponseError
@@ -1532,7 +1532,7 @@ class Fusion:
         publisher: str | None = None,
         subCategory: str | list[str] | None = None,
         tag: str | list[str] | None = None,
-        deliveryChannel: str | list[str] = ["API"],
+        deliveryChannel: str | list[str] = "API",
         theme: str | None = None,
         releaseDate: str | None = None,
         language: str = "English",
@@ -1589,7 +1589,7 @@ class Fusion:
         tags: str | list[str] | None = None,
         createdDate: str | None = None,
         modifiedDate: str | None = None,
-        deliveryChannel: str | list[str] | None = "API",
+        deliveryChannel: str | list[str] = "API",
         language: str = "English",
         status: str = "Available",
         type_: str | None = "Source",
@@ -1654,7 +1654,7 @@ class Fusion:
         self,
         identifier: str,
         index: int,
-        dataType: str | Types = cast(Types, Types.String),
+        dataType: str | Types = "String",
         title: str = "",
         description: str = "",
         isDatasetKey: bool = False,
@@ -1674,6 +1674,7 @@ class Fusion:
         **kwargs: Any,
     ) -> Attribute:
         """Instantiate a Attribute object with this client for metadata creation."""
+        dataType = Types[str(dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
         attribute_obj = Attribute(
             identifier=identifier,
             index=index,

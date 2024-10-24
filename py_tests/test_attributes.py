@@ -1,17 +1,15 @@
 """Test case for attributes module."""
 
-import json
-from collections.abc import Generator
-from typing import Any, cast
+from typing import cast
 
-from fusion.fusion_types import Types
 import pandas as pd
-import pytest
 import requests
 import requests_mock
 
 from fusion import Fusion
-from fusion.attributes import Attributes, Attribute
+from fusion.attributes import Attribute, Attributes
+from fusion.fusion_types import Types
+
 
 def test_attribute_class() -> None:
     """Test attribute class."""

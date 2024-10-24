@@ -48,9 +48,12 @@ def test_fusion_init_from_path(example_creds_dict: dict[str, Any], tmp_path: Pat
     assert fusion
 
 
-def test_fusion_init_cred_value_error(example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
-    with pytest.raises(ValueError) as error_info:
-        fusion = Fusion(credentials=example_creds_dict)
+def test_fusion_init_cred_value_error(example_creds_dict: dict[str, Any]) -> None:
+    with pytest.raises(
+        ValueError, 
+        match="credentials must be a path to a credentials file or FusionCredentials object"
+    ) as error_info:
+        Fusion(credentials=example_creds_dict)  # type: ignore
     assert str(error_info.value) == "credentials must be a path to a credentials file or FusionCredentials object"
 
 
@@ -1189,6 +1192,7 @@ def test_fusion_delete_datasetmembers(requests_mock: requests_mock.Mocker, fusio
 
     resp = fusion_obj.delete_datasetmembers(dataset, datasetseries, catalog=catalog, return_resp_obj=True)
     status_code = 200
+    assert resp is not None
     assert isinstance(resp[0], requests.Response)
     assert resp[0].status_code == status_code
     resp_len = 1
@@ -1207,6 +1211,7 @@ def test_fusion_delete_datasetmembers_multiple(requests_mock: requests_mock.Mock
 
     resp = fusion_obj.delete_datasetmembers(dataset, datasetseries, catalog=catalog, return_resp_obj=True)
     status_code = 200
+    assert resp is not None
     assert isinstance(resp[0], requests.Response)
     assert resp[0].status_code == status_code
     assert isinstance(resp[1], requests.Response)
