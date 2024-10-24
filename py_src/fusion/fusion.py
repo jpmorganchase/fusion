@@ -149,19 +149,13 @@ class Fusion:
                     [
                         method_name
                         for method_name in dir(Fusion)
-                        if callable(getattr(Fusion, method_name))
-                        and not method_name.startswith("_")
+                        if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
                     ]
-                    + [
-                        p
-                        for p in dir(Fusion)
-                        if isinstance(getattr(Fusion, p), property)
-                    ],
+                    + [p for p in dir(Fusion) if isinstance(getattr(Fusion, p), property)],
                     [
                         getattr(Fusion, method_name).__doc__.split("\n")[0]
                         for method_name in dir(Fusion)
-                        if callable(getattr(Fusion, method_name))
-                        and not method_name.startswith("_")
+                        if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
                     ]
                     + [
                         getattr(Fusion, p).__doc__.split("\n")[0]
@@ -214,9 +208,7 @@ class Fusion:
         Returns: Fusion Filesystem
 
         """
-        return FusionHTTPFileSystem(
-            client_kwargs={"root_url": self.root_url, "credentials": self.credentials}
-        )
+        return FusionHTTPFileSystem(client_kwargs={"root_url": self.root_url, "credentials": self.credentials})
 
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
@@ -235,9 +227,7 @@ class Fusion:
 
         return cat_df
 
-    def catalog_resources(
-        self, catalog: Optional[str] = None, output: bool = False
-    ) -> pd.DataFrame:
+    def catalog_resources(self, catalog: Optional[str] = None, output: bool = False) -> pd.DataFrame:
         """List the resources contained within the catalog, for example products and datasets.
 
         Args:
@@ -293,9 +283,7 @@ class Fusion:
             if isinstance(contains, list):
                 contains = "|".join(f"{s}" for s in contains)
             if id_contains:
-                filtered_df = full_prod_df[
-                    full_prod_df["identifier"].str.contains(contains, case=False)
-                ]
+                filtered_df = full_prod_df[full_prod_df["identifier"].str.contains(contains, case=False)]
             else:
                 filtered_df = full_prod_df[
                     full_prod_df["identifier"].str.contains(contains, case=False)
@@ -384,9 +372,7 @@ class Fusion:
                 if isinstance(product, str)
                 else prd_df[prd_df["product"].isin(product)]
             )
-            ds_df = ds_df[
-                ds_df["identifier"].str.lower().isin(prd_df["dataset"].str.lower())
-            ].reset_index(drop=True)
+            ds_df = ds_df[ds_df["identifier"].str.lower().isin(prd_df["dataset"].str.lower())].reset_index(drop=True)
 
         if max_results > -1:
             ds_df = ds_df[0:max_results]
@@ -416,9 +402,7 @@ class Fusion:
 
         return ds_df
 
-    def dataset_resources(
-        self, dataset: str, catalog: Optional[str] = None, output: bool = False
-    ) -> pd.DataFrame:
+    def dataset_resources(self, dataset: str, catalog: Optional[str] = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
 
         Args:
@@ -461,11 +445,7 @@ class Fusion:
         catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
-        ds_attr_df = (
-            Fusion._call_for_dataframe(url, self.session)
-            .sort_values(by="index")
-            .reset_index(drop=True)
-        )
+        ds_attr_df = Fusion._call_for_dataframe(url, self.session).sort_values(by="index").reset_index(drop=True)
 
         if not display_all_columns:
             ds_attr_df = ds_attr_df[
@@ -603,9 +583,7 @@ class Fusion:
 
         datasetseries_list = self.list_datasetmembers(dataset, catalog)
         if len(datasetseries_list) == 0:
-            raise AssertionError(
-                f"There are no dataset members for dataset {dataset} in catalog {catalog}"
-            )
+            raise AssertionError(f"There are no dataset members for dataset {dataset} in catalog {catalog}")
 
         if datasetseries_list.empty:
             raise APIResponseError(  # pragma: no cover
@@ -613,7 +591,6 @@ class Fusion:
                 f"Check that a valid dataset identifier and date/date range has been set."
             )
 
-     
         if dt_str == "latest":
             dt_str = datasetseries_list[
                 datasetseries_list["createdDate"]==datasetseries_list["createdDate"].to_numpy().max()
@@ -653,9 +630,7 @@ class Fusion:
             )
 
         required_series = list(datasetseries_list["@id"])
-        tups = [
-            (catalog, dataset, series, dataset_format) for series in required_series
-        ]
+        tups = [(catalog, dataset, series, dataset_format) for series in required_series]
 
         return tups
 
@@ -699,20 +674,14 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        valid_date_range = re.compile(
-            r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$"
-        )
+        valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
 
         if valid_date_range.match(dt_str) or dt_str == "latest":
-            required_series = self._resolve_distro_tuples(
-                dataset, dt_str, dataset_format, catalog
-            )
+            required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
         else:
             # sample data is limited to csv
             if dt_str == "sample":
-                dataset_format = self.list_distributions(dataset, dt_str, catalog)[
-                    "identifier"
-                ].iloc[0]
+                dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
             required_series = [(catalog, dataset, dt_str, dataset_format)]
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
@@ -767,21 +736,17 @@ class Fusion:
         if show_progress:
             with joblib_progress("Downloading", total=len(download_spec)):
                 res = Parallel(n_jobs=n_par)(
-                    delayed(self.get_fusion_filesystem().download)(**spec)
-                    for spec in download_spec
+                    delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
                 )
         else:
             res = Parallel(n_jobs=n_par)(
-                delayed(self.get_fusion_filesystem().download)(**spec)
-                for spec in download_spec
+                delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
             )
 
         if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
                 if not r[0]:
-                    warnings.warn(
-                        f"The download of {r[1]} was not successful", stacklevel=2
-                    )
+                    warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
         return res if return_paths else None
 
     def to_df(  # noqa: PLR0913
@@ -850,9 +815,7 @@ class Fusion:
         )
 
         if not download_res:
-            raise ValueError(
-                "Must specify 'return_paths=True' in download call to use this function"
-            )
+            raise ValueError("Must specify 'return_paths=True' in download call to use this function")
 
         if not all(res[0] for res in download_res):
             failed_res = [res for res in download_res if not res[0]]
@@ -903,9 +866,7 @@ class Fusion:
         pd_reader = pd_read_fn_map.get(dataset_format)
         pd_read_kwargs = pd_read_default_kwargs.get(dataset_format, {})
         if not pd_reader:
-            raise Exception(
-                f"No pandas function to read file in format {dataset_format}"
-            )
+            raise Exception(f"No pandas function to read file in format {dataset_format}")
 
         pd_read_kwargs.update(kwargs)
 
@@ -1024,9 +985,7 @@ class Fusion:
         )
 
         if not download_res:
-            raise ValueError(
-                "Must specify 'return_paths=True' in download call to use this function"
-            )
+            raise ValueError("Must specify 'return_paths=True' in download call to use this function")
 
         if not all(res[0] for res in download_res):
             failed_res = [res for res in download_res if not res[0]]
@@ -1126,37 +1085,23 @@ class Fusion:
         if self.fs.info(path)["type"] == "directory":
             file_path_lst = self.fs.find(path)
             local_file_validation = validate_file_names(file_path_lst, fs_fusion)
-            file_path_lst = [
-                f for flag, f in zip(local_file_validation, file_path_lst) if flag
-            ]
+            file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
             file_name = [f.split("/")[-1] for f in file_path_lst]
             is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
-            local_url_eqiv = [
-                path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)
-            ]
+            local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
         else:
             file_path_lst = [path]
             if not catalog or not dataset:
                 local_file_validation = validate_file_names(file_path_lst, fs_fusion)
-                file_path_lst = [
-                    f for flag, f in zip(local_file_validation, file_path_lst) if flag
-                ]
+                file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
                 is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
-                local_url_eqiv = [
-                    path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)
-                ]
+                local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
                 if preserve_original_name:
-                    raise ValueError(
-                        "preserve_original_name can only be used when catalog and dataset are provided."
-                    )
+                    raise ValueError("preserve_original_name can only be used when catalog and dataset are provided.")
             else:
                 date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
                 if date_identifier.match(dt_str):
-                    dt_str = (
-                        dt_str
-                        if dt_str != "latest"
-                        else pd.Timestamp("today").date().strftime("%Y%m%d")
-                    )
+                    dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
                     dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
 
                 if catalog not in fs_fusion.ls("") or dataset not in [
@@ -1170,16 +1115,10 @@ class Fusion:
                     return [(False, path, msg)]
                 file_format = path.split(".")[-1]
                 file_name = [path.split("/")[-1]]
-                file_format = (
-                    "raw" if file_format not in RECOGNIZED_FORMATS else file_format
-                )
+                file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
 
                 local_url_eqiv = [
-                    "/".join(
-                        distribution_to_url(
-                            "", dataset, dt_str, file_format, catalog, False
-                        ).split("/")[1:]
-                    )
+                    "/".join(distribution_to_url("", dataset, dt_str, file_format, catalog, False).split("/")[1:])
                 ]
 
         if not preserve_original_name:
@@ -1256,9 +1195,7 @@ class Fusion:
             raise ValueError(f"Dataset format {distribution} is not supported")
 
         is_raw = js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["isRawData"]
-        local_url_eqiv = path_to_url(
-            f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw
-        )
+        local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)
 
         data_map_df = pd.DataFrame(["", local_url_eqiv, file_name]).T
         data_map_df.columns = ["path", "url", "file_name"]  # type: ignore
@@ -1333,9 +1270,7 @@ class Fusion:
                         if self.events is None:
                             self.events = pd.DataFrame()
                         else:
-                            self.events = pd.concat(
-                                [self.events, pd.DataFrame(event)], ignore_index=True
-                            )
+                            self.events = pd.concat([self.events, pd.DataFrame(event)], ignore_index=True)
                 except TimeoutError as ex:
                     raise ex from None
                 except BaseException:
@@ -1343,9 +1278,7 @@ class Fusion:
 
         _ = self.list_catalogs()  # refresh token
         if "headers" in kwargs:
-            kwargs["headers"].update(
-                {"authorization": f"bearer {self.credentials.bearer_token}"}
-            )
+            kwargs["headers"].update({"authorization": f"bearer {self.credentials.bearer_token}"})
         else:
             kwargs["headers"] = {
                 "authorization": f"bearer {self.credentials.bearer_token}",
@@ -1465,9 +1398,9 @@ class Fusion:
                 for dataset in data["datasets"]:
                     if dataset["identifier"] == destination_dataset_id and dataset.get("status", None) != "Restricted":
                         destination_dataset_title = dataset["title"]
-                    elif dataset[
-                        "identifier"
-                        ] == destination_dataset_id and dataset.get("status", None) == "Restricted":
+                    elif (
+                        dataset["identifier"] == destination_dataset_id and dataset.get("status", None) == "Restricted"
+                    ):
                         destination_dataset_title = "Access Restricted"
                 data_dict[destination_dataset_id] = ("produced", destination_catalog, destination_dataset_title)
 
@@ -1511,7 +1444,7 @@ class Fusion:
         Raises:
             ValueError: If source_dataset_catalog_mapping is not a pandas DataFrame or a list of dictionaries
             HTTPError: If the request is unsuccessful.
-        
+
         Examples:
             Creating lineage from a pandas DataFrame.
             >>> data = [{"dataset": "a", "catalog": "a"}, {"dataset": "b", "catalog": "b"}]
@@ -1529,18 +1462,14 @@ class Fusion:
 
         if isinstance(source_dataset_catalog_mapping, pd.DataFrame):
             dataset_mapping_list = [
-                {
-                    "dataset": row["dataset"],
-                    "catalog": row["catalog"]
-                } for _, row in source_dataset_catalog_mapping.iterrows()
+                {"dataset": row["dataset"], "catalog": row["catalog"]}
+                for _, row in source_dataset_catalog_mapping.iterrows()
             ]
         elif isinstance(source_dataset_catalog_mapping, list):
             dataset_mapping_list = source_dataset_catalog_mapping
         else:
             raise ValueError("source_dataset_catalog_mapping must be a pandas DataFrame or a list of dictionaries.")
-        data = {
-            "source": dataset_mapping_list
-        }
+        data = {"source": dataset_mapping_list}
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{base_dataset}/lineage"
 
@@ -1549,4 +1478,3 @@ class Fusion:
         resp.raise_for_status()
 
         return resp if return_resp_obj else None
-
