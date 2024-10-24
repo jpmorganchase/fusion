@@ -271,7 +271,7 @@ class Attributes:
 
         attributes_obj = Attributes(attributes=self.attributes)
 
-        return attributes_obj
+        return attributes_obj  # type: ignore
 
     def create(
         self,
