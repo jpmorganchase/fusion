@@ -613,36 +613,38 @@ class Fusion:
                 f"Check that a valid dataset identifier and date/date range has been set."
             )
 
+     
         if dt_str == "latest":
-            dt_str = datasetseries_list.iloc[
-                datasetseries_list["createdDate"].to_numpy().argmax()
-            ]["identifier"]
+            dt_str = datasetseries_list[
+                datasetseries_list["createdDate"]==datasetseries_list["createdDate"].to_numpy().max()
+            ].sort_values(by="identifier").iloc[-1]["identifier"]
+            datasetseries_list = datasetseries_list[datasetseries_list["identifier"] == dt_str]
+        else:
+            parsed_dates = normalise_dt_param_str(dt_str)
+            if len(parsed_dates) == 1:
+                parsed_dates = (parsed_dates[0], parsed_dates[0])
 
-        parsed_dates = normalise_dt_param_str(dt_str)
-        if len(parsed_dates) == 1:
-            parsed_dates = (parsed_dates[0], parsed_dates[0])
+            if parsed_dates[0]:
+                datasetseries_list = datasetseries_list[
+                    pd.Series(
+                        [
+                            pd.to_datetime(i, errors="coerce")
+                            for i in datasetseries_list["identifier"]
+                        ]
+                    )
+                    >= pd.to_datetime(parsed_dates[0])
+                ].reset_index()
 
-        if parsed_dates[0]:
-            datasetseries_list = datasetseries_list[
-                pd.Series(
-                    [
-                        pd.to_datetime(i, errors="coerce")
-                        for i in datasetseries_list["identifier"]
-                    ]
-                )
-                >= pd.to_datetime(parsed_dates[0])
-            ].reset_index()
-
-        if parsed_dates[1]:
-            datasetseries_list = datasetseries_list[
-                pd.Series(
-                    [
-                        pd.to_datetime(i, errors="coerce")
-                        for i in datasetseries_list["identifier"]
-                    ]
-                )
-                <= pd.to_datetime(parsed_dates[1])
-            ].reset_index()
+            if parsed_dates[1]:
+                datasetseries_list = datasetseries_list[
+                    pd.Series(
+                        [
+                            pd.to_datetime(i, errors="coerce")
+                            for i in datasetseries_list["identifier"]
+                        ]
+                    )
+                    <= pd.to_datetime(parsed_dates[1])
+                ].reset_index()
 
         if len(datasetseries_list) == 0:
             raise APIResponseError(  # pragma: no cover
@@ -677,7 +679,8 @@ class Fusion:
             dataset (str): A dataset identifier
             dt_str (str, optional): Either a single date or a range identified by a start or end date,
                 or both separated with a ":". Defaults to 'latest' which will return the most recent
-                instance of the dataset.
+                instance of the dataset. If more than one series member exists on the latest date, the
+                series member identifiers will be sorted alphabetically and the last one will be downloaded.
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             n_par (int, optional): Specify how many distributions to download in parallel.
