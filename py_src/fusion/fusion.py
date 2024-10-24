@@ -617,7 +617,7 @@ class Fusion:
         if dt_str == "latest":
             dt_str = datasetseries_list[
                 datasetseries_list["createdDate"]==datasetseries_list["createdDate"].to_numpy().max()
-            ].iloc[-1]["identifier"]
+            ].sort_values(by="identifier").iloc[-1]["identifier"]
             datasetseries_list = datasetseries_list[datasetseries_list["identifier"] == dt_str]
         else:
             parsed_dates = normalise_dt_param_str(dt_str)
@@ -679,7 +679,8 @@ class Fusion:
             dataset (str): A dataset identifier
             dt_str (str, optional): Either a single date or a range identified by a start or end date,
                 or both separated with a ":". Defaults to 'latest' which will return the most recent
-                instance of the dataset.
+                instance of the dataset. If more than one series member exists on the latest date, the
+                series member identifiers will be sorted alphabetically and the last one will be downloaded.
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             n_par (int, optional): Specify how many distributions to download in parallel.
