@@ -237,22 +237,28 @@ class Attributes:
         dict_out = {"attributes": [attr.to_dict() for attr in self.attributes]}
         return dict_out
 
-    @classmethod
-    def from_dict_list(cls: type[Attributes], data: list[dict[str, Any]]) -> Attributes:
+    def from_dict_list(self, data: list[dict[str, Any]]) -> Attributes:
         """Create an Attributes instance from a list of dictionaries."""
         attributes = [Attribute.from_dict(attr_data) for attr_data in data]
-        return cls(attributes=attributes)
+        attrs_obj = Attributes(attributes=attributes)
 
-    @classmethod
-    def from_dataframe(cls: type[Attributes], data: pd.DataFrame) -> Attributes:
+        attrs_obj.set_client(self._client)
+        return attrs_obj
+
+    def from_dataframe(self, data: pd.DataFrame) -> Attributes:
         """Create an Attributes instance from a pandas DataFrame."""
         data = data.replace(to_replace=np.nan, value=None)
         data = data.reset_index() if "index" not in data.columns else data
         attributes = [Attribute.from_series(series) for _, series in data.iterrows()]
-        return cls(attributes=attributes)
+        attrs_obj = Attributes(attributes=attributes)
+
+        attrs_obj.set_client(self._client)
+        return attrs_obj
 
     def to_dataframe(self) -> pd.DataFrame:
         """Convert the collection of Attribute instances to a pandas DataFrame."""
+        if len(self.attributes) == 0:
+            self.attributes = [Attribute(identifier="example_attribute", index=0)]
         data = [attr.to_dict() for attr in self.attributes]
         return pd.DataFrame(data)
 

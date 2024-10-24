@@ -391,7 +391,7 @@ def test_attributes_from_dict_list() -> None:
             }
         ]
     }
-    test_attributes = Attributes.from_dict_list(test_dict["attributes"])
+    test_attributes = Attributes().from_dict_list(test_dict["attributes"])
     assert test_attributes.attributes[0].title == "Test Attribute"
     assert test_attributes.attributes[0].identifier == "test_attribute"
     assert test_attributes.attributes[0].index == 0
@@ -425,7 +425,7 @@ def test_attributes_from_dataframe() -> None:
             "availableFrom": ["May 5, 2020"],
         }
     )
-    test_attributes = Attributes.from_dataframe(test_df)
+    test_attributes = Attributes().from_dataframe(test_df)
     assert test_attributes.attributes[0].title == "Test Attribute"
     assert test_attributes.attributes[0].identifier == "test_attribute"
     assert test_attributes.attributes[0].index == 0
@@ -474,6 +474,32 @@ def test_attributes_to_dataframe() -> None:
     assert test_df["isMetric"].iloc[0] is None
     assert test_df["isPropogationEligible"].iloc[0] is None
     assert test_df["availableFrom"].iloc[0] == "2020-05-05"
+    assert test_df["deprecatedFrom"].iloc[0] is None
+    assert test_df["term"].iloc[0] == "bizterm1"
+    assert test_df["dataset"].iloc[0] is None
+    assert test_df["attributeType"].iloc[0] is None
+
+
+def test_attributes_to_dataframe_empty() -> None:
+    """Test attributes class to_dataframe method with empty attributes."""
+    test_attributes = Attributes([])
+    test_df = test_attributes.to_dataframe()
+    assert test_df.shape == (1, 19)
+    assert test_df["title"].iloc[0] == "Example Attribute"
+    assert test_df["identifier"].iloc[0] == "example_attribute"
+    assert test_df["index"].iloc[0] == 0
+    assert not test_df["isDatasetKey"].iloc[0]
+    assert test_df["dataType"].iloc[0] == "String"
+    assert test_df["description"].iloc[0] == "Example Attribute"
+    assert test_df["source"].iloc[0] is None
+    assert test_df["sourceFieldId"].iloc[0] == "example_attribute"
+    assert test_df["isInternalDatasetKey"].iloc[0] is None
+    assert test_df["isExternallyVisible"].iloc[0]
+    assert test_df["unit"].iloc[0] is None
+    assert test_df["multiplier"].iloc[0] == 1.0
+    assert test_df["isMetric"].iloc[0] is None
+    assert test_df["isPropogationEligible"].iloc[0] is None
+    assert test_df["availableFrom"].iloc[0] is None
     assert test_df["deprecatedFrom"].iloc[0] is None
     assert test_df["term"].iloc[0] == "bizterm1"
     assert test_df["dataset"].iloc[0] is None
