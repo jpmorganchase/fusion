@@ -281,6 +281,7 @@ class Attributes:
         self.attributes = [Attribute.from_dict(attr_data) for attr_data in list_attributes]
 
         attributes_obj = Attributes(attributes=self.attributes)
+        attributes_obj.set_client(client)
 
         return attributes_obj
 

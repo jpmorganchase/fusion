@@ -427,6 +427,7 @@ def test_attributes_from_dict_list() -> None:
     assert test_attributes.attributes[0].term == "bizterm1"
     assert test_attributes.attributes[0].dataset is None
     assert test_attributes.attributes[0].attributeType is None
+    
 
 
 def test_attributes_from_dataframe() -> None:

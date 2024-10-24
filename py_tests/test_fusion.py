@@ -10,7 +10,9 @@ import requests_mock
 from pytest_mock import MockerFixture
 
 from fusion._fusion import FusionCredentials
+from fusion.attributes import Attribute
 from fusion.fusion import Fusion
+from fusion.fusion_types import Types
 from fusion.utils import _normalise_dt_param, distribution_to_url
 
 
@@ -990,6 +992,7 @@ def test_fusion_product(fusion_obj: Fusion) -> None:
     assert test_product.image == ""
     assert test_product.logo == ""
     assert test_product.dataset is None
+    assert test_product._client == fusion_obj
 
 
 def test_fusion_dataset(fusion_obj: Fusion) -> None:
@@ -1038,6 +1041,75 @@ def test_fusion_dataset(fusion_obj: Fusion) -> None:
     assert test_dataset.isConfidential is None
     assert test_dataset.isHighlyConfidential is None
     assert test_dataset.isActive is None
+    assert test_dataset._client == fusion_obj
+
+
+def test_fusion_attribute(fusion_obj: Fusion) -> None:
+    """Test Fusion Attribute class from client."""
+    test_attribute = fusion_obj.attribute(
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+        isDatasetKey=True,
+        dataType="String",
+        availableFrom="May 5, 2020",
+    )
+    assert str(test_attribute)
+    assert repr(test_attribute)
+    assert test_attribute.title == "Test Attribute"
+    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.index == 0
+    assert test_attribute.isDatasetKey
+    assert test_attribute.dataType == Types.String
+    assert test_attribute.description == "Test Attribute"
+    assert test_attribute.source is None
+    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.isInternalDatasetKey is None
+    assert test_attribute.isExternallyVisible is True
+    assert test_attribute.unit is None
+    assert test_attribute.multiplier == 1.0
+    assert test_attribute.isMetric is None
+    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.availableFrom == "2020-05-05"
+    assert test_attribute.deprecatedFrom is None
+    assert test_attribute.term == "bizterm1"
+    assert test_attribute.dataset is None
+    assert test_attribute.attributeType is None
+    assert test_attribute._client == fusion_obj
+
+
+def test_fusion_attributes(fusion_obj: Fusion) -> None:
+    """Test Fusion Attributes class from client."""
+    test_attributes = fusion_obj.attributes(
+        [Attribute(title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+        isDatasetKey=True,
+        dataType=Types.String,
+        availableFrom="May 5, 2020",
+    )])
+    assert str(test_attributes)
+    assert repr(test_attributes)
+    assert test_attributes.attributes[0].title == "Test Attribute"
+    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].index == 0
+    assert test_attributes.attributes[0].isDatasetKey
+    assert test_attributes.attributes[0].dataType == Types.String
+    assert test_attributes.attributes[0].description == "Test Attribute"
+    assert test_attributes.attributes[0].source is None
+    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].isInternalDatasetKey is None
+    assert test_attributes.attributes[0].isExternallyVisible is True
+    assert test_attributes.attributes[0].unit is None
+    assert test_attributes.attributes[0].multiplier == 1.0
+    assert test_attributes.attributes[0].isMetric is None
+    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].availableFrom == "2020-05-05"
+    assert test_attributes.attributes[0].deprecatedFrom is None
+    assert test_attributes.attributes[0].term == "bizterm1"
+    assert test_attributes.attributes[0].dataset is None
+    assert test_attributes.attributes[0].attributeType is None
+    assert test_attributes._client == fusion_obj
 
 
 def test_fusion_create_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -1178,6 +1250,58 @@ def test_fusion_create_dataset_dict(requests_mock: requests_mock.Mocker, fusion_
     resp = dataset_obj.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
     status_code = 200
     assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def test_fusion_create_attributes(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test create attributes from client."""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
+
+    expected_data = {
+        "attributes": [
+            {
+                "title": "Test Attribute",
+                "identifier": "Test Attribute",
+                "index": 0,
+                "isDatasetKey": True,
+                "dataType": "string",
+                "description": "Test Attribute",
+                "source": None,
+                "sourceFieldId": "test_attribute",
+                "isInternalDatasetKey": None,
+                "isExternallyVisible": True,
+                "unit": None,
+                "multiplier": 1.0,
+                "isMetric": None,
+                "isPropogationEligible": None,
+                "availableFrom": "2020-05-05",
+                "deprecatedFrom": None,
+                "term": "bizterm1",
+                "dataset": None,
+                "attributeType": None,
+            }
+        ]
+    }
+
+    requests_mock.put(url, json=expected_data)
+
+    test_attributes = fusion_obj.attributes(
+        [
+            fusion_obj.attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                isDatasetKey=True,
+                dataType="String",
+                availableFrom="May 5, 2020",
+            )
+        ]
+    )
+    resp = test_attributes.create(client=fusion_obj, catalog=catalog, dataset=dataset, return_resp_obj=True)
+    status_code = 200
+    assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code
 
 
