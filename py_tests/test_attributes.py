@@ -14,9 +14,9 @@ from fusion.fusion_types import Types
 def test_attribute_class() -> None:
     """Test attribute class."""
     test_attribute = Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
         isDatasetKey=True,
         dataType=cast(Types, "string"),
         availableFrom="May 5, 2020",
@@ -117,9 +117,9 @@ def test_attribute_class_from_dict() -> None:
 def test_attribute_class_to_dict() -> None:
     """Test attribute class to dict method"""
     test_attribute = Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
         isDatasetKey=True,
         dataType=cast(Types, "string"),
         availableFrom="May 5, 2020",
@@ -179,9 +179,9 @@ def test_attribute_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
     requests_mock.put(url, json=expected_data)
 
     test_attribute = Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
         isDatasetKey=True,
         dataType=cast(Types, "string"),
         availableFrom="May 5, 2020",
@@ -202,7 +202,7 @@ def test_attribute_delete(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
     requests_mock.delete(url, status_code=204)
 
     test_attribute = Attribute(
-        identifier= "test_attribute",
+        identifier="test_attribute",
         index=0,
     )
     resp = test_attribute.delete(client=fusion_obj, catalog=catalog, dataset=dataset, return_resp_obj=True)
@@ -214,9 +214,9 @@ def test_attribute_delete(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
 def test_attribute_class_set_client(fusion_obj: Fusion) -> None:
     """Test attribute class set client method."""
     test_attribute = Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
         isDatasetKey=True,
         dataType=cast(Types, "string"),
         availableFrom="May 5, 2020",
@@ -229,9 +229,9 @@ def test_attribute_class_set_client(fusion_obj: Fusion) -> None:
 def test_attributes_class() -> None:
     """Test attributes class."""
     test_attribute = Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
         isDatasetKey=True,
         dataType=cast(Types, "string"),
         availableFrom="May 5, 2020",
@@ -262,14 +262,18 @@ def test_attributes_class() -> None:
 
 def test_attributes_class_set_client(fusion_obj: Fusion) -> None:
     """Test attribute class set client method."""
-    test_attributes = Attributes([Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
-    )])
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                isDatasetKey=True,
+                dataType=cast(Types, "string"),
+                availableFrom="May 5, 2020",
+            )
+        ]
+    )
     test_attributes.set_client(fusion_obj)
     assert test_attributes._client is not None
     assert test_attributes._client == fusion_obj
@@ -279,9 +283,9 @@ def test_attributes_add_attribute() -> None:
     """Test attributes class add attribute method."""
     test_attributes = Attributes([])
     test_attribute = Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
         isDatasetKey=True,
         dataType=cast(Types, "string"),
         availableFrom="May 5, 2020",
@@ -310,28 +314,36 @@ def test_attributes_add_attribute() -> None:
 
 def test_attributes_remove_attributes() -> None:
     """Test attributes class remove attributes method."""
-    test_attributes = Attributes([Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
-    )])
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                isDatasetKey=True,
+                dataType=cast(Types, "string"),
+                availableFrom="May 5, 2020",
+            )
+        ]
+    )
     test_attributes.remove_attribute("test_attribute")
     assert test_attributes.attributes == []
 
 
 def test_attributes_get_attribute() -> None:
     """Test attributes class get_attribute method."""
-    test_attributes = Attributes([Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
-    )])
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                isDatasetKey=True,
+                dataType=cast(Types, "string"),
+                availableFrom="May 5, 2020",
+            )
+        ]
+    )
     attr = test_attributes.get_attribute("test_attribute")
     assert attr is not None
     assert attr.title == "Test Attribute"
@@ -339,16 +351,20 @@ def test_attributes_get_attribute() -> None:
 
 def test_attributes_to_dict() -> None:
     """Test attributes class to_dict method."""
-    test_attributes = Attributes([Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
-    )])
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                isDatasetKey=True,
+                dataType=cast(Types, "string"),
+                availableFrom="May 5, 2020",
+            )
+        ]
+    )
     dict_out = test_attributes.to_dict()
-    
+
     exp_dict = {
         "attributes": [
             {
@@ -449,14 +465,18 @@ def test_attributes_from_dataframe() -> None:
 
 def test_attributes_to_dataframe() -> None:
     """Test attributes class to_dataframe method."""
-    test_attributes = Attributes([Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
-    )])
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                isDatasetKey=True,
+                dataType=cast(Types, "string"),
+                availableFrom="May 5, 2020",
+            )
+        ]
+    )
     test_df = test_attributes.to_dataframe()
     assert test_df.shape == (1, 19)
     assert test_df["title"].iloc[0] == "Test Attribute"
@@ -581,14 +601,18 @@ def test_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
 
     requests_mock.put(url, json=expected_data)
 
-    test_attributes = Attributes([Attribute(
-        title= "Test Attribute",
-        identifier= "Test Attribute",
-        index= 0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
-    )])
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                isDatasetKey=True,
+                dataType=cast(Types, "string"),
+                availableFrom="May 5, 2020",
+            )
+        ]
+    )
     resp = test_attributes.create(client=fusion_obj, catalog=catalog, dataset=dataset, return_resp_obj=True)
     status_code = 200
     assert isinstance(resp, requests.Response)
@@ -603,10 +627,14 @@ def test_attributes_delete(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
 
     requests_mock.delete(url, status_code=204)
 
-    test_attributes = Attributes([Attribute(
-        identifier= "test_attribute",
-        index=0,
-    )])
+    test_attributes = Attributes(
+        [
+            Attribute(
+                identifier="test_attribute",
+                index=0,
+            )
+        ]
+    )
     resp = test_attributes.delete(client=fusion_obj, catalog=catalog, dataset=dataset, return_resp_obj=True)
     status_code = 204
     assert resp is not None

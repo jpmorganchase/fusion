@@ -1649,7 +1649,7 @@ class Fusion:
         )
         dataset_obj.set_client(self)
         return dataset_obj
-    
+
     def attribute(  # noqa: PLR0913
         self,
         identifier: str,
@@ -1699,22 +1699,22 @@ class Fusion:
         )
         attribute_obj.set_client(self)
         return attribute_obj
-    
+
     def attributes(
-            self,
-            attributes: list[Attribute] | None = None,
+        self,
+        attributes: list[Attribute] | None = None,
     ) -> Attributes:
         """Instantiate a Attributes object with this client for metadata creation."""
         attributes_obj = Attributes(attributes=attributes or [])
         attributes_obj.set_client(self)
         return attributes_obj
-    
+
     def delete_datasetmembers(
-            self,
-            dataset: str,
-            series_members: str | list[str],
-            catalog: str | None = None,
-            return_resp_obj: bool = False,
+        self,
+        dataset: str,
+        series_members: str | list[str],
+        catalog: str | None = None,
+        return_resp_obj: bool = False,
     ) -> list[requests.Response] | None:
         """Delete dataset members.
 
@@ -1738,12 +1738,12 @@ class Fusion:
             resp = self.session.delete(url)
             responses.append(resp)
         return responses if return_resp_obj else None
-    
+
     def delete_all_datasetmembers(
-            self,
-            dataset: str,
-            catalog: str | None = None,
-            return_resp_obj: bool = False,
+        self,
+        dataset: str,
+        catalog: str | None = None,
+        return_resp_obj: bool = False,
     ) -> requests.Response | None:
         """Delete all dataset members.
 

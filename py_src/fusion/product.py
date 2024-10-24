@@ -137,8 +137,8 @@ class Product:
         )
 
     def from_object(
-            self,
-            product_source: Product | dict[str, Any] | str | pd.Series[Any],
+        self,
+        product_source: Product | dict[str, Any] | str | pd.Series[Any],
     ) -> Product:
         """Create a Product object from a dictionary."""
         if isinstance(product_source, Product):

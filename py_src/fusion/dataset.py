@@ -96,7 +96,6 @@ class Dataset:
         self.modifiedDate = convert_date_format(self.modifiedDate) if self.modifiedDate else None
         self.owners = self.owners if isinstance(self.owners, list) or self.owners is None else make_list(self.owners)
 
-
     def set_client(self, client: Any) -> None:
         """Set the client for the Dataset."""
         self._client = client
@@ -218,7 +217,7 @@ class Dataset:
             dataset = Dataset._from_series(dataset_source)
         else:
             raise TypeError(f"Could not resolve the object provided: {dataset_source}")
-            
+
         dataset.set_client(self._client)
 
         return dataset

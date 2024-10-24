@@ -71,7 +71,10 @@ class Attribute:
         self.dataType = Types[str(self.dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
 
     @classmethod
-    def from_series(cls: type[Attribute], series: pd.Series[Any],) -> Attribute:
+    def from_series(
+        cls: type[Attribute],
+        series: pd.Series[Any],
+    ) -> Attribute:
         """Create an Attribute object from a pandas Series."""
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower()).replace(
             to_replace=np.nan, value=None
@@ -190,6 +193,7 @@ class Attribute:
         resp = client.session.delete(url)
         resp.raise_for_status()
         return resp if return_resp_obj else None
+
 
 @dataclass
 class Attributes:
