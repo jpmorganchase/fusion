@@ -1640,6 +1640,8 @@ class Fusion:
         isConfidential: bool | None = None,
         isHighlyConfidential: bool | None = None,
         isActive: bool | None = None,
+        owners: list[str] | None = None,
+        applicationId: str | None = None,
         **kwargs: Any,
     ) -> Dataset:
         """Instantiate a Dataset object with this client for metadata creation.
@@ -1647,9 +1649,10 @@ class Fusion:
         Args:
             identifier (str): Dataset identifier.
             title (str, optional): Dataset title. If not provided, defaults to identifier.
-            category (str | list[str] | None, optional): Category. Defaults to None.
+            category (str | list[str] | None, optional): A category or list of categories for the dataset.
+                Defaults to None.
             description (str, optional): Dataset description. If not provided, defaults to identifier.
-            frequency (str, optional): Frequency. Defaults to "Once".
+            frequency (str, optional): The frequency of the dataset. Defaults to "Once".
             isInternalOnlyDataset (bool, optional): Flag for internal datasets. Defaults to False.
             isThirdPartyData (bool, optional): Flag for third party data. Defaults to True.
             isRestricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
@@ -1680,6 +1683,8 @@ class Fusion:
             isConfidential (bool | None, optional): IsConfidential. Defaults to None.
             isHighlyConfidential (bool | None, optional): isHighlyConfidential. Defaults to None.
             isActive (bool | None, optional): isActive. Defaults to None.
+            owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
+            applicationId (str | None, optional): The application ID of the dataset. Defaults to None.
 
         Returns:
             Dataset: Fusion Dataset class.
@@ -1729,6 +1734,8 @@ class Fusion:
             isConfidential=isConfidential,
             isHighlyConfidential=isHighlyConfidential,
             isActive=isActive,
+            owners=owners,
+            applicationId=applicationId,
             **kwargs,
         )
         dataset_obj.set_client(self)

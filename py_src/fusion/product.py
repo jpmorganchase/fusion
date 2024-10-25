@@ -21,7 +21,7 @@ class Product:
     """Fusion Product class for managing product metadata.
     
     Attributes:
-        identifier (str): Product identifier.
+        identifier (str): A unique identifier for the product.
         title (str, optional): Product title. Defaults to "".
         category (str | list[str] | None, optional): Product category. Defaults to None.
         shortAbstract (str, optional): Short abstract of the product. Defaults to "".
@@ -69,10 +69,10 @@ class Product:
     _client: Any = field(init=False, repr=False, compare=False, default=None)
 
     def __repr__(self: Product) -> str:
-        """Return a string representation of the Product object.
+        """Return an object representation of the Product object.
 
         Returns:
-            str: String representaiton of the product.
+            str: Object representaiton of the product.
 
         """
         attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
@@ -115,7 +115,18 @@ class Product:
         self.releaseDate = convert_date_format(self.releaseDate) if self.releaseDate else None
 
     def set_client(self, client: Any) -> None:
-        """Set the client for the Product."""
+        """Set the client for the Product. Set automatically, if the Product is instantiated from a Fusion object.
+
+        Args:
+            client (Any): Fusion client object.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> product = fusion.product("my_product")
+            >>> product.set_client(fusion)
+
+        """
         self._client = client
 
     @classmethod
@@ -196,13 +207,13 @@ class Product:
         self,
         product_source: Product | dict[str, Any] | str | pd.Series[Any],
     ) -> Product:
-        """Instantiate a Product object from a Product object, dictionary, path to csv, JSON string, or pandas Series.
+        """Instantiate a Product object from a Product object, dictionary, path to CSV, JSON string, or pandas Series.
 
         Args:
             product_source (Product | dict[str, Any] | str | pd.Series[Any]): Product metadata source.
 
         Raises:
-            TypeError: If the object provided is not a Product, dictionary, path to csv file, JSON string,
+            TypeError: If the object provided is not a Product, dictionary, path to CSV file, JSON string,
                 or pandas Series.
 
         Returns:
@@ -231,12 +242,15 @@ class Product:
             ...     "theme": "Data",
             ...     "releaseDate": "2021-01-01",
             ...     "language": "English",
-            ...     "status": "Available",
+            ...     "status": "Available"
             ... }
             >>> product = fusion.product("my_product").from_object(product_dict)
 
             Instatiating a Product object from a JSON string:
 
+            >>> from fusion import Fusion
+            >>> from fusion.product import Product
+            >>> fusion = Fusion()
             >>> product_json = '{
             ...     "identifier": "my_product",
             ...     "title": "My Product",
@@ -260,10 +274,16 @@ class Product:
 
             Instatiating a Product object from a CSV file:
 
+            >>> from fusion import Fusion
+            >>> from fusion.product import Product
+            >>> fusion = Fusion()
             >>> product = fusion.product("my_product").from_object("path/to/product.csv")
 
             Instatiating a Product object from a pandas Series:
 
+            >>> from fusion import Fusion
+            >>> from fusion.product import Product
+            >>> fusion = Fusion()
             >>> product_series = pd.Series({
             ...     "identifier": "my_product",
             ...     "title": "My Product",
@@ -391,6 +411,8 @@ class Product:
 
             From a JSON string:
 
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
             >>> product_json = '{
             ...     "identifier": "my_product",
             ...     "title": "My Product",
@@ -401,11 +423,15 @@ class Product:
 
             From a CSV file:
 
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
             >>> product = fusion.product("my_product").from_object("path/to/product.csv")
             >>> product.create(catalog="my_catalog")
 
             From a pandas Series:
 
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
             >>> product_series = pd.Series({
             ...     "identifier": "my_product",
             ...     "title": "My Product",
@@ -416,6 +442,8 @@ class Product:
 
             From existing product in a catalog:
 
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
             >>> product = fusion.product("my_product").from_catalog()
             >>> product.identifier = "my_new_product"
             >>> product.create(catalog="my_catalog")
@@ -458,7 +486,7 @@ class Product:
         
             >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> product = fusion.product("my_product").from_catalog()
+            >>> product = fusion.product("my_product").from_catalog(catalog="my_catalog")
             >>> product.title = "My Updated Product Title"
             >>> product.update(catalog="my_catalog")
             
@@ -522,7 +550,6 @@ class Product:
         """Copy product from one Fusion catalog and/or environment to another by copy.
 
         Args:
-            product (str): Product identifier.
             catalog_to (str): Catalog identifier to which to copy product.
             catalog_from (str, optional): A catalog identifier from which to copy product. Defaults to "common".
             client (Fusion): A Fusion client object. Defaults to the instance's _client.

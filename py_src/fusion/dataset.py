@@ -18,7 +18,49 @@ if TYPE_CHECKING:
 
 @dataclass
 class Dataset:
-    """Dataset class."""
+    """Fusion Dataset class for managing dataset metadata.
+
+    Attributes:
+        identifier (str): A unique identifier for the dataset.
+        title (str, optional): A title for the dataset. If not provided, defaults to identifier.
+        category (str | list[str] | None, optional): A category or list of categories for the dataset. Defaults to None.
+        description (str, optional): A description of the dataset. If not provided, defaults to identifier.
+        frequency (str, optional): The frequency of the dataset. Defaults to "Once".
+        isInternalOnlyDataset (bool, optional): Flag for internal datasets. Defaults to False.
+        isThirdPartyData (bool, optional): Flag for third party data. Defaults to True.
+        isRestricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
+        isRawData (bool, optional): Flag for raw datasets. Defaults to True.
+        maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
+        source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
+        region (str | list[str] | None, optional): Region. Defaults to None.
+        publisher (str, optional): Name of vendor that publishes the data.. Defaults to "J.P. Morgan".
+        product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
+        subCategory (str | list[str] | None, optional): Sub-category. Defaults to None.
+        tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
+        createdDate (str | None, optional): Created date. Defaults to None.
+        modifiedDate (str | None, optional): Modified date. Defaults to None.
+        deliveryChannel (str | list[str], optional): Delivery channel. Defaults to "API".
+        language (str, optional): Language. Defaults to "English".
+        status (str, optional): Status. Defaults to "Available".
+        type_ (str | None, optional): Dataset type. Defaults to "Source".
+        containerType (str | None, optional): Container type. Defaults to "Snapshot-Full".
+        snowflake (str | None, optional): Snowflake account connection. Defaults to None.
+        complexity (str | None, optional): Complecist. Defaults to None.
+        isImmutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
+        isMnpi (bool | None, optional): isMnpi. Defaults to None.
+        isPci (bool | None, optional): isPci. Defaults to None.
+        isPii (bool | None, optional): isPii. Defaults to None.
+        isClient (bool | None, optional): isClient. Defaults to None.
+        isPublic (bool | None, optional): isPublic. Defaults to None.
+        isInternal (bool | None, optional): IsInternal. Defaults to None.
+        isConfidential (bool | None, optional): IsConfidential. Defaults to None.
+        isHighlyConfidential (bool | None, optional): isHighlyConfidential. Defaults to None.
+        isActive (bool | None, optional): isActive. Defaults to None.
+        owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
+        applicationId (str | None, optional): The application ID of the dataset. Defaults to None.
+        _client (Any, optional): A Fusion client object. Defaults to None.
+
+    """
 
     identifier: str
     title: str = ""
@@ -61,7 +103,12 @@ class Dataset:
     _client: Any = field(init=False, repr=False, compare=False, default=None)
 
     def __repr__(self: Dataset) -> str:
-        """Format object representation."""
+        """Return an object representation of the Dataset object.
+
+        Returns:
+            str: Object representaiton of the dataset.
+
+        """
         attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
         return f"Dataset(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
 
@@ -97,12 +144,31 @@ class Dataset:
         self.owners = self.owners if isinstance(self.owners, list) or self.owners is None else make_list(self.owners)
 
     def set_client(self, client: Any) -> None:
-        """Set the client for the Dataset."""
+        """Set the client for the Dataset. Set automatically, if the Dataset is instantiated from a Fusion object.
+
+        Args:
+            client (Any): Fusion client object.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset("my_dataset")
+            >>> dataset.set_client(fusion)
+                    
+        """
         self._client = client
 
     @classmethod
     def _from_series(cls: type[Dataset], series: pd.Series[Any]) -> Dataset:
-        """Create a Dataset object from a pandas Series."""
+        """Instantiate a Dataset object from a pandas Series.
+
+        Args:
+            series (pd.Series[Any]): Dataset metadata as a pandas Series.
+
+        Returns:
+            Dataset: Dataset object.
+
+        """
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
         series = series.rename({"tag": "tags"})
         series = series.rename({"type_": "type"})
@@ -180,7 +246,15 @@ class Dataset:
 
     @classmethod
     def _from_dict(cls: type[Dataset], data: dict[str, Any]) -> Dataset:
-        """Create a Dataset object from a dictionary."""
+        """Instantiate a Dataset object from a dictionary.
+
+        Args:
+            data (dict[str, Any]): Dataset metadata as a dictionary.
+
+        Returns:
+            Dataset: Dataset object.
+
+        """
         keys = [f.name for f in fields(cls)]
         keys = ["type" if key == "type_" else key for key in keys]
         data = {k: v for k, v in data.items() if k in keys}
@@ -190,7 +264,17 @@ class Dataset:
 
     @classmethod
     def _from_csv(cls: type[Dataset], file_path: str, identifier: str | None = None) -> Dataset:
-        """Create a list of Dataset objects from a CSV file."""
+        """Instantiate a Dataset object from a CSV file.
+
+        Args:
+            file_path (str): Path to the CSV file.
+            identifier (str | None, optional): Dataset identifer for filtering if multipler datasets are defined in csv.
+                Defaults to None.
+
+        Returns:
+            Dataset: Dataset object.
+
+        """
         data = pd.read_csv(file_path)
 
         return (
@@ -203,7 +287,77 @@ class Dataset:
         self,
         dataset_source: Dataset | dict[str, Any] | str | pd.Series[Any],
     ) -> Dataset:
-        """Create a Dataset object from a dictionary."""
+        """Instantiate a Dataset object from a Dataset object, dictionary, JSON string, path to CSV, or pandas Series.
+
+        Args:
+            dataset_source (Dataset | dict[str, Any] | str | pd.Series[Any]): Dataset metadata source.
+
+        Raises:
+            TypeError: If the object provided is not a Dataset, dictionary, JSON string, path to CSV file,
+                or pandas Series.
+
+        Returns:
+            Dataset: Dataset object.
+        
+        Examples:
+            Instantiate a Dataset object from a dictionary:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset_dict = {
+            ...     "identifier": "my_dataset",
+            ...     "title": "My Dataset",
+            ...     "description": "My dataset description",
+            ...     "category": "Finance",
+            ...     "frequency": "Daily",
+            ...     "isRestricted": False,
+            ...     "isRawData": True,
+            ...     "maintainer": "J.P. Morgan Fusion",
+            ...     "source": "J.P. Morgan",
+            ...     }
+            >>> dataset = fusion.dataset("my_dataset").from_object(dataset_dict)
+
+            Instantiate a Dataset object from a JSON string:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset_json = '{
+            ...     "identifier": "my_dataset",
+            ...     "title": "My Dataset",
+            ...     "description": "My dataset description",
+            ...     "category": "Finance",
+            ...     "frequency": "Daily",
+            ...     "isRestricted": False,
+            ...     "isRawData": True,
+            ...     "maintainer": "J.P. Morgan Fusion",
+            ...     "source": "J.P. Morgan"
+            ...     }'
+            >>> dataset = fusion.dataset("my_dataset").from_object(dataset_json)
+
+            Instantiate a Dataset object from a CSV file:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset("my_dataset").from_object("path/to/dataset.csv")
+
+            Instantiate a Dataset object from a pandas Series:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset_series = pd.Series({
+            ...     "identifier": "my_dataset",
+            ...     "title": "My Dataset",
+            ...     "description": "My dataset description",
+            ...     "category": "Finance",
+            ...     "frequency": "Daily",
+            ...     "isRestricted": False,
+            ...     "isRawData": True,
+            ...     "maintainer": "J.P. Morgan Fusion",
+            ...     "source": "J.P. Morgan"
+            ...     })
+            >>> dataset = fusion.dataset("my_dataset").from_object(dataset_series)
+
+        """
         if isinstance(dataset_source, Dataset):
             dataset = dataset_source
         elif isinstance(dataset_source, dict):
@@ -223,7 +377,23 @@ class Dataset:
         return dataset
 
     def from_catalog(self, catalog: str | None = None, client: Fusion | None = None) -> Dataset:
-        """Create a Dataset object from a catalog."""
+        """Instantiate a Dataset object from a Fusion catalog.
+
+        Args:
+            catalog (str | None, optional): Catalog identifer. Defaults to None.
+            client (Fusion | None, optional): Fusion session. Defaults to None.
+                If instantiated from a Fusion object, then the client is set automatically.
+
+        Returns:
+            Dataset: Dataset object.
+        
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset("my_dataset").from_catalog(catalog="my_catalog")    
+            
+        """
         if client is None:
             client = self._client
         catalog = client._use_catalog(catalog)
@@ -242,7 +412,18 @@ class Dataset:
         return dataset_obj
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert the Dataset object to a dictionary."""
+        """Convert the Dataset instance to a dictionary.
+
+        Returns:
+            dict[str, Any]: Dataset metadata as a dictionary.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset("my_dataset")
+            >>> dataset_dict = dataset.to_dict()
+
+        """
         dataset_dict = asdict(self)
         dataset_dict["type"] = dataset_dict.pop("type_")
         dataset_dict.pop("_client")
@@ -254,15 +435,91 @@ class Dataset:
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Uploada dataset via API from a Dataset object.
+        """Upload a new dataset to a Fusion catalog.
 
         Args:
             catalog (str | None, optional): A catalog identifier. Defaults to "common".
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
-            requests.Response: Request response.
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            From scratch:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset(
+            ...     identifier= "my_dataset",
+            ...     title= "My Dataset",
+            ...     description= "My dataset description",
+            ...     category= "Finance",
+            ...     frequency= "Daily",
+            ...     isRestricted= False
+            ...     )
+            >>> dataset.create(catalog="my_catalog")
+
+            From a dictionary:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset_dict = {
+            ...     "identifier": "my_dataset",
+            ...     "title": "My Dataset",
+            ...     "description": "My dataset description",
+            ...     "category": "Finance",
+            ...     "frequency": "Daily",
+            ...     "isRestricted": False
+            ...     }
+            >>> dataset = fusion.dataset("my_dataset").from_object(dataset_dict)
+            >>> dataset.create(catalog="my_catalog")
+
+            From a JSON string:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset_json = '{
+            ...     "identifier": "my_dataset",
+            ...     "title": "My Dataset",
+            ...     "description": "My dataset description",
+            ...     "category": "Finance",
+            ...     "frequency": "Daily",
+            ...     "isRestricted": False
+            ...     }'
+            >>> dataset = fusion.dataset("my_dataset").from_object(dataset_json)
+            >>> dataset.create(catalog="my_catalog")
+
+            From a CSV file:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset("my_dataset").from_object("path/to/dataset.csv")
+            >>> dataset.create(catalog="my_catalog")
+
+            From a pandas Series:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset_series = pd.Series({
+            ...     "identifier": "my_dataset",
+            ...     "title": "My Dataset",
+            ...     "description": "My dataset description",
+            ...     "category": "Finance",
+            ...     "frequency": "Daily",
+            ...     "isRestricted": False
+            ...     })
+            >>> dataset = fusion.dataset("my_dataset").from_object(dataset_series)
+
+            From existing dataset in a catalog:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset("my_dataset").from_catalog(catalog="my_catalog")
+            >>> dataset.identifier = "my_new_dataset"
+            >>> dataset.create(catalog="my_catalog")
 
         """
         client = self._client if client is None else client
@@ -291,10 +548,20 @@ class Dataset:
         Args:
             catalog (str | None, optional): A catalog identifier. Defaults to "common".
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
-            requests.Response: Request response.
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset("my_dataset").from_catalog(catalog="my_catalog")
+            >>> dataset.title = "My Updated Dataset"
+            >>> dataset.update(catalog="my_catalog")
+
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -319,10 +586,18 @@ class Dataset:
         Args:
             catalog (str | None, optional): A catalog identifier. Defaults to "common".
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
-            requests.Response: Request response.
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset("my_dataset").delete(catalog="my_catalog")
+
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -339,17 +614,25 @@ class Dataset:
         client_to: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Copy dataset and its attributes from one catalog and/or environment to another by copy.
+        """Copy dataset from one catalog and/or environment to another by copy.
 
         Args:
             catalog_to (str): A catalog identifier to which to copy dataset.
             catalog_from (str, optional): A catalog identifier from which to copy dataset. Defaults to "common".
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
             client_to (Fusion | None, optional): Fusion client object. Defaults to current instance.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
-            requests.Response: Request response.
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset("my_dataset").copy(catalog_from="my_catalog", catalog_to="my_new_catalog")
+
         """
         client = self._client if client is None else client
         catalog_from = client._use_catalog(catalog_from)
