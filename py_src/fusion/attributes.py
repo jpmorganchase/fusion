@@ -673,7 +673,7 @@ class Attributes:
 
         Returns:
             list[requests.Response] | None: List of response objects from the API calls if return_resp_obj is True,
-             otherwise None.
+                otherwise None.
 
         Examples:
 
