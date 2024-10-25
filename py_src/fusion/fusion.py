@@ -1767,7 +1767,7 @@ class Fusion:
         """Instantiate an Attribute object with this client for metadata creation.
 
         Args:
-            identifier (str): Attribute identifier.
+            identifier (str): The unique identifier for the attribute.
             index (int): Attribute index.
             dataType (str | Types, optional): Datatype of attribute. Defaults to "String".
             title (str, optional): Attribute title. If not provided, defaults to identifier.

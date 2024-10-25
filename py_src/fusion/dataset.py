@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class Dataset:
-    """Fusion Dataset class for managing dataset metadata.
+    """Fusion Dataset class for managing dataset metadata in a Fusion catalog.
 
     Attributes:
         identifier (str): A unique identifier for the dataset.
@@ -596,7 +596,7 @@ class Dataset:
 
             >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> dataset = fusion.dataset("my_dataset").delete(catalog="my_catalog")
+            >>> fusion.dataset("my_dataset").delete(catalog="my_catalog")
 
         """
         client = self._client if client is None else client

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class Product:
-    """Fusion Product class for managing product metadata.
+    """Fusion Product class for managing product metadata in a Fusion catalog.
     
     Attributes:
         identifier (str): A unique identifier for the product.
@@ -528,7 +528,7 @@ class Product:
 
             >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> product = fusion.product("my_product").delete(catalog="my_catalog")   
+            >>> fusion.product("my_product").delete(catalog="my_catalog")   
 
         """
         client = self._client if client is None else client

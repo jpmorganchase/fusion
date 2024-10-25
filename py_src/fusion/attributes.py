@@ -19,7 +19,32 @@ if TYPE_CHECKING:
 
 @dataclass
 class Attribute:
-    """Attribute class."""
+    """Fusion Attribute class for managing attributes metadata in a Fusion catalog.
+
+    Attributes:
+        identifier (str): The unique identifier for the attribute.
+        index (int): Attribute index.
+        dataType (str | Types, optional): Datatype of attribute. Defaults to "String".
+        title (str, optional): Attribute title. If not provided, defaults to identifier.
+        description (str, optional): Attribute description. If not provided, defaults to identifier.
+        isDatasetKey (bool, optional): Flag for primary keys. Defaults to False.
+        source (str | None, optional): Name of data vendor which provided the data. Defaults to None.
+        sourceFieldId (str | None, optional): Original identifier of attribute, if attribute has been renamed.
+            If not provided, defaults to identifier.
+        isInternalDatasetKey (bool | None, optional): Flag for internal primary keys. Defaults to None.
+        isExternallyVisible (bool | None, optional): Flag for externally visible attributes. Defaults to True.
+        unit (Any | None, optional): Unit of attribute. Defaults to None.
+        multiplier (float, optional): Multiplier for unit. Defaults to 1.0.
+        isPropogationEligible (bool | None, optional): Flag for propogation eligibility. Defaults to None.
+        isMetric (bool | None, optional): Flag for attributes that are metrics. Defaults to None.
+        availableFrom (str | None, optional): Date from which the attribute is available. Defaults to None.
+        deprecatedFrom (str | None, optional): Date from which the attribute is deprecated. Defaults to None.
+        term (str, optional): Term. Defaults to "bizterm1".
+        dataset (int | None, optional): Dataset. Defaults to None.
+        attributeType (str | None, optional): Attribute type. Defaults to None.
+        _client (Fusion | None, optional): Fusion client object. Defaults to None.
+
+    """
 
     identifier: str
     index: int
@@ -44,11 +69,23 @@ class Attribute:
     _client: Fusion | None = None
 
     def set_client(self, client: Any) -> None:
-        """Set the client for the Product."""
+        """Set the client for the Attribute. Set automatically, if the Attribute is instantiated from a Fusion object.
+
+        Args:
+            client (Any): Fusion client object.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
+            >>> attribute.set_client(fusion)
+
+        """
         self._client = client
 
     def __str__(self: Attribute) -> str:
-        """Format object representation."""
+        """Format string representation."""
         attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
         return f"Attribute(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
 
@@ -58,7 +95,7 @@ class Attribute:
         return "(" + s + ")"
 
     def __post_init__(self: Attribute) -> None:
-        """Post-initialization steps."""
+        """Format Attribute metadata fields after object initialization."""
         self.isDatasetKey = make_bool(self.isDatasetKey)
         self.identifier = tidy_string(self.identifier).lower().replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
@@ -75,7 +112,29 @@ class Attribute:
         cls: type[Attribute],
         series: pd.Series[Any],
     ) -> Attribute:
-        """Create an Attribute object from a pandas Series."""
+        """Instantiate an Attribute object from a pandas Series.
+
+        Args:
+            series (pd.Series[Any]): Attribute metadata as a pandas Series.
+
+        Returns:
+            Attribute: Attribute object.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> import pandas as pd
+            >>> series = pd.Series({
+            ...     "identifier": "my_attribute",
+            ...     "index": 0,
+            ...     "dataType": "String",
+            ...     "title": "My Attribute",
+            ...     "description": "My attribute description"
+            ... })
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_series(series)
+
+        """
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower()).replace(
             to_replace=np.nan, value=None
         )
@@ -123,7 +182,28 @@ class Attribute:
 
     @classmethod
     def from_dict(cls: type[Attribute], data: dict[str, Any]) -> Attribute:
-        """Create an Attribute object from a dictionary."""
+        """Instantiate an Attribute object from a dictionary.
+
+        Args:
+            data (dict[str, Any]): Attribute metadata as a dictionary.
+
+        Returns:
+            Attribute: Attribute object.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> data = {
+            ...     "identifier": "my_attribute",
+            ...     "index": 0,
+            ...     "dataType": "String",
+            ...     "title": "My Attribute",
+            ...     "description": "My attribute description"
+            ... }
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_dict(data)
+
+        """
         keys = [f.name for f in fields(cls)]
         data = {k: (None if pd.isna(v) else v) for k, v in data.items() if k in keys}
         if "dataType" in data:
@@ -131,7 +211,19 @@ class Attribute:
         return cls(**data)
 
     def to_dict(self: Attribute) -> dict[str, Any]:
-        """Convert object to dictionary."""
+        """Convert object to dictionary.
+
+        Returns:
+            dict[str, Any]: Attribute metadata as a dictionary.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
+            >>> attribute_dict = attribute.to_dict()
+    
+        """
         result = asdict(self)
         result["unit"] = str(self.unit) if self.unit is not None else None
         result["dataType"] = self.dataType.name
@@ -145,16 +237,58 @@ class Attribute:
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Create an Attribute in a Fusion catalog.
+        """Upload a new attribute to a Fusion catalog.
 
         Args:
             dataset (str): Dataset identifier.
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
             catalog (str, optional): A catalog identifier. Defaults to None.
-            return_resp_obj (bool, optional): _description_. Defaults to False.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            Individually, from scratch:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute0 = fusion.attribute(identifier="my_attribute_0", index=0)
+            >>> attribute.create(dataset="my_dataset", catalog="my_catalog")
+            >>> attribute1 = fusion.attribute(identifier="my_attribute_1", index=1)
+            >>> attribute.create(dataset="my_dataset", catalog="my_catalog")
+
+            Individually, from a dictionary:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> data = {
+            ...     "identifier": "my_attribute",
+            ...     "index": 0,
+            ...     "dataType": "String",
+            ...     "title": "My Attribute",
+            ...     "description": "My attribute description"
+            ...    }
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_dict(data)
+            >>> attribute.create(dataset="my_dataset", catalog="my_catalog")
+
+            Individually, from a pandas Series:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> import pandas as pd
+            >>> series = pd.Series({
+            ...     "identifier": "my_attribute",
+            ...     "index": 0,
+            ...     "dataType": "String",
+            ...     "title": "My Attribute",
+            ...     "description": "My attribute description"
+            ... })
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_series(series)
+            >>> attribute.create(dataset="my_dataset", catalog="my_catalog")
+
         """
         client = self._client if client is None else client
 
@@ -184,6 +318,13 @@ class Attribute:
 
         Returns:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.attribute(identifier="my_attribute", index=0).delete(dataset="my_dataset", catalog="my_catalog")
+
         """
         client = self._client if client is None else client
         if client is None:
@@ -197,7 +338,13 @@ class Attribute:
 
 @dataclass
 class Attributes:
-    """Class representing a collection of Attribute instances."""
+    """Class representing a collection of Attribute instances for managing atrribute metadata in a Fusion catalog.
+    
+    Attributes:
+        attributes (list[Attribute]): List of Attribute instances.
+        _client (Fusion | None): Fusion client object.
+        
+    """
 
     attributes: list[Attribute] = field(default_factory=list)
 
@@ -214,15 +361,57 @@ class Attributes:
         return self.__str__()
 
     def set_client(self, client: Any) -> None:
-        """Set the client for the Product."""
+        """Set the client for the Attributes object. Set automatically,
+            if the Attributes object is instantiated from a Fusion object.
+
+        Args:
+            client (Any): Fusion client object.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attributes = fusion.attributes()
+            >>> attributes.set_client(fusion)
+
+        """
         self._client = client
 
     def add_attribute(self, attribute: Attribute) -> None:
-        """Add an Attribute instance to the collection."""
+        """Add an Attribute instance to the collection.
+
+        Args:
+            attribute (Attribute): Attribute instance to add.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
+            >>> attributes = fusion.attributes()
+            >>> attributes.add_attribute(attribute)
+
+        """
         self.attributes.append(attribute)
 
     def remove_attribute(self, identifier: str) -> bool:
-        """Remove an Attribute instance from the collection by identifier."""
+        """Remove an Attribute instance from the collection by identifier.
+
+        Args:
+            identifier (str): Identifier of the Attribute to remove.
+
+        Returns:
+            bool: True if the Attribute was removed, False otherwise.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
+            >>> attributes = fusion.attributes(attributes=[attribute])
+            >>> attributes.remove_attribute("my_attribute")
+
+        """
         for attr in self.attributes:
             if attr.identifier == identifier:
                 self.attributes.remove(attr)
@@ -230,19 +419,71 @@ class Attributes:
         return False
 
     def get_attribute(self, identifier: str) -> Attribute | None:
-        """Get an Attribute instance from the collection by identifier."""
+        """Get an Attribute instance from the collection by identifier.
+
+        Args:
+            identifier (str): Identifier of the Attribute to retrieve.
+
+        Returns:
+            Attribute | None: The Attribute instance if found, None otherwise.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
+            >>> attributes =fusion.attributes(attributes=[attribute])
+            >>> retrieved_attribute = attributes.get_attribute("my_attribute")
+
+        """
         for attr in self.attributes:
             if attr.identifier == identifier:
                 return attr
         return None
 
     def to_dict(self) -> dict[str, list[dict[str, Any]]]:
-        """Convert the collection of Attribute instances to a list of dictionaries."""
+        """Convert the collection of Attribute instances to a list of dictionaries.
+
+        Returns:
+            dict[str, list[dict[str, Any]]]: Collection of Attribute instances as a dictionary.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
+            >>> attributes = fusion.attributes(attributes=[attribute])
+            >>> attributes_dict = attributes.to_dict()
+
+        """
         dict_out = {"attributes": [attr.to_dict() for attr in self.attributes]}
         return dict_out
 
     def from_dict_list(self, data: list[dict[str, Any]]) -> Attributes:
-        """Create an Attributes instance from a list of dictionaries."""
+        """Create an Attributes instance from a list of dictionaries.
+
+        Args:
+            data (list[dict[str, Any]]): List of dictionaries representing Attribute instances.
+
+        Returns:
+            Attributes: Attributes instance.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> data = [
+            ...     {
+            ...         "identifier": "my_attribute",
+            ...         "index": 0,
+            ...         "dataType": "String",
+            ...         "title": "My Attribute",
+            ...         "description": "My attribute description"
+            ...     }
+            ... ]
+            >>> attributes = fusion.attributes().from_dict_list(data)
+
+        """
         attributes = [Attribute.from_dict(attr_data) for attr_data in data]
         attrs_obj = Attributes(attributes=attributes)
 
@@ -250,7 +491,31 @@ class Attributes:
         return attrs_obj
 
     def from_dataframe(self, data: pd.DataFrame) -> Attributes:
-        """Create an Attributes instance from a pandas DataFrame."""
+        """Create an Attributes instance from a pandas DataFrame.
+
+        Args:
+            data (pd.DataFrame): DataFrame representing Attribute instances.
+
+        Returns:
+            Attributes: Attributes instance.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> import pandas as pd
+            >>> data = pd.DataFrame([
+            ...     {
+            ...         "identifier": "my_attribute",
+            ...         "index": 0,
+            ...         "dataType": "String",
+            ...         "title": "My Attribute",
+            ...         "description": "My attribute description"
+            ...     }
+            ... ])
+            >>> attributes = fusion.attributes().from_dataframe(data)
+
+        """
         data = data.replace(to_replace=np.nan, value=None)
         data = data.reset_index() if "index" not in data.columns else data
         attributes = [Attribute.from_series(series) for _, series in data.iterrows()]
@@ -260,30 +525,56 @@ class Attributes:
         return attrs_obj
 
     def to_dataframe(self) -> pd.DataFrame:
-        """Convert the collection of Attribute instances to a pandas DataFrame."""
+        """Convert the collection of Attribute instances to a pandas DataFrame.
+
+        Returns:
+            pd.DataFrame: DataFrame representing the collection of Attribute instances.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> import pandas as pd
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
+            >>> attributes = fusion.attributes(attributes=[attribute])
+            >>> attributes_df = attributes.to_dataframe()
+
+        """
         if len(self.attributes) == 0:
             self.attributes = [Attribute(identifier="example_attribute", index=0)]
         data = [attr.to_dict() for attr in self.attributes]
         return pd.DataFrame(data)
 
     def from_catalog(self, dataset: str, catalog: str | None = None, client: Fusion | None = None) -> Attributes:
-        """Get the Attributes from a Fusion catalog."""
+        """Instatiate an Attributes object from a dataset's attributes in a Fusion catalog.
+
+        Args:
+            dataset (str): The dataset identifier.
+            catalog (str | None, optional): The catalog identifier. Defaults to None.
+            client (Fusion | None, optional): Fusion session. Defaults to None.
+                If instantiated from a Fusion object, then the client is set automatically.
+
+        Returns:
+            Attributes: An instance of the Attributes class with the attributes from the catalog.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attributes = fusion.attributes().from_catalog(dataset="my_dataset", catalog="my_catalog")
+
+        """
         client = self._client if client is None else client
         if client is None:
             raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
+        url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes"
         response = client.session.get(url)
         response.raise_for_status()
         list_attributes = response.json()["resources"]
         list_attributes = sorted(list_attributes, key=lambda x: x["index"])
 
         self.attributes = [Attribute.from_dict(attr_data) for attr_data in list_attributes]
-
-        attributes_obj = Attributes(attributes=self.attributes)
-        attributes_obj.set_client(client)
-
-        return attributes_obj
+        return self
 
     def create(
         self,
@@ -292,23 +583,75 @@ class Attributes:
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Create the Attributes in a Fusion catalog.
+        """Upload the Attributes  to a dataset in a Fusion catalog.
 
         Args:
             dataset (str): Dataset identifier.
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
             catalog (str, optional): A catalog identifier. Defaults to None.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            From scratch:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
+            >>> attributes = fusion.attributes(attributes=[attribute])
+            >>> attributes.create(dataset="my_dataset", catalog="my_catalog")
+
+            From a list of dictionaries:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> data = [
+            ...     {
+            ...         "identifier": "my_attribute",
+            ...         "index": 0,
+            ...         "dataType": "String",
+            ...         "title": "My Attribute",
+            ...         "description": "My attribute description"
+            ...     }
+            ... ]
+            >>> attributes = fusion.attributes().from_dict_list(data)
+            >>> attributes.create(dataset="my_dataset", catalog="my_catalog")
+
+            From a pandas DataFrame:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> import pandas as pd
+            >>> data = pd.DataFrame([
+            ...     {
+            ...         "identifier": "my_attribute",
+            ...         "index": 0,
+            ...         "dataType": "String",
+            ...         "title": "My Attribute",
+            ...         "description": "My attribute description"
+            ...     }
+            ... ])
+            >>> attributes = fusion.attributes().from_dataframe(data)
+            >>> attributes.create(dataset="my_dataset", catalog="my_catalog")
+
+            From existing dataset's attributes in a Fusion catalog:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attributes = fusion.attributes().from_catalog(dataset="my_dataset", catalog="my_catalog")
+            >>> attributes.create(dataset="my_new_dataset", catalog="my_catalog")
+
         """
         client = self._client if client is None else client
         if client is None:
             raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
         data = self.to_dict()
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
+        url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes"
         resp = client.session.put(url, json=data)
         resp.raise_for_status()
         return resp if return_resp_obj else None
@@ -331,6 +674,14 @@ class Attributes:
         Returns:
             list[requests.Response] | None: List of response objects from the API calls if return_resp_obj is True,
              otherwise None.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attributes = fusion.attributes().from_catalog(dataset="my_dataset", catalog="my_catalog")
+            >>> attributes.delete(dataset="my_dataset", catalog="my_catalog")
+
         """
         client = self._client if client is None else client
         if client is None:
@@ -339,7 +690,7 @@ class Attributes:
 
         resp = [
             client.session.delete(
-                f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{attr.identifier}"
+                f"{client.root_url}/catalogs{catalog}/datasets/{dataset}/attributes/{attr.identifier}"
             )
             for attr in self.attributes
         ]
