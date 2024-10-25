@@ -93,7 +93,7 @@ dev-dependencies = [
     "auditwheel>=6.0.0; sys_platform=='linux'",
     "bump-my-version",
     "cffi>=1.16.0; sys_platform=='darwin'",
-    "freezegun>=1.4.0",
+    "freezegun>=1.4.1",
     "ipython",
     "maturin>=1.6,<2.0",
     "moto[s3]>=5.0.5",
