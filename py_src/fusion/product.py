@@ -18,7 +18,32 @@ if TYPE_CHECKING:
 
 @dataclass
 class Product:
-    "Product class."
+    """Fusion Product class for managing product metadata.
+    
+    Attributes:
+        identifier (str): Product identifier.
+        title (str, optional): Product title. Defaults to "".
+        category (str | list[str] | None, optional): Product category. Defaults to None.
+        shortAbstract (str, optional): Short abstract of the product. Defaults to "".
+        description (str, optional): Product description. If not provided, defaults to identifier.
+        isActive (bool, optional): Boolean for Active status. Defaults to True.
+        isRestricted (bool | None, optional): Flag for restricted products. Defaults to None.
+        maintainer (str | list[str] | None, optional): Product maintainer. Defaults to None.
+        region (str | list[str] | None, optional): Product region. Defaults to None.
+        publisher (str | None, optional): Name of vendor that publishes the data. Defaults to None.
+        subCategory (str | list[str] | None, optional): Product sub-category. Defaults to None.
+        tag (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
+        deliveryChannel (str | list[str], optional): Product delivery channel. Defaults to ["API"].
+        theme (str | None, optional): Product theme. Defaults to None.
+        releaseDate (str | None, optional): Product release date. Defaults to None.
+        language (str, optional): Product language. Defaults to "English".
+        status (str, optional): Product status. Defaults to "Available".
+        image (str, optional): Product image. Defaults to "".
+        logo (str, optional): Product logo. Defaults to "".
+        dataset (str | list[str] | None, optional): Product datasets. Defaults to None.
+        _client (Any, optional): Fusion client object. Defaults to None.
+
+    """
 
     identifier: str
     title: str = ""
@@ -44,7 +69,12 @@ class Product:
     _client: Any = field(init=False, repr=False, compare=False, default=None)
 
     def __repr__(self: Product) -> str:
-        """Return a string representation of the Product object."""
+        """Return a string representation of the Product object.
+
+        Returns:
+            str: String representaiton of the product.
+
+        """
         attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
         return f"Product(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
 
@@ -90,7 +120,15 @@ class Product:
 
     @classmethod
     def from_series(cls: type[Product], series: pd.Series[Any]) -> Product:
-        """Create a Product object from a pandas Series."""
+        """Instantiate a Product object from a pandas Series.
+
+        Args:
+            series (pd.Series[Any]): Product metadata as a pandas Series.
+
+        Returns:
+            Product: Product object.
+
+        """
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
         series = series.rename({"tag": "tags", "dataset": "datasets"})
         short_abstract = series.get("abstract", "")
@@ -120,14 +158,32 @@ class Product:
 
     @classmethod
     def from_dict(cls: type[Product], data: dict[str, Any]) -> Product:
-        """Create a Product object from a dictionary."""
+        """Instantiate a Product object from a dictionary.
+
+        Args:
+            data (dict[str, Any]): Product metadata as a dictionary.
+
+        Returns:
+            Product: Product object.
+
+        """
         keys = [f.name for f in fields(cls)]
         data = {k: v for k, v in data.items() if k in keys}
         return cls(**data)
 
     @classmethod
     def from_csv(cls: type[Product], file_path: str, identifier: str | None = None) -> Product:
-        """Create a list of Product objects from a CSV file."""
+        """Instantiate a Product object from a CSV file.
+
+        Args:
+            file_path (str): Path to the CSV file.
+            identifier (str | None, optional): Product identifer for filtering if multipler products are defined in csv.
+                Defaults to None.
+
+        Returns:
+            Product: Product object.
+
+        """
         data = pd.read_csv(file_path)
 
         return (
@@ -140,7 +196,96 @@ class Product:
         self,
         product_source: Product | dict[str, Any] | str | pd.Series[Any],
     ) -> Product:
-        """Create a Product object from a dictionary."""
+        """Instantiate a Product object from a Product object, dictionary, path to csv, JSON string, or pandas Series.
+
+        Args:
+            product_source (Product | dict[str, Any] | str | pd.Series[Any]): Product metadata source.
+
+        Raises:
+            TypeError: If the object provided is not a Product, dictionary, path to csv file, JSON string,
+                or pandas Series.
+
+        Returns:
+            Product: Product object.
+
+        Examples:
+            Instatiating a Product object from a dictionary:
+
+            >>> from fusion import Fusion
+            >>> from fusion.product import Product
+            >>> fusion = Fusion()
+            >>> product_dict = {
+            ...     "identifier": "my_product",
+            ...     "title": "My Product",
+            ...     "category": "Data",
+            ...     "shortAbstract": "My product is awesome",
+            ...     "description": "My product is very awesome",
+            ...     "isActive": True,
+            ...     "isRestricted": False,
+            ...     "maintainer": "My Company",
+            ...     "region": "Global",
+            ...     "publisher": "My Company",
+            ...     "subCategory": "Data",
+            ...     "tag": "My Company",
+            ...     "deliveryChannel": "API",
+            ...     "theme": "Data",
+            ...     "releaseDate": "2021-01-01",
+            ...     "language": "English",
+            ...     "status": "Available",
+            ... }
+            >>> product = fusion.product("my_product").from_object(product_dict)
+
+            Instatiating a Product object from a JSON string:
+
+            >>> product_json = '{
+            ...     "identifier": "my_product",
+            ...     "title": "My Product",
+            ...     "category": "Data",
+            ...     "shortAbstract": "My product is awesome",
+            ...     "description": "My product is very awesome",
+            ...     "isActive": True,
+            ...     "isRestricted": False,
+            ...     "maintainer": "My Company",
+            ...     "region": "Global",
+            ...     "publisher": "My Company",
+            ...     "subCategory": "Data",
+            ...     "tag": "My Company",
+            ...     "deliveryChannel": "API",
+            ...     "theme": "Data",
+            ...     "releaseDate": "2021-01-01",
+            ...     "language": "English",
+            ...     "status": "Available",
+            ... }'
+            >>> product = fusion.product("my_product").from_object(product_json)
+
+            Instatiating a Product object from a CSV file:
+
+            >>> product = fusion.product("my_product").from_object("path/to/product.csv")
+
+            Instatiating a Product object from a pandas Series:
+
+            >>> product_series = pd.Series({
+            ...     "identifier": "my_product",
+            ...     "title": "My Product",
+            ...     "category": "Data",
+            ...     "shortAbstract": "My product is awesome",
+            ...     "description": "My product is very awesome",
+            ...     "isActive": True,
+            ...     "isRestricted": False,
+            ...     "maintainer": "My Company",
+            ...     "region": "Global",
+            ...     "publisher": "My Company",
+            ...     "subCategory": "Data",
+            ...     "tag": "My Company",
+            ...     "deliveryChannel": "API",
+            ...     "theme": "Data",
+            ...     "releaseDate": "2021-01-01",
+            ...     "language": "English",
+            ...     "status": "Available",
+            ... })
+            >>> product = fusion.product("my_product").from_object(product_series)
+
+        """
         if isinstance(product_source, Product):
             product = product_source
         elif isinstance(product_source, dict):
@@ -158,7 +303,22 @@ class Product:
         return product
 
     def from_catalog(self, catalog: str | None = None, client: Fusion | None = None) -> Product:
-        """Create a Product object from a catalog."""
+        """Instantiate a Product object from a Fusion catalog.
+
+        Args:
+            catalog (str | None, optional): Catalog identifer. Defaults to None.
+            client (Fusion | None, optional): Fusion session. Defaults to None.
+                If instantiated from a Fusion object, then the client is set automatically.
+
+        Returns:
+            Product: Product object.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> product = fusion.product("my_product").from_catalog(catalog="my_catalog")
+                
+        """
         client = self._client if client is None else client
 
         catalog = client._use_catalog(catalog)
@@ -171,7 +331,18 @@ class Product:
         return product_obj
 
     def to_dict(self: Product) -> dict[str, Any]:
-        """Convert the Product object to a dictionary."""
+        """Convert the Product instance to a dictionary.
+
+        Returns:
+            dict[str, Any]: Product metadata as a dictionary.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> product = fusion.product("my_product")
+            >>> product_dict = product.to_dict()
+        
+        """
         product_dict = asdict(self)
         product_dict.pop("_client")
         return product_dict
@@ -182,15 +353,73 @@ class Product:
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Create a new product in the catalog.
+        """Upload a new product to a Fusion catalog.
 
         Args:
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
             catalog (str, optional): A catalog identifier. Defaults to None.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            From scratch:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> product = fusion.product(
+            ...     identifer="my_product"
+            ...     title="My Product",
+            ...     category="Data",
+            ...     shortAbstract="My product is awesome",
+            ...     description="My product is very awesome",
+            ...     )
+            >>> product.create(catalog="my_catalog")
+
+            From a dictionary:
+
+            >>> product_dict = {
+            ...     "identifier": "my_product",
+            ...     "title": "My Product",
+            ...     "category": "Data"
+            ...     }    
+            >>> product = fusion.product("my_product").from_object(product_dict)
+            >>> product.create(catalog="my_catalog")
+
+            From a JSON string:
+
+            >>> product_json = '{
+            ...     "identifier": "my_product",
+            ...     "title": "My Product",
+            ...     "category": "Data"
+            ...     }'
+            >>> product = fusion.product("my_product").from_object(product_json)
+            >>> product.create(catalog="my_catalog")
+
+            From a CSV file:
+
+            >>> product = fusion.product("my_product").from_object("path/to/product.csv")
+            >>> product.create(catalog="my_catalog")
+
+            From a pandas Series:
+
+            >>> product_series = pd.Series({
+            ...     "identifier": "my_product",
+            ...     "title": "My Product",
+            ...     "category": "Data"
+            ...     })
+            >>> product = fusion.product("my_product").from_object(product_series)
+            >>> product.create(catalog="my_catalog")
+
+            From existing product in a catalog:
+
+            >>> product = fusion.product("my_product").from_catalog()
+            >>> product.identifier = "my_new_product"
+            >>> product.create(catalog="my_catalog")
+
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -214,15 +443,25 @@ class Product:
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Update an existing product in the catalog.
+        """Update an existing product in a Fusion catalog.
 
         Args:
-            client (Fusion): A Fusion client object.
+            client (Fusion): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
             catalog (str, optional): A catalog identifier. Defaults to None.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+        
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> product = fusion.product("my_product").from_catalog()
+            >>> product.title = "My Updated Product Title"
+            >>> product.update(catalog="my_catalog")
+            
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -246,15 +485,23 @@ class Product:
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Delete a product from the catalog.
+        """Delete a product from a Fusion catalog.
 
         Args:
-            client (Fusion): A Fusion client object.
+            client (Fusion): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
             catalog (str, optional): A catalog identifier. Defaults to None.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+         Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> product = fusion.product("my_product").delete(catalog="my_catalog")   
+
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -272,17 +519,26 @@ class Product:
         client_to: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Copy product from one catalog and/or environment to another by copy.
+        """Copy product from one Fusion catalog and/or environment to another by copy.
 
         Args:
             product (str): Product identifier.
             catalog_to (str): Catalog identifier to which to copy product.
             catalog_from (str, optional): A catalog identifier from which to copy product. Defaults to "common".
+            client (Fusion): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
             client_to (Fusion | None, optional): Fusion client object. Defaults to current instance.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+    
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.product("my_product").copy(catalog_from="my_catalog", catalog_to="my_new_catalog")
+                
         """
         client = self._client if client is None else client
         catalog_from = client._use_catalog(catalog_from)

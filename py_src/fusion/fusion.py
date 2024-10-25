@@ -1542,7 +1542,41 @@ class Fusion:
         dataset: str | list[str] | None = None,
         **kwargs: Any,
     ) -> Product:
-        """Instantiate a Product object with this client for metadata creation."""
+        """Instantiate a Product object with this client for metadata creation.
+
+        Args:
+            identifier (str): Product identifier.
+            title (str, optional): Product title. If not provided, defaults to identifier.
+            category (str | list[str] | None, optional): Category. Defaults to None.
+            shortAbstract (str, optional): Short description. Defaults to "".
+            description (str, optional): Description. If not provided, defaults to identifier. 
+            isActive (bool, optional): Boolean for Active status. Defaults to True.
+            isRestricted (bool | None, optional): Flag for restricted products. Defaults to None.
+            maintainer (str | list[str] | None, optional): Product maintainer. Defaults to None.
+            region (str | list[str] | None, optional): Product region. Defaults to None.
+            publisher (str | None, optional): Name of vendor that publishes the data. Defaults to None.
+            subCategory (str | list[str] | None, optional): Product sub-category. Defaults to None.
+            tag (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
+            deliveryChannel (str | list[str], optional): Product delivery channel. Defaults to "API".
+            theme (str | None, optional): Product theme. Defaults to None.
+            releaseDate (str | None, optional): Product release date. Defaults to None.
+            language (str, optional): Product language. Defaults to "English".
+            status (str, optional): product status. Defaults to "Available".
+            image (str, optional): Product image. Defaults to "".
+            logo (str, optional): Product logo. Defaults to "".
+            dataset (str | list[str] | None, optional): Product datasets. Defaults to None.
+
+        Returns:
+            Product: Fusion Product class instance.
+        
+        Examples:
+            >>> fusion = Fusion()
+            >>> fusion.product(identifier="PRODUCT_1", title="Product")
+
+        Note:
+            See the product module for more information on functionalities of product objects.              
+
+        """
         product_obj = Product(
             identifier=identifier,
             title=title,
@@ -1608,7 +1642,57 @@ class Fusion:
         isActive: bool | None = None,
         **kwargs: Any,
     ) -> Dataset:
-        """Instantiate a Dataset object with this client for metadata creation."""
+        """Instantiate a Dataset object with this client for metadata creation.
+
+        Args:
+            identifier (str): Dataset identifier.
+            title (str, optional): Dataset title. If not provided, defaults to identifier.
+            category (str | list[str] | None, optional): Category. Defaults to None.
+            description (str, optional): Dataset description. If not provided, defaults to identifier.
+            frequency (str, optional): Frequency. Defaults to "Once".
+            isInternalOnlyDataset (bool, optional): Flag for internal datasets. Defaults to False.
+            isThirdPartyData (bool, optional): Flag for third party data. Defaults to True.
+            isRestricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
+            isRawData (bool, optional): Flag for raw datasets. Defaults to True.
+            maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
+            source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
+            region (str | list[str] | None, optional): Region. Defaults to None.
+            publisher (str, optional): Name of vendor that publishes the data.. Defaults to "J.P. Morgan".
+            product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
+            subCategory (str | list[str] | None, optional): Sub-category. Defaults to None.
+            tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
+            createdDate (str | None, optional): Created date. Defaults to None.
+            modifiedDate (str | None, optional): Modified date. Defaults to None.
+            deliveryChannel (str | list[str], optional): Delivery channel. Defaults to "API".
+            language (str, optional): Language. Defaults to "English".
+            status (str, optional): Status. Defaults to "Available".
+            type_ (str | None, optional): Dataset type. Defaults to "Source".
+            containerType (str | None, optional): Container type. Defaults to "Snapshot-Full".
+            snowflake (str | None, optional): Snowflake account connection. Defaults to None.
+            complexity (str | None, optional): Complecist. Defaults to None.
+            isImmutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
+            isMnpi (bool | None, optional): isMnpi. Defaults to None.
+            isPci (bool | None, optional): isPci. Defaults to None.
+            isPii (bool | None, optional): isPii. Defaults to None.
+            isClient (bool | None, optional): isClient. Defaults to None.
+            isPublic (bool | None, optional): isPublic. Defaults to None.
+            isInternal (bool | None, optional): IsInternal. Defaults to None.
+            isConfidential (bool | None, optional): IsConfidential. Defaults to None.
+            isHighlyConfidential (bool | None, optional): isHighlyConfidential. Defaults to None.
+            isActive (bool | None, optional): isActive. Defaults to None.
+
+        Returns:
+            Dataset: Fusion Dataset class.
+        
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset(identifier="DATASET_1")   
+
+        Note:
+            See the dataset module for more information on functionalities of dataset objects.            
+
+        """
         dataset_obj = Dataset(
             identifier=identifier,
             title=title,
@@ -1673,7 +1757,42 @@ class Fusion:
         attributeType: str | None = None,
         **kwargs: Any,
     ) -> Attribute:
-        """Instantiate a Attribute object with this client for metadata creation."""
+        """Instantiate an Attribute object with this client for metadata creation.
+
+        Args:
+            identifier (str): Attribute identifier.
+            index (int): Attribute index.
+            dataType (str | Types, optional): Datatype of attribute. Defaults to "String".
+            title (str, optional): Attribute title. If not provided, defaults to identifier.
+            description (str, optional): Attribute description. If not provided, defaults to identifier.
+            isDatasetKey (bool, optional): Flag for primary keys. Defaults to False.
+            source (str | None, optional): Name of data vendor which provided the data. Defaults to None.
+            sourceFieldId (str | None, optional): Original identifier of attribute, if attribute has been renamed.
+                If not provided, defaults to identifier.
+            isInternalDatasetKey (bool | None, optional): Flag for internal primary keys. Defaults to None.
+            isExternallyVisible (bool | None, optional): Flag for externally visible attributes. Defaults to True.
+            unit (Any | None, optional): Unit of attribute. Defaults to None.
+            multiplier (float, optional): Multiplier for unit. Defaults to 1.0.
+            isPropogationEligible (bool | None, optional): Flag for propogation eligibility. Defaults to None.
+            isMetric (bool | None, optional): Flag for attributes that are metrics. Defaults to None.
+            availableFrom (str | None, optional): Date from which the attribute is available. Defaults to None.
+            deprecatedFrom (str | None, optional): Date from which the attribute is deprecated. Defaults to None.
+            term (str, optional): Term. Defaults to "bizterm1".
+            dataset (int | None, optional): Dataset. Defaults to None.
+            attributeType (str | None, optional): Attribute type. Defaults to None.
+
+        Returns:
+            Attribute: Fusion Attribute class.
+        
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attr = fusion.attribute(identifier="attr1", index=0)   
+
+        Note:
+            See the attributes module for more information on functionalities of attribute objects. 
+
+        """
         dataType = Types[str(dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
         attribute_obj = Attribute(
             identifier=identifier,
@@ -1704,7 +1823,25 @@ class Fusion:
         self,
         attributes: list[Attribute] | None = None,
     ) -> Attributes:
-        """Instantiate a Attributes object with this client for metadata creation."""
+        """Instantiate an Attributes object with this client for metadata creation.
+
+        Args:
+            attributes (list[Attribute] | None, optional): List of Attribute objects. Defaults to None.
+
+        Returns:
+            Attributes: Fusion Attributes class.
+        
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attr1 = fusion.attribute("attr1", 0)
+            >>> attr2 = fusion.attribute("attr2", 1)
+            >>> attrs = fusion.attributes([attr1, attr2])
+        
+        Note:
+            See the attributes module for more information on functionalities of attributes object.
+            
+        """
         attributes_obj = Attributes(attributes=attributes or [])
         attributes_obj.set_client(self)
         return attributes_obj
@@ -1728,6 +1865,19 @@ class Fusion:
         Returns:
             list[requests.Response]: a list of response objects.
 
+        Examples:
+            Delete one dataset member.
+    
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.delete_datasetmembers(dataset="dataset1", series_members="series1")
+
+            Delete multiple dataset members.
+    
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.delete_datasetmembers(dataset="dataset1", series_members=["series1", "series2"])
+
         """
         catalog = self._use_catalog(catalog)
         if isinstance(series_members, str):
@@ -1745,7 +1895,7 @@ class Fusion:
         catalog: str | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Delete all dataset members.
+        """Delete all dataset members within a dataset.
 
         Args:
             dataset (str): A dataset identifier
@@ -1754,6 +1904,11 @@ class Fusion:
 
         Returns:
             list[requests.Response]: a list of response objects.
+        
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.delete_all_datasetmembers(dataset="dataset1")
 
         """
         catalog = self._use_catalog(catalog)
