@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from fusion.fusion_types import Types
-from fusion.utils import convert_date_format, make_bool, tidy_string
+from fusion.utils import convert_date_format, make_bool, requests_raise_for_status, tidy_string
 
 if TYPE_CHECKING:
     import requests
@@ -354,7 +354,7 @@ class Attribute:
         data = self.to_dict()
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
         resp = client.session.put(url, json=data)
-        resp.raise_for_status()
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
     def delete(
@@ -388,7 +388,7 @@ class Attribute:
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
         resp = client.session.delete(url)
-        resp.raise_for_status()
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
 
@@ -682,7 +682,7 @@ class Attributes:
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
         response = client.session.get(url)
-        response.raise_for_status()
+        requests_raise_for_status(response)
         list_attributes = response.json()["resources"]
         list_attributes = sorted(list_attributes, key=lambda x: x["index"])
 
@@ -766,7 +766,7 @@ class Attributes:
         data = self.to_dict()
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
         resp = client.session.put(url, json=data)
-        resp.raise_for_status()
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
     def delete(
@@ -800,11 +800,12 @@ class Attributes:
         if client is None:
             raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
-
-        resp = [
-            client.session.delete(
+        responses = []
+        for attr in self.attributes:
+            resp = client.session.delete(
                 f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{attr.identifier}"
             )
-            for attr in self.attributes
-        ]
-        return resp if return_resp_obj else None
+            requests_raise_for_status(resp)
+            responses.append(resp)
+  
+        return responses if return_resp_obj else None

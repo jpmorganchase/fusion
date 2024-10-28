@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from fusion.utils import _is_json, convert_date_format, make_bool, make_list, tidy_string
+from fusion.utils import _is_json, convert_date_format, make_bool, make_list, requests_raise_for_status, tidy_string
 
 if TYPE_CHECKING:
     import requests
@@ -398,7 +398,9 @@ class Dataset:
             client = self._client
         catalog = client._use_catalog(catalog)
         dataset = self.identifier
-        list_datasets = client.session.get(f"{client.root_url}catalogs/{catalog}/datasets").json()["resources"]
+        resp = client.session.get(f"{client.root_url}catalogs/{catalog}/datasets")
+        requests_raise_for_status(resp)
+        list_datasets = resp.json()["resources"]
         dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset][0]
         dataset_obj = Dataset._from_dict(dict_)
         dataset_obj.set_client(client)
@@ -533,7 +535,7 @@ class Dataset:
 
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
         resp: requests.Response = client.session.post(url, json=data)
-        resp.raise_for_status()
+        requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
 
@@ -573,6 +575,7 @@ class Dataset:
 
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
         resp: requests.Response = client.session.put(url, json=data)
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
     def delete(
@@ -604,6 +607,7 @@ class Dataset:
 
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
         resp: requests.Response = client.session.delete(url)
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
     def copy(

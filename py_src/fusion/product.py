@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from fusion.utils import _is_json, convert_date_format, make_bool, make_list, tidy_string
+from fusion.utils import _is_json, convert_date_format, make_bool, make_list, requests_raise_for_status, tidy_string
 
 if TYPE_CHECKING:
     import requests
@@ -342,8 +342,9 @@ class Product:
         client = self._client if client is None else client
 
         catalog = client._use_catalog(catalog)
-
-        list_products = client.session.get(f"{client.root_url}catalogs/{catalog}/products").json()["resources"]
+        resp = client.session.get(f"{client.root_url}catalogs/{catalog}/products")
+        requests_raise_for_status(resp)
+        list_products = resp.json()["resources"]
         dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == self.identifier][0]
         product_obj = Product._from_dict(dict_)
         product_obj.set_client(client)
@@ -462,7 +463,7 @@ class Product:
 
         url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
         resp: requests.Response = client.session.post(url, json=data)
-        resp.raise_for_status()
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
     def update(
@@ -504,7 +505,7 @@ class Product:
 
         url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
         resp: requests.Response = client.session.put(url, json=data)
-        resp.raise_for_status()
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
     def delete(
@@ -536,7 +537,7 @@ class Product:
 
         url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
         resp: requests.Response = client.session.delete(url)
-        resp.raise_for_status()
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
     def copy(
