@@ -40,7 +40,7 @@ def test_product_class() -> None:
 
 def test_product_class_from_series() -> None:
     """Test the Product class."""
-    test_product = Product.from_series(
+    test_product = Product._from_series(
         pd.Series(
             {
                 "title": "Test Product",
@@ -73,7 +73,7 @@ def test_product_class_from_series() -> None:
 
 def test_product_class_from_dict() -> None:
     """Test the Product class."""
-    test_product = Product.from_dict(
+    test_product = Product._from_dict(
         {
             "title": "Test Product",
             "identifier": "TEST_PRODUCT",
@@ -104,7 +104,7 @@ def test_product_class_from_dict() -> None:
 
 def test_product_class_from_csv(mock_product_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test the Product class."""
-    test_product = Product.from_csv("products.csv")
+    test_product = Product._from_csv("products.csv")
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None

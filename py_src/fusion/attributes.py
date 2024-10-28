@@ -108,7 +108,7 @@ class Attribute:
         self.dataType = Types[str(self.dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
 
     @classmethod
-    def from_series(
+    def _from_series(
         cls: type[Attribute],
         series: pd.Series[Any],
     ) -> Attribute:
@@ -132,7 +132,7 @@ class Attribute:
             ...     "title": "My Attribute",
             ...     "description": "My attribute description"
             ... })
-            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_series(series)
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)._from_series(series)
 
         """
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower()).replace(
@@ -181,7 +181,7 @@ class Attribute:
         )
 
     @classmethod
-    def from_dict(cls: type[Attribute], data: dict[str, Any]) -> Attribute:
+    def _from_dict(cls: type[Attribute], data: dict[str, Any]) -> Attribute:
         """Instantiate an Attribute object from a dictionary.
 
         Args:
@@ -201,7 +201,7 @@ class Attribute:
             ...     "title": "My Attribute",
             ...     "description": "My attribute description"
             ... }
-            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_dict(data)
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)._from_dict(data)
 
         """
         keys = [f.name for f in fields(cls)]
@@ -209,6 +209,62 @@ class Attribute:
         if "dataType" in data:
             data["dataType"] = Types[data["dataType"].strip().rsplit(".", maxsplit=1)[-1].title()]
         return cls(**data)
+
+    def from_object(
+            self,
+            attribute_source: Attribute | dict[str, Any] | pd.Series[Any],
+    ) -> Attribute:
+        """Instatiate an Attribute from an Attribute object, dictionary or pandas Series.
+
+        Args:
+            attribute_source (Attribute | dict[str, Any] | pd.Series[Any]): Attribute metadata source.
+        
+        Raises:
+            TypeError: If the object provided is not an Attribute object, dictionary or pandas Series.
+
+        Returns:
+            Attribute: Attribute object.
+        
+        Examples:
+
+            Instatiating a Attribute from a dictionary:
+            
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> data = {
+            ...     "identifier": "my_attribute",
+            ...     "index": 0,
+            ...     "dataType": "String",
+            ...     "title": "My Attribute",
+            ...     "description": "My attribute description"
+            ... }
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_object(data)
+
+            Instatiating a Attribute from a pandas Series:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> import pandas as pd
+            >>> series = pd.Series({
+            ...     "identifier": "my_attribute",
+            ...     "index": 0,
+            ...     "dataType": "String",
+            ...     "title": "My Attribute",
+            ...     "description": "My attribute description"
+            ... })
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_object(series)
+
+        """
+        if isinstance(attribute_source, Attribute):
+            attribute = attribute_source
+        elif isinstance(attribute_source, dict):
+            attribute = self._from_dict(attribute_source)
+        elif isinstance(attribute_source, pd.Series):
+            attribute = self._from_series(attribute_source)
+        else:
+            raise ValueError(f"Could not resolve the object provided: {attribute_source}")
+        attribute.set_client(self._client)
+        return attribute
 
     def to_dict(self: Attribute) -> dict[str, Any]:
         """Convert object to dictionary.
@@ -271,7 +327,7 @@ class Attribute:
             ...     "title": "My Attribute",
             ...     "description": "My attribute description"
             ...    }
-            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_dict(data)
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_object(data)
             >>> attribute.create(dataset="my_dataset", catalog="my_catalog")
 
             Individually, from a pandas Series:
@@ -286,7 +342,7 @@ class Attribute:
             ...     "title": "My Attribute",
             ...     "description": "My attribute description"
             ... })
-            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_series(series)
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0).from_object(series)
             >>> attribute.create(dataset="my_dataset", catalog="my_catalog")
 
         """
@@ -459,7 +515,8 @@ class Attributes:
         dict_out = {"attributes": [attr.to_dict() for attr in self.attributes]}
         return dict_out
 
-    def from_dict_list(self, data: list[dict[str, Any]]) -> Attributes:
+    @classmethod
+    def _from_dict_list(cls: type[Attributes], data: list[dict[str, Any]]) -> Attributes:
         """Create an Attributes instance from a list of dictionaries.
 
         Args:
@@ -481,16 +538,14 @@ class Attributes:
             ...         "description": "My attribute description"
             ...     }
             ... ]
-            >>> attributes = fusion.attributes().from_dict_list(data)
+            >>> attributes = fusion.attributes()._from_dict_list(data)
 
         """
-        attributes = [Attribute.from_dict(attr_data) for attr_data in data]
-        attrs_obj = Attributes(attributes=attributes)
+        attributes = [Attribute._from_dict(attr_data) for attr_data in data]
+        return Attributes(attributes=attributes)
 
-        attrs_obj.set_client(self._client)
-        return attrs_obj
-
-    def from_dataframe(self, data: pd.DataFrame) -> Attributes:
+    @classmethod
+    def _from_dataframe(cls: type[Attributes], data: pd.DataFrame) -> Attributes:
         """Create an Attributes instance from a pandas DataFrame.
 
         Args:
@@ -513,16 +568,74 @@ class Attributes:
             ...         "description": "My attribute description"
             ...     }
             ... ])
-            >>> attributes = fusion.attributes().from_dataframe(data)
+            >>> attributes = fusion.attributes()._from_dataframe(data)
 
         """
         data = data.replace(to_replace=np.nan, value=None)
         data = data.reset_index() if "index" not in data.columns else data
-        attributes = [Attribute.from_series(series) for _, series in data.iterrows()]
-        attrs_obj = Attributes(attributes=attributes)
+        attributes = [Attribute._from_series(series) for _, series in data.iterrows()]
+        return Attributes(attributes=attributes)
 
-        attrs_obj.set_client(self._client)
-        return attrs_obj
+    def from_object(
+            self,
+            attributes_source: list[Attribute] | list[dict[str, Any]] | pd.DataFrame,
+    ) -> Attributes:
+        """Instantiate an Attributes object from a list of Attribute objects, dictionaries or pandas DataFrame.
+
+        Args:
+            attributes_source (list[Attribute] | list[dict[str, Any]] | pd.DataFrame): Attributes metadata source.
+
+        Raises:
+            TypeError: If the object provided is not a list of Attribute objects, dictionaries or pandas DataFrame.
+
+        Returns:
+            Attributes: Attributes object.
+        
+        Examples:
+
+            Instatiating Attributes from a list of dictionaries:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> data = [
+            ...     {
+            ...         "identifier": "my_attribute",
+            ...         "index": 0,
+            ...         "dataType": "String",
+            ...         "title": "My Attribute",
+            ...         "description": "My attribute description"
+            ...     }
+            ... ]
+            >>> attributes = fusion.attributes().from_object(data)
+
+            Instatiating Attributes from a pandas DataFrame:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> import pandas as pd
+            >>> data = pd.DataFrame([
+            ...     {
+            ...         "identifier": "my_attribute",
+            ...         "index": 0,
+            ...         "dataType": "String",
+            ...         "title": "My Attribute",
+            ...         "description": "My attribute description"
+            ...     }
+            ... ])
+            >>> attributes = fusion.attributes().from_object(data)
+            
+        """
+        if isinstance(attributes_source, list):
+            if all(isinstance(attr, Attribute) for attr in attributes_source):
+                attributes = Attributes(cast(list[Attribute], attributes_source))
+            elif all(isinstance(attr, dict) for attr in attributes_source):
+                attributes = Attributes._from_dict_list(cast(list[dict[str, Any]], attributes_source))
+        elif isinstance(attributes_source, pd.DataFrame):
+            attributes = Attributes._from_dataframe(attributes_source)
+        else:
+            raise ValueError(f"Could not resolve the object provided: {attributes_source}")
+        attributes.set_client(self._client)
+        return attributes
 
     def to_dataframe(self) -> pd.DataFrame:
         """Convert the collection of Attribute instances to a pandas DataFrame.
@@ -567,13 +680,13 @@ class Attributes:
         if client is None:
             raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
-        url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes"
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
         response = client.session.get(url)
         response.raise_for_status()
         list_attributes = response.json()["resources"]
         list_attributes = sorted(list_attributes, key=lambda x: x["index"])
 
-        self.attributes = [Attribute.from_dict(attr_data) for attr_data in list_attributes]
+        self.attributes = [Attribute._from_dict(attr_data) for attr_data in list_attributes]
         return self
 
     def create(
@@ -651,7 +764,7 @@ class Attributes:
             raise ValueError("Client must be provided")
         catalog = client._use_catalog(catalog)
         data = self.to_dict()
-        url = f"{client.root_url}/catalogs/{catalog}/datasets/{dataset}/attributes"
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
         resp = client.session.put(url, json=data)
         resp.raise_for_status()
         return resp if return_resp_obj else None
@@ -690,7 +803,7 @@ class Attributes:
 
         resp = [
             client.session.delete(
-                f"{client.root_url}/catalogs{catalog}/datasets/{dataset}/attributes/{attr.identifier}"
+                f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{attr.identifier}"
             )
             for attr in self.attributes
         ]

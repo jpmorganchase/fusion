@@ -130,7 +130,7 @@ class Product:
         self._client = client
 
     @classmethod
-    def from_series(cls: type[Product], series: pd.Series[Any]) -> Product:
+    def _from_series(cls: type[Product], series: pd.Series[Any]) -> Product:
         """Instantiate a Product object from a pandas Series.
 
         Args:
@@ -168,7 +168,7 @@ class Product:
         )
 
     @classmethod
-    def from_dict(cls: type[Product], data: dict[str, Any]) -> Product:
+    def _from_dict(cls: type[Product], data: dict[str, Any]) -> Product:
         """Instantiate a Product object from a dictionary.
 
         Args:
@@ -183,7 +183,7 @@ class Product:
         return cls(**data)
 
     @classmethod
-    def from_csv(cls: type[Product], file_path: str, identifier: str | None = None) -> Product:
+    def _from_csv(cls: type[Product], file_path: str, identifier: str | None = None) -> Product:
         """Instantiate a Product object from a CSV file.
 
         Args:
@@ -198,9 +198,9 @@ class Product:
         data = pd.read_csv(file_path)
 
         return (
-            Product.from_series(data[data["identifier"] == identifier].reset_index(drop=True).iloc[0])
+            Product._from_series(data[data["identifier"] == identifier].reset_index(drop=True).iloc[0])
             if identifier
-            else Product.from_series(data.reset_index(drop=True).iloc[0])
+            else Product._from_series(data.reset_index(drop=True).iloc[0])
         )
 
     def from_object(
@@ -309,14 +309,14 @@ class Product:
         if isinstance(product_source, Product):
             product = product_source
         elif isinstance(product_source, dict):
-            product = Product.from_dict(product_source)
+            product = Product._from_dict(product_source)
         elif isinstance(product_source, str):
             if _is_json(product_source):
-                product = Product.from_dict(js.loads(product_source))
+                product = Product._from_dict(js.loads(product_source))
             else:
-                product = Product.from_csv(product_source)
+                product = Product._from_csv(product_source)
         elif isinstance(product_source, pd.Series):
-            product = Product.from_series(product_source)
+            product = Product._from_series(product_source)
         else:
             raise TypeError(f"Could not resolve the object provided: {product_source}")
         product.set_client(self._client)
@@ -345,7 +345,7 @@ class Product:
 
         list_products = client.session.get(f"{client.root_url}catalogs/{catalog}/products").json()["resources"]
         dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == self.identifier][0]
-        product_obj = Product.from_dict(dict_)
+        product_obj = Product._from_dict(dict_)
         product_obj.set_client(client)
 
         return product_obj

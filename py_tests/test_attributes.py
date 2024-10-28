@@ -56,7 +56,7 @@ def test_attribute_class_from_series() -> None:
             "availableFrom": "May 5, 2020",
         }
     )
-    test_attribute = Attribute.from_series(test_series)
+    test_attribute = Attribute._from_series(test_series)
     assert str(test_attribute)
     assert repr(test_attribute)
     assert test_attribute.title == "Test Attribute"
@@ -90,7 +90,7 @@ def test_attribute_class_from_dict() -> None:
         "dataType": "string",
         "availableFrom": "May 5, 2020",
     }
-    test_attribute = Attribute.from_dict(test_dict)
+    test_attribute = Attribute._from_dict(test_dict)
     assert str(test_attribute)
     assert repr(test_attribute)
     assert test_attribute.title == "Test Attribute"
@@ -112,6 +112,77 @@ def test_attribute_class_from_dict() -> None:
     assert test_attribute.term == "bizterm1"
     assert test_attribute.dataset is None
     assert test_attribute.attributeType is None
+
+
+def test_attribute_class_from_object_dict() -> None:
+    """Test attribute class from object"""
+    test_dict = {
+        "title": "Test Attribute",
+        "identifier": "Test Attribute",
+        "index": 0,
+        "isDatasetKey": True,
+        "dataType": "string",
+        "availableFrom": "May 5, 2020",
+    }
+    test_attribute = Attribute(identifier="test_attribute", index=0).from_object(test_dict)
+    assert str(test_attribute)
+    assert repr(test_attribute)
+    assert test_attribute.title == "Test Attribute"
+    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.index == 0
+    assert test_attribute.isDatasetKey
+    assert test_attribute.dataType == Types.String
+    assert test_attribute.description == "Test Attribute"
+    assert test_attribute.source is None
+    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.isInternalDatasetKey is None
+    assert test_attribute.isExternallyVisible is True
+    assert test_attribute.unit is None
+    assert test_attribute.multiplier == 1.0
+    assert test_attribute.isMetric is None
+    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.availableFrom == "2020-05-05"
+    assert test_attribute.deprecatedFrom is None
+    assert test_attribute.term == "bizterm1"
+    assert test_attribute.dataset is None
+    assert test_attribute.attributeType is None
+
+
+def test_attribute_class_from_object_series() -> None:
+    """Test attribute class from object"""
+    test_series = pd.Series(
+        {
+            "title": "Test Attribute",
+            "identifier": "Test Attribute",
+            "index": 0,
+            "isDatasetKey": True,
+            "dataType": "string",
+            "availableFrom": "May 5, 2020",
+        }
+    )
+    test_attribute = Attribute(identifier="test_attribute", index=0).from_object(test_series)
+    assert str(test_attribute)
+    assert repr(test_attribute)
+    assert test_attribute.title == "Test Attribute"
+    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.index == 0
+    assert test_attribute.isDatasetKey is True
+    assert test_attribute.dataType == Types.String
+    assert test_attribute.description == "Test Attribute"
+    assert test_attribute.source is None
+    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.isInternalDatasetKey is None
+    assert test_attribute.isExternallyVisible is True
+    assert test_attribute.unit is None
+    assert test_attribute.multiplier == 1.0
+    assert test_attribute.isMetric is None
+    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.availableFrom == "2020-05-05"
+    assert test_attribute.deprecatedFrom is None
+    assert test_attribute.term == "bizterm1"
+    assert test_attribute.dataset is None
+    assert test_attribute.attributeType is None
+
 
 
 def test_attribute_class_to_dict() -> None:
@@ -407,7 +478,7 @@ def test_attributes_from_dict_list() -> None:
             }
         ]
     }
-    test_attributes = Attributes().from_dict_list(test_dict["attributes"])
+    test_attributes = Attributes._from_dict_list(test_dict["attributes"])
     assert test_attributes.attributes[0].title == "Test Attribute"
     assert test_attributes.attributes[0].identifier == "test_attribute"
     assert test_attributes.attributes[0].index == 0
@@ -442,7 +513,77 @@ def test_attributes_from_dataframe() -> None:
             "availableFrom": ["May 5, 2020"],
         }
     )
-    test_attributes = Attributes().from_dataframe(test_df)
+    test_attributes = Attributes._from_dataframe(test_df)
+    assert test_attributes.attributes[0].title == "Test Attribute"
+    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].index == 0
+    assert test_attributes.attributes[0].isDatasetKey
+    assert test_attributes.attributes[0].dataType == Types.String
+    assert test_attributes.attributes[0].description == "Test Attribute"
+    assert test_attributes.attributes[0].source is None
+    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].isInternalDatasetKey is None
+    assert test_attributes.attributes[0].isExternallyVisible is True
+    assert test_attributes.attributes[0].unit is None
+    assert test_attributes.attributes[0].multiplier == 1.0
+    assert test_attributes.attributes[0].isMetric is None
+    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].availableFrom == "2020-05-05"
+    assert test_attributes.attributes[0].deprecatedFrom is None
+    assert test_attributes.attributes[0].term == "bizterm1"
+    assert test_attributes.attributes[0].dataset is None
+    assert test_attributes.attributes[0].attributeType is None
+
+
+def test_attributes_from_object_list_dict() -> None:
+    """Test attributes class from_object"""
+    test_dict = {
+        "attributes": [
+            {
+                "title": "Test Attribute",
+                "identifier": "Test Attribute",
+                "index": 0,
+                "isDatasetKey": True,
+                "dataType": "string",
+                "availableFrom": "May 5, 2020",
+            }
+        ]
+    }
+    test_attributes = Attributes().from_object(test_dict["attributes"])
+    assert test_attributes.attributes[0].title == "Test Attribute"
+    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].index == 0
+    assert test_attributes.attributes[0].isDatasetKey
+    assert test_attributes.attributes[0].dataType == Types.String
+    assert test_attributes.attributes[0].description == "Test Attribute"
+    assert test_attributes.attributes[0].source is None
+    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].isInternalDatasetKey is None
+    assert test_attributes.attributes[0].isExternallyVisible is True
+    assert test_attributes.attributes[0].unit is None
+    assert test_attributes.attributes[0].multiplier == 1.0
+    assert test_attributes.attributes[0].isMetric is None
+    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].availableFrom == "2020-05-05"
+    assert test_attributes.attributes[0].deprecatedFrom is None
+    assert test_attributes.attributes[0].term == "bizterm1"
+    assert test_attributes.attributes[0].dataset is None
+    assert test_attributes.attributes[0].attributeType is None
+
+
+def test_attributes_from_object_dataframe() -> None:
+    """Test attributes class from_dataframe method."""
+    test_df = pd.DataFrame(
+        {
+            "title": ["Test Attribute"],
+            "identifier": ["Test Attribute"],
+            "index": [0],
+            "isDatasetKey": [True],
+            "dataType": ["string"],
+            "availableFrom": ["May 5, 2020"],
+        }
+    )
+    test_attributes = Attributes().from_object(test_df)
     assert test_attributes.attributes[0].title == "Test Attribute"
     assert test_attributes.attributes[0].identifier == "test_attribute"
     assert test_attributes.attributes[0].index == 0
