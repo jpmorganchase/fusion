@@ -211,24 +211,24 @@ class Attribute:
         return cls(**data)
 
     def from_object(
-            self,
-            attribute_source: Attribute | dict[str, Any] | pd.Series[Any],
+        self,
+        attribute_source: Attribute | dict[str, Any] | pd.Series[Any],
     ) -> Attribute:
         """Instatiate an Attribute from an Attribute object, dictionary or pandas Series.
 
         Args:
             attribute_source (Attribute | dict[str, Any] | pd.Series[Any]): Attribute metadata source.
-        
+
         Raises:
             TypeError: If the object provided is not an Attribute object, dictionary or pandas Series.
 
         Returns:
             Attribute: Attribute object.
-        
+
         Examples:
 
             Instatiating a Attribute from a dictionary:
-            
+
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> data = {
@@ -278,7 +278,7 @@ class Attribute:
             >>> fusion = Fusion()
             >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
             >>> attribute_dict = attribute.to_dict()
-    
+
         """
         result = asdict(self)
         result["unit"] = str(self.unit) if self.unit is not None else None
@@ -395,11 +395,11 @@ class Attribute:
 @dataclass
 class Attributes:
     """Class representing a collection of Attribute instances for managing atrribute metadata in a Fusion catalog.
-    
+
     Attributes:
         attributes (list[Attribute]): List of Attribute instances.
         _client (Fusion | None): Fusion client object.
-        
+
     """
 
     attributes: list[Attribute] = field(default_factory=list)
@@ -577,8 +577,8 @@ class Attributes:
         return Attributes(attributes=attributes)
 
     def from_object(
-            self,
-            attributes_source: list[Attribute] | list[dict[str, Any]] | pd.DataFrame,
+        self,
+        attributes_source: list[Attribute] | list[dict[str, Any]] | pd.DataFrame,
     ) -> Attributes:
         """Instantiate an Attributes object from a list of Attribute objects, dictionaries or pandas DataFrame.
 
@@ -590,7 +590,7 @@ class Attributes:
 
         Returns:
             Attributes: Attributes object.
-        
+
         Examples:
 
             Instatiating Attributes from a list of dictionaries:
@@ -623,7 +623,7 @@ class Attributes:
             ...     }
             ... ])
             >>> attributes = fusion.attributes().from_object(data)
-            
+
         """
         if isinstance(attributes_source, list):
             if all(isinstance(attr, Attribute) for attr in attributes_source):
@@ -807,5 +807,5 @@ class Attributes:
             )
             requests_raise_for_status(resp)
             responses.append(resp)
-  
+
         return responses if return_resp_obj else None

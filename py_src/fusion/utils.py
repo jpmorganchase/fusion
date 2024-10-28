@@ -909,13 +909,13 @@ def _is_json(data: str) -> bool:
 
 
 def requests_raise_for_status(response: requests.Response) -> None:
-        """Send response text into raise for status."""
-        if response.status_code == requests.codes.not_found:  # noqa: PLR2004
+    """Send response text into raise for status."""
+    if response.status_code == requests.codes.not_found:  # noqa: PLR2004
+        response.raise_for_status()
+    else:
+        real_reason = ""
+        try:
+            real_reason = response.text
+            response.reason = real_reason
+        finally:
             response.raise_for_status()
-        else:
-            real_reason = ""
-            try:
-                real_reason = response.text
-                response.reason = real_reason
-            finally:
-                response.raise_for_status()

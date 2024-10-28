@@ -184,7 +184,6 @@ def test_attribute_class_from_object_series() -> None:
     assert test_attribute.attributeType is None
 
 
-
 def test_attribute_class_to_dict() -> None:
     """Test attribute class to dict method"""
     test_attribute = Attribute(
@@ -498,7 +497,6 @@ def test_attributes_from_dict_list() -> None:
     assert test_attributes.attributes[0].term == "bizterm1"
     assert test_attributes.attributes[0].dataset is None
     assert test_attributes.attributes[0].attributeType is None
-    
 
 
 def test_attributes_from_dataframe() -> None:

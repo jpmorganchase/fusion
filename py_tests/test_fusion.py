@@ -1081,13 +1081,17 @@ def test_fusion_attribute(fusion_obj: Fusion) -> None:
 def test_fusion_attributes(fusion_obj: Fusion) -> None:
     """Test Fusion Attributes class from client."""
     test_attributes = fusion_obj.attributes(
-        [Attribute(title="Test Attribute",
-        identifier="Test Attribute",
-        index=0,
-        isDatasetKey=True,
-        dataType=Types.String,
-        availableFrom="May 5, 2020",
-    )])
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                isDatasetKey=True,
+                dataType=Types.String,
+                availableFrom="May 5, 2020",
+            )
+        ]
+    )
     assert str(test_attributes)
     assert repr(test_attributes)
     assert test_attributes.attributes[0].title == "Test Attribute"

@@ -421,7 +421,6 @@ packaging==24.0
     # via msal-extensions
     # via nbconvert
     # via nox
-    # via pint
     # via pyproject-api
     # via pytest
     # via tox
@@ -439,8 +438,6 @@ pathspec==0.12.1
     # via mkdocs
 pexpect==4.9.0
     # via ipython
-pint==0.18
-    # via pyfusion
 pip==24.0
 pkginfo==1.10.0
     # via twine

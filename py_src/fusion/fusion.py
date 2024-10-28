@@ -599,9 +599,13 @@ class Fusion:
             )
 
         if dt_str == "latest":
-            dt_str = datasetseries_list[
-                datasetseries_list["createdDate"]==datasetseries_list["createdDate"].to_numpy().max()
-            ].sort_values(by="identifier").iloc[-1]["identifier"]
+            dt_str = (
+                datasetseries_list[
+                    datasetseries_list["createdDate"] == datasetseries_list["createdDate"].to_numpy().max()
+                ]
+                .sort_values(by="identifier")
+                .iloc[-1]["identifier"]
+            )
             datasetseries_list = datasetseries_list[datasetseries_list["identifier"] == dt_str]
         else:
             parsed_dates = normalise_dt_param_str(dt_str)
@@ -610,23 +614,13 @@ class Fusion:
 
             if parsed_dates[0]:
                 datasetseries_list = datasetseries_list[
-                    pd.Series(
-                        [
-                            pd.to_datetime(i, errors="coerce")
-                            for i in datasetseries_list["identifier"]
-                        ]
-                    )
+                    pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
                     >= pd.to_datetime(parsed_dates[0])
                 ].reset_index()
 
             if parsed_dates[1]:
                 datasetseries_list = datasetseries_list[
-                    pd.Series(
-                        [
-                            pd.to_datetime(i, errors="coerce")
-                            for i in datasetseries_list["identifier"]
-                        ]
-                    )
+                    pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
                     <= pd.to_datetime(parsed_dates[1])
                 ].reset_index()
 
@@ -1563,7 +1557,7 @@ class Fusion:
             title (str, optional): Product title. If not provided, defaults to identifier.
             category (str | list[str] | None, optional): Category. Defaults to None.
             shortAbstract (str, optional): Short description. Defaults to "".
-            description (str, optional): Description. If not provided, defaults to identifier. 
+            description (str, optional): Description. If not provided, defaults to identifier.
             isActive (bool, optional): Boolean for Active status. Defaults to True.
             isRestricted (bool | None, optional): Flag for restricted products. Defaults to None.
             maintainer (str | list[str] | None, optional): Product maintainer. Defaults to None.
@@ -1582,13 +1576,13 @@ class Fusion:
 
         Returns:
             Product: Fusion Product class instance.
-        
+
         Examples:
             >>> fusion = Fusion()
             >>> fusion.product(identifier="PRODUCT_1", title="Product")
 
         Note:
-            See the product module for more information on functionalities of product objects.              
+            See the product module for more information on functionalities of product objects.
 
         """
         product_obj = Product(
@@ -1702,14 +1696,14 @@ class Fusion:
 
         Returns:
             Dataset: Fusion Dataset class.
-        
+
         Examples:
             >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> dataset = fusion.dataset(identifier="DATASET_1")   
+            >>> dataset = fusion.dataset(identifier="DATASET_1")
 
         Note:
-            See the dataset module for more information on functionalities of dataset objects.            
+            See the dataset module for more information on functionalities of dataset objects.
 
         """
         dataset_obj = Dataset(
@@ -1804,14 +1798,14 @@ class Fusion:
 
         Returns:
             Attribute: Fusion Attribute class.
-        
+
         Examples:
             >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> attr = fusion.attribute(identifier="attr1", index=0)   
+            >>> attr = fusion.attribute(identifier="attr1", index=0)
 
         Note:
-            See the attributes module for more information on functionalities of attribute objects. 
+            See the attributes module for more information on functionalities of attribute objects.
 
         """
         dataType = Types[str(dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
@@ -1851,17 +1845,17 @@ class Fusion:
 
         Returns:
             Attributes: Fusion Attributes class.
-        
+
         Examples:
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> attr1 = fusion.attribute("attr1", 0)
             >>> attr2 = fusion.attribute("attr2", 1)
             >>> attrs = fusion.attributes([attr1, attr2])
-        
+
         Note:
             See the attributes module for more information on functionalities of attributes object.
-            
+
         """
         attributes_obj = Attributes(attributes=attributes or [])
         attributes_obj.set_client(self)
@@ -1888,13 +1882,13 @@ class Fusion:
 
         Examples:
             Delete one dataset member.
-    
+
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> fusion.delete_datasetmembers(dataset="dataset1", series_members="series1")
 
             Delete multiple dataset members.
-    
+
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> fusion.delete_datasetmembers(dataset="dataset1", series_members=["series1", "series2"])
@@ -1925,7 +1919,7 @@ class Fusion:
 
         Returns:
             list[requests.Response]: a list of response objects.
-        
+
         Examples:
             >>> from fusion import Fusion
             >>> fusion = Fusion()

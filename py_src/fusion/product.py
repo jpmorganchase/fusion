@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 @dataclass
 class Product:
     """Fusion Product class for managing product metadata in a Fusion catalog.
-    
+
     Attributes:
         identifier (str): A unique identifier for the product.
         title (str, optional): Product title. Defaults to "".
@@ -337,7 +337,7 @@ class Product:
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> product = fusion.product("my_product").from_catalog(catalog="my_catalog")
-                
+
         """
         client = self._client if client is None else client
 
@@ -362,7 +362,7 @@ class Product:
             >>> fusion = Fusion()
             >>> product = fusion.product("my_product")
             >>> product_dict = product.to_dict()
-        
+
         """
         product_dict = asdict(self)
         product_dict.pop("_client")
@@ -406,7 +406,7 @@ class Product:
             ...     "identifier": "my_product",
             ...     "title": "My Product",
             ...     "category": "Data"
-            ...     }    
+            ...     }
             >>> product = fusion.product("my_product").from_object(product_dict)
             >>> product.create(catalog="my_catalog")
 
@@ -484,13 +484,13 @@ class Product:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
 
         Examples:
-        
+
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> product = fusion.product("my_product").from_catalog(catalog="my_catalog")
             >>> product.title = "My Updated Product Title"
             >>> product.update(catalog="my_catalog")
-            
+
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -529,7 +529,7 @@ class Product:
 
             >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> fusion.product("my_product").delete(catalog="my_catalog")   
+            >>> fusion.product("my_product").delete(catalog="my_catalog")
 
         """
         client = self._client if client is None else client
@@ -562,11 +562,11 @@ class Product:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
 
         Examples:
-    
+
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> fusion.product("my_product").copy(catalog_from="my_catalog", catalog_to="my_new_catalog")
-                
+
         """
         client = self._client if client is None else client
         catalog_from = client._use_catalog(catalog_from)

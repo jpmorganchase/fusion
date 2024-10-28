@@ -154,7 +154,7 @@ class Dataset:
             >>> fusion = Fusion()
             >>> dataset = fusion.dataset("my_dataset")
             >>> dataset.set_client(fusion)
-                    
+
         """
         self._client = client
 
@@ -298,7 +298,7 @@ class Dataset:
 
         Returns:
             Dataset: Dataset object.
-        
+
         Examples:
             Instantiate a Dataset object from a dictionary:
 
@@ -386,13 +386,13 @@ class Dataset:
 
         Returns:
             Dataset: Dataset object.
-        
+
         Examples:
 
             >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> dataset = fusion.dataset("my_dataset").from_catalog(catalog="my_catalog")    
-            
+            >>> dataset = fusion.dataset("my_dataset").from_catalog(catalog="my_catalog")
+
         """
         if client is None:
             client = self._client
