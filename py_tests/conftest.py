@@ -4,7 +4,9 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Union
+from unittest.mock import patch
 
+import pandas as pd
 import polars as pl
 import pytest
 
@@ -179,3 +181,28 @@ def data_table_as_csv(data_table: pl.DataFrame) -> str:
 @pytest.fixture()
 def data_table_as_json(data_table: pl.DataFrame) -> str:
     return data_table.write_json(None)
+
+
+@pytest.fixture()
+def mock_product_pd_read_csv() -> Generator[pd.DataFrame, Any, None]:
+    """Mock the pd.read_csv function."""
+    product_df = pd.DataFrame(
+        {
+            "title": "Test Product",
+            "identifier": "TEST_PRODUCT",
+        },
+        index=[0],
+    )
+    with patch("fusion.fusion.pd.read_csv", return_value=product_df) as mock:
+        yield mock
+
+
+@pytest.fixture()
+def mock_dataset_pd_read_csv() -> Generator[pd.DataFrame, Any, None]:
+    """Mock the pd.read_csv function."""
+    dataset_df = pd.DataFrame(
+        {"title": "Test Dataset", "identifier": "TEST_DATASET", "category": "Test", "product": "TEST_PRODUCT"},
+        index=[0],
+    )
+    with patch("fusion.fusion.pd.read_csv", return_value=dataset_df) as mock:
+        yield mock

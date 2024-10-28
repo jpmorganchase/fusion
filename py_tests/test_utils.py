@@ -3,7 +3,7 @@ import multiprocessing as mp
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import fsspec
@@ -19,17 +19,21 @@ from fusion.fusion import Fusion
 from fusion.utils import (
     PathLikeT,
     _filename_to_distribution,
+    convert_date_format,
     cpu_count,
     csv_to_table,
     get_session,
     is_dataset_raw,
     joblib_progress,
     json_to_table,
+    make_bool,
+    make_list,
     normalise_dt_param_str,
     parquet_to_table,
     path_to_url,
     read_csv,
     read_json,
+    tidy_string,
     upload_files,
     validate_file_names,
 )
@@ -769,3 +773,119 @@ def test_upload_public_parallel(
     fs_local = io.BytesIO(b"some data to simulate file content" * 100)
     res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=True)
     assert res
+
+
+def test_tidy_string() -> None:
+    """Test the tidy_string function."""
+    bad_string = " string with  spaces  and  multiple  spaces  "
+
+    assert tidy_string(bad_string) == "string with spaces and multiple spaces"
+
+
+def test_make_list_from_string() -> None:
+    """Test make list from string."""
+    string_obj = "Hello, hi, hey"
+    string_to_list = make_list(string_obj)
+    assert isinstance(string_to_list, list)
+    exp_len = 3
+    assert len(string_to_list) == exp_len
+    assert string_to_list[0] == "Hello"
+    assert string_to_list[1] == "hi"
+    assert string_to_list[2] == "hey"
+
+
+def test_make_list_from_list() -> None:
+    """Test make list from list."""
+
+    list_obj = ["hi", "hi"]
+    list_to_list = make_list(list_obj)
+    assert isinstance(list_to_list, list)
+    exp_len = 2
+    assert len(list_to_list) == exp_len
+    assert list_to_list[0] == "hi"
+    assert list_to_list[1] == "hi"
+
+
+def test_make_list_from_nonstring() -> None:
+    """Test make list from non string."""
+    any_obj = 1
+    obj_to_list = make_list(any_obj)
+    assert isinstance(obj_to_list, list)
+    exp_len = 1
+    assert len(obj_to_list) == exp_len
+    assert obj_to_list[0] == cast(str, any_obj)
+
+
+def test_make_bool_string() -> None:
+    """Test make bool."""
+
+    input_ = "string"
+    output_ = make_bool(input_)
+    assert output_ is True
+
+
+def test_make_bool_hidden_false() -> None:
+    """Test make bool."""
+
+    input_1 = "False"
+    input_2 = "false"
+    input_3 = "FALSE"
+    input_4 = "0"
+
+    output_1 = make_bool(input_1)
+    output_2 = make_bool(input_2)
+    output_3 = make_bool(input_3)
+    output_4 = make_bool(input_4)
+
+    assert output_1 is False
+    assert output_2 is False
+    assert output_3 is False
+    assert output_4 is False
+
+
+def test_make_bool_bool() -> None:
+    """Test make bool."""
+
+    input_ = True
+    output_ = make_bool(input_)
+    assert output_ is True
+
+
+def test_make_bool_1() -> None:
+    """Test make bool."""
+
+    input_ = 1
+    output_ = make_bool(input_)
+    assert output_ is True
+
+
+def test_make_bool_0() -> None:
+    """Test make bool."""
+
+    input_ = 0
+    output_ = make_bool(input_)
+    assert output_ is False
+
+
+def test_convert_date_format_month() -> None:
+    """Test convert date format."""
+    date = "May 6, 2024"
+    output_ = convert_date_format(date)
+    exp_output = "2024-05-06"
+    assert output_ == exp_output
+
+
+def test_convert_format_one_string() -> None:
+    """Test convert date format."""
+    date = "20240506"
+    output_ = convert_date_format(date)
+    exp_output = "2024-05-06"
+    assert output_ == exp_output
+
+
+def test_convert_format_slash() -> None:
+    """Test convert date format."""
+    date = "2024/05/06"
+    output_ = convert_date_format(date)
+    exp_output = "2024-05-06"
+    assert output_ == exp_output

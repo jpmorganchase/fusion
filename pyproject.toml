@@ -1,6 +1,6 @@
 [project]
 name = "pyfusion"
-version = "1.4.1"
+version = "2.0.0-dev0"
 
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
@@ -186,7 +186,16 @@ extend-select = [
     'NPY',   # NumPy-specific rules
     'PERF',  # Perflint
 ]
-extend-ignore = ["S101", "FA100", "F541", "ANN101", "ANN401"]
+extend-ignore = [
+    "S101",
+    "FA100",
+    "F541",
+    "ANN101",
+    "ANN401",
+    "N815",  # Allow mixedCase variables for request body construction
+    "N806",  # Allow mixedCase variables for request body construction
+    "N803",  # Allow mixedCase variables for request body construction
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["fusion"]
@@ -221,10 +230,14 @@ omit = [
     "py_src/fusion/_legacy/authentication.py",
     "py_src/fusion/_legacy/__init__.py"
 ]
+exclude_lines = [
+    "if typing.TYPE_CHECKING:",
+    "if TYPE_CHECKING:",
+]
 
 
 [tool.bumpversion]
-current_version = "1.4.1"
+current_version = "2.0.0-dev0"
 parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[a-z]+)(?P<candidate>\d+))?'
 serialize = [
     '{major}.{minor}.{patch}-{release}{candidate}',

@@ -13,7 +13,7 @@ from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, cast
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
@@ -24,6 +24,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
+from dateutil import parser
 from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
@@ -846,3 +847,75 @@ def upload_files(  # noqa: PLR0913
             res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
     return res  # type: ignore
+
+
+def tidy_string(x: str) -> str:
+    """Tidy string.
+
+    Args:
+        x (str): String to tidy.
+
+    Returns (str): Tidy string.
+
+    """
+    x = x.strip()
+    x = re.sub(" +", " ", x)
+    x = re.sub("/ +", "/", x)
+
+    return x
+
+
+def make_list(obj: Any) -> list[str]:
+    """Make list."""
+    if isinstance(obj, list):
+        lst = obj
+    elif isinstance(obj, str):
+        lst = obj.split(",")
+        for i, _ in enumerate(lst):
+            lst[i] = lst[i].strip()
+    else:
+        lst = [cast(str, obj)]
+
+    return lst
+
+
+def make_bool(obj: Any) -> bool:
+    """Make boolean."""
+    if isinstance(obj, str):
+        false_strings = ["F", "FALSE", "0"]
+        obj = obj.strip().upper()
+        if obj in false_strings:
+            obj = False
+
+    bool_obj = bool(obj)
+    return bool_obj
+
+
+def convert_date_format(date_str: str) -> Any:
+    """Convert date to YYYY-MM-DD format."""
+    desired_format = "%Y-%m-%d"
+    date_obj = parser.parse(date_str)
+    formatted_date = date_obj.strftime(desired_format)
+    return formatted_date
+
+
+def _is_json(data: str) -> bool:
+    """Check if the data is in JSON format."""
+    try:
+        js.loads(data)
+    except Exception:  # noqa: BLE001
+        return False
+    return True
+
+
+def requests_raise_for_status(response: requests.Response) -> None:
+    """Send response text into raise for status."""
+    if response.status_code == requests.codes.not_found:  # noqa: PLR2004
+        response.raise_for_status()
+    else:
+        real_reason = ""
+        try:
+            real_reason = response.text
+            response.reason = real_reason
+        finally:
+            response.raise_for_status()

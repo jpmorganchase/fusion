@@ -1,5 +1,7 @@
 """Main Fusion module."""
 
+from __future__ import annotations
+
 import json as js
 import logging
 import re
@@ -7,21 +9,22 @@ import sys
 import warnings
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
 
-import fsspec
 import pandas as pd
 import pyarrow as pa
-import requests
 from joblib import Parallel, delayed
 from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
+from fusion.attributes import Attribute, Attributes
+from fusion.dataset import Dataset
+from fusion.fusion_types import Types
+from fusion.product import Product
 
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
-from .types import PyArrowFilterT
 from .utils import (
     RECOGNIZED_FORMATS,
     cpu_count,
@@ -44,6 +47,12 @@ from .utils import (
     upload_files,
     validate_file_names,
 )
+
+if TYPE_CHECKING:
+    import fsspec
+    import requests
+
+    from .types import PyArrowFilterT
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -88,7 +97,7 @@ class Fusion:
 
     def __init__(
         self,
-        credentials: Union[str, FusionCredentials] = "config/client_credentials.json",
+        credentials: str | FusionCredentials = "config/client_credentials.json",
         root_url: str = "https://fusion.jpmorgan.com/api/v1/",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
@@ -133,13 +142,11 @@ class Fusion:
         elif isinstance(credentials, str):
             self.credentials = FusionCredentials.from_file(Path(credentials))
         else:
-            raise ValueError(
-                "credentials must be a path to a credentials file or a dictionary containing the required keys"
-            )
+            raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
 
         self.session = get_session(self.credentials, self.root_url)
         self.fs = fs if fs else get_default_fs()
-        self.events: Optional[pd.DataFrame] = None
+        self.events: pd.DataFrame | None = None
 
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
@@ -188,7 +195,7 @@ class Fusion:
         """
         self._default_catalog = catalog
 
-    def _use_catalog(self, catalog: Optional[str]) -> str:
+    def _use_catalog(self, catalog: str | None) -> str:
         """Determine which catalog to use in an API call.
 
         Args:
@@ -227,7 +234,7 @@ class Fusion:
 
         return cat_df
 
-    def catalog_resources(self, catalog: Optional[str] = None, output: bool = False) -> pd.DataFrame:
+    def catalog_resources(self, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
         """List the resources contained within the catalog, for example products and datasets.
 
         Args:
@@ -249,9 +256,9 @@ class Fusion:
 
     def list_products(
         self,
-        contains: Optional[Union[str, list[str]]] = None,
+        contains: str | list[str] | None = None,
         id_contains: bool = False,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
         max_results: int = -1,
         display_all_columns: bool = False,
@@ -318,14 +325,14 @@ class Fusion:
 
     def list_datasets(  # noqa: PLR0913
         self,
-        contains: Optional[Union[str, list[str]]] = None,
+        contains: str | list[str] | None = None,
         id_contains: bool = False,
-        product: Optional[Union[str, list[str]]] = None,
-        catalog: Optional[str] = None,
+        product: str | list[str] | None = None,
+        catalog: str | None = None,
         output: bool = False,
         max_results: int = -1,
         display_all_columns: bool = False,
-        status: Optional[str] = None,
+        status: str | None = None,
     ) -> pd.DataFrame:
         """Get the datasets contained in a catalog.
 
@@ -402,7 +409,7 @@ class Fusion:
 
         return ds_df
 
-    def dataset_resources(self, dataset: str, catalog: Optional[str] = None, output: bool = False) -> pd.DataFrame:
+    def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
 
         Args:
@@ -426,7 +433,7 @@ class Fusion:
     def list_dataset_attributes(
         self,
         dataset: str,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
         display_all_columns: bool = False,
     ) -> pd.DataFrame:
@@ -469,7 +476,7 @@ class Fusion:
     def list_datasetmembers(
         self,
         dataset: str,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
         max_results: int = -1,
     ) -> pd.DataFrame:
@@ -502,7 +509,7 @@ class Fusion:
         self,
         dataset: str,
         series: str,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
     ) -> pd.DataFrame:
         """List the available resources for a datasetseries member.
@@ -531,7 +538,7 @@ class Fusion:
         self,
         dataset: str,
         series: str,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
     ) -> pd.DataFrame:
         """List the available distributions (downloadable instances of the dataset with a format type).
@@ -560,7 +567,7 @@ class Fusion:
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
     ) -> list[tuple[str, str, str, str]]:
         """Resolve distribution tuples given specification params.
 
@@ -592,9 +599,13 @@ class Fusion:
             )
 
         if dt_str == "latest":
-            dt_str = datasetseries_list[
-                datasetseries_list["createdDate"]==datasetseries_list["createdDate"].to_numpy().max()
-            ].sort_values(by="identifier").iloc[-1]["identifier"]
+            dt_str = (
+                datasetseries_list[
+                    datasetseries_list["createdDate"] == datasetseries_list["createdDate"].to_numpy().max()
+                ]
+                .sort_values(by="identifier")
+                .iloc[-1]["identifier"]
+            )
             datasetseries_list = datasetseries_list[datasetseries_list["identifier"] == dt_str]
         else:
             parsed_dates = normalise_dt_param_str(dt_str)
@@ -603,23 +614,13 @@ class Fusion:
 
             if parsed_dates[0]:
                 datasetseries_list = datasetseries_list[
-                    pd.Series(
-                        [
-                            pd.to_datetime(i, errors="coerce")
-                            for i in datasetseries_list["identifier"]
-                        ]
-                    )
+                    pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
                     >= pd.to_datetime(parsed_dates[0])
                 ].reset_index()
 
             if parsed_dates[1]:
                 datasetseries_list = datasetseries_list[
-                    pd.Series(
-                        [
-                            pd.to_datetime(i, errors="coerce")
-                            for i in datasetseries_list["identifier"]
-                        ]
-                    )
+                    pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
                     <= pd.to_datetime(parsed_dates[1])
                 ].reset_index()
 
@@ -639,15 +640,15 @@ class Fusion:
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: Optional[str] = None,
-        n_par: Optional[int] = None,
+        catalog: str | None = None,
+        n_par: int | None = None,
         show_progress: bool = True,
         force_download: bool = False,
-        download_folder: Optional[str] = None,
+        download_folder: str | None = None,
         return_paths: bool = False,
-        partitioning: Optional[str] = None,
+        partitioning: str | None = None,
         preserve_original_name: bool = False,
-    ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
+    ) -> list[tuple[bool, str, str | None]] | None:
         """Downloads the requested distributions of a dataset to disk.
 
         Args:
@@ -754,13 +755,13 @@ class Fusion:
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: Optional[str] = None,
-        n_par: Optional[int] = None,
+        catalog: str | None = None,
+        n_par: int | None = None,
         show_progress: bool = True,
-        columns: Optional[list[str]] = None,
-        filters: Optional[PyArrowFilterT] = None,
+        columns: list[str] | None = None,
+        filters: PyArrowFilterT | None = None,
         force_download: bool = False,
-        download_folder: Optional[str] = None,
+        download_folder: str | None = None,
         dataframe_type: str = "pandas",
         **kwargs: Any,
     ) -> pd.DataFrame:
@@ -902,7 +903,7 @@ class Fusion:
         dataset: str,
         series_member: str,
         dataset_format: str = "parquet",
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
     ) -> BytesIO:
         """Returns an instance of dataset (the distribution) as a bytes object.
 
@@ -930,13 +931,13 @@ class Fusion:
         dataset: str,
         dt_str: str = "latest",
         dataset_format: str = "parquet",
-        catalog: Optional[str] = None,
-        n_par: Optional[int] = None,
+        catalog: str | None = None,
+        n_par: int | None = None,
         show_progress: bool = True,
-        columns: Optional[list[str]] = None,
-        filters: Optional[PyArrowFilterT] = None,
+        columns: list[str] | None = None,
+        filters: PyArrowFilterT | None = None,
         force_download: bool = False,
-        download_folder: Optional[str] = None,
+        download_folder: str | None = None,
         **kwargs: Any,
     ) -> pa.Table:
         """Gets distributions for a specified date or date range and returns the data as an arrow table.
@@ -1036,24 +1037,24 @@ class Fusion:
     def upload(  # noqa: PLR0913
         self,
         path: str,
-        dataset: Optional[str] = None,
+        dataset: str | None = None,
         dt_str: str = "latest",
-        catalog: Optional[str] = None,
-        n_par: Optional[int] = None,
+        catalog: str | None = None,
+        n_par: int | None = None,
         show_progress: bool = True,
         return_paths: bool = False,
         multipart: bool = True,
         chunk_size: int = 5 * 2**20,
-        from_date: Optional[str] = None,
-        to_date: Optional[str] = None,
-        preserve_original_name: Optional[bool] = False,
-        additional_headers: Optional[dict[str, str]] = None,
-    ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
+        from_date: str | None = None,
+        to_date: str | None = None,
+        preserve_original_name: bool | None = False,
+        additional_headers: dict[str, str] | None = None,
+    ) -> list[tuple[bool, str, str | None]] | None:
         """Uploads the requested files/files to Fusion.
 
         Args:
             path (str): path to a file or a folder with files
-            dataset (str, optional): Dataset name to which the file will be uploaded (for single file only).
+            dataset (str, optional): Dataset identifier to which the file will be uploaded (for single file only).
                                     If not provided the dataset will be implied from file's name.
             dt_str (str, optional): A file name. Can be any string but is usually a date.
                                     Defaults to 'latest' which will return the most recent.
@@ -1157,16 +1158,16 @@ class Fusion:
         data: BytesIO,
         dataset: str,
         series_member: str = "latest",
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         distribution: str = "parquet",
         show_progress: bool = True,
         return_paths: bool = False,
         chunk_size: int = 5 * 2**20,
-        from_date: Optional[str] = None,
-        to_date: Optional[str] = None,
-        file_name: Optional[str] = None,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        file_name: str | None = None,
         **kwargs: Any,  # noqa: ARG002
-    ) -> Optional[list[tuple[bool, str, Optional[str]]]]:
+    ) -> list[tuple[bool, str, str | None]] | None:
         """Uploads data from an object in memory.
 
         Args:
@@ -1223,10 +1224,10 @@ class Fusion:
 
     def listen_to_events(
         self,
-        last_event_id: Optional[str] = None,
-        catalog: Optional[str] = None,
+        last_event_id: str | None = None,
+        catalog: str | None = None,
         url: str = "https://fusion.jpmorgan.com/api/v1/",
-    ) -> Union[None, pd.DataFrame]:
+    ) -> None | pd.DataFrame:
         """Run server sent event listener in the background. Retrieve results by running get_events.
 
         Args:
@@ -1293,11 +1294,11 @@ class Fusion:
 
     def get_events(
         self,
-        last_event_id: Optional[str] = None,
-        catalog: Optional[str] = None,
+        last_event_id: str | None = None,
+        catalog: str | None = None,
         in_background: bool = True,
         url: str = "https://fusion.jpmorgan.com/api/v1/",
-    ) -> Union[None, pd.DataFrame]:
+    ) -> None | pd.DataFrame:
         """Run server sent event listener and print out the new events. Keyboard terminate to stop.
 
         Args:
@@ -1341,7 +1342,7 @@ class Fusion:
     def list_dataset_lineage(
         self,
         dataset_id: str,
-        catalog: Optional[str] = None,
+        catalog: str | None = None,
         output: bool = False,
         max_results: int = -1,
     ) -> pd.DataFrame:
@@ -1392,7 +1393,11 @@ class Fusion:
                         source_dataset_title = dataset["title"]
                     elif dataset["identifier"] == source_dataset_id and dataset.get("status", None) == "Restricted":
                         source_dataset_title = "Access Restricted"
-                data_dict[source_dataset_id] = ("source", source_catalog, source_dataset_title)
+                data_dict[source_dataset_id] = (
+                    "source",
+                    source_catalog,
+                    source_dataset_title,
+                )
 
             if source_dataset_id == dataset_id:
                 for dataset in data["datasets"]:
@@ -1402,7 +1407,11 @@ class Fusion:
                         dataset["identifier"] == destination_dataset_id and dataset.get("status", None) == "Restricted"
                     ):
                         destination_dataset_title = "Access Restricted"
-                data_dict[destination_dataset_id] = ("produced", destination_catalog, destination_dataset_title)
+                data_dict[destination_dataset_id] = (
+                    "produced",
+                    destination_catalog,
+                    destination_dataset_title,
+                )
 
         output_data = {
             "type": [v[0] for v in data_dict.values()],
@@ -1428,10 +1437,10 @@ class Fusion:
     def create_dataset_lineage(
         self,
         base_dataset: str,
-        source_dataset_catalog_mapping: Union[pd.DataFrame, list[dict[str, str]]],
-        catalog: Optional[str] = None,
+        source_dataset_catalog_mapping: pd.DataFrame | list[dict[str, str]],
+        catalog: str | None = None,
         return_resp_obj: bool = False,
-    ) -> Optional[requests.Response]:
+    ) -> requests.Response | None:
         """Upload lineage to a dataset.
 
         Args:
@@ -1477,4 +1486,447 @@ class Fusion:
 
         resp.raise_for_status()
 
+        return resp if return_resp_obj else None
+
+    def list_product_dataset_mapping(
+        self,
+        dataset: str | list[str] | None = None,
+        product: str | list[str] | None = None,
+        catalog: str | None = None,
+    ) -> pd.DataFrame:
+        """get the product to dataset linking contained in  a catalog. A product is a grouping of datasets.
+
+        Args:
+            dataset (str | list[str] | None, optional): A string or list of strings that are dataset
+            identifiers to filter the output. If a list is provided then it will return
+            datasets whose identifier matches any of the strings. Defaults to None.
+            product (str | list[str] | None, optional): A string or list of strings that are product
+            identifiers to filter the output. If a list is provided then it will return
+            products whose identifier matches any of the strings. Defaults to None.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            pd.DataFrame: a dataframe with a row  for each dataset to product mapping.
+        """
+        catalog = self._use_catalog(catalog)
+        url = f"{self.root_url}catalogs/{catalog}/productDatasets"
+        mapping_df = pd.DataFrame(self._call_for_dataframe(url, self.session))
+
+        if dataset:
+            if isinstance(dataset, list):
+                contains = "|".join(f"{s}" for s in dataset)
+                mapping_df = mapping_df[mapping_df["dataset"].str.contains(contains, case=False)]
+            if isinstance(dataset, str):
+                mapping_df = mapping_df[mapping_df["dataset"].str.contains(dataset, case=False)]
+        if product:
+            if isinstance(product, list):
+                contains = "|".join(f"{s}" for s in product)
+                mapping_df = mapping_df[mapping_df["product"].str.contains(contains, case=False)]
+            if isinstance(product, str):
+                mapping_df = mapping_df[mapping_df["product"].str.contains(product, case=False)]
+        return mapping_df
+
+    def product(  # noqa: PLR0913
+        self,
+        identifier: str,
+        title: str = "",
+        category: str | list[str] | None = None,
+        shortAbstract: str = "",
+        description: str = "",
+        isActive: bool = True,
+        isRestricted: bool | None = None,
+        maintainer: str | list[str] | None = None,
+        region: str | list[str] | None = None,
+        publisher: str | None = None,
+        subCategory: str | list[str] | None = None,
+        tag: str | list[str] | None = None,
+        deliveryChannel: str | list[str] = "API",
+        theme: str | None = None,
+        releaseDate: str | None = None,
+        language: str = "English",
+        status: str = "Available",
+        image: str = "",
+        logo: str = "",
+        dataset: str | list[str] | None = None,
+        **kwargs: Any,
+    ) -> Product:
+        """Instantiate a Product object with this client for metadata creation.
+
+        Args:
+            identifier (str): Product identifier.
+            title (str, optional): Product title. If not provided, defaults to identifier.
+            category (str | list[str] | None, optional): Category. Defaults to None.
+            shortAbstract (str, optional): Short description. Defaults to "".
+            description (str, optional): Description. If not provided, defaults to identifier.
+            isActive (bool, optional): Boolean for Active status. Defaults to True.
+            isRestricted (bool | None, optional): Flag for restricted products. Defaults to None.
+            maintainer (str | list[str] | None, optional): Product maintainer. Defaults to None.
+            region (str | list[str] | None, optional): Product region. Defaults to None.
+            publisher (str | None, optional): Name of vendor that publishes the data. Defaults to None.
+            subCategory (str | list[str] | None, optional): Product sub-category. Defaults to None.
+            tag (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
+            deliveryChannel (str | list[str], optional): Product delivery channel. Defaults to "API".
+            theme (str | None, optional): Product theme. Defaults to None.
+            releaseDate (str | None, optional): Product release date. Defaults to None.
+            language (str, optional): Product language. Defaults to "English".
+            status (str, optional): product status. Defaults to "Available".
+            image (str, optional): Product image. Defaults to "".
+            logo (str, optional): Product logo. Defaults to "".
+            dataset (str | list[str] | None, optional): Product datasets. Defaults to None.
+
+        Returns:
+            Product: Fusion Product class instance.
+
+        Examples:
+            >>> fusion = Fusion()
+            >>> fusion.product(identifier="PRODUCT_1", title="Product")
+
+        Note:
+            See the product module for more information on functionalities of product objects.
+
+        """
+        product_obj = Product(
+            identifier=identifier,
+            title=title,
+            category=category,
+            shortAbstract=shortAbstract,
+            description=description,
+            isActive=isActive,
+            isRestricted=isRestricted,
+            maintainer=maintainer,
+            region=region,
+            publisher=publisher,
+            subCategory=subCategory,
+            tag=tag,
+            deliveryChannel=deliveryChannel,
+            theme=theme,
+            releaseDate=releaseDate,
+            language=language,
+            status=status,
+            image=image,
+            logo=logo,
+            dataset=dataset,
+            **kwargs,
+        )
+        product_obj.set_client(self)
+        return product_obj
+
+    def dataset(  # noqa: PLR0913
+        self,
+        identifier: str,
+        title: str = "",
+        category: str | list[str] | None = None,
+        description: str = "",
+        frequency: str = "Once",
+        isInternalOnlyDataset: bool = False,
+        isThirdPartyData: bool = True,
+        isRestricted: bool | None = None,
+        isRawData: bool = True,
+        maintainer: str | None = "J.P. Morgan Fusion",
+        source: str | list[str] | None = None,
+        region: str | list[str] | None = None,
+        publisher: str = "J.P. Morgan",
+        product: str | list[str] | None = None,
+        subCategory: str | list[str] | None = None,
+        tags: str | list[str] | None = None,
+        createdDate: str | None = None,
+        modifiedDate: str | None = None,
+        deliveryChannel: str | list[str] = "API",
+        language: str = "English",
+        status: str = "Available",
+        type_: str | None = "Source",
+        containerType: str | None = "Snapshot-Full",
+        snowflake: str | None = None,
+        complexity: str | None = None,
+        isImmutable: bool | None = None,
+        isMnpi: bool | None = None,
+        isPci: bool | None = None,
+        isPii: bool | None = None,
+        isClient: bool | None = None,
+        isPublic: bool | None = None,
+        isInternal: bool | None = None,
+        isConfidential: bool | None = None,
+        isHighlyConfidential: bool | None = None,
+        isActive: bool | None = None,
+        owners: list[str] | None = None,
+        applicationId: str | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        """Instantiate a Dataset object with this client for metadata creation.
+
+        Args:
+            identifier (str): Dataset identifier.
+            title (str, optional): Dataset title. If not provided, defaults to identifier.
+            category (str | list[str] | None, optional): A category or list of categories for the dataset.
+                Defaults to None.
+            description (str, optional): Dataset description. If not provided, defaults to identifier.
+            frequency (str, optional): The frequency of the dataset. Defaults to "Once".
+            isInternalOnlyDataset (bool, optional): Flag for internal datasets. Defaults to False.
+            isThirdPartyData (bool, optional): Flag for third party data. Defaults to True.
+            isRestricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
+            isRawData (bool, optional): Flag for raw datasets. Defaults to True.
+            maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
+            source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
+            region (str | list[str] | None, optional): Region. Defaults to None.
+            publisher (str, optional): Name of vendor that publishes the data.. Defaults to "J.P. Morgan".
+            product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
+            subCategory (str | list[str] | None, optional): Sub-category. Defaults to None.
+            tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
+            createdDate (str | None, optional): Created date. Defaults to None.
+            modifiedDate (str | None, optional): Modified date. Defaults to None.
+            deliveryChannel (str | list[str], optional): Delivery channel. Defaults to "API".
+            language (str, optional): Language. Defaults to "English".
+            status (str, optional): Status. Defaults to "Available".
+            type_ (str | None, optional): Dataset type. Defaults to "Source".
+            containerType (str | None, optional): Container type. Defaults to "Snapshot-Full".
+            snowflake (str | None, optional): Snowflake account connection. Defaults to None.
+            complexity (str | None, optional): Complecist. Defaults to None.
+            isImmutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
+            isMnpi (bool | None, optional): isMnpi. Defaults to None.
+            isPci (bool | None, optional): isPci. Defaults to None.
+            isPii (bool | None, optional): isPii. Defaults to None.
+            isClient (bool | None, optional): isClient. Defaults to None.
+            isPublic (bool | None, optional): isPublic. Defaults to None.
+            isInternal (bool | None, optional): IsInternal. Defaults to None.
+            isConfidential (bool | None, optional): IsConfidential. Defaults to None.
+            isHighlyConfidential (bool | None, optional): isHighlyConfidential. Defaults to None.
+            isActive (bool | None, optional): isActive. Defaults to None.
+            owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
+            applicationId (str | None, optional): The application ID of the dataset. Defaults to None.
+
+        Returns:
+            Dataset: Fusion Dataset class.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.dataset(identifier="DATASET_1")
+
+        Note:
+            See the dataset module for more information on functionalities of dataset objects.
+
+        """
+        dataset_obj = Dataset(
+            identifier=identifier,
+            title=title,
+            category=category,
+            description=description,
+            frequency=frequency,
+            isInternalOnlyDataset=isInternalOnlyDataset,
+            isThirdPartyData=isThirdPartyData,
+            isRestricted=isRestricted,
+            isRawData=isRawData,
+            maintainer=maintainer,
+            source=source,
+            region=region,
+            publisher=publisher,
+            product=product,
+            subCategory=subCategory,
+            tags=tags,
+            createdDate=createdDate,
+            modifiedDate=modifiedDate,
+            deliveryChannel=deliveryChannel,
+            language=language,
+            status=status,
+            type_=type_,
+            containerType=containerType,
+            snowflake=snowflake,
+            complexity=complexity,
+            isImmutable=isImmutable,
+            isMnpi=isMnpi,
+            isPci=isPci,
+            isPii=isPii,
+            isClient=isClient,
+            isPublic=isPublic,
+            isInternal=isInternal,
+            isConfidential=isConfidential,
+            isHighlyConfidential=isHighlyConfidential,
+            isActive=isActive,
+            owners=owners,
+            applicationId=applicationId,
+            **kwargs,
+        )
+        dataset_obj.set_client(self)
+        return dataset_obj
+
+    def attribute(  # noqa: PLR0913
+        self,
+        identifier: str,
+        index: int,
+        dataType: str | Types = "String",
+        title: str = "",
+        description: str = "",
+        isDatasetKey: bool = False,
+        source: str | None = None,
+        sourceFieldId: str | None = None,
+        isInternalDatasetKey: bool | None = None,
+        isExternallyVisible: bool | None = True,
+        unit: Any | None = None,
+        multiplier: float = 1.0,
+        isPropogationEligible: bool | None = None,
+        isMetric: bool | None = None,
+        availableFrom: str | None = None,
+        deprecatedFrom: str | None = None,
+        term: str = "bizterm1",
+        dataset: int | None = None,
+        attributeType: str | None = None,
+        **kwargs: Any,
+    ) -> Attribute:
+        """Instantiate an Attribute object with this client for metadata creation.
+
+        Args:
+            identifier (str): The unique identifier for the attribute.
+            index (int): Attribute index.
+            dataType (str | Types, optional): Datatype of attribute. Defaults to "String".
+            title (str, optional): Attribute title. If not provided, defaults to identifier.
+            description (str, optional): Attribute description. If not provided, defaults to identifier.
+            isDatasetKey (bool, optional): Flag for primary keys. Defaults to False.
+            source (str | None, optional): Name of data vendor which provided the data. Defaults to None.
+            sourceFieldId (str | None, optional): Original identifier of attribute, if attribute has been renamed.
+                If not provided, defaults to identifier.
+            isInternalDatasetKey (bool | None, optional): Flag for internal primary keys. Defaults to None.
+            isExternallyVisible (bool | None, optional): Flag for externally visible attributes. Defaults to True.
+            unit (Any | None, optional): Unit of attribute. Defaults to None.
+            multiplier (float, optional): Multiplier for unit. Defaults to 1.0.
+            isPropogationEligible (bool | None, optional): Flag for propogation eligibility. Defaults to None.
+            isMetric (bool | None, optional): Flag for attributes that are metrics. Defaults to None.
+            availableFrom (str | None, optional): Date from which the attribute is available. Defaults to None.
+            deprecatedFrom (str | None, optional): Date from which the attribute is deprecated. Defaults to None.
+            term (str, optional): Term. Defaults to "bizterm1".
+            dataset (int | None, optional): Dataset. Defaults to None.
+            attributeType (str | None, optional): Attribute type. Defaults to None.
+
+        Returns:
+            Attribute: Fusion Attribute class.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attr = fusion.attribute(identifier="attr1", index=0)
+
+        Note:
+            See the attributes module for more information on functionalities of attribute objects.
+
+        """
+        dataType = Types[str(dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
+        attribute_obj = Attribute(
+            identifier=identifier,
+            index=index,
+            dataType=dataType,
+            title=title,
+            description=description,
+            isDatasetKey=isDatasetKey,
+            source=source,
+            sourceFieldId=sourceFieldId,
+            isInternalDatasetKey=isInternalDatasetKey,
+            isExternallyVisible=isExternallyVisible,
+            unit=unit,
+            multiplier=multiplier,
+            isPropogationEligible=isPropogationEligible,
+            isMetric=isMetric,
+            availableFrom=availableFrom,
+            deprecatedFrom=deprecatedFrom,
+            term=term,
+            dataset=dataset,
+            attributeType=attributeType,
+            **kwargs,
+        )
+        attribute_obj.set_client(self)
+        return attribute_obj
+
+    def attributes(
+        self,
+        attributes: list[Attribute] | None = None,
+    ) -> Attributes:
+        """Instantiate an Attributes object with this client for metadata creation.
+
+        Args:
+            attributes (list[Attribute] | None, optional): List of Attribute objects. Defaults to None.
+
+        Returns:
+            Attributes: Fusion Attributes class.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attr1 = fusion.attribute("attr1", 0)
+            >>> attr2 = fusion.attribute("attr2", 1)
+            >>> attrs = fusion.attributes([attr1, attr2])
+
+        Note:
+            See the attributes module for more information on functionalities of attributes object.
+
+        """
+        attributes_obj = Attributes(attributes=attributes or [])
+        attributes_obj.set_client(self)
+        return attributes_obj
+
+    def delete_datasetmembers(
+        self,
+        dataset: str,
+        series_members: str | list[str],
+        catalog: str | None = None,
+        return_resp_obj: bool = False,
+    ) -> list[requests.Response] | None:
+        """Delete dataset members.
+
+        Args:
+            dataset (str): A dataset identifier
+            series_members (str | list[str]): A string or list of strings that are dataset series member
+            identifiers to delete.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
+
+        Returns:
+            list[requests.Response]: a list of response objects.
+
+        Examples:
+            Delete one dataset member.
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.delete_datasetmembers(dataset="dataset1", series_members="series1")
+
+            Delete multiple dataset members.
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.delete_datasetmembers(dataset="dataset1", series_members=["series1", "series2"])
+
+        """
+        catalog = self._use_catalog(catalog)
+        if isinstance(series_members, str):
+            series_members = [series_members]
+        responses = []
+        for series_member in series_members:
+            url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series_member}"
+            resp = self.session.delete(url)
+            responses.append(resp)
+        return responses if return_resp_obj else None
+
+    def delete_all_datasetmembers(
+        self,
+        dataset: str,
+        catalog: str | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Delete all dataset members within a dataset.
+
+        Args:
+            dataset (str): A dataset identifier
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
+
+        Returns:
+            list[requests.Response]: a list of response objects.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.delete_all_datasetmembers(dataset="dataset1")
+
+        """
+        catalog = self._use_catalog(catalog)
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+        resp = self.session.delete(url)
         return resp if return_resp_obj else None

@@ -10,7 +10,9 @@ import requests_mock
 from pytest_mock import MockerFixture
 
 from fusion._fusion import FusionCredentials
+from fusion.attributes import Attribute
 from fusion.fusion import Fusion
+from fusion.fusion_types import Types
 from fusion.utils import _normalise_dt_param, distribution_to_url
 
 
@@ -38,6 +40,22 @@ def test_fusion_credentials(example_creds_dict: dict[str, Any], tmp_path: Path) 
 def test_fusion_init(credentials: FusionCredentials) -> None:
     fusion = Fusion(credentials=credentials)
     assert fusion
+
+
+def test_fusion_init_from_path(example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
+    credentials_file = tmp_path / "client_credentials_test.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
+    fusion = Fusion(credentials="client_credentials_test.json")
+    assert fusion
+
+
+def test_fusion_init_cred_value_error(example_creds_dict: dict[str, Any]) -> None:
+    with pytest.raises(
+        ValueError, match="credentials must be a path to a credentials file or FusionCredentials object"
+    ) as error_info:
+        Fusion(credentials=example_creds_dict)  # type: ignore
+    assert str(error_info.value) == "credentials must be a path to a credentials file or FusionCredentials object"
 
 
 def test_fusion_credentials_no_pxy(example_creds_dict_no_pxy: dict[str, Any], tmp_path: Path) -> None:
@@ -872,3 +890,459 @@ def test_create_dataset_lineage_httperror(requests_mock: requests_mock.Mocker, f
         fusion_obj.create_dataset_lineage(
             base_dataset=base_dataset, source_dataset_catalog_mapping=data, catalog=catalog
         )
+
+
+def test_list_product_dataset_mapping_dataset_list(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list Product Dataset Mapping method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data = {
+        "resources": [
+            {"product": "P00001", "dataset": "D00001"},
+            {"product": "P00002", "dataset": "D00002"},
+        ]
+    }
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_product_dataset_mapping(dataset=["D00001"], catalog=catalog)
+    assert all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+
+
+def test_list_product_dataset_mapping_dataset_str(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list Product Dataset Mapping method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data = {
+        "resources": [
+            {"product": "P00001", "dataset": "D00001"},
+            {"product": "P00002", "dataset": "D00002"},
+        ]
+    }
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_product_dataset_mapping(dataset="D00001", catalog=catalog)
+    assert all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+
+
+def test_list_product_dataset_mapping_product_str(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list Product Dataset Mapping method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data = {
+        "resources": [
+            {"product": "P00001", "dataset": "D00001"},
+            {"product": "P00002", "dataset": "D00002"},
+        ]
+    }
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_product_dataset_mapping(product="P00001", catalog=catalog)
+    assert all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+
+
+def test_list_product_dataset_mapping_product_list(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list Product Dataset Mapping method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data = {
+        "resources": [
+            {"product": "P00001", "dataset": "D00001"},
+            {"product": "P00002", "dataset": "D00002"},
+        ]
+    }
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_product_dataset_mapping(product=["P00001"], catalog=catalog)
+    assert all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+
+
+def test_list_product_dataset_mapping_product_no_filter(
+    requests_mock: requests_mock.Mocker, fusion_obj: Fusion
+) -> None:
+    """Test list Product Dataset Mapping method."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data = {"resources": [{"product": "P00001", "dataset": "D00001"}]}
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_product_dataset_mapping(catalog=catalog)
+    assert all(resp == pd.DataFrame({"product": ["P00001"], "dataset": ["D00001"]}))
+
+
+def test_fusion_product(fusion_obj: Fusion) -> None:
+    """Test Fusion Product class from client."""
+    test_product = fusion_obj.product(title="Test Product", identifier="Test Product", releaseDate="May 5, 2020")
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == ""
+    assert test_product.description == "Test Product"
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region is None
+    assert test_product.publisher is None
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ["API"]
+    assert test_product.theme is None
+    assert test_product.releaseDate == "2020-05-05"
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+    assert test_product._client == fusion_obj
+
+
+def test_fusion_dataset(fusion_obj: Fusion) -> None:
+    """Test Fusion Dataset class from client"""
+    test_dataset = fusion_obj.dataset(
+        title="Test Dataset",
+        identifier="Test Dataset",
+        category="Test",
+        product="TEST_PRODUCT",
+    )
+
+    assert str(test_dataset)
+    assert repr(test_dataset)
+    assert test_dataset.title == "Test Dataset"
+    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.category == ["Test"]
+    assert test_dataset.description == "Test Dataset"
+    assert test_dataset.frequency == "Once"
+    assert test_dataset.isInternalOnlyDataset is False
+    assert test_dataset.isThirdPartyData is True
+    assert test_dataset.isRestricted is None
+    assert test_dataset.isRawData is True
+    assert test_dataset.maintainer == "J.P. Morgan Fusion"
+    assert test_dataset.source is None
+    assert test_dataset.region is None
+    assert test_dataset.publisher == "J.P. Morgan"
+    assert test_dataset.product == ["TEST_PRODUCT"]
+    assert test_dataset.subCategory is None
+    assert test_dataset.tags is None
+    assert test_dataset.createdDate is None
+    assert test_dataset.modifiedDate is None
+    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.language == "English"
+    assert test_dataset.status == "Available"
+    assert test_dataset.type_ == "Source"
+    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.snowflake is None
+    assert test_dataset.complexity is None
+    assert test_dataset.isImmutable is None
+    assert test_dataset.isMnpi is None
+    assert test_dataset.isPii is None
+    assert test_dataset.isPci is None
+    assert test_dataset.isClient is None
+    assert test_dataset.isPublic is None
+    assert test_dataset.isInternal is None
+    assert test_dataset.isConfidential is None
+    assert test_dataset.isHighlyConfidential is None
+    assert test_dataset.isActive is None
+    assert test_dataset._client == fusion_obj
+
+
+def test_fusion_attribute(fusion_obj: Fusion) -> None:
+    """Test Fusion Attribute class from client."""
+    test_attribute = fusion_obj.attribute(
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+        isDatasetKey=True,
+        dataType="String",
+        availableFrom="May 5, 2020",
+    )
+    assert str(test_attribute)
+    assert repr(test_attribute)
+    assert test_attribute.title == "Test Attribute"
+    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.index == 0
+    assert test_attribute.isDatasetKey
+    assert test_attribute.dataType == Types.String
+    assert test_attribute.description == "Test Attribute"
+    assert test_attribute.source is None
+    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.isInternalDatasetKey is None
+    assert test_attribute.isExternallyVisible is True
+    assert test_attribute.unit is None
+    assert test_attribute.multiplier == 1.0
+    assert test_attribute.isMetric is None
+    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.availableFrom == "2020-05-05"
+    assert test_attribute.deprecatedFrom is None
+    assert test_attribute.term == "bizterm1"
+    assert test_attribute.dataset is None
+    assert test_attribute.attributeType is None
+    assert test_attribute._client == fusion_obj
+
+
+def test_fusion_attributes(fusion_obj: Fusion) -> None:
+    """Test Fusion Attributes class from client."""
+    test_attributes = fusion_obj.attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                isDatasetKey=True,
+                dataType=Types.String,
+                availableFrom="May 5, 2020",
+            )
+        ]
+    )
+    assert str(test_attributes)
+    assert repr(test_attributes)
+    assert test_attributes.attributes[0].title == "Test Attribute"
+    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].index == 0
+    assert test_attributes.attributes[0].isDatasetKey
+    assert test_attributes.attributes[0].dataType == Types.String
+    assert test_attributes.attributes[0].description == "Test Attribute"
+    assert test_attributes.attributes[0].source is None
+    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].isInternalDatasetKey is None
+    assert test_attributes.attributes[0].isExternallyVisible is True
+    assert test_attributes.attributes[0].unit is None
+    assert test_attributes.attributes[0].multiplier == 1.0
+    assert test_attributes.attributes[0].isMetric is None
+    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].availableFrom == "2020-05-05"
+    assert test_attributes.attributes[0].deprecatedFrom is None
+    assert test_attributes.attributes[0].term == "bizterm1"
+    assert test_attributes.attributes[0].dataset is None
+    assert test_attributes.attributes[0].attributeType is None
+    assert test_attributes._client == fusion_obj
+
+
+def test_fusion_create_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test create product from client."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/products/TEST_PRODUCT"
+    expected_data = {
+        "title": "Test Product",
+        "identifier": "TEST_PRODUCT",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "isActive": True,
+        "isRestricted": False,
+        "maintainer": ["maintainer"],
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tag": ["tag1", "tag2"],
+        "deliveryChannel": ["API"],
+        "theme": "theme",
+        "releaseDate": "2020-05-05",
+        "language": "English",
+        "status": "Available",
+        "image": "",
+        "logo": "",
+    }
+    requests_mock.post(url, json=expected_data)
+
+    my_product = fusion_obj.product(
+        title="Test Product",
+        identifier="TEST_PRODUCT",
+        category=["category"],
+        shortAbstract="short abstract",
+        description="description",
+        isActive=True,
+        isRestricted=False,
+        maintainer=["maintainer"],
+        region=["region"],
+        publisher="publisher",
+        subCategory=["subCategory"],
+        tag=["tag1", "tag2"],
+        deliveryChannel=["API"],
+        theme="theme",
+        releaseDate="2020-05-05",
+        language="English",
+        status="Available",
+        image="",
+        logo="",
+    )
+    status_code = 200
+    resp = my_product.create(catalog=catalog, client=fusion_obj, return_resp_obj=True)
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def test_fusion_create_dataset_dict(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test create dataset from client."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/TEST_DATASET"
+    expected_data = {
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": False,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+    }
+    requests_mock.post(url, json=expected_data)
+
+    dataset_dict = {
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": False,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+    }
+    dataset_obj = fusion_obj.dataset(identifier="TEST_DATASET").from_object(dataset_dict)
+    resp = dataset_obj.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
+    status_code = 200
+    assert isinstance(resp, requests.models.Response)
+    assert resp.status_code == status_code
+
+
+def test_fusion_create_attributes(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test create attributes from client."""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
+
+    expected_data = {
+        "attributes": [
+            {
+                "title": "Test Attribute",
+                "identifier": "Test Attribute",
+                "index": 0,
+                "isDatasetKey": True,
+                "dataType": "string",
+                "description": "Test Attribute",
+                "source": None,
+                "sourceFieldId": "test_attribute",
+                "isInternalDatasetKey": None,
+                "isExternallyVisible": True,
+                "unit": None,
+                "multiplier": 1.0,
+                "isMetric": None,
+                "isPropogationEligible": None,
+                "availableFrom": "2020-05-05",
+                "deprecatedFrom": None,
+                "term": "bizterm1",
+                "dataset": None,
+                "attributeType": None,
+            }
+        ]
+    }
+
+    requests_mock.put(url, json=expected_data)
+
+    test_attributes = fusion_obj.attributes(
+        [
+            fusion_obj.attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                isDatasetKey=True,
+                dataType="String",
+                availableFrom="May 5, 2020",
+            )
+        ]
+    )
+    resp = test_attributes.create(client=fusion_obj, catalog=catalog, dataset=dataset, return_resp_obj=True)
+    status_code = 200
+    assert isinstance(resp, requests.Response)
+    assert resp.status_code == status_code
+
+
+def test_fusion_delete_datasetmembers(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test delete datasetmembers"""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    datasetseries = "20200101"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}"
+    requests_mock.delete(url, status_code=200)
+
+    resp = fusion_obj.delete_datasetmembers(dataset, datasetseries, catalog=catalog, return_resp_obj=True)
+    status_code = 200
+    assert resp is not None
+    assert isinstance(resp[0], requests.Response)
+    assert resp[0].status_code == status_code
+    resp_len = 1
+    assert len(resp) == resp_len
+
+
+def test_fusion_delete_datasetmembers_multiple(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test delete datasetmembers"""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    datasetseries = ["20200101", "20200101"]
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries[0]}"
+    requests_mock.delete(url, status_code=200)
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries[1]}"
+    requests_mock.delete(url, status_code=200)
+
+    resp = fusion_obj.delete_datasetmembers(dataset, datasetseries, catalog=catalog, return_resp_obj=True)
+    status_code = 200
+    assert resp is not None
+    assert isinstance(resp[0], requests.Response)
+    assert resp[0].status_code == status_code
+    assert isinstance(resp[1], requests.Response)
+    assert resp[1].status_code == status_code
+    resp_len = 2
+    assert len(resp) == resp_len
