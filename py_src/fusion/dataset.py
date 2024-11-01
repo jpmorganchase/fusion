@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json as js
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
