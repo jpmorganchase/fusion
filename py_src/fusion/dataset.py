@@ -426,9 +426,9 @@ class Dataset:
             >>> dataset_dict = dataset.to_dict()
 
         """
-        dataset_dict = asdict(self)
+        dataset_dict = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+
         dataset_dict["type"] = dataset_dict.pop("type_")
-        dataset_dict.pop("_client")
         return dataset_dict
 
     def create(

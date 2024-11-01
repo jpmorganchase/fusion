@@ -364,8 +364,7 @@ class Product:
             >>> product_dict = product.to_dict()
 
         """
-        product_dict = asdict(self)
-        product_dict.pop("_client")
+        product_dict = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
         return product_dict
 
     def create(
