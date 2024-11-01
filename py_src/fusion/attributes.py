@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -280,10 +280,9 @@ class Attribute:
             >>> attribute_dict = attribute.to_dict()
 
         """
-        result = asdict(self)
+        result = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
         result["unit"] = str(self.unit) if self.unit is not None else None
         result["dataType"] = self.dataType.name
-        result.pop("_client")
         return result
 
     def create(

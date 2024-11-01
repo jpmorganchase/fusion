@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json as js
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -426,9 +426,9 @@ class Dataset:
             >>> dataset_dict = dataset.to_dict()
 
         """
-        dataset_dict = asdict(self)
+        dataset_dict = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+
         dataset_dict["type"] = dataset_dict.pop("type_")
-        dataset_dict.pop("_client")
         return dataset_dict
 
     def create(
