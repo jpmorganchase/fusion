@@ -548,10 +548,10 @@ jobs:
         name: artifacts-win-${{ matrix.target }}-${{ matrix.python-versions }}
         path: dist
 
-  # Define the macos x86 64 maturin builds, across multiple python versions, these will run on macos-12
+  # Define the macos x86 64 maturin builds, across multiple python versions, these will run on macos-13
   macos-x86_64:
     #needs: tests
-    runs-on: macos-12
+    runs-on: macos-13
     strategy:
       matrix:
         python-versions: ["3.9", "3.10", "3.11", "3.12"]
