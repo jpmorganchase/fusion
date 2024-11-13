@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 
 from .utils import (
+    CamelCaseMeta,
     _is_json,
     camel_to_snake,
     convert_date_format,
@@ -17,7 +18,6 @@ from .utils import (
     requests_raise_for_status,
     snake_to_camel,
     tidy_string,
-    CamelCaseMeta
 )
 
 if TYPE_CHECKING:

@@ -860,12 +860,13 @@ def camel_to_snake(name: str) -> str:
 
 class CamelCaseMeta(type):
     """Metaclass to support both snake and camel case typing."""
+
     def __new__(cls: Any, name: str, bases: Any, dct: dict[str, Any]) -> Any:
         new_namespace = {}
         annotations = dct.get("__annotations__", {})
         new_annotations = {}
         for attr_name, attr_value in dct.items():
-            if not attr_name.startswith('__'):
+            if not attr_name.startswith("__"):
                 snake_name = camel_to_snake(attr_name)
                 new_namespace[snake_name] = attr_value
             else:
@@ -877,7 +878,7 @@ class CamelCaseMeta(type):
         cls = super().__new__(cls, name, bases, new_namespace)
         return cls
 
-    def __call__(cls: Any, *args, **kwargs) -> Any:
+    def __call__(cls: Any, *args: Any, **kwargs: Any) -> Any:
         # Convert keyword arguments to snake_case before initialization
         snake_kwargs = {camel_to_snake(k): v for k, v in kwargs.items()}
         return super().__call__(*args, **snake_kwargs)
