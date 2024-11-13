@@ -46,7 +46,7 @@ def test_fusion_init_from_path(example_creds_dict: dict[str, Any], tmp_path: Pat
     credentials_file = tmp_path / "client_credentials_test.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    fusion = Fusion(credentials="client_credentials_test.json")
+    fusion = Fusion(credentials=str(credentials_file))
     assert fusion
 
 
