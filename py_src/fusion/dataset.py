@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from fusion.utils import _is_json, convert_date_format, make_bool, make_list, requests_raise_for_status, tidy_string
+from .utils import _is_json, convert_date_format, make_bool, make_list, requests_raise_for_status, tidy_string, camel_to_snake
 
 if TYPE_CHECKING:
     import requests
@@ -26,36 +26,36 @@ class Dataset:
         category (str | list[str] | None, optional): A category or list of categories for the dataset. Defaults to None.
         description (str, optional): A description of the dataset. If not provided, defaults to identifier.
         frequency (str, optional): The frequency of the dataset. Defaults to "Once".
-        isInternalOnlyDataset (bool, optional): Flag for internal datasets. Defaults to False.
-        isThirdPartyData (bool, optional): Flag for third party data. Defaults to True.
-        isRestricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
-        isRawData (bool, optional): Flag for raw datasets. Defaults to True.
+        is_internal_only_dataset (bool, optional): Flag for internal datasets. Defaults to False.
+        is_third_party_data (bool, optional): Flag for third party data. Defaults to True.
+        is_restricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
+        is_raw_data (bool, optional): Flag for raw datasets. Defaults to True.
         maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
         source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
         region (str | list[str] | None, optional): Region. Defaults to None.
         publisher (str, optional): Name of vendor that publishes the data.. Defaults to "J.P. Morgan".
         product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
-        subCategory (str | list[str] | None, optional): Sub-category. Defaults to None.
+        sub_category (str | list[str] | None, optional): Sub-category. Defaults to None.
         tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
-        createdDate (str | None, optional): Created date. Defaults to None.
-        modifiedDate (str | None, optional): Modified date. Defaults to None.
-        deliveryChannel (str | list[str], optional): Delivery channel. Defaults to "API".
+        created_date (str | None, optional): Created date. Defaults to None.
+        modified_date (str | None, optional): Modified date. Defaults to None.
+        delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
         language (str, optional): Language. Defaults to "English".
         status (str, optional): Status. Defaults to "Available".
         type_ (str | None, optional): Dataset type. Defaults to "Source".
         containerType (str | None, optional): Container type. Defaults to "Snapshot-Full".
         snowflake (str | None, optional): Snowflake account connection. Defaults to None.
-        complexity (str | None, optional): Complecist. Defaults to None.
-        isImmutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
-        isMnpi (bool | None, optional): isMnpi. Defaults to None.
-        isPci (bool | None, optional): isPci. Defaults to None.
-        isPii (bool | None, optional): isPii. Defaults to None.
-        isClient (bool | None, optional): isClient. Defaults to None.
-        isPublic (bool | None, optional): isPublic. Defaults to None.
-        isInternal (bool | None, optional): IsInternal. Defaults to None.
-        isConfidential (bool | None, optional): IsConfidential. Defaults to None.
-        isHighlyConfidential (bool | None, optional): isHighlyConfidential. Defaults to None.
-        isActive (bool | None, optional): isActive. Defaults to None.
+        complexity (str | None, optional): Complexity. Defaults to None.
+        is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
+        is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
+        is_pci (bool | None, optional): is_pci. Defaults to None.
+        is_pii (bool | None, optional): is_pii. Defaults to None.
+        is_client (bool | None, optional): is_client. Defaults to None.
+        is_public (bool | None, optional): is_public. Defaults to None.
+        is_internal (bool | None, optional): is_internal. Defaults to None.
+        is_confidential (bool | None, optional): is_confidential. Defaults to None.
+        is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
+        is_active (bool | None, optional): is_active. Defaults to None.
         owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
         applicationId (str | None, optional): The application ID of the dataset. Defaults to None.
         _client (Any, optional): A Fusion client object. Defaults to None.
@@ -67,38 +67,38 @@ class Dataset:
     category: str | list[str] | None = None
     description: str = ""
     frequency: str = "Once"
-    isInternalOnlyDataset: bool = False
-    isThirdPartyData: bool = True
-    isRestricted: bool | None = None
-    isRawData: bool = True
+    is_internal_only_dataset: bool = False
+    is_third_party_data: bool = True
+    is_restricted: bool | None = None
+    is_raw_data: bool = True
     maintainer: str | None = "J.P. Morgan Fusion"
     source: str | list[str] | None = None
     region: str | list[str] | None = None
     publisher: str = "J.P. Morgan"
     product: str | list[str] | None = None
-    subCategory: str | list[str] | None = None
+    sub_category: str | list[str] | None = None
     tags: str | list[str] | None = None
-    createdDate: str | None = None
-    modifiedDate: str | None = None
-    deliveryChannel: str | list[str] = field(default_factory=lambda: ["API"])
+    created_date: str | None = None
+    modified_date: str | None = None
+    delivery_channel: str | list[str] = field(default_factory=lambda: ["API"])
     language: str = "English"
     status: str = "Available"
     type_: str | None = "Source"
-    containerType: str | None = "Snapshot-Full"
+    container_type: str | None = "Snapshot-Full"
     snowflake: str | None = None
     complexity: str | None = None
-    isImmutable: bool | None = None
-    isMnpi: bool | None = None
-    isPci: bool | None = None
-    isPii: bool | None = None
-    isClient: bool | None = None
-    isPublic: bool | None = None
-    isInternal: bool | None = None
-    isConfidential: bool | None = None
-    isHighlyConfidential: bool | None = None
-    isActive: bool | None = None
+    is_immutable: bool | None = None
+    is_mnpi: bool | None = None
+    is_pci: bool | None = None
+    is_pii: bool | None = None
+    is_client: bool | None = None
+    is_public: bool | None = None
+    is_internal: bool | None = None
+    is_confidential: bool | None = None
+    is_highly_confidential: bool | None = None
+    is_active: bool | None = None
     owners: list[str] | None = None
-    applicationId: str | None = None
+    application_id: str | None = None
 
     _client: Any = field(init=False, repr=False, compare=False, default=None)
 
@@ -112,35 +112,53 @@ class Dataset:
         attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
         return f"Dataset(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
 
+    def __init__(self, identifier: str, **kwargs: Any) -> None:
+        """Initialize the Dataset object with kwargs."""
+        self.identifier = identifier
+        for key, value in kwargs.items():
+            snake_case_key = camel_to_snake(key)
+            setattr(self, snake_case_key, value)
+
+        self.__post_init__()
+
     def __post_init__(self: Dataset) -> None:
         """Format Dataset metadata fields after object initialization."""
+        # Convert camelCase to snake_case for all fields
+        for field_name in list(self.__dict__.keys()):
+            if field_name.startswith("_"):
+                continue
+            snake_case_name = camel_to_snake(field_name)
+            if snake_case_name != field_name:
+                setattr(self, snake_case_name, getattr(self, field_name))
+                delattr(self, field_name)
+
         self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description != "" else self.title
         self.category = (
             self.category if isinstance(self.category, list) or self.category is None else make_list(self.category)
         )
-        self.deliveryChannel = (
-            self.deliveryChannel if isinstance(self.deliveryChannel, list) else make_list(self.deliveryChannel)
+        self.delivery_channel = (
+            self.delivery_channel if isinstance(self.delivery_channel, list) else make_list(self.delivery_channel)
         )
         self.source = self.source if isinstance(self.source, list) or self.source is None else make_list(self.source)
         self.region = self.region if isinstance(self.region, list) or self.region is None else make_list(self.region)
         self.product = (
             self.product if isinstance(self.product, list) or self.product is None else make_list(self.product)
         )
-        self.subCategory = (
-            self.subCategory
-            if isinstance(self.subCategory, list) or self.subCategory is None
-            else make_list(self.subCategory)
+        self.sub_category = (
+            self.sub_category
+            if isinstance(self.sub_category, list) or self.sub_category is None
+            else make_list(self.sub_category)
         )
         self.tags = self.tags if isinstance(self.tags, list) or self.tags is None else make_list(self.tags)
-        self.isInternalOnlyDataset = (
-            self.isInternalOnlyDataset
-            if isinstance(self.isInternalOnlyDataset, bool)
-            else make_bool(self.isInternalOnlyDataset)
+        self.is_internal_only_dataset = (
+            self.is_internal_only_dataset
+            if isinstance(self.is_internal_only_dataset, bool)
+            else make_bool(self.is_internal_only_dataset)
         )
-        self.createdDate = convert_date_format(self.createdDate) if self.createdDate else None
-        self.modifiedDate = convert_date_format(self.modifiedDate) if self.modifiedDate else None
+        self.created_date = convert_date_format(self.created_date) if self.created_date else None
+        self.modified_date = convert_date_format(self.modified_date) if self.modified_date else None
         self.owners = self.owners if isinstance(self.owners, list) or self.owners is None else make_list(self.owners)
 
     def set_client(self, client: Any) -> None:
