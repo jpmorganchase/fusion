@@ -90,6 +90,9 @@ RECOGNIZED_FORMATS = [
     "mkv",
 ]
 
+re_str_1 = re.compile("(.)([A-Z][a-z]+)")
+re_str_2 = re.compile("([a-z0-9])([A-Z])")
+
 
 def get_default_fs() -> fsspec.filesystem:
     """Retrieve default filesystem.
@@ -851,33 +854,15 @@ def upload_files(  # noqa: PLR0913
 
 def camel_to_snake(name: str) -> str:
     """Convert camelCase to snake_case."""
-    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+    s1 = re.sub(re_str_1, name)
+    return re.sub(re_str_2, r"\1_\2", s1).lower()
 
 
 class CamelCaseMeta(type):
     """Metaclass to support both snake and camel case typing."""
-
-    # def __new__(cls: Any, name: str, bases: Any, dct: dict[str, str]) -> Any:
-    #     new_class = super().__new__(cls, name, bases, dct)
-
-    #     for attr_name in dct:
-    #         if not attr_name.startswith("_"):
-    #             camel_case_name = snake_to_camel(attr_name)
-    #             setattr(
-    #                 new_class,
-    #                 camel_case_name,
-    #                 property(
-    #                     lambda self, attr_name=attr_name: getattr(self, attr_name),
-    #                     lambda self, value, attr_name=attr_name: setattr(self, attr_name, value),
-    #                 ),
-    #             )
-    #     return new_class
-    
-    def __new__(cls: Any, name: str, bases: Any, dct: dict[str, str]) -> Any:
-        # Convert class attributes and annotations to snake_case
+    def __new__(cls: Any, name: str, bases: Any, dct: dict[str, Any]) -> Any:
         new_namespace = {}
-        annotations = dct.get('__annotations__', {})
+        annotations = dct.get("__annotations__", {})
         new_annotations = {}
         for attr_name, attr_value in dct.items():
             if not attr_name.startswith('__'):
@@ -888,13 +873,11 @@ class CamelCaseMeta(type):
         for anno_name, anno_type in annotations.items():
             snake_name = camel_to_snake(anno_name)
             new_annotations[snake_name] = anno_type
-        new_namespace['__annotations__'] = new_annotations
-
-        # Create the new class with the modified namespace
+        new_namespace["__annotations__"] = new_annotations
         cls = super().__new__(cls, name, bases, new_namespace)
         return cls
 
-    def __call__(cls, *args, **kwargs) -> Any:
+    def __call__(cls: Any, *args, **kwargs) -> Any:
         # Convert keyword arguments to snake_case before initialization
         snake_kwargs = {camel_to_snake(k): v for k, v in kwargs.items()}
         return super().__call__(*args, **snake_kwargs)

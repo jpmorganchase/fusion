@@ -124,15 +124,6 @@ class Dataset(metaclass=CamelCaseMeta):
 
     def __post_init__(self: Dataset) -> None:
         """Format Dataset metadata fields after object initialization."""
-        # Convert camelCase to snake_case for all fields
-        for field_name in list(self.__dict__.keys()):
-            if field_name.startswith("_"):
-                continue
-            snake_case_name = camel_to_snake(field_name)
-            if snake_case_name != field_name:
-                setattr(self, snake_case_name, getattr(self, field_name))
-                delattr(self, field_name)
-
         self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description != "" else self.title
@@ -170,11 +161,8 @@ class Dataset(metaclass=CamelCaseMeta):
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __setattr__(self, name: str, value: Any) -> None:
-        # Set both snake_case and CamelCase attributes
         snake_name = camel_to_snake(name)
         self.__dict__[snake_name] = value
-        camel_name = ''.join(word.capitalize() if i != 0 else word for i, word in enumerate(snake_name.split('_')))
-        self.__dict__[camel_name] = value
 
     def set_client(self, client: Any) -> None:
         """Set the client for the Dataset. Set automatically, if the Dataset is instantiated from a Fusion object.
