@@ -147,7 +147,7 @@ class Attribute(metaclass=CamelCaseMeta):
             >>> series = pd.Series({
             ...     "identifier": "my_attribute",
             ...     "index": 0,
-            ...     "dataType": "String",
+            ...     "data_type": "String",
             ...     "title": "My Attribute",
             ...     "description": "My attribute description"
             ... })
@@ -218,7 +218,7 @@ class Attribute(metaclass=CamelCaseMeta):
             >>> data = {
             ...     "identifier": "my_attribute",
             ...     "index": 0,
-            ...     "dataType": "String",
+            ...     "data_type": "String",
             ...     "title": "My Attribute",
             ...     "description": "My attribute description"
             ... }
@@ -256,7 +256,7 @@ class Attribute(metaclass=CamelCaseMeta):
             >>> data = {
             ...     "identifier": "my_attribute",
             ...     "index": 0,
-            ...     "dataType": "String",
+            ...     "data_type": "String",
             ...     "title": "My Attribute",
             ...     "description": "My attribute description"
             ... }
@@ -270,7 +270,7 @@ class Attribute(metaclass=CamelCaseMeta):
             >>> series = pd.Series({
             ...     "identifier": "my_attribute",
             ...     "index": 0,
-            ...     "dataType": "String",
+            ...     "data_type": "String",
             ...     "title": "My Attribute",
             ...     "description": "My attribute description"
             ... })
@@ -344,7 +344,7 @@ class Attribute(metaclass=CamelCaseMeta):
             >>> data = {
             ...     "identifier": "my_attribute",
             ...     "index": 0,
-            ...     "dataType": "String",
+            ...     "data_type": "String",
             ...     "title": "My Attribute",
             ...     "description": "My attribute description"
             ...    }
@@ -359,7 +359,7 @@ class Attribute(metaclass=CamelCaseMeta):
             >>> series = pd.Series({
             ...     "identifier": "my_attribute",
             ...     "index": 0,
-            ...     "dataType": "String",
+            ...     "data_type": "String",
             ...     "title": "My Attribute",
             ...     "description": "My attribute description"
             ... })
@@ -554,7 +554,7 @@ class Attributes:
             ...     {
             ...         "identifier": "my_attribute",
             ...         "index": 0,
-            ...         "dataType": "String",
+            ...         "data_type": "String",
             ...         "title": "My Attribute",
             ...         "description": "My attribute description"
             ...     }
@@ -584,7 +584,7 @@ class Attributes:
             ...     {
             ...         "identifier": "my_attribute",
             ...         "index": 0,
-            ...         "dataType": "String",
+            ...         "data_type": "String",
             ...         "title": "My Attribute",
             ...         "description": "My attribute description"
             ...     }
@@ -622,7 +622,7 @@ class Attributes:
             ...     {
             ...         "identifier": "my_attribute",
             ...         "index": 0,
-            ...         "dataType": "String",
+            ...         "data_type": "String",
             ...         "title": "My Attribute",
             ...         "description": "My attribute description"
             ...     }
@@ -638,7 +638,7 @@ class Attributes:
             ...     {
             ...         "identifier": "my_attribute",
             ...         "index": 0,
-            ...         "dataType": "String",
+            ...         "data_type": "String",
             ...         "title": "My Attribute",
             ...         "description": "My attribute description"
             ...     }
@@ -747,7 +747,7 @@ class Attributes:
             ...     {
             ...         "identifier": "my_attribute",
             ...         "index": 0,
-            ...         "dataType": "String",
+            ...         "data_type": "String",
             ...         "title": "My Attribute",
             ...         "description": "My attribute description"
             ...     }
@@ -764,7 +764,7 @@ class Attributes:
             ...     {
             ...         "identifier": "my_attribute",
             ...         "index": 0,
-            ...         "dataType": "String",
+            ...         "data_type": "String",
             ...         "title": "My Attribute",
             ...         "description": "My attribute description"
             ...     }

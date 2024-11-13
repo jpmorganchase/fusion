@@ -332,8 +332,8 @@ class Dataset(metaclass=CamelCaseMeta):
             ...     "description": "My dataset description",
             ...     "category": "Finance",
             ...     "frequency": "Daily",
-            ...     "isRestricted": False,
-            ...     "isRawData": True,
+            ...     "is_restricted": False,
+            ...     "is_raw_data": True,
             ...     "maintainer": "J.P. Morgan Fusion",
             ...     "source": "J.P. Morgan",
             ...     }
@@ -349,8 +349,8 @@ class Dataset(metaclass=CamelCaseMeta):
             ...     "description": "My dataset description",
             ...     "category": "Finance",
             ...     "frequency": "Daily",
-            ...     "isRestricted": False,
-            ...     "isRawData": True,
+            ...     "is_restricted": False,
+            ...     "is_raw_data": True,
             ...     "maintainer": "J.P. Morgan Fusion",
             ...     "source": "J.P. Morgan"
             ...     }'
@@ -372,8 +372,8 @@ class Dataset(metaclass=CamelCaseMeta):
             ...     "description": "My dataset description",
             ...     "category": "Finance",
             ...     "frequency": "Daily",
-            ...     "isRestricted": False,
-            ...     "isRawData": True,
+            ...     "is_restricted": False,
+            ...     "is_raw_data": True,
             ...     "maintainer": "J.P. Morgan Fusion",
             ...     "source": "J.P. Morgan"
             ...     })
@@ -485,7 +485,7 @@ class Dataset(metaclass=CamelCaseMeta):
             ...     description= "My dataset description",
             ...     category= "Finance",
             ...     frequency= "Daily",
-            ...     isRestricted= False
+            ...     is_restricted= False
             ...     )
             >>> dataset.create(catalog="my_catalog")
 
@@ -499,7 +499,7 @@ class Dataset(metaclass=CamelCaseMeta):
             ...     "description": "My dataset description",
             ...     "category": "Finance",
             ...     "frequency": "Daily",
-            ...     "isRestricted": False
+            ...     "is_restricted": False
             ...     }
             >>> dataset = fusion.dataset("my_dataset").from_object(dataset_dict)
             >>> dataset.create(catalog="my_catalog")
@@ -514,7 +514,7 @@ class Dataset(metaclass=CamelCaseMeta):
             ...     "description": "My dataset description",
             ...     "category": "Finance",
             ...     "frequency": "Daily",
-            ...     "isRestricted": False
+            ...     "is_restricted": False
             ...     }'
             >>> dataset = fusion.dataset("my_dataset").from_object(dataset_json)
             >>> dataset.create(catalog="my_catalog")
@@ -536,7 +536,7 @@ class Dataset(metaclass=CamelCaseMeta):
             ...     "description": "My dataset description",
             ...     "category": "Finance",
             ...     "frequency": "Daily",
-            ...     "isRestricted": False
+            ...     "is_restricted": False
             ...     })
             >>> dataset = fusion.dataset("my_dataset").from_object(dataset_series)
 

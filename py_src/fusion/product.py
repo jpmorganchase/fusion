@@ -236,13 +236,13 @@ class Product(metaclass=CamelCaseMeta):
 
         Raises:
             TypeError: If the object provided is not a Product, dictionary, path to CSV file, JSON string,
-                or pandas Series.
+            or pandas Series.
 
         Returns:
             Product: Product object.
 
         Examples:
-            Instatiating a Product object from a dictionary:
+            Instantiating a Product object from a dictionary:
 
             >>> from fusion import Fusion
             >>> from fusion.product import Product
@@ -251,24 +251,24 @@ class Product(metaclass=CamelCaseMeta):
             ...     "identifier": "my_product",
             ...     "title": "My Product",
             ...     "category": "Data",
-            ...     "shortAbstract": "My product is awesome",
+            ...     "short_abstract": "My product is awesome",
             ...     "description": "My product is very awesome",
-            ...     "isActive": True,
-            ...     "isRestricted": False,
+            ...     "is_active": True,
+            ...     "is_restricted": False,
             ...     "maintainer": "My Company",
             ...     "region": "Global",
             ...     "publisher": "My Company",
-            ...     "subCategory": "Data",
+            ...     "sub_category": "Data",
             ...     "tag": "My Company",
-            ...     "deliveryChannel": "API",
+            ...     "delivery_channel": "API",
             ...     "theme": "Data",
-            ...     "releaseDate": "2021-01-01",
+            ...     "release_date": "2021-01-01",
             ...     "language": "English",
             ...     "status": "Available"
             ... }
             >>> product = fusion.product("my_product").from_object(product_dict)
 
-            Instatiating a Product object from a JSON string:
+            Instantiating a Product object from a JSON string:
 
             >>> from fusion import Fusion
             >>> from fusion.product import Product
@@ -277,31 +277,31 @@ class Product(metaclass=CamelCaseMeta):
             ...     "identifier": "my_product",
             ...     "title": "My Product",
             ...     "category": "Data",
-            ...     "shortAbstract": "My product is awesome",
+            ...     "short_abstract": "My product is awesome",
             ...     "description": "My product is very awesome",
-            ...     "isActive": True,
-            ...     "isRestricted": False,
+            ...     "is_active": True,
+            ...     "is_restricted": False,
             ...     "maintainer": "My Company",
             ...     "region": "Global",
             ...     "publisher": "My Company",
-            ...     "subCategory": "Data",
+            ...     "sub_category": "Data",
             ...     "tag": "My Company",
-            ...     "deliveryChannel": "API",
+            ...     "delivery_channel": "API",
             ...     "theme": "Data",
-            ...     "releaseDate": "2021-01-01",
+            ...     "release_date": "2021-01-01",
             ...     "language": "English",
             ...     "status": "Available",
             ... }'
             >>> product = fusion.product("my_product").from_object(product_json)
 
-            Instatiating a Product object from a CSV file:
+            Instantiating a Product object from a CSV file:
 
             >>> from fusion import Fusion
             >>> from fusion.product import Product
             >>> fusion = Fusion()
             >>> product = fusion.product("my_product").from_object("path/to/product.csv")
 
-            Instatiating a Product object from a pandas Series:
+            Instantiating a Product object from a pandas Series:
 
             >>> from fusion import Fusion
             >>> from fusion.product import Product
@@ -310,18 +310,18 @@ class Product(metaclass=CamelCaseMeta):
             ...     "identifier": "my_product",
             ...     "title": "My Product",
             ...     "category": "Data",
-            ...     "shortAbstract": "My product is awesome",
+            ...     "short_abstract": "My product is awesome",
             ...     "description": "My product is very awesome",
-            ...     "isActive": True,
-            ...     "isRestricted": False,
+            ...     "is_active": True,
+            ...     "is_restricted": False,
             ...     "maintainer": "My Company",
             ...     "region": "Global",
             ...     "publisher": "My Company",
-            ...     "subCategory": "Data",
+            ...     "sub_category": "Data",
             ...     "tag": "My Company",
-            ...     "deliveryChannel": "API",
+            ...     "delivery_channel": "API",
             ...     "theme": "Data",
-            ...     "releaseDate": "2021-01-01",
+            ...     "release_date": "2021-01-01",
             ...     "language": "English",
             ...     "status": "Available",
             ... })
@@ -420,7 +420,7 @@ class Product(metaclass=CamelCaseMeta):
             ...     identifer="my_product"
             ...     title="My Product",
             ...     category="Data",
-            ...     shortAbstract="My product is awesome",
+            ...     short_abstract="My product is awesome",
             ...     description="My product is very awesome",
             ...     )
             >>> product.create(catalog="my_catalog")
