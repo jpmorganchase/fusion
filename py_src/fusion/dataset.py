@@ -161,6 +161,16 @@ class Dataset:
         self.modified_date = convert_date_format(self.modified_date) if self.modified_date else None
         self.owners = self.owners if isinstance(self.owners, list) or self.owners is None else make_list(self.owners)
 
+    def __getattr__(self, name: str) -> Any:
+        """Access attributes with both camelCase and snake_case."""
+        # Convert camelCase access to snake_case if needed
+        if name in self.__dict__:
+            return self.__dict__[name]
+        snake_case_name = camel_to_snake(name)
+        if snake_case_name in self.__dict__:
+            return self.__dict__[snake_case_name]
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
     def set_client(self, client: Any) -> None:
         """Set the client for the Dataset. Set automatically, if the Dataset is instantiated from a Fusion object.
 
