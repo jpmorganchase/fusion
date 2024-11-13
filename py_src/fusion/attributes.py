@@ -9,7 +9,15 @@ import numpy as np
 import pandas as pd
 
 from fusion.fusion_types import Types
-from fusion.utils import convert_date_format, make_bool, requests_raise_for_status, tidy_string
+from fusion.utils import (
+    CamelCaseMeta,
+    camel_to_snake,
+    convert_date_format,
+    make_bool,
+    requests_raise_for_status,
+    snake_to_camel,
+    tidy_string,
+)
 
 if TYPE_CHECKING:
     import requests
@@ -18,53 +26,53 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class Attribute:
+class Attribute(metaclass=CamelCaseMeta):
     """Fusion Attribute class for managing attributes metadata in a Fusion catalog.
 
     Attributes:
         identifier (str): The unique identifier for the attribute.
         index (int): Attribute index.
-        dataType (str | Types, optional): Datatype of attribute. Defaults to "String".
+        data_type (str | Types, optional): Datatype of attribute. Defaults to "String".
         title (str, optional): Attribute title. If not provided, defaults to identifier.
         description (str, optional): Attribute description. If not provided, defaults to identifier.
-        isDatasetKey (bool, optional): Flag for primary keys. Defaults to False.
+        is_dataset_key (bool, optional): Flag for primary keys. Defaults to False.
         source (str | None, optional): Name of data vendor which provided the data. Defaults to None.
-        sourceFieldId (str | None, optional): Original identifier of attribute, if attribute has been renamed.
+        source_field_id (str | None, optional): Original identifier of attribute, if attribute has been renamed.
             If not provided, defaults to identifier.
-        isInternalDatasetKey (bool | None, optional): Flag for internal primary keys. Defaults to None.
-        isExternallyVisible (bool | None, optional): Flag for externally visible attributes. Defaults to True.
+        is_internal_dataset_key (bool | None, optional): Flag for internal primary keys. Defaults to None.
+        is_externally_visible (bool | None, optional): Flag for externally visible attributes. Defaults to True.
         unit (Any | None, optional): Unit of attribute. Defaults to None.
         multiplier (float, optional): Multiplier for unit. Defaults to 1.0.
-        isPropogationEligible (bool | None, optional): Flag for propogation eligibility. Defaults to None.
-        isMetric (bool | None, optional): Flag for attributes that are metrics. Defaults to None.
-        availableFrom (str | None, optional): Date from which the attribute is available. Defaults to None.
-        deprecatedFrom (str | None, optional): Date from which the attribute is deprecated. Defaults to None.
+        is_propogation_eligible (bool | None, optional): Flag for propogation eligibility. Defaults to None.
+        is_metric (bool | None, optional): Flag for attributes that are metrics. Defaults to None.
+        available_from (str | None, optional): Date from which the attribute is available. Defaults to None.
+        deprecated_from (str | None, optional): Date from which the attribute is deprecated. Defaults to None.
         term (str, optional): Term. Defaults to "bizterm1".
         dataset (int | None, optional): Dataset. Defaults to None.
-        attributeType (str | None, optional): Attribute type. Defaults to None.
+        attribute_type (str | None, optional): Attribute type. Defaults to None.
         _client (Fusion | None, optional): Fusion client object. Defaults to None.
 
     """
 
     identifier: str
     index: int
-    dataType: Types = cast(Types, Types.String)
+    data_type: Types = cast(Types, Types.String)
     title: str = ""
     description: str = ""
-    isDatasetKey: bool = False
+    is_dataset_key: bool = False
     source: str | None = None
-    sourceFieldId: str | None = None
-    isInternalDatasetKey: bool | None = None
-    isExternallyVisible: bool | None = True
+    source_field_id: str | None = None
+    is_internal_dataset_key: bool | None = None
+    is_externally_visible: bool | None = True
     unit: Any | None = None  # add units handling
     multiplier: float = 1.0
-    isPropogationEligible: bool | None = None
-    isMetric: bool | None = None
-    availableFrom: str | None = None
-    deprecatedFrom: str | None = None
+    is_propogation_eligible: bool | None = None
+    is_metric: bool | None = None
+    available_from: str | None = None
+    deprecated_from: str | None = None
     term: str = "bizterm1"
     dataset: int | None = None
-    attributeType: str | None = None
+    attribute_type: str | None = None
 
     _client: Fusion | None = None
 
@@ -96,17 +104,28 @@ class Attribute:
 
     def __post_init__(self: Attribute) -> None:
         """Format Attribute metadata fields after object initialization."""
-        self.isDatasetKey = make_bool(self.isDatasetKey)
+        self.is_dataset_key = make_bool(self.is_dataset_key)
         self.identifier = tidy_string(self.identifier).lower().replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description and self.description != "" else self.title
-        self.sourceFieldId = (
-            tidy_string(self.sourceFieldId).lower().replace(" ", "_") if self.sourceFieldId else self.identifier
+        self.source_field_id = (
+            tidy_string(self.source_field_id).lower().replace(" ", "_") if self.source_field_id else self.identifier
         )
-        self.availableFrom = convert_date_format(self.availableFrom) if self.availableFrom else None
-        self.deprecatedFrom = convert_date_format(self.deprecatedFrom) if self.deprecatedFrom else None
-        self.dataType = Types[str(self.dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
+        self.available_from = convert_date_format(self.available_from) if self.available_from else None
+        self.deprecated_from = convert_date_format(self.deprecated_from) if self.deprecated_from else None
+        self.data_type = Types[str(self.data_type).strip().rsplit(".", maxsplit=1)[-1].title()]
 
+    def __getattr__(self, name: str) -> Any:
+        # Redirect attribute access to the snake_case version
+        snake_name = camel_to_snake(name)
+        if snake_name in self.__dict__:
+            return self.__dict__[snake_name]
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        snake_name = camel_to_snake(name)
+        self.__dict__[snake_name] = value
+        
     @classmethod
     def _from_series(
         cls: type[Attribute],
@@ -138,46 +157,48 @@ class Attribute:
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower()).replace(
             to_replace=np.nan, value=None
         )
-        dataType = series.get("datatype", cast(Types, Types.String))
-        if dataType is None:
-            dataType = series.get("type", cast(Types, Types.String))
+        data_type = series.get("datatype", cast(Types, Types.String))
+        if data_type is None:
+            data_type = series.get("type", cast(Types, Types.String))
 
         source = series.get("source", None)
         source = source.strip() if isinstance(source, str) else source
 
-        isPropogationEligible = series.get("ispropogationeligible", None)
-        isPropogationEligible = (
-            make_bool(isPropogationEligible) if isPropogationEligible is not None else isPropogationEligible
+        is_propogation_eligible = series.get("ispropogationeligible", None)
+        is_propogation_eligible = (
+            make_bool(is_propogation_eligible) if is_propogation_eligible is not None else is_propogation_eligible
         )
-        isMetric = series.get("ismetric", None)
-        isMetric = make_bool(isMetric) if isMetric is not None else isMetric
-        isInternalDatasetKey = series.get("isinternaldatasetkey", None)
-        isInternalDatasetKey = (
-            make_bool(isInternalDatasetKey) if isInternalDatasetKey is not None else isInternalDatasetKey
+        is_metric = series.get("ismetric", None)
+        is_metric = make_bool(is_metric) if is_metric is not None else is_metric
+        is_internal_dataset_key = series.get("isinternaldatasetkey", None)
+        is_internal_dataset_key = (
+            make_bool(is_internal_dataset_key) if is_internal_dataset_key is not None else is_internal_dataset_key
         )
-        isExternallyVisible = series.get("isexternallyvisible", True)
-        isExternallyVisible = make_bool(isExternallyVisible) if isExternallyVisible is not None else isExternallyVisible
+        is_externally_visible = series.get("isexternallyvisible", True)
+        is_externally_visible = (
+            make_bool(is_externally_visible) if is_externally_visible is not None else is_externally_visible
+        )
 
         return cls(
             identifier=series.get("identifier", "").strip(),
             index=series.get("index", -1),
-            dataType=Types[dataType.strip().split(".")[-1].title()],
+            data_type=Types[data_type.strip().split(".")[-1].title()],
             title=series.get("title", ""),
             description=series.get("description", ""),
-            isDatasetKey=series.get("isdatasetkey", False),
+            is_dataset_key=series.get("isdatasetkey", False),
             source=source,
-            sourceFieldId=series.get("sourcefieldid", None),
-            isInternalDatasetKey=isInternalDatasetKey,
-            isExternallyVisible=isExternallyVisible,
+            source_field_id=series.get("sourcefieldid", None),
+            is_internal_dataset_key=is_internal_dataset_key,
+            is_externally_visible=is_externally_visible,
             unit=series.get("unit", None),
             multiplier=series.get("multiplier", 1.0),
-            isPropogationEligible=isPropogationEligible,
-            isMetric=isMetric,
-            availableFrom=series.get("availablefrom", None),
-            deprecatedFrom=series.get("deprecatedfrom", None),
+            is_propogation_eligible=is_propogation_eligible,
+            is_metric=is_metric,
+            available_from=series.get("availablefrom", None),
+            deprecated_from=series.get("deprecatedfrom", None),
             term=series.get("term", "bizterm1"),
             dataset=series.get("dataset", None),
-            attributeType=series.get("attributetype", None),
+            attribute_type=series.get("attributetype", None),
         )
 
     @classmethod
@@ -205,9 +226,10 @@ class Attribute:
 
         """
         keys = [f.name for f in fields(cls)]
+        data = {camel_to_snake(k): v for k, v in data.items()}
         data = {k: (None if pd.isna(v) else v) for k, v in data.items() if k in keys}
-        if "dataType" in data:
-            data["dataType"] = Types[data["dataType"].strip().rsplit(".", maxsplit=1)[-1].title()]
+        if "data_type" in data:
+            data["data_type"] = Types[data["data_type"].strip().rsplit(".", maxsplit=1)[-1].title()]
         return cls(**data)
 
     def from_object(
@@ -280,9 +302,9 @@ class Attribute:
             >>> attribute_dict = attribute.to_dict()
 
         """
-        result = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+        result = {snake_to_camel(k): v for k, v in self.__dict__.items() if not k.startswith("_")}
         result["unit"] = str(self.unit) if self.unit is not None else None
-        result["dataType"] = self.dataType.name
+        result["dataType"] = self.data_type.name
         return result
 
     def create(
