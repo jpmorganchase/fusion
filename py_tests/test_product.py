@@ -15,7 +15,7 @@ from fusion.product import Product
 
 def test_product_class() -> None:
     """Test the Product class."""
-    test_product = Product(title="Test Product", identifier="Test Product", releaseDate="May 5, 2020")
+    test_product = Product(title="Test Product", identifier="Test Product", release_date="May 5, 2020")
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
@@ -350,18 +350,18 @@ def test_create_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
         title="Test Product",
         identifier="TEST_PRODUCT",
         category=["category"],
-        shortAbstract="short abstract",
+        short_abstract="short abstract",
         description="description",
-        isActive=True,
-        isRestricted=False,
+        is_active=True,
+        is_restricted=False,
         maintainer=["maintainer"],
         region=["region"],
         publisher="publisher",
-        subCategory=["subCategory"],
+        sub_category=["subCategory"],
         tag=["tag1", "tag2"],
-        deliveryChannel=["API"],
+        delivery_channel=["API"],
         theme="theme",
-        releaseDate="2020-05-05",
+        release_date="2020-05-05",
         language="English",
         status="Available",
         image="",
@@ -404,18 +404,18 @@ def test_update_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
         title="Test Product",
         identifier="TEST_PRODUCT",
         category=["category"],
-        shortAbstract="short abstract",
+        short_abstract="short abstract",
         description="description",
-        isActive=True,
-        isRestricted=False,
+        is_active=True,
+        is_restricted=False,
         maintainer=["maintainer"],
         region=["region"],
         publisher="publisher",
-        subCategory=["subCategory"],
+        sub_category=["subCategory"],
         tag=["tag1", "tag2"],
-        deliveryChannel=["API"],
+        delivery_channel=["API"],
         theme="theme",
-        releaseDate="2020-05-05",
+        release_date="2020-05-05",
         language="English",
         status="Available",
         image="",
