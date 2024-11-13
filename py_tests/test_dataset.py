@@ -28,36 +28,36 @@ def test_dataset_class() -> None:
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
 
 
 def test_dataset_class_from_series() -> None:
@@ -80,36 +80,36 @@ def test_dataset_class_from_series() -> None:
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
 
 
 def test_dataset_class_from_dict() -> None:
@@ -130,36 +130,36 @@ def test_dataset_class_from_dict() -> None:
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
 
 
 def test_dataset_class_from_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
@@ -173,36 +173,36 @@ def test_dataset_class_from_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
 
 
 def test_dataset_class_from_object_dataset() -> None:
@@ -221,36 +221,36 @@ def test_dataset_class_from_object_dataset() -> None:
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
 
 
 def test_dataset_class_from_object_dict() -> None:
@@ -270,36 +270,36 @@ def test_dataset_class_from_object_dict() -> None:
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
 
 
 def test_dataset_class_from_object_json() -> None:
@@ -321,36 +321,36 @@ def test_dataset_class_from_object_json() -> None:
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
 
 
 def test_dataset_class_from_object_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
@@ -364,36 +364,36 @@ def test_dataset_class_from_object_csv(mock_dataset_pd_read_csv: Generator[pd.Da
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
 
 
 def test_dataset_class_from_object_series() -> None:
@@ -415,36 +415,36 @@ def test_dataset_class_from_object_series() -> None:
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
 
 
 def test_dataset_class_from_object_failure() -> None:
@@ -526,36 +526,36 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
     assert my_dataset.category == ["category"]
     assert my_dataset.description == "description"
     assert my_dataset.frequency == "Once"
-    assert my_dataset.isInternalOnlyDataset is False
-    assert my_dataset.isThirdPartyData is True
-    assert my_dataset.isRestricted is False
-    assert my_dataset.isRawData is True
+    assert my_dataset.is_internal_only_dataset is False
+    assert my_dataset.is_third_party_data is True
+    assert my_dataset.is_restricted is False
+    assert my_dataset.is_raw_data is True
     assert my_dataset.maintainer == "maintainer"
     assert my_dataset.source == ["source"]
     assert my_dataset.region == ["region"]
     assert my_dataset.publisher == "publisher"
     assert my_dataset.product == ["TEST_PRODUCT"]
-    assert my_dataset.subCategory == ["subCategory"]
+    assert my_dataset.sub_category == ["subCategory"]
     assert my_dataset.tags == ["tag1", "tag2"]
-    assert my_dataset.createdDate == "2020-05-05"
-    assert my_dataset.modifiedDate == "2020-05-05"
-    assert my_dataset.deliveryChannel == ["API"]
+    assert my_dataset.created_date == "2020-05-05"
+    assert my_dataset.modified_date == "2020-05-05"
+    assert my_dataset.delivery_channel == ["API"]
     assert my_dataset.language == "English"
     assert my_dataset.status == "Available"
     assert my_dataset.type_ == "Source"
-    assert my_dataset.containerType == "Snapshot-Full"
+    assert my_dataset.container_type == "Snapshot-Full"
     assert my_dataset.snowflake == "snowflake"
     assert my_dataset.complexity == "complexity"
-    assert my_dataset.isImmutable is False
-    assert my_dataset.isMnpi is False
-    assert my_dataset.isPii is False
-    assert my_dataset.isPci is False
-    assert my_dataset.isClient is False
-    assert my_dataset.isPublic is False
-    assert my_dataset.isInternal is False
-    assert my_dataset.isConfidential is False
-    assert my_dataset.isHighlyConfidential is False
-    assert my_dataset.isActive is False
+    assert my_dataset.is_immutable is False
+    assert my_dataset.is_mnpi is False
+    assert my_dataset.is_pii is False
+    assert my_dataset.is_pci is False
+    assert my_dataset.is_client is False
+    assert my_dataset.is_public is False
+    assert my_dataset.is_internal is False
+    assert my_dataset.is_confidential is False
+    assert my_dataset.is_highly_confidential is False
+    assert my_dataset.is_active is False
     assert isinstance(my_dataset._client, Fusion)
 
 
@@ -629,36 +629,36 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
     assert my_dataset.category == ["category"]
     assert my_dataset.description == "description"
     assert my_dataset.frequency == "Once"
-    assert my_dataset.isInternalOnlyDataset is False
-    assert my_dataset.isThirdPartyData is True
-    assert my_dataset.isRestricted is False
-    assert my_dataset.isRawData is True
+    assert my_dataset.is_internal_only_dataset is False
+    assert my_dataset.is_third_party_data is True
+    assert my_dataset.is_restricted is False
+    assert my_dataset.is_raw_data is True
     assert my_dataset.maintainer == "maintainer"
     assert my_dataset.source == ["source"]
     assert my_dataset.region == ["region"]
     assert my_dataset.publisher == "publisher"
     assert my_dataset.product is None
-    assert my_dataset.subCategory == ["subCategory"]
+    assert my_dataset.sub_category == ["subCategory"]
     assert my_dataset.tags == ["tag1", "tag2"]
-    assert my_dataset.createdDate == "2020-05-05"
-    assert my_dataset.modifiedDate == "2020-05-05"
-    assert my_dataset.deliveryChannel == ["API"]
+    assert my_dataset.created_date == "2020-05-05"
+    assert my_dataset.modified_date == "2020-05-05"
+    assert my_dataset.delivery_channel == ["API"]
     assert my_dataset.language == "English"
     assert my_dataset.status == "Available"
     assert my_dataset.type_ == "Source"
-    assert my_dataset.containerType == "Snapshot-Full"
+    assert my_dataset.container_type == "Snapshot-Full"
     assert my_dataset.snowflake == "snowflake"
     assert my_dataset.complexity == "complexity"
-    assert my_dataset.isImmutable is False
-    assert my_dataset.isMnpi is False
-    assert my_dataset.isPii is False
-    assert my_dataset.isPci is False
-    assert my_dataset.isClient is False
-    assert my_dataset.isPublic is False
-    assert my_dataset.isInternal is False
-    assert my_dataset.isConfidential is False
-    assert my_dataset.isHighlyConfidential is False
-    assert my_dataset.isActive is False
+    assert my_dataset.is_immutable is False
+    assert my_dataset.is_mnpi is False
+    assert my_dataset.is_pii is False
+    assert my_dataset.is_pci is False
+    assert my_dataset.is_client is False
+    assert my_dataset.is_public is False
+    assert my_dataset.is_internal is False
+    assert my_dataset.is_confidential is False
+    assert my_dataset.is_highly_confidential is False
+    assert my_dataset.is_active is False
 
 
 def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:

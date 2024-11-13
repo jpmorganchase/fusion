@@ -1011,36 +1011,36 @@ def test_fusion_dataset(fusion_obj: Fusion) -> None:
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
     assert test_dataset._client == fusion_obj
 
 

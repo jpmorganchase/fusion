@@ -8,7 +8,16 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from .utils import _is_json, convert_date_format, make_bool, make_list, requests_raise_for_status, tidy_string, camel_to_snake
+from .utils import (
+    _is_json,
+    camel_to_snake,
+    convert_date_format,
+    make_bool,
+    make_list,
+    requests_raise_for_status,
+    snake_to_camel,
+    tidy_string,
+)
 
 if TYPE_CHECKING:
     import requests
@@ -33,7 +42,7 @@ class Dataset:
         maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
         source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
         region (str | list[str] | None, optional): Region. Defaults to None.
-        publisher (str, optional): Name of vendor that publishes the data.. Defaults to "J.P. Morgan".
+        publisher (str, optional): Name of vendor that publishes the data. Defaults to "J.P. Morgan".
         product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
         sub_category (str | list[str] | None, optional): Sub-category. Defaults to None.
         tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
@@ -43,7 +52,7 @@ class Dataset:
         language (str, optional): Language. Defaults to "English".
         status (str, optional): Status. Defaults to "Available".
         type_ (str | None, optional): Dataset type. Defaults to "Source".
-        containerType (str | None, optional): Container type. Defaults to "Snapshot-Full".
+        container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
         snowflake (str | None, optional): Snowflake account connection. Defaults to None.
         complexity (str | None, optional): Complexity. Defaults to None.
         is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
@@ -57,7 +66,7 @@ class Dataset:
         is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
         is_active (bool | None, optional): is_active. Defaults to None.
         owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-        applicationId (str | None, optional): The application ID of the dataset. Defaults to None.
+        application_id (str | None, optional): The application ID of the dataset. Defaults to None.
         _client (Any, optional): A Fusion client object. Defaults to None.
 
     """
@@ -106,20 +115,11 @@ class Dataset:
         """Return an object representation of the Dataset object.
 
         Returns:
-            str: Object representaiton of the dataset.
+            str: Object representation of the dataset.
 
         """
         attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
         return f"Dataset(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
-
-    def __init__(self, identifier: str, **kwargs: Any) -> None:
-        """Initialize the Dataset object with kwargs."""
-        self.identifier = identifier
-        for key, value in kwargs.items():
-            snake_case_key = camel_to_snake(key)
-            setattr(self, snake_case_key, value)
-
-        self.__post_init__()
 
     def __post_init__(self: Dataset) -> None:
         """Format Dataset metadata fields after object initialization."""
@@ -192,73 +192,73 @@ class Dataset:
         series = series.rename({"type_": "type"})
         series = series.rename({"productId": "product"})
 
-        isInternalOnlyDataset = series.get("isinternalonlydataset", None)
-        isInternalOnlyDataset = (
-            make_bool(isInternalOnlyDataset) if isInternalOnlyDataset is not None else isInternalOnlyDataset
+        is_internal_only_dataset = series.get("isinternalonlydataset", None)
+        is_internal_only_dataset = (
+            make_bool(is_internal_only_dataset) if is_internal_only_dataset is not None else is_internal_only_dataset
         )
-        isRestricted = series.get("isrestricted", None)
-        isRestricted = make_bool(isRestricted) if isRestricted is not None else isRestricted
-        isImmutable = series.get("isimmutable", None)
-        isImmutable = make_bool(isImmutable) if isImmutable is not None else isImmutable
-        isMnpi = series.get("ismnpi", None)
-        isMnpi = make_bool(isMnpi) if isMnpi is not None else isMnpi
-        isPci = series.get("ispci", None)
-        isPci = make_bool(isPci) if isPci is not None else isPci
-        isPii = series.get("ispii", None)
-        isPii = make_bool(isPii) if isPii is not None else isPii
-        isClient = series.get("isclient", None)
-        isClient = make_bool(isClient) if isClient is not None else isClient
-        isPublic = series.get("ispublic", None)
-        isPublic = make_bool(isPublic) if isPublic is not None else isPublic
-        isInternal = series.get("isinternal", None)
-        isInternal = make_bool(isInternal) if isInternal is not None else isInternal
-        isConfidential = series.get("isconfidential", None)
-        isConfidential = make_bool(isConfidential) if isConfidential is not None else isConfidential
-        isHighlyConfidential = series.get("ishighlyconfidential", None)
-        isHighlyConfidential = (
-            make_bool(isHighlyConfidential) if isHighlyConfidential is not None else isHighlyConfidential
+        is_restricted = series.get("isrestricted", None)
+        is_restricted = make_bool(is_restricted) if is_restricted is not None else is_restricted
+        is_immutable = series.get("isimmutable", None)
+        is_immutable = make_bool(is_immutable) if is_immutable is not None else is_immutable
+        is_mnpi = series.get("ismnpi", None)
+        is_mnpi = make_bool(is_mnpi) if is_mnpi is not None else is_mnpi
+        is_pci = series.get("ispci", None)
+        is_pci = make_bool(is_pci) if is_pci is not None else is_pci
+        is_pii = series.get("ispii", None)
+        is_pii = make_bool(is_pii) if is_pii is not None else is_pii
+        is_client = series.get("isclient", None)
+        is_client = make_bool(is_client) if is_client is not None else is_client
+        is_public = series.get("ispublic", None)
+        is_public = make_bool(is_public) if is_public is not None else is_public
+        is_internal = series.get("isinternal", None)
+        is_internal = make_bool(is_internal) if is_internal is not None else is_internal
+        is_confidential = series.get("isconfidential", None)
+        is_confidential = make_bool(is_confidential) if is_confidential is not None else is_confidential
+        is_highly_confidential = series.get("ishighlyconfidential", None)
+        is_highly_confidential = (
+            make_bool(is_highly_confidential) if is_highly_confidential is not None else is_highly_confidential
         )
-        isActive = series.get("isactive", None)
-        isActive = make_bool(isActive) if isActive is not None else isActive
+        is_active = series.get("isactive", None)
+        is_active = make_bool(is_active) if is_active is not None else is_active
 
         dataset = cls(
             identifier=series.get("identifier", ""),
             category=series.get("category", None),
-            deliveryChannel=series.get("deliverychannel", ["API"]),
+            delivery_channel=series.get("deliverychannel", ["API"]),
             title=series.get("title", ""),
             description=series.get("description", ""),
             frequency=series.get("frequency", "Once"),
-            isInternalOnlyDataset=isInternalOnlyDataset,  # type: ignore
-            isThirdPartyData=series.get("isthirdpartydata", True),
-            isRestricted=isRestricted,
-            isRawData=series.get("israwdata", True),
+            is_internal_only_dataset=is_internal_only_dataset,  # type: ignore
+            is_third_party_data=series.get("isthirdpartydata", True),
+            is_restricted=is_restricted,
+            is_raw_data=series.get("israwdata", True),
             maintainer=series.get("maintainer", "J.P. Morgan Fusion"),
             source=series.get("source", None),
             region=series.get("region", None),
             publisher=series.get("publisher", "J.P. Morgan"),
             product=series.get("product", None),
-            subCategory=series.get("subcategory", None),
+            sub_category=series.get("subcategory", None),
             tags=series.get("tags", None),
-            containerType=series.get("containertype", "Snapshot-Full"),
+            container_type=series.get("containertype", "Snapshot-Full"),
             language=series.get("language", "English"),
             status=series.get("status", "Available"),
             type_=series.get("type", "Source"),
-            createdDate=series.get("createddate", None),
-            modifiedDate=series.get("modifieddate", None),
+            created_date=series.get("createddate", None),
+            modified_date=series.get("modifieddate", None),
             snowflake=series.get("snowflake", None),
             complexity=series.get("complexity", None),
             owners=series.get("owners", None),
-            applicationId=series.get("applicationid", None),
-            isImmutable=isImmutable,
-            isMnpi=isMnpi,
-            isPci=isPci,
-            isPii=isPii,
-            isClient=isClient,
-            isPublic=isPublic,
-            isInternal=isInternal,
-            isConfidential=isConfidential,
-            isHighlyConfidential=isHighlyConfidential,
-            isActive=isActive,
+            application_id=series.get("applicationid", None),
+            is_immutable=is_immutable,
+            is_mnpi=is_mnpi,
+            is_pci=is_pci,
+            is_pii=is_pii,
+            is_client=is_client,
+            is_public=is_public,
+            is_internal=is_internal,
+            is_confidential=is_confidential,
+            is_highly_confidential=is_highly_confidential,
+            is_active=is_active,
         )
         return dataset
 
@@ -275,6 +275,7 @@ class Dataset:
         """
         keys = [f.name for f in fields(cls)]
         keys = ["type" if key == "type_" else key for key in keys]
+        data = {camel_to_snake(k): v for k, v in data.items()}
         data = {k: v for k, v in data.items() if k in keys}
         if "type" in data:
             data["type_"] = data.pop("type")
@@ -444,9 +445,12 @@ class Dataset:
             >>> dataset_dict = dataset.to_dict()
 
         """
-        dataset_dict = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+        dataset_dict = {
+            snake_to_camel(k): v
+            for k, v in self.__dict__.items()
+            if not k.startswith("_")
+        }
 
-        dataset_dict["type"] = dataset_dict.pop("type_")
         return dataset_dict
 
     def create(
@@ -545,9 +549,8 @@ class Dataset:
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
 
-        self.createdDate = self.createdDate if self.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
-
-        self.modifiedDate = self.modifiedDate if self.modifiedDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+        self.created_date = self.created_date if self.created_date else pd.Timestamp("today").strftime("%Y-%m-%d")
+        self.modified_date = self.modified_date if self.modified_date else pd.Timestamp("today").strftime("%Y-%m-%d")
 
         data = self.to_dict()
 
@@ -586,8 +589,8 @@ class Dataset:
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
 
-        self.createdDate = self.createdDate if self.createdDate else pd.Timestamp("today").strftime("%Y-%m-%d")
-        self.modifiedDate = self.modifiedDate if self.modifiedDate else pd.Timestamp("today").strftime("%Y-%m-%d")
+        self.created_date = self.created_date if self.created_date else pd.Timestamp("today").strftime("%Y-%m-%d")
+        self.modified_date = self.modified_date if self.modified_date else pd.Timestamp("today").strftime("%Y-%m-%d")
 
         data = self.to_dict()
 
