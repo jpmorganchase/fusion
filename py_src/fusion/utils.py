@@ -854,7 +854,7 @@ def upload_files(  # noqa: PLR0913
 
 def camel_to_snake(name: str) -> str:
     """Convert camelCase to snake_case."""
-    s1 = re.sub(re_str_1, name)
+    s1 = re.sub(re_str_1, r"\1_\2", name)
     return re.sub(re_str_2, r"\1_\2", s1).lower()
 
 
