@@ -36,7 +36,7 @@ def test_attribute_class() -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -72,7 +72,7 @@ def test_attribute_class_from_series() -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -106,7 +106,7 @@ def test_attribute_class_from_dict() -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -140,7 +140,7 @@ def test_attribute_class_from_object_dict() -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -176,7 +176,7 @@ def test_attribute_class_from_object_series() -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -208,7 +208,7 @@ def test_attribute_class_to_dict() -> None:
         "unit": None,
         "multiplier": 1.0,
         "isMetric": None,
-        "isPropogationEligible": None,
+        "isPropagationEligible": None,
         "availableFrom": "2020-05-05",
         "deprecatedFrom": None,
         "term": "bizterm1",
@@ -238,7 +238,7 @@ def test_attribute_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
         "unit": None,
         "multiplier": 1.0,
         "isMetric": None,
-        "isPropogationEligible": None,
+        "isPropagationEligible": None,
         "availableFrom": "2020-05-05",
         "deprecatedFrom": None,
         "term": "bizterm1",
@@ -322,7 +322,7 @@ def test_attributes_class() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -374,7 +374,7 @@ def test_attributes_add_attribute() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -451,7 +451,7 @@ def test_attributes_to_dict() -> None:
                 "unit": None,
                 "multiplier": 1.0,
                 "isMetric": None,
-                "isPropogationEligible": None,
+                "isPropagationEligible": None,
                 "availableFrom": "2020-05-05",
                 "deprecatedFrom": None,
                 "term": "bizterm1",
@@ -491,7 +491,7 @@ def test_attributes_from_dict_list() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -525,7 +525,7 @@ def test_attributes_from_dataframe() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -561,7 +561,7 @@ def test_attributes_from_object_list_dict() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -595,7 +595,7 @@ def test_attributes_from_object_dataframe() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -632,7 +632,7 @@ def test_attributes_to_dataframe() -> None:
     assert test_df["unit"].iloc[0] is None
     assert test_df["multiplier"].iloc[0] == 1.0
     assert test_df["isMetric"].iloc[0] is None
-    assert test_df["isPropogationEligible"].iloc[0] is None
+    assert test_df["isPropagationEligible"].iloc[0] is None
     assert test_df["availableFrom"].iloc[0] == "2020-05-05"
     assert test_df["deprecatedFrom"].iloc[0] is None
     assert test_df["term"].iloc[0] == "bizterm1"
@@ -658,7 +658,7 @@ def test_attributes_to_dataframe_empty() -> None:
     assert test_df["unit"].iloc[0] is None
     assert test_df["multiplier"].iloc[0] == 1.0
     assert test_df["isMetric"].iloc[0] is None
-    assert test_df["isPropogationEligible"].iloc[0] is None
+    assert test_df["isPropagationEligible"].iloc[0] is None
     assert test_df["availableFrom"].iloc[0] is None
     assert test_df["deprecatedFrom"].iloc[0] is None
     assert test_df["term"].iloc[0] == "bizterm1"
@@ -699,7 +699,7 @@ def test_attributes_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -729,7 +729,7 @@ def test_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
                 "unit": None,
                 "multiplier": 1.0,
                 "isMetric": None,
-                "isPropogationEligible": None,
+                "isPropagationEligible": None,
                 "availableFrom": "2020-05-05",
                 "deprecatedFrom": None,
                 "term": "bizterm1",

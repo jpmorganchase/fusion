@@ -1069,7 +1069,7 @@ def test_fusion_attribute(fusion_obj: Fusion) -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -1107,7 +1107,7 @@ def test_fusion_attributes(fusion_obj: Fusion) -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -1279,7 +1279,7 @@ def test_fusion_create_attributes(requests_mock: requests_mock.Mocker, fusion_ob
                 "unit": None,
                 "multiplier": 1.0,
                 "isMetric": None,
-                "isPropogationEligible": None,
+                "isPropagationEligible": None,
                 "availableFrom": "2020-05-05",
                 "deprecatedFrom": None,
                 "term": "bizterm1",

@@ -43,7 +43,7 @@ class Attribute(metaclass=CamelCaseMeta):
         is_externally_visible (bool | None, optional): Flag for externally visible attributes. Defaults to True.
         unit (Any | None, optional): Unit of attribute. Defaults to None.
         multiplier (float, optional): Multiplier for unit. Defaults to 1.0.
-        is_propogation_eligible (bool | None, optional): Flag for propogation eligibility. Defaults to None.
+        is_propagation_eligible (bool | None, optional): Flag for propagation eligibility. Defaults to None.
         is_metric (bool | None, optional): Flag for attributes that are metrics. Defaults to None.
         available_from (str | None, optional): Date from which the attribute is available. Defaults to None.
         deprecated_from (str | None, optional): Date from which the attribute is deprecated. Defaults to None.
@@ -66,7 +66,7 @@ class Attribute(metaclass=CamelCaseMeta):
     is_externally_visible: bool | None = True
     unit: Any | None = None  # add units handling
     multiplier: float = 1.0
-    is_propogation_eligible: bool | None = None
+    is_propagation_eligible: bool | None = None
     is_metric: bool | None = None
     available_from: str | None = None
     deprecated_from: str | None = None
@@ -164,9 +164,9 @@ class Attribute(metaclass=CamelCaseMeta):
         source = series.get("source", None)
         source = source.strip() if isinstance(source, str) else source
 
-        is_propogation_eligible = series.get("ispropogationeligible", None)
-        is_propogation_eligible = (
-            make_bool(is_propogation_eligible) if is_propogation_eligible is not None else is_propogation_eligible
+        is_propagation_eligible = series.get("ispropagationeligible", None)
+        is_propagation_eligible = (
+            make_bool(is_propagation_eligible) if is_propagation_eligible is not None else is_propagation_eligible
         )
         is_metric = series.get("ismetric", None)
         is_metric = make_bool(is_metric) if is_metric is not None else is_metric
@@ -192,7 +192,7 @@ class Attribute(metaclass=CamelCaseMeta):
             is_externally_visible=is_externally_visible,
             unit=series.get("unit", None),
             multiplier=series.get("multiplier", 1.0),
-            is_propogation_eligible=is_propogation_eligible,
+            is_propagation_eligible=is_propagation_eligible,
             is_metric=is_metric,
             available_from=series.get("availablefrom", None),
             deprecated_from=series.get("deprecatedfrom", None),

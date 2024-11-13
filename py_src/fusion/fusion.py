@@ -1531,18 +1531,18 @@ class Fusion:
         identifier: str,
         title: str = "",
         category: str | list[str] | None = None,
-        shortAbstract: str = "",
+        short_abstract: str = "",
         description: str = "",
-        isActive: bool = True,
-        isRestricted: bool | None = None,
+        is_active: bool = True,
+        is_restricted: bool | None = None,
         maintainer: str | list[str] | None = None,
         region: str | list[str] | None = None,
         publisher: str | None = None,
-        subCategory: str | list[str] | None = None,
+        sub_category: str | list[str] | None = None,
         tag: str | list[str] | None = None,
-        deliveryChannel: str | list[str] = "API",
+        delivery_channel: str | list[str] = "API",
         theme: str | None = None,
-        releaseDate: str | None = None,
+        release_date: str | None = None,
         language: str = "English",
         status: str = "Available",
         image: str = "",
@@ -1556,20 +1556,20 @@ class Fusion:
             identifier (str): Product identifier.
             title (str, optional): Product title. If not provided, defaults to identifier.
             category (str | list[str] | None, optional): Category. Defaults to None.
-            shortAbstract (str, optional): Short description. Defaults to "".
+            short_abstract (str, optional): Short description. Defaults to "".
             description (str, optional): Description. If not provided, defaults to identifier.
-            isActive (bool, optional): Boolean for Active status. Defaults to True.
-            isRestricted (bool | None, optional): Flag for restricted products. Defaults to None.
+            is_active (bool, optional): Boolean for Active status. Defaults to True.
+            is_restricted (bool | None, optional): Flag for restricted products. Defaults to None.
             maintainer (str | list[str] | None, optional): Product maintainer. Defaults to None.
             region (str | list[str] | None, optional): Product region. Defaults to None.
             publisher (str | None, optional): Name of vendor that publishes the data. Defaults to None.
-            subCategory (str | list[str] | None, optional): Product sub-category. Defaults to None.
+            sub_category (str | list[str] | None, optional): Product sub-category. Defaults to None.
             tag (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
-            deliveryChannel (str | list[str], optional): Product delivery channel. Defaults to "API".
+            delivery_channel (str | list[str], optional): Product delivery channel. Defaults to "API".
             theme (str | None, optional): Product theme. Defaults to None.
-            releaseDate (str | None, optional): Product release date. Defaults to None.
+            release_date (str | None, optional): Product release date. Defaults to None.
             language (str, optional): Product language. Defaults to "English".
-            status (str, optional): product status. Defaults to "Available".
+            status (str, optional): Product status. Defaults to "Available".
             image (str, optional): Product image. Defaults to "".
             logo (str, optional): Product logo. Defaults to "".
             dataset (str | list[str] | None, optional): Product datasets. Defaults to None.
@@ -1589,18 +1589,18 @@ class Fusion:
             identifier=identifier,
             title=title,
             category=category,
-            shortAbstract=shortAbstract,
+            short_abstract=short_abstract,
             description=description,
-            isActive=isActive,
-            isRestricted=isRestricted,
+            is_active=is_active,
+            is_restricted=is_restricted,
             maintainer=maintainer,
             region=region,
             publisher=publisher,
-            subCategory=subCategory,
+            sub_category=sub_category,
             tag=tag,
-            deliveryChannel=deliveryChannel,
+            delivery_channel=delivery_channel,
             theme=theme,
-            releaseDate=releaseDate,
+            release_date=release_date,
             language=language,
             status=status,
             image=image,
@@ -1658,41 +1658,41 @@ class Fusion:
             identifier (str): Dataset identifier.
             title (str, optional): Dataset title. If not provided, defaults to identifier.
             category (str | list[str] | None, optional): A category or list of categories for the dataset.
-                Defaults to None.
+            Defaults to None.
             description (str, optional): Dataset description. If not provided, defaults to identifier.
             frequency (str, optional): The frequency of the dataset. Defaults to "Once".
-            isInternalOnlyDataset (bool, optional): Flag for internal datasets. Defaults to False.
-            isThirdPartyData (bool, optional): Flag for third party data. Defaults to True.
-            isRestricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
-            isRawData (bool, optional): Flag for raw datasets. Defaults to True.
+            is_internal_only_dataset (bool, optional): Flag for internal datasets. Defaults to False.
+            is_third_party_data (bool, optional): Flag for third party data. Defaults to True.
+            is_restricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
+            is_raw_data (bool, optional): Flag for raw datasets. Defaults to True.
             maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
             source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
             region (str | list[str] | None, optional): Region. Defaults to None.
-            publisher (str, optional): Name of vendor that publishes the data.. Defaults to "J.P. Morgan".
+            publisher (str, optional): Name of vendor that publishes the data. Defaults to "J.P. Morgan".
             product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
-            subCategory (str | list[str] | None, optional): Sub-category. Defaults to None.
+            sub_category (str | list[str] | None, optional): Sub-category. Defaults to None.
             tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
-            createdDate (str | None, optional): Created date. Defaults to None.
-            modifiedDate (str | None, optional): Modified date. Defaults to None.
-            deliveryChannel (str | list[str], optional): Delivery channel. Defaults to "API".
+            created_date (str | None, optional): Created date. Defaults to None.
+            modified_date (str | None, optional): Modified date. Defaults to None.
+            delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
             language (str, optional): Language. Defaults to "English".
             status (str, optional): Status. Defaults to "Available".
             type_ (str | None, optional): Dataset type. Defaults to "Source".
-            containerType (str | None, optional): Container type. Defaults to "Snapshot-Full".
+            container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
             snowflake (str | None, optional): Snowflake account connection. Defaults to None.
-            complexity (str | None, optional): Complecist. Defaults to None.
-            isImmutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
-            isMnpi (bool | None, optional): isMnpi. Defaults to None.
-            isPci (bool | None, optional): isPci. Defaults to None.
-            isPii (bool | None, optional): isPii. Defaults to None.
-            isClient (bool | None, optional): isClient. Defaults to None.
-            isPublic (bool | None, optional): isPublic. Defaults to None.
-            isInternal (bool | None, optional): IsInternal. Defaults to None.
-            isConfidential (bool | None, optional): IsConfidential. Defaults to None.
-            isHighlyConfidential (bool | None, optional): isHighlyConfidential. Defaults to None.
-            isActive (bool | None, optional): isActive. Defaults to None.
+            complexity (str | None, optional): Complexity. Defaults to None.
+            is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
+            is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
+            is_pci (bool | None, optional): is_pci. Defaults to None.
+            is_pii (bool | None, optional): is_pii. Defaults to None.
+            is_client (bool | None, optional): is_client. Defaults to None.
+            is_public (bool | None, optional): is_public. Defaults to None.
+            is_internal (bool | None, optional): is_internal. Defaults to None.
+            is_confidential (bool | None, optional): is_confidential. Defaults to None.
+            is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
+            is_active (bool | None, optional): is_active. Defaults to None.
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-            applicationId (str | None, optional): The application ID of the dataset. Defaults to None.
+            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
 
         Returns:
             Dataset: Fusion Dataset class.
@@ -1753,23 +1753,23 @@ class Fusion:
         self,
         identifier: str,
         index: int,
-        dataType: str | Types = "String",
+        data_type: str | Types = "String",
         title: str = "",
         description: str = "",
-        isDatasetKey: bool = False,
+        is_dataset_key: bool = False,
         source: str | None = None,
-        sourceFieldId: str | None = None,
-        isInternalDatasetKey: bool | None = None,
-        isExternallyVisible: bool | None = True,
+        source_field_id: str | None = None,
+        is_internal_dataset_key: bool | None = None,
+        is_externally_visible: bool | None = True,
         unit: Any | None = None,
         multiplier: float = 1.0,
-        isPropogationEligible: bool | None = None,
-        isMetric: bool | None = None,
-        availableFrom: str | None = None,
-        deprecatedFrom: str | None = None,
+        is_propagation_eligible: bool | None = None,
+        is_metric: bool | None = None,
+        available_from: str | None = None,
+        deprecated_from: str | None = None,
         term: str = "bizterm1",
         dataset: int | None = None,
-        attributeType: str | None = None,
+        attribute_type: str | None = None,
         **kwargs: Any,
     ) -> Attribute:
         """Instantiate an Attribute object with this client for metadata creation.
@@ -1777,24 +1777,24 @@ class Fusion:
         Args:
             identifier (str): The unique identifier for the attribute.
             index (int): Attribute index.
-            dataType (str | Types, optional): Datatype of attribute. Defaults to "String".
+            data_type (str | Types, optional): Datatype of attribute. Defaults to "String".
             title (str, optional): Attribute title. If not provided, defaults to identifier.
             description (str, optional): Attribute description. If not provided, defaults to identifier.
-            isDatasetKey (bool, optional): Flag for primary keys. Defaults to False.
+            is_dataset_key (bool, optional): Flag for primary keys. Defaults to False.
             source (str | None, optional): Name of data vendor which provided the data. Defaults to None.
-            sourceFieldId (str | None, optional): Original identifier of attribute, if attribute has been renamed.
+            source_field_id (str | None, optional): Original identifier of attribute, if attribute has been renamed.
                 If not provided, defaults to identifier.
-            isInternalDatasetKey (bool | None, optional): Flag for internal primary keys. Defaults to None.
-            isExternallyVisible (bool | None, optional): Flag for externally visible attributes. Defaults to True.
+            is_internal_dataset_key (bool | None, optional): Flag for internal primary keys. Defaults to None.
+            is_externally_visible (bool | None, optional): Flag for externally visible attributes. Defaults to True.
             unit (Any | None, optional): Unit of attribute. Defaults to None.
             multiplier (float, optional): Multiplier for unit. Defaults to 1.0.
-            isPropogationEligible (bool | None, optional): Flag for propogation eligibility. Defaults to None.
-            isMetric (bool | None, optional): Flag for attributes that are metrics. Defaults to None.
-            availableFrom (str | None, optional): Date from which the attribute is available. Defaults to None.
-            deprecatedFrom (str | None, optional): Date from which the attribute is deprecated. Defaults to None.
+            is_propagation_eligible (bool | None, optional): Flag for propagation eligibility. Defaults to None.
+            is_metric (bool | None, optional): Flag for attributes that are metrics. Defaults to None.
+            available_from (str | None, optional): Date from which the attribute is available. Defaults to None.
+            deprecated_from (str | None, optional): Date from which the attribute is deprecated. Defaults to None.
             term (str, optional): Term. Defaults to "bizterm1".
             dataset (int | None, optional): Dataset. Defaults to None.
-            attributeType (str | None, optional): Attribute type. Defaults to None.
+            attribute_type (str | None, optional): Attribute type. Defaults to None.
 
         Returns:
             Attribute: Fusion Attribute class.
@@ -1808,27 +1808,27 @@ class Fusion:
             See the attributes module for more information on functionalities of attribute objects.
 
         """
-        dataType = Types[str(dataType).strip().rsplit(".", maxsplit=1)[-1].title()]
+        data_type = Types[str(data_type).strip().rsplit(".", maxsplit=1)[-1].title()]
         attribute_obj = Attribute(
             identifier=identifier,
             index=index,
-            dataType=dataType,
+            data_type=data_type,
             title=title,
             description=description,
-            isDatasetKey=isDatasetKey,
+            is_dataset_key=is_dataset_key,
             source=source,
-            sourceFieldId=sourceFieldId,
-            isInternalDatasetKey=isInternalDatasetKey,
-            isExternallyVisible=isExternallyVisible,
+            source_field_id=source_field_id,
+            is_internal_dataset_key=is_internal_dataset_key,
+            is_externally_visible=is_externally_visible,
             unit=unit,
             multiplier=multiplier,
-            isPropogationEligible=isPropogationEligible,
-            isMetric=isMetric,
-            availableFrom=availableFrom,
-            deprecatedFrom=deprecatedFrom,
+            is_propagation_eligible=is_propagation_eligible,
+            is_metric=is_metric,
+            available_from=available_from,
+            deprecated_from=deprecated_from,
             term=term,
             dataset=dataset,
-            attributeType=attributeType,
+            attribute_type=attribute_type,
             **kwargs,
         )
         attribute_obj.set_client(self)
