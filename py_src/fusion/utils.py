@@ -855,6 +855,51 @@ def camel_to_snake(name: str) -> str:
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
+class CamelCaseMeta(type):
+    """Metaclass to support both snake and camel case typing."""
+
+    # def __new__(cls: Any, name: str, bases: Any, dct: dict[str, str]) -> Any:
+    #     new_class = super().__new__(cls, name, bases, dct)
+
+    #     for attr_name in dct:
+    #         if not attr_name.startswith("_"):
+    #             camel_case_name = snake_to_camel(attr_name)
+    #             setattr(
+    #                 new_class,
+    #                 camel_case_name,
+    #                 property(
+    #                     lambda self, attr_name=attr_name: getattr(self, attr_name),
+    #                     lambda self, value, attr_name=attr_name: setattr(self, attr_name, value),
+    #                 ),
+    #             )
+    #     return new_class
+    
+    def __new__(cls: Any, name: str, bases: Any, dct: dict[str, str]) -> Any:
+        # Convert class attributes and annotations to snake_case
+        new_namespace = {}
+        annotations = dct.get('__annotations__', {})
+        new_annotations = {}
+        for attr_name, attr_value in dct.items():
+            if not attr_name.startswith('__'):
+                snake_name = camel_to_snake(attr_name)
+                new_namespace[snake_name] = attr_value
+            else:
+                new_namespace[attr_name] = attr_value
+        for anno_name, anno_type in annotations.items():
+            snake_name = camel_to_snake(anno_name)
+            new_annotations[snake_name] = anno_type
+        new_namespace['__annotations__'] = new_annotations
+
+        # Create the new class with the modified namespace
+        cls = super().__new__(cls, name, bases, new_namespace)
+        return cls
+
+    def __call__(cls, *args, **kwargs) -> Any:
+        # Convert keyword arguments to snake_case before initialization
+        snake_kwargs = {camel_to_snake(k): v for k, v in kwargs.items()}
+        return super().__call__(*args, **snake_kwargs)
+
+
 def snake_to_camel(name: str) -> str:
     """Convert snake_case to camelCase."""
     components = name.lower().split("_")

@@ -17,6 +17,7 @@ from .utils import (
     requests_raise_for_status,
     snake_to_camel,
     tidy_string,
+    CamelCaseMeta
 )
 
 if TYPE_CHECKING:
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class Dataset:
+class Dataset(metaclass=CamelCaseMeta):
     """Fusion Dataset class for managing dataset metadata in a Fusion catalog.
 
     Attributes:
@@ -162,14 +163,18 @@ class Dataset:
         self.owners = self.owners if isinstance(self.owners, list) or self.owners is None else make_list(self.owners)
 
     def __getattr__(self, name: str) -> Any:
-        """Access attributes with both camelCase and snake_case."""
-        # Convert camelCase access to snake_case if needed
-        if name in self.__dict__:
-            return self.__dict__[name]
-        snake_case_name = camel_to_snake(name)
-        if snake_case_name in self.__dict__:
-            return self.__dict__[snake_case_name]
+        # Redirect attribute access to the snake_case version
+        snake_name = camel_to_snake(name)
+        if snake_name in self.__dict__:
+            return self.__dict__[snake_name]
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        # Set both snake_case and CamelCase attributes
+        snake_name = camel_to_snake(name)
+        self.__dict__[snake_name] = value
+        camel_name = ''.join(word.capitalize() if i != 0 else word for i, word in enumerate(snake_name.split('_')))
+        self.__dict__[camel_name] = value
 
     def set_client(self, client: Any) -> None:
         """Set the client for the Dataset. Set automatically, if the Dataset is instantiated from a Fusion object.
