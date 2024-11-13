@@ -1086,9 +1086,9 @@ def test_fusion_attributes(fusion_obj: Fusion) -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=Types.String,
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=Types.String,
+                available_from="May 5, 2020",
             )
         ]
     )

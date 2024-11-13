@@ -17,9 +17,9 @@ def test_attribute_class() -> None:
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     assert str(test_attribute)
     assert repr(test_attribute)
@@ -190,9 +190,9 @@ def test_attribute_class_to_dict() -> None:
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     assert test_attribute.to_dict() == {
         "title": "Test Attribute",
@@ -252,9 +252,9 @@ def test_attribute_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     resp = test_attribute.create(client=fusion_obj, catalog=catalog, dataset=dataset, return_resp_obj=True)
     status_code = 200
@@ -287,9 +287,9 @@ def test_attribute_class_set_client(fusion_obj: Fusion) -> None:
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     test_attribute.set_client(fusion_obj)
     assert test_attribute._client is not None
@@ -302,9 +302,9 @@ def test_attributes_class() -> None:
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     test_attributes = Attributes([test_attribute])
     assert str(test_attributes)
@@ -338,9 +338,9 @@ def test_attributes_class_set_client(fusion_obj: Fusion) -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -356,9 +356,9 @@ def test_attributes_add_attribute() -> None:
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     test_attributes.add_attribute(test_attribute)
     assert test_attributes.attributes[0].title == "Test Attribute"
@@ -390,9 +390,9 @@ def test_attributes_remove_attributes() -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -408,9 +408,9 @@ def test_attributes_get_attribute() -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -427,9 +427,9 @@ def test_attributes_to_dict() -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -611,9 +611,9 @@ def test_attributes_to_dataframe() -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -747,9 +747,9 @@ def test_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
