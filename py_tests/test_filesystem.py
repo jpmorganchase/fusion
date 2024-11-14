@@ -1,3 +1,4 @@
+from calendar import c
 import io
 import json
 from pathlib import Path
@@ -115,11 +116,16 @@ async def test_isdir_false(http_fs_instance: FusionHTTPFileSystem) -> None:
 
 
 @patch("requests.Session")
-def test_stream_single_file(mock_session_class: MagicMock) -> None:
+def test_stream_single_file(mock_session_class: MagicMock, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
     url = "http://example.com/data"
     output_file = MagicMock(spec=fsspec.spec.AbstractBufferedFile)
     output_file.path = "./output_file_path/file.txt"
     output_file.name = "file.txt"
+
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
+    creds = FusionCredentials.from_file(credentials_file)
 
     # Create a mock response object with the necessary context manager methods
     mock_response = MagicMock()
@@ -136,7 +142,7 @@ def test_stream_single_file(mock_session_class: MagicMock) -> None:
     mock_session_class.return_value = mock_session
 
     # Create an instance of FusionHTTPFileSystem
-    http_fs_instance = FusionHTTPFileSystem()
+    http_fs_instance = FusionHTTPFileSystem(credentials=creds)
     http_fs_instance.sync_session = mock_session
 
     # Run the function
@@ -148,7 +154,7 @@ def test_stream_single_file(mock_session_class: MagicMock) -> None:
 
 
 @patch("requests.Session")
-def test_stream_single_file_exception(mock_session_class: MagicMock) -> None:
+def test_stream_single_file_exception(mock_session_class: MagicMock, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
     url = "http://example.com/data"
     output_file = MagicMock(spec=fsspec.spec.AbstractBufferedFile)
     output_file.path = "./output_file_path/file.txt"
@@ -168,8 +174,13 @@ def test_stream_single_file_exception(mock_session_class: MagicMock) -> None:
     mock_session.get.return_value = mock_response
     mock_session_class.return_value = mock_session
 
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
+    creds = FusionCredentials.from_file(credentials_file)
+
     # Create an instance of FusionHTTPFileSystem
-    http_fs_instance = FusionHTTPFileSystem()
+    http_fs_instance = FusionHTTPFileSystem(credentials=creds)
     http_fs_instance.sync_session = mock_session
 
     # Run the function and catch the exception
@@ -182,7 +193,7 @@ def test_stream_single_file_exception(mock_session_class: MagicMock) -> None:
 
 @pytest.mark.asyncio()
 @patch("fsspec.asyn._run_coros_in_chunks", new_callable=AsyncMock)
-async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMock) -> None:
+async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
     # Define the mock return value
     mock_run_coros_in_chunks.return_value = [True, True, True]
 
@@ -193,8 +204,13 @@ async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMo
     chunk_size = 10
     n_threads = 3
 
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
+    creds = FusionCredentials.from_file(credentials_file)
+
     # Create an instance of FusionHTTPFileSystem
-    http_fs_instance = FusionHTTPFileSystem()
+    http_fs_instance = FusionHTTPFileSystem(credentials=creds)
     http_fs_instance.set_session = AsyncMock(return_value=AsyncMock())
 
     # Mock the _fetch_range method
@@ -218,7 +234,7 @@ async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMo
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")
-async def test_fetch_range_exception(mock_client_session: mock.AsyncMock) -> None:
+async def test_fetch_range_exception(mock_client_session: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
     output_file = MagicMock(spec=io.IOBase)
     output_file.path = "./output_file_path/file.txt"
     output_file.seek = MagicMock()
@@ -239,8 +255,13 @@ async def test_fetch_range_exception(mock_client_session: mock.AsyncMock) -> Non
     mock_session.get.return_value = mock_response
     mock_client_session.return_value.__aenter__.return_value = mock_session
 
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
+    creds = FusionCredentials.from_file(credentials_file)
+
     # Create an instance of FusionHTTPFileSystem
-    http_fs_instance = FusionHTTPFileSystem()
+    http_fs_instance = FusionHTTPFileSystem(credentials=creds)
     http_fs_instance.kwargs = {}  # Add any necessary kwargs here
 
     # Assertions to verify the behavior
@@ -250,7 +271,7 @@ async def test_fetch_range_exception(mock_client_session: mock.AsyncMock) -> Non
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")
-async def test_fetch_range_success(mock_client_session: mock.AsyncMock) -> None:
+async def test_fetch_range_success(mock_client_session: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
     url = "http://example.com/data"
     output_file = MagicMock(spec=io.IOBase)
     output_file.path = "./output_file_path/file.txt"
@@ -274,8 +295,13 @@ async def test_fetch_range_success(mock_client_session: mock.AsyncMock) -> None:
     mock_session.get.return_value = mock_response
     mock_client_session.return_value.__aenter__.return_value = mock_session
 
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
+    creds = FusionCredentials.from_file(credentials_file)
+
     # Create an instance of FusionHTTPFileSystem
-    http_fs_instance = FusionHTTPFileSystem()
+    http_fs_instance = FusionHTTPFileSystem(credentials=creds)
     http_fs_instance.kwargs = {}  # Add any necessary kwargs here
 
     # Run the async function and ensure it completes successfully
@@ -309,9 +335,16 @@ def test_get(
     n_threads: int,
     is_local_fs: bool,
     expected_method: Literal["stream_single_file", "_download_single_file_async"],
+    example_creds_dict: dict[str, Any],
+    tmp_path: Path,
 ) -> None:
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
+    creds = FusionCredentials.from_file(credentials_file)
+
     # Arrange
-    fs = FusionHTTPFileSystem()
+    fs = FusionHTTPFileSystem(credentials=creds)
     rpath = "http://example.com/data"
     chunk_size = 5 * 2**20
     kwargs = {"n_threads": n_threads, "is_local_fs": is_local_fs, "headers": {"Content-Length": "100"}}
@@ -360,9 +393,17 @@ def test_download(
     overwrite: bool,
     preserve_original_name: bool,
     expected_lpath: Literal["local_file.txt", "original_file.txt"],
+    example_creds_dict: dict[str, Any],
+    tmp_path: Path,
 ) -> None:
+    
+    credentials_file = tmp_path / "client_credentials.json"
+    with Path(credentials_file).open("w") as f:
+        json.dump(example_creds_dict, f)
+    creds = FusionCredentials.from_file(credentials_file)
+
     # Arrange
-    fs = FusionHTTPFileSystem()
+    fs = FusionHTTPFileSystem(credentials=creds)
     lfs = mock_fs_class.return_value
     rpath = "http://example.com/data"
     lpath = "local_file.txt"
