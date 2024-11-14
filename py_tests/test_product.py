@@ -511,3 +511,62 @@ def test_copy_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
     )
     assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code
+
+
+def test_product_case_switching() -> None:
+    """Test the product case switching."""
+    my_product = Product(
+        title="Test Product",
+        identifier="Test Product",
+        release_date="May 5, 2020",
+        short_abstract="Short Abstract",
+        description="Description",
+        is_active=True,
+        is_restricted=False,
+        maintainer="Maintainer",
+        region="Region",
+        publisher="Publisher",
+        sub_category="Sub Category",
+        tag="Tag",
+        delivery_channel="API",
+        theme="Theme",
+        language="English",
+        status="Available",
+    )
+
+    camel_case_dict = my_product.to_dict()
+
+    assert camel_case_dict == {
+        "identifier": "TEST_PRODUCT",
+        "title": "Test Product",
+        "category": None,
+        "shortAbstract": "Short Abstract",
+        "description": "Description",
+        "isActive": True,
+        "isRestricted": False,
+        "maintainer": ["Maintainer"],
+        "region": ["Region"],
+        "publisher": "Publisher",
+        "subCategory": ["Sub Category"],
+        "tag": ["Tag"],
+        "deliveryChannel": ["API"],
+        "theme": "Theme",
+        "releaseDate": "2020-05-05",
+        "language": "English",
+        "status": "Available",
+        "image": "",
+        "logo": "",
+        "dataset": None,
+    }
+
+    product_from_camel_dict = Product("TEST_PRODUCT").from_object(camel_case_dict)
+
+    assert product_from_camel_dict == my_product
+
+    assert product_from_camel_dict.short_abstract == product_from_camel_dict.shortAbstract
+    assert product_from_camel_dict.sub_category == product_from_camel_dict.subCategory
+    assert product_from_camel_dict.delivery_channel == product_from_camel_dict.deliveryChannel
+    assert product_from_camel_dict.release_date == product_from_camel_dict.releaseDate
+    assert product_from_camel_dict.is_active == product_from_camel_dict.isActive
+    assert product_from_camel_dict.is_restricted == product_from_camel_dict.isRestricted
+

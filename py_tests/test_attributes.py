@@ -780,3 +780,59 @@ def test_attributes_delete(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
     assert resp is not None
     assert isinstance(resp[0], requests.Response)
     assert resp[0].status_code == status_code
+
+
+def test_attribute_case_switching() -> None:
+    """Test attribute class case switching."""
+    my_attribute = Attribute(
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+        is_dataset_key=True,
+        data_type="string", # type: ignore
+        available_from="May 5, 2020",
+        is_internal_dataset_key=True,
+        is_externally_visible=False,
+        is_metric=True,
+        is_propagation_eligible=True,
+        deprecated_from="May 5, 2021",
+    )
+
+    my_attribute_dict = my_attribute.to_dict()
+
+    assert my_attribute_dict == {
+        "identifier": "test_attribute",
+        "index": 0,
+        "dataType": "String",
+        "title": "Test Attribute",
+        "description": "Test Attribute",
+        "isDatasetKey": True,
+        "source": None,
+        "sourceFieldId": "test_attribute",
+        "isInternalDatasetKey": True,
+        "isExternallyVisible": False,
+        "unit": None,
+        "multiplier": 1.0,
+        "isPropagationEligible": True,
+        "isMetric": True,
+        "availableFrom": "2020-05-05",
+        "deprecatedFrom": "2021-05-05",
+        "term": "bizterm1",
+        "dataset": None,
+        "attributeType": None,
+    }
+
+    attribute_from_camel_dict = Attribute("test_attribute", 0).from_object(my_attribute_dict)
+
+    assert attribute_from_camel_dict == my_attribute
+
+    assert attribute_from_camel_dict.dataType == attribute_from_camel_dict.data_type
+    assert attribute_from_camel_dict.isDatasetKey == attribute_from_camel_dict.is_dataset_key
+    assert attribute_from_camel_dict.isInternalDatasetKey == attribute_from_camel_dict.is_internal_dataset_key
+    assert attribute_from_camel_dict.isExternallyVisible == attribute_from_camel_dict.is_externally_visible
+    assert attribute_from_camel_dict.isMetric == attribute_from_camel_dict.is_metric
+    assert attribute_from_camel_dict.isPropagationEligible == attribute_from_camel_dict.is_propagation_eligible
+    assert attribute_from_camel_dict.deprecatedFrom == attribute_from_camel_dict.deprecated_from
+    assert attribute_from_camel_dict.availableFrom == attribute_from_camel_dict.available_from
+    assert attribute_from_camel_dict.sourceFieldId == attribute_from_camel_dict.source_field_id
+    assert attribute_from_camel_dict.attributeType == attribute_from_camel_dict.attribute_type

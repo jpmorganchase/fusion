@@ -958,3 +958,99 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
     status_code = 200
     assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code
+
+
+def test_dataset_case_switching() -> None:
+    """Test dataset class case switching."""
+    my_dataset = Dataset(
+        identifier="TEST_DATASET",
+        title="Test Dataset",
+        category="Test",
+        product="TEST_PRODUCT",
+        frequency="Once",
+        is_internal_only_dataset=False,
+        is_third_party_data=True,
+        is_restricted=False,
+        is_raw_data=True,
+        maintainer="J.P. Morgan Fusion",
+        source="source",
+        region="region",
+        publisher="J.P. Morgan",
+        sub_category="subCategory",
+        tags="tag1, tag2",
+        created_date="2020-05-05",
+        modified_date="2020-05-05",
+        delivery_channel="API",
+        language="English",
+        status="Available",
+        type_="Source",
+        container_type="Snapshot-Full",
+        snowflake="snowflake",
+    )
+
+    camel_case_dict = my_dataset.to_dict()
+
+    assert camel_case_dict == {
+        "identifier": "TEST_DATASET",
+        "title": "Test Dataset",
+        "category": ["Test"],
+        "description": "Test Dataset",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": True,
+        "maintainer": "J.P. Morgan Fusion",
+        "source": ["source"],
+        "region": ["region"],
+        "publisher": "J.P. Morgan",
+        "product": ["TEST_PRODUCT"],
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": None,
+        "isImmutable": None,
+        "isMnpi": None,
+        "isPci": None,
+        "isPii": None,
+        "isClient": None,
+        "isPublic": None,
+        "isInternal": None,
+        "isConfidential": None,
+        "isHighlyConfidential": None,
+        "isActive": None,
+        "owners": None,
+        "applicationId": None,
+    }
+
+    dataset_from_camel_dict = Dataset("TEST_DATASET").from_object(camel_case_dict)
+
+    assert dataset_from_camel_dict == my_dataset
+
+    assert dataset_from_camel_dict.sub_category == dataset_from_camel_dict.subCategory
+    assert dataset_from_camel_dict.delivery_channel == dataset_from_camel_dict.deliveryChannel
+    assert dataset_from_camel_dict.is_internal_only_dataset == dataset_from_camel_dict.isInternalOnlyDataset
+    assert dataset_from_camel_dict.is_third_party_data == dataset_from_camel_dict.isThirdPartyData
+    assert dataset_from_camel_dict.is_restricted == dataset_from_camel_dict.isRestricted
+    assert dataset_from_camel_dict.is_raw_data == dataset_from_camel_dict.isRawData
+    assert dataset_from_camel_dict.created_date == dataset_from_camel_dict.createdDate
+    assert dataset_from_camel_dict.modified_date == dataset_from_camel_dict.modifiedDate
+    assert dataset_from_camel_dict.container_type == dataset_from_camel_dict.containerType
+    assert dataset_from_camel_dict.is_immutable == dataset_from_camel_dict.isImmutable
+    assert dataset_from_camel_dict.is_mnpi == dataset_from_camel_dict.isMnpi
+    assert dataset_from_camel_dict.is_pii == dataset_from_camel_dict.isPii
+    assert dataset_from_camel_dict.is_pci == dataset_from_camel_dict.isPci
+    assert dataset_from_camel_dict.is_client == dataset_from_camel_dict.isClient
+    assert dataset_from_camel_dict.is_public == dataset_from_camel_dict.isPublic
+    assert dataset_from_camel_dict.is_internal == dataset_from_camel_dict.isInternal
+    assert dataset_from_camel_dict.is_confidential == dataset_from_camel_dict.isConfidential
+    assert dataset_from_camel_dict.is_highly_confidential == dataset_from_camel_dict.isHighlyConfidential
+    assert dataset_from_camel_dict.is_active == dataset_from_camel_dict.isActive
+    assert dataset_from_camel_dict.application_id == dataset_from_camel_dict.applicationId
