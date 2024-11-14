@@ -17,9 +17,9 @@ def test_attribute_class() -> None:
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     assert str(test_attribute)
     assert repr(test_attribute)
@@ -36,7 +36,7 @@ def test_attribute_class() -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -72,7 +72,7 @@ def test_attribute_class_from_series() -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -106,7 +106,7 @@ def test_attribute_class_from_dict() -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -140,7 +140,7 @@ def test_attribute_class_from_object_dict() -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -176,7 +176,7 @@ def test_attribute_class_from_object_series() -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -190,9 +190,9 @@ def test_attribute_class_to_dict() -> None:
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     assert test_attribute.to_dict() == {
         "title": "Test Attribute",
@@ -208,7 +208,7 @@ def test_attribute_class_to_dict() -> None:
         "unit": None,
         "multiplier": 1.0,
         "isMetric": None,
-        "isPropogationEligible": None,
+        "isPropagationEligible": None,
         "availableFrom": "2020-05-05",
         "deprecatedFrom": None,
         "term": "bizterm1",
@@ -238,7 +238,7 @@ def test_attribute_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
         "unit": None,
         "multiplier": 1.0,
         "isMetric": None,
-        "isPropogationEligible": None,
+        "isPropagationEligible": None,
         "availableFrom": "2020-05-05",
         "deprecatedFrom": None,
         "term": "bizterm1",
@@ -252,9 +252,9 @@ def test_attribute_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     resp = test_attribute.create(client=fusion_obj, catalog=catalog, dataset=dataset, return_resp_obj=True)
     status_code = 200
@@ -287,9 +287,9 @@ def test_attribute_class_set_client(fusion_obj: Fusion) -> None:
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     test_attribute.set_client(fusion_obj)
     assert test_attribute._client is not None
@@ -302,9 +302,9 @@ def test_attributes_class() -> None:
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     test_attributes = Attributes([test_attribute])
     assert str(test_attributes)
@@ -322,7 +322,7 @@ def test_attributes_class() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -338,9 +338,9 @@ def test_attributes_class_set_client(fusion_obj: Fusion) -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -356,9 +356,9 @@ def test_attributes_add_attribute() -> None:
         title="Test Attribute",
         identifier="Test Attribute",
         index=0,
-        isDatasetKey=True,
-        dataType=cast(Types, "string"),
-        availableFrom="May 5, 2020",
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
     )
     test_attributes.add_attribute(test_attribute)
     assert test_attributes.attributes[0].title == "Test Attribute"
@@ -374,7 +374,7 @@ def test_attributes_add_attribute() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -390,9 +390,9 @@ def test_attributes_remove_attributes() -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -408,9 +408,9 @@ def test_attributes_get_attribute() -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -427,9 +427,9 @@ def test_attributes_to_dict() -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -451,7 +451,7 @@ def test_attributes_to_dict() -> None:
                 "unit": None,
                 "multiplier": 1.0,
                 "isMetric": None,
-                "isPropogationEligible": None,
+                "isPropagationEligible": None,
                 "availableFrom": "2020-05-05",
                 "deprecatedFrom": None,
                 "term": "bizterm1",
@@ -491,7 +491,7 @@ def test_attributes_from_dict_list() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -525,7 +525,7 @@ def test_attributes_from_dataframe() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -561,7 +561,7 @@ def test_attributes_from_object_list_dict() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -595,7 +595,7 @@ def test_attributes_from_object_dataframe() -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -611,9 +611,9 @@ def test_attributes_to_dataframe() -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -632,7 +632,7 @@ def test_attributes_to_dataframe() -> None:
     assert test_df["unit"].iloc[0] is None
     assert test_df["multiplier"].iloc[0] == 1.0
     assert test_df["isMetric"].iloc[0] is None
-    assert test_df["isPropogationEligible"].iloc[0] is None
+    assert test_df["isPropagationEligible"].iloc[0] is None
     assert test_df["availableFrom"].iloc[0] == "2020-05-05"
     assert test_df["deprecatedFrom"].iloc[0] is None
     assert test_df["term"].iloc[0] == "bizterm1"
@@ -658,7 +658,7 @@ def test_attributes_to_dataframe_empty() -> None:
     assert test_df["unit"].iloc[0] is None
     assert test_df["multiplier"].iloc[0] == 1.0
     assert test_df["isMetric"].iloc[0] is None
-    assert test_df["isPropogationEligible"].iloc[0] is None
+    assert test_df["isPropagationEligible"].iloc[0] is None
     assert test_df["availableFrom"].iloc[0] is None
     assert test_df["deprecatedFrom"].iloc[0] is None
     assert test_df["term"].iloc[0] == "bizterm1"
@@ -699,7 +699,7 @@ def test_attributes_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -729,7 +729,7 @@ def test_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
                 "unit": None,
                 "multiplier": 1.0,
                 "isMetric": None,
-                "isPropogationEligible": None,
+                "isPropagationEligible": None,
                 "availableFrom": "2020-05-05",
                 "deprecatedFrom": None,
                 "term": "bizterm1",
@@ -747,9 +747,9 @@ def test_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=cast(Types, "string"),
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -780,3 +780,59 @@ def test_attributes_delete(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
     assert resp is not None
     assert isinstance(resp[0], requests.Response)
     assert resp[0].status_code == status_code
+
+
+def test_attribute_case_switching() -> None:
+    """Test attribute class case switching."""
+    my_attribute = Attribute(
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+        is_dataset_key=True,
+        data_type="string", # type: ignore
+        available_from="May 5, 2020",
+        is_internal_dataset_key=True,
+        is_externally_visible=False,
+        is_metric=True,
+        is_propagation_eligible=True,
+        deprecated_from="May 5, 2021",
+    )
+
+    my_attribute_dict = my_attribute.to_dict()
+
+    assert my_attribute_dict == {
+        "identifier": "test_attribute",
+        "index": 0,
+        "dataType": "String",
+        "title": "Test Attribute",
+        "description": "Test Attribute",
+        "isDatasetKey": True,
+        "source": None,
+        "sourceFieldId": "test_attribute",
+        "isInternalDatasetKey": True,
+        "isExternallyVisible": False,
+        "unit": None,
+        "multiplier": 1.0,
+        "isPropagationEligible": True,
+        "isMetric": True,
+        "availableFrom": "2020-05-05",
+        "deprecatedFrom": "2021-05-05",
+        "term": "bizterm1",
+        "dataset": None,
+        "attributeType": None,
+    }
+
+    attribute_from_camel_dict = Attribute("test_attribute", 0).from_object(my_attribute_dict)
+
+    assert attribute_from_camel_dict == my_attribute
+
+    assert attribute_from_camel_dict.dataType == attribute_from_camel_dict.data_type
+    assert attribute_from_camel_dict.isDatasetKey == attribute_from_camel_dict.is_dataset_key
+    assert attribute_from_camel_dict.isInternalDatasetKey == attribute_from_camel_dict.is_internal_dataset_key
+    assert attribute_from_camel_dict.isExternallyVisible == attribute_from_camel_dict.is_externally_visible
+    assert attribute_from_camel_dict.isMetric == attribute_from_camel_dict.is_metric
+    assert attribute_from_camel_dict.isPropagationEligible == attribute_from_camel_dict.is_propagation_eligible
+    assert attribute_from_camel_dict.deprecatedFrom == attribute_from_camel_dict.deprecated_from
+    assert attribute_from_camel_dict.availableFrom == attribute_from_camel_dict.available_from
+    assert attribute_from_camel_dict.sourceFieldId == attribute_from_camel_dict.source_field_id
+    assert attribute_from_camel_dict.attributeType == attribute_from_camel_dict.attribute_type

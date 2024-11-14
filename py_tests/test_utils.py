@@ -33,6 +33,7 @@ from fusion.utils import (
     path_to_url,
     read_csv,
     read_json,
+    snake_to_camel,
     tidy_string,
     upload_files,
     validate_file_names,
@@ -888,4 +889,12 @@ def test_convert_format_slash() -> None:
     date = "2024/05/06"
     output_ = convert_date_format(date)
     exp_output = "2024-05-06"
+    assert output_ == exp_output
+
+
+def test_snake_to_camel() -> None:
+    """Test snake to camel."""
+    input_ = "this_is_snake"
+    output_ = snake_to_camel(input_)
+    exp_output = "thisIsSnake"
     assert output_ == exp_output

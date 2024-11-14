@@ -8,7 +8,17 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from fusion.utils import _is_json, convert_date_format, make_bool, make_list, requests_raise_for_status, tidy_string
+from fusion.utils import (
+    CamelCaseMeta,
+    _is_json,
+    camel_to_snake,
+    convert_date_format,
+    make_bool,
+    make_list,
+    requests_raise_for_status,
+    snake_to_camel,
+    tidy_string,
+)
 
 if TYPE_CHECKING:
     import requests
@@ -17,25 +27,25 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class Product:
+class Product(metaclass=CamelCaseMeta):
     """Fusion Product class for managing product metadata in a Fusion catalog.
 
     Attributes:
         identifier (str): A unique identifier for the product.
         title (str, optional): Product title. Defaults to "".
         category (str | list[str] | None, optional): Product category. Defaults to None.
-        shortAbstract (str, optional): Short abstract of the product. Defaults to "".
+        short_abstract (str, optional): Short abstract of the product. Defaults to "".
         description (str, optional): Product description. If not provided, defaults to identifier.
-        isActive (bool, optional): Boolean for Active status. Defaults to True.
-        isRestricted (bool | None, optional): Flag for restricted products. Defaults to None.
+        is_active (bool, optional): Boolean for Active status. Defaults to True.
+        is_restricted (bool | None, optional): Flag for restricted products. Defaults to None.
         maintainer (str | list[str] | None, optional): Product maintainer. Defaults to None.
         region (str | list[str] | None, optional): Product region. Defaults to None.
         publisher (str | None, optional): Name of vendor that publishes the data. Defaults to None.
-        subCategory (str | list[str] | None, optional): Product sub-category. Defaults to None.
+        sub_category (str | list[str] | None, optional): Product sub-category. Defaults to None.
         tag (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
-        deliveryChannel (str | list[str], optional): Product delivery channel. Defaults to ["API"].
+        delivery_channel (str | list[str], optional): Product delivery channel. Defaults to ["API"].
         theme (str | None, optional): Product theme. Defaults to None.
-        releaseDate (str | None, optional): Product release date. Defaults to None.
+        release_date (str | None, optional): Product release date. Defaults to None.
         language (str, optional): Product language. Defaults to "English".
         status (str, optional): Product status. Defaults to "Available".
         image (str, optional): Product image. Defaults to "".
@@ -48,18 +58,18 @@ class Product:
     identifier: str
     title: str = ""
     category: str | list[str] | None = None
-    shortAbstract: str = ""
+    short_abstract: str = ""
     description: str = ""
-    isActive: bool = True
-    isRestricted: bool | None = None
+    is_active: bool = True
+    is_restricted: bool | None = None
     maintainer: str | list[str] | None = None
     region: str | list[str] | None = None
     publisher: str | None = None
-    subCategory: str | list[str] | None = None
+    sub_category: str | list[str] | None = None
     tag: str | list[str] | None = None
-    deliveryChannel: str | list[str] = field(default_factory=lambda: ["API"])
+    delivery_channel: str | list[str] = field(default_factory=lambda: ["API"])
     theme: str | None = None
-    releaseDate: str | None = None
+    release_date: str | None = None
     language: str = "English"
     status: str = "Available"
     image: str = ""
@@ -83,7 +93,7 @@ class Product:
         self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description != "" else self.title
-        self.shortAbstract = tidy_string(self.shortAbstract)
+        self.short_abstract = tidy_string(self.short_abstract)
         self.description = tidy_string(self.description)
         self.category = (
             self.category if isinstance(self.category, list) or self.category is None else make_list(self.category)
@@ -92,16 +102,16 @@ class Product:
         self.dataset = (
             self.dataset if isinstance(self.dataset, list) or self.dataset is None else make_list(self.dataset)
         )
-        self.subCategory = (
-            self.subCategory
-            if isinstance(self.subCategory, list) or self.subCategory is None
-            else make_list(self.subCategory)
+        self.sub_category = (
+            self.sub_category
+            if isinstance(self.sub_category, list) or self.sub_category is None
+            else make_list(self.sub_category)
         )
-        self.isActive = self.isActive if isinstance(self.isActive, bool) else make_bool(self.isActive)
-        self.isRestricted = (
-            self.isRestricted
-            if isinstance(self.isRestricted, bool) or self.isRestricted is None
-            else make_bool(self.isRestricted)
+        self.is_active = self.is_active if isinstance(self.is_active, bool) else make_bool(self.is_active)
+        self.is_restricted = (
+            self.is_restricted
+            if isinstance(self.is_restricted, bool) or self.is_restricted is None
+            else make_bool(self.is_restricted)
         )
         self.maintainer = (
             self.maintainer
@@ -109,10 +119,21 @@ class Product:
             else make_list(self.maintainer)
         )
         self.region = self.region if isinstance(self.region, list) or self.region is None else make_list(self.region)
-        self.deliveryChannel = (
-            self.deliveryChannel if isinstance(self.deliveryChannel, list) else make_list(self.deliveryChannel)
+        self.delivery_channel = (
+            self.delivery_channel if isinstance(self.delivery_channel, list) else make_list(self.delivery_channel)
         )
-        self.releaseDate = convert_date_format(self.releaseDate) if self.releaseDate else None
+        self.release_date = convert_date_format(self.release_date) if self.release_date else None
+
+    def __getattr__(self, name: str) -> Any:
+        # Redirect attribute access to the snake_case version
+        snake_name = camel_to_snake(name)
+        if snake_name in self.__dict__:
+            return self.__dict__[snake_name]
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        snake_name = camel_to_snake(name)
+        self.__dict__[snake_name] = value
 
     def set_client(self, client: Any) -> None:
         """Set the client for the Product. Set automatically, if the Product is instantiated from a Fusion object.
@@ -150,18 +171,18 @@ class Product:
             title=series.get("title", ""),
             identifier=series.get("identifier", ""),
             category=series.get("category", None),
-            shortAbstract=short_abstract,
+            short_abstract=short_abstract,
             description=series.get("description", ""),
             theme=series.get("theme", None),
-            releaseDate=series.get("releasedate", None),
-            isActive=series.get("isactive", True),
-            isRestricted=series.get("isrestricted", None),
+            release_date=series.get("releasedate", None),
+            is_active=series.get("isactive", True),
+            is_restricted=series.get("isrestricted", None),
             maintainer=series.get("maintainer", None),
             region=series.get("region", None),
             publisher=series.get("publisher", None),
-            subCategory=series.get("subcategory", None),
+            sub_category=series.get("subcategory", None),
             tag=series.get("tags", None),
-            deliveryChannel=series.get("deliverychannel", "API"),
+            delivery_channel=series.get("deliverychannel", "API"),
             language=series.get("language", "English"),
             status=series.get("status", "Available"),
             dataset=series.get("datasets", None),
@@ -179,6 +200,7 @@ class Product:
 
         """
         keys = [f.name for f in fields(cls)]
+        data = {camel_to_snake(k): v for k, v in data.items()}
         data = {k: v for k, v in data.items() if k in keys}
         return cls(**data)
 
@@ -214,13 +236,13 @@ class Product:
 
         Raises:
             TypeError: If the object provided is not a Product, dictionary, path to CSV file, JSON string,
-                or pandas Series.
+            or pandas Series.
 
         Returns:
             Product: Product object.
 
         Examples:
-            Instatiating a Product object from a dictionary:
+            Instantiating a Product object from a dictionary:
 
             >>> from fusion import Fusion
             >>> from fusion.product import Product
@@ -229,24 +251,24 @@ class Product:
             ...     "identifier": "my_product",
             ...     "title": "My Product",
             ...     "category": "Data",
-            ...     "shortAbstract": "My product is awesome",
+            ...     "short_abstract": "My product is awesome",
             ...     "description": "My product is very awesome",
-            ...     "isActive": True,
-            ...     "isRestricted": False,
+            ...     "is_active": True,
+            ...     "is_restricted": False,
             ...     "maintainer": "My Company",
             ...     "region": "Global",
             ...     "publisher": "My Company",
-            ...     "subCategory": "Data",
+            ...     "sub_category": "Data",
             ...     "tag": "My Company",
-            ...     "deliveryChannel": "API",
+            ...     "delivery_channel": "API",
             ...     "theme": "Data",
-            ...     "releaseDate": "2021-01-01",
+            ...     "release_date": "2021-01-01",
             ...     "language": "English",
             ...     "status": "Available"
             ... }
             >>> product = fusion.product("my_product").from_object(product_dict)
 
-            Instatiating a Product object from a JSON string:
+            Instantiating a Product object from a JSON string:
 
             >>> from fusion import Fusion
             >>> from fusion.product import Product
@@ -255,31 +277,31 @@ class Product:
             ...     "identifier": "my_product",
             ...     "title": "My Product",
             ...     "category": "Data",
-            ...     "shortAbstract": "My product is awesome",
+            ...     "short_abstract": "My product is awesome",
             ...     "description": "My product is very awesome",
-            ...     "isActive": True,
-            ...     "isRestricted": False,
+            ...     "is_active": True,
+            ...     "is_restricted": False,
             ...     "maintainer": "My Company",
             ...     "region": "Global",
             ...     "publisher": "My Company",
-            ...     "subCategory": "Data",
+            ...     "sub_category": "Data",
             ...     "tag": "My Company",
-            ...     "deliveryChannel": "API",
+            ...     "delivery_channel": "API",
             ...     "theme": "Data",
-            ...     "releaseDate": "2021-01-01",
+            ...     "release_date": "2021-01-01",
             ...     "language": "English",
             ...     "status": "Available",
             ... }'
             >>> product = fusion.product("my_product").from_object(product_json)
 
-            Instatiating a Product object from a CSV file:
+            Instantiating a Product object from a CSV file:
 
             >>> from fusion import Fusion
             >>> from fusion.product import Product
             >>> fusion = Fusion()
             >>> product = fusion.product("my_product").from_object("path/to/product.csv")
 
-            Instatiating a Product object from a pandas Series:
+            Instantiating a Product object from a pandas Series:
 
             >>> from fusion import Fusion
             >>> from fusion.product import Product
@@ -288,18 +310,18 @@ class Product:
             ...     "identifier": "my_product",
             ...     "title": "My Product",
             ...     "category": "Data",
-            ...     "shortAbstract": "My product is awesome",
+            ...     "short_abstract": "My product is awesome",
             ...     "description": "My product is very awesome",
-            ...     "isActive": True,
-            ...     "isRestricted": False,
+            ...     "is_active": True,
+            ...     "is_restricted": False,
             ...     "maintainer": "My Company",
             ...     "region": "Global",
             ...     "publisher": "My Company",
-            ...     "subCategory": "Data",
+            ...     "sub_category": "Data",
             ...     "tag": "My Company",
-            ...     "deliveryChannel": "API",
+            ...     "delivery_channel": "API",
             ...     "theme": "Data",
-            ...     "releaseDate": "2021-01-01",
+            ...     "release_date": "2021-01-01",
             ...     "language": "English",
             ...     "status": "Available",
             ... })
@@ -364,7 +386,11 @@ class Product:
             >>> product_dict = product.to_dict()
 
         """
-        product_dict = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+        product_dict = {
+            snake_to_camel(k): v
+            for k, v in self.__dict__.items()
+            if not k.startswith("_")
+        }
         return product_dict
 
     def create(
@@ -394,7 +420,7 @@ class Product:
             ...     identifer="my_product"
             ...     title="My Product",
             ...     category="Data",
-            ...     shortAbstract="My product is awesome",
+            ...     short_abstract="My product is awesome",
             ...     description="My product is very awesome",
             ...     )
             >>> product.create(catalog="my_catalog")
@@ -452,11 +478,11 @@ class Product:
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
 
-        releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
-        deliveryChannel = self.deliveryChannel if self.deliveryChannel else ["API"]
+        release_date = self.release_date if self.release_date else pd.Timestamp("today").strftime("%Y-%m-%d")
+        delivery_channel = self.delivery_channel if self.delivery_channel else ["API"]
 
-        self.releaseDate = releaseDate
-        self.deliveryChannel = deliveryChannel
+        self.release_date = release_date
+        self.delivery_channel = delivery_channel
 
         data = self.to_dict()
 
@@ -494,11 +520,11 @@ class Product:
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
 
-        releaseDate = self.releaseDate if self.releaseDate else pd.Timestamp("today").strftime("%Y-%m-%d")
-        deliveryChannel = self.deliveryChannel if self.deliveryChannel else ["API"]
+        release_date = self.release_date if self.release_date else pd.Timestamp("today").strftime("%Y-%m-%d")
+        delivery_channel = self.delivery_channel if self.delivery_channel else ["API"]
 
-        self.releaseDate = releaseDate
-        self.deliveryChannel = deliveryChannel
+        self.release_date = release_date
+        self.delivery_channel = delivery_channel
 
         data = self.to_dict()
 

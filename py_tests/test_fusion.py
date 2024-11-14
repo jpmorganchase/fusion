@@ -46,7 +46,7 @@ def test_fusion_init_from_path(example_creds_dict: dict[str, Any], tmp_path: Pat
     credentials_file = tmp_path / "client_credentials_test.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    fusion = Fusion(credentials="client_credentials_test.json")
+    fusion = Fusion(credentials=str(credentials_file))
     assert fusion
 
 
@@ -1011,36 +1011,36 @@ def test_fusion_dataset(fusion_obj: Fusion) -> None:
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
-    assert test_dataset.isInternalOnlyDataset is False
-    assert test_dataset.isThirdPartyData is True
-    assert test_dataset.isRestricted is None
-    assert test_dataset.isRawData is True
+    assert test_dataset.is_internal_only_dataset is False
+    assert test_dataset.is_third_party_data is True
+    assert test_dataset.is_restricted is None
+    assert test_dataset.is_raw_data is True
     assert test_dataset.maintainer == "J.P. Morgan Fusion"
     assert test_dataset.source is None
     assert test_dataset.region is None
     assert test_dataset.publisher == "J.P. Morgan"
     assert test_dataset.product == ["TEST_PRODUCT"]
-    assert test_dataset.subCategory is None
+    assert test_dataset.sub_category is None
     assert test_dataset.tags is None
-    assert test_dataset.createdDate is None
-    assert test_dataset.modifiedDate is None
-    assert test_dataset.deliveryChannel == ["API"]
+    assert test_dataset.created_date is None
+    assert test_dataset.modified_date is None
+    assert test_dataset.delivery_channel == ["API"]
     assert test_dataset.language == "English"
     assert test_dataset.status == "Available"
     assert test_dataset.type_ == "Source"
-    assert test_dataset.containerType == "Snapshot-Full"
+    assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
     assert test_dataset.complexity is None
-    assert test_dataset.isImmutable is None
-    assert test_dataset.isMnpi is None
-    assert test_dataset.isPii is None
-    assert test_dataset.isPci is None
-    assert test_dataset.isClient is None
-    assert test_dataset.isPublic is None
-    assert test_dataset.isInternal is None
-    assert test_dataset.isConfidential is None
-    assert test_dataset.isHighlyConfidential is None
-    assert test_dataset.isActive is None
+    assert test_dataset.is_immutable is None
+    assert test_dataset.is_mnpi is None
+    assert test_dataset.is_pii is None
+    assert test_dataset.is_pci is None
+    assert test_dataset.is_client is None
+    assert test_dataset.is_public is None
+    assert test_dataset.is_internal is None
+    assert test_dataset.is_confidential is None
+    assert test_dataset.is_highly_confidential is None
+    assert test_dataset.is_active is None
     assert test_dataset._client == fusion_obj
 
 
@@ -1069,7 +1069,7 @@ def test_fusion_attribute(fusion_obj: Fusion) -> None:
     assert test_attribute.unit is None
     assert test_attribute.multiplier == 1.0
     assert test_attribute.isMetric is None
-    assert test_attribute.isPropogationEligible is None
+    assert test_attribute.isPropagationEligible is None
     assert test_attribute.availableFrom == "2020-05-05"
     assert test_attribute.deprecatedFrom is None
     assert test_attribute.term == "bizterm1"
@@ -1086,9 +1086,9 @@ def test_fusion_attributes(fusion_obj: Fusion) -> None:
                 title="Test Attribute",
                 identifier="Test Attribute",
                 index=0,
-                isDatasetKey=True,
-                dataType=Types.String,
-                availableFrom="May 5, 2020",
+                is_dataset_key=True,
+                data_type=Types.String,
+                available_from="May 5, 2020",
             )
         ]
     )
@@ -1107,7 +1107,7 @@ def test_fusion_attributes(fusion_obj: Fusion) -> None:
     assert test_attributes.attributes[0].unit is None
     assert test_attributes.attributes[0].multiplier == 1.0
     assert test_attributes.attributes[0].isMetric is None
-    assert test_attributes.attributes[0].isPropogationEligible is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
     assert test_attributes.attributes[0].availableFrom == "2020-05-05"
     assert test_attributes.attributes[0].deprecatedFrom is None
     assert test_attributes.attributes[0].term == "bizterm1"
@@ -1279,7 +1279,7 @@ def test_fusion_create_attributes(requests_mock: requests_mock.Mocker, fusion_ob
                 "unit": None,
                 "multiplier": 1.0,
                 "isMetric": None,
-                "isPropogationEligible": None,
+                "isPropagationEligible": None,
                 "availableFrom": "2020-05-05",
                 "deprecatedFrom": None,
                 "term": "bizterm1",

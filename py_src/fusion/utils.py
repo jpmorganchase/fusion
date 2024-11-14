@@ -90,6 +90,9 @@ RECOGNIZED_FORMATS = [
     "mkv",
 ]
 
+re_str_1 = re.compile("(.)([A-Z][a-z]+)")
+re_str_2 = re.compile("([a-z0-9])([A-Z])")
+
 
 def get_default_fs() -> fsspec.filesystem:
     """Retrieve default filesystem.
@@ -847,6 +850,44 @@ def upload_files(  # noqa: PLR0913
             res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
     return res  # type: ignore
+
+
+def camel_to_snake(name: str) -> str:
+    """Convert camelCase to snake_case."""
+    s1 = re.sub(re_str_1, r"\1_\2", name)
+    return re.sub(re_str_2, r"\1_\2", s1).lower()
+
+
+class CamelCaseMeta(type):
+    """Metaclass to support both snake and camel case typing."""
+
+    def __new__(cls: Any, name: str, bases: Any, dct: dict[str, Any]) -> Any:
+        new_namespace = {}
+        annotations = dct.get("__annotations__", {})
+        new_annotations = {}
+        for attr_name, attr_value in dct.items():
+            if not attr_name.startswith("__"):
+                snake_name = camel_to_snake(attr_name)
+                new_namespace[snake_name] = attr_value
+            else:
+                new_namespace[attr_name] = attr_value
+        for anno_name, anno_type in annotations.items():
+            snake_name = camel_to_snake(anno_name)
+            new_annotations[snake_name] = anno_type
+        new_namespace["__annotations__"] = new_annotations
+        cls = super().__new__(cls, name, bases, new_namespace)
+        return cls
+
+    def __call__(cls: Any, *args: Any, **kwargs: Any) -> Any:
+        # Convert keyword arguments to snake_case before initialization
+        snake_kwargs = {camel_to_snake(k): v for k, v in kwargs.items()}
+        return super().__call__(*args, **snake_kwargs)
+
+
+def snake_to_camel(name: str) -> str:
+    """Convert snake_case to camelCase."""
+    components = name.lower().split("_")
+    return components[0] + "".join(x.title() for x in components[1:])
 
 
 def tidy_string(x: str) -> str:
