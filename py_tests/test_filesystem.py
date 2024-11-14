@@ -1,4 +1,3 @@
-from calendar import c
 import io
 import json
 from pathlib import Path
@@ -154,7 +153,9 @@ def test_stream_single_file(mock_session_class: MagicMock, example_creds_dict: d
 
 
 @patch("requests.Session")
-def test_stream_single_file_exception(mock_session_class: MagicMock, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
+def test_stream_single_file_exception(
+    mock_session_class: MagicMock, example_creds_dict: dict[str, Any], tmp_path: Path
+) -> None:
     url = "http://example.com/data"
     output_file = MagicMock(spec=fsspec.spec.AbstractBufferedFile)
     output_file.path = "./output_file_path/file.txt"
@@ -193,7 +194,9 @@ def test_stream_single_file_exception(mock_session_class: MagicMock, example_cre
 
 @pytest.mark.asyncio()
 @patch("fsspec.asyn._run_coros_in_chunks", new_callable=AsyncMock)
-async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
+async def test_download_single_file_async(
+    mock_run_coros_in_chunks: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path
+) -> None:
     # Define the mock return value
     mock_run_coros_in_chunks.return_value = [True, True, True]
 
@@ -205,7 +208,7 @@ async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMo
     n_threads = 3
 
     credentials_file = tmp_path / "client_credentials.json"
-    with Path(credentials_file).open("w") as f:
+    with Path(credentials_file).open("w") as f: # noqa: ASYNC101
         json.dump(example_creds_dict, f)
     creds = FusionCredentials.from_file(credentials_file)
 
@@ -234,7 +237,9 @@ async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMo
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")
-async def test_fetch_range_exception(mock_client_session: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
+async def test_fetch_range_exception(
+    mock_client_session: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path
+) -> None:
     output_file = MagicMock(spec=io.IOBase)
     output_file.path = "./output_file_path/file.txt"
     output_file.seek = MagicMock()
@@ -256,7 +261,7 @@ async def test_fetch_range_exception(mock_client_session: mock.AsyncMock, exampl
     mock_client_session.return_value.__aenter__.return_value = mock_session
 
     credentials_file = tmp_path / "client_credentials.json"
-    with Path(credentials_file).open("w") as f:
+    with Path(credentials_file).open("w") as f:  # noqa: ASYNC101
         json.dump(example_creds_dict, f)
     creds = FusionCredentials.from_file(credentials_file)
 
@@ -271,7 +276,9 @@ async def test_fetch_range_exception(mock_client_session: mock.AsyncMock, exampl
 
 @pytest.mark.asyncio()
 @patch("aiohttp.ClientSession")
-async def test_fetch_range_success(mock_client_session: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
+async def test_fetch_range_success(
+    mock_client_session: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path
+) -> None:
     url = "http://example.com/data"
     output_file = MagicMock(spec=io.IOBase)
     output_file.path = "./output_file_path/file.txt"
@@ -296,7 +303,7 @@ async def test_fetch_range_success(mock_client_session: mock.AsyncMock, example_
     mock_client_session.return_value.__aenter__.return_value = mock_session
 
     credentials_file = tmp_path / "client_credentials.json"
-    with Path(credentials_file).open("w") as f:
+    with Path(credentials_file).open("w") as f:  # noqa: ASYNC101
         json.dump(example_creds_dict, f)
     creds = FusionCredentials.from_file(credentials_file)
 
@@ -327,7 +334,7 @@ async def test_fetch_range_success(mock_client_session: mock.AsyncMock, example_
 @patch("fsspec.asyn.sync")
 @patch.object(FusionHTTPFileSystem, "stream_single_file", new_callable=AsyncMock)
 @patch.object(FusionHTTPFileSystem, "_download_single_file_async", new_callable=AsyncMock)
-def test_get(
+def test_get(  # noqa: PLR0913
     mock_download_single_file_async: mock.AsyncMock,
     mock_stream_single_file: mock.AsyncMock,
     mock_sync: mock.AsyncMock,
@@ -385,7 +392,7 @@ def test_get(
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
 @patch("fsspec.AbstractFileSystem", autospec=True)
 @patch("aiohttp.ClientSession")
-def test_download(
+def test_download(  # noqa: PLR0913
     mock_client_session: mock.AsyncMock,
     mock_fs_class: mock.AsyncMock,
     mock_set_session: mock.AsyncMock,
@@ -396,7 +403,6 @@ def test_download(
     example_creds_dict: dict[str, Any],
     tmp_path: Path,
 ) -> None:
-    
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
