@@ -1304,6 +1304,8 @@ mod tests {
         assert!(headers.is_some());
         assert_eq!(grant_type, Some("grant_type".to_string()));
         assert_eq!(fusion_e2e, Some("fusion_e2e".to_string()));
+        assert_eq!(kid, Some("kid".to_string()));
+        assert_eq!(private_key, Some("private_key".to_string()));
     }
 
     #[test]
