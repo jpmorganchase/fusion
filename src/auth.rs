@@ -616,6 +616,8 @@ impl FusionCredentials {
             let header = Header::new(Algorithm::RS256);
             let private_key_jwt =
                 encode(&header, &claims, &encoding_key).expect("Failed to encode JWT");
+            println!("JWT: {}", private_key_jwt);
+            println!("Claims: {:?}", claims);
 
             // Build the payload vector
             vec![
