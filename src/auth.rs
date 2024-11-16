@@ -608,7 +608,6 @@ impl FusionCredentials {
                 exp: Utc::now().timestamp() + 3600,
                 jti: "id001".to_string(),
             };
-            println!("Claims: {:?}", claims);
             // Encode the JWT
             let private_key_bytes = private_key.as_bytes();
             let encoding_key =
@@ -617,7 +616,6 @@ impl FusionCredentials {
             header.kid = Some(self.kid.clone().unwrap_or_default());
             let private_key_jwt =
                 encode(&header, &claims, &encoding_key).expect("Failed to encode JWT");
-            println!("JWT: {}", private_key_jwt);
 
             // Build the payload vector
             vec![
