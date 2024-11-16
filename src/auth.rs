@@ -365,7 +365,7 @@ impl Default for FusionCredentials {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 struct Claims {
     iss: String,
     aud: String,
@@ -608,7 +608,7 @@ impl FusionCredentials {
                 exp: Utc::now().timestamp() + 3600,
                 jti: "id001".to_string(),
             };
-
+            println!("Claims: {:?}", claims);
             // Encode the JWT
             let private_key_bytes = private_key.as_bytes();
             let encoding_key =
