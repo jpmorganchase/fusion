@@ -34,8 +34,6 @@ annotated-types==0.6.0
     # via pydantic
 anyio==4.3.0
     # via jupyter-server
-appnope==0.1.4
-    # via ipykernel
 argcomplete==3.3.0
     # via nox
 argon2-cffi==23.1.0
@@ -55,6 +53,7 @@ attrs==23.2.0
     # via aiohttp-sse-client
     # via jsonschema
     # via referencing
+auditwheel==6.1.0
 azure-core==1.30.1
     # via adlfs
     # via azure-identity
@@ -120,6 +119,7 @@ cryptography==42.0.5
     # via moto
     # via msal
     # via pyjwt
+    # via secretstorage
 debugpy==1.8.1
     # via ipykernel
 decorator==5.1.1
@@ -228,6 +228,9 @@ jaraco-functools==4.0.1
     # via keyring
 jedi==0.19.1
     # via ipython
+jeepney==0.8.0
+    # via keyring
+    # via secretstorage
 jinja2==3.1.4
     # via jupyter-server
     # via mike
@@ -414,6 +417,7 @@ oauthlib==3.2.2
 overrides==7.7.0
     # via jupyter-server
 packaging==24.0
+    # via auditwheel
     # via ipykernel
     # via jupyter-server
     # via jupytext
@@ -434,6 +438,7 @@ pandocfilters==1.5.1
     # via nbconvert
 parso==0.8.4
     # via jedi
+patchelf==0.17.2.1
 pathspec==0.12.1
     # via mkdocs
 pexpect==4.9.0
@@ -494,6 +499,8 @@ pydantic-core==2.18.2
     # via pydantic
 pydantic-settings==2.2.1
     # via bump-my-version
+pyelftools==0.31
+    # via auditwheel
 pygments==2.17.2
     # via ipython
     # via mkdocs-jupyter
@@ -621,6 +628,8 @@ s3fs==2024.3.1
     # via pyfusion
 s3transfer==0.10.1
     # via boto3
+secretstorage==3.3.3
+    # via keyring
 send2trash==1.8.3
     # via jupyter-server
     # via nbclassic
@@ -767,6 +776,7 @@ xmltodict==0.13.0
 yarl==1.9.4
     # via aiohttp
     # via aiohttp-sse-client
+ziglang==0.13.0
 zipp==3.18.1
     # via importlib-metadata
     # via importlib-resources
