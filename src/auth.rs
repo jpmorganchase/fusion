@@ -613,7 +613,8 @@ impl FusionCredentials {
             let private_key_bytes = private_key.as_bytes();
             let encoding_key =
                 EncodingKey::from_rsa_pem(private_key_bytes).expect("Invalid RSA private key");
-            let header = Header::new(Algorithm::RS256);
+            let mut header = Header::new(Algorithm::RS256);
+            header.kid = Some(self.kid.clone().unwrap_or_default());
             let private_key_jwt =
                 encode(&header, &claims, &encoding_key).expect("Failed to encode JWT");
             println!("JWT: {}", private_key_jwt);
