@@ -697,6 +697,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                             await self._async_raise_not_found_for_status(resp, url)
                             return await resp.json()  # type: ignore
                         except Exception as ex:  # noqa: BLE001
+                            logger.debug(f"Failed to upload file: {ex}")
                             ex_cnt += 1
                             last_ex = ex
 

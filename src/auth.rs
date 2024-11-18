@@ -808,7 +808,7 @@ impl FusionCredentials {
             }
         }
 
-        self._refresh_bearer_token(py, false, 30)?;
+        self._refresh_bearer_token(py, false, 15 * 60)?;
         let bearer_token_tup = self
             .bearer_token
             .as_ref()
