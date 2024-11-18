@@ -578,7 +578,8 @@ impl FusionCredentials {
         force: bool,
         max_remain_secs: u32,
     ) -> PyResult<()> {
-        print!("Refreshing bearer token 1");
+        println!("Refreshing bearer token 1");
+        println!("Token expires in: {:?}", self.bearer_token.as_ref().unwrap().expires_in_secs());
         if !force {
             if let Some(token) = self.bearer_token.as_ref() {
                 if !token.is_expirable() {
@@ -715,6 +716,7 @@ impl FusionCredentials {
             }
         }
         self.put_bearer_token(token, expires_in_secs);
+        println!("Bearer token is: {:?}", self.bearer_token);
         Ok(())
     }
 
@@ -782,6 +784,8 @@ impl FusionCredentials {
         let token = response["access_token"].as_str().unwrap().to_string();
         let expires_in_secs = response["expires_in"].as_i64();
         debug!("Got Fusion token, expires in: {:?}", expires_in_secs);
+        println!("Token url is: {:?}", url);
+        println!("Fusion token is: {:?}", token);
         Ok((token, expires_in_secs))
     }
 
@@ -835,7 +839,7 @@ impl FusionCredentials {
             std::collections::hash_map::Entry::Occupied(mut entry) => {
                 let token = entry.get_mut();
                 if let Some(expires_in_secs) = token.expires_in_secs() {
-                    if expires_in_secs > 30 {
+                    if expires_in_secs > 15 * 60 {
                         (None, Some(self._gen_fusion_token(py, fusion_tk_url)?))
                     } else {
                         (Some(token.as_fusion_header()?), None)
