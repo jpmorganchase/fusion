@@ -578,7 +578,6 @@ impl FusionCredentials {
         force: bool,
         max_remain_secs: u32,
     ) -> PyResult<()> {
-        println!("Refreshing bearer token 1");
         println!("Token expires in: {:?}", self.bearer_token.as_ref().unwrap().expires_in_secs());
         if !force {
             if let Some(token) = self.bearer_token.as_ref() {
@@ -716,7 +715,6 @@ impl FusionCredentials {
             }
         }
         self.put_bearer_token(token, expires_in_secs);
-        println!("Bearer token is: {:?}", self.bearer_token);
         Ok(())
     }
 
