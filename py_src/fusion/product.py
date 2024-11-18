@@ -64,7 +64,7 @@ class Product(metaclass=CamelCaseMeta):
     is_restricted: bool | None = None
     maintainer: str | list[str] | None = None
     region: str | list[str] | None = None
-    publisher: str | None = None
+    publisher: str = "J.P. Morgan"
     sub_category: str | list[str] | None = None
     tag: str | list[str] | None = None
     delivery_channel: str | list[str] = field(default_factory=lambda: ["API"])
@@ -93,7 +93,7 @@ class Product(metaclass=CamelCaseMeta):
         self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description != "" else self.title
-        self.short_abstract = tidy_string(self.short_abstract)
+        self.short_abstract = tidy_string(self.short_abstract) if self.short_abstract != "" else self.title
         self.description = tidy_string(self.description)
         self.category = (
             self.category if isinstance(self.category, list) or self.category is None else make_list(self.category)
@@ -179,7 +179,7 @@ class Product(metaclass=CamelCaseMeta):
             is_restricted=series.get("isrestricted", None),
             maintainer=series.get("maintainer", None),
             region=series.get("region", None),
-            publisher=series.get("publisher", None),
+            publisher=series.get("publisher", "J.P. Morgan"),
             sub_category=series.get("subcategory", None),
             tag=series.get("tags", None),
             delivery_channel=series.get("deliverychannel", "API"),
