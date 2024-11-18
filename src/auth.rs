@@ -578,11 +578,6 @@ impl FusionCredentials {
         force: bool,
         max_remain_secs: u32,
     ) -> PyResult<()> {
-        // if token has expires in seconds attribute then print it
-        if let Some(expires_in_secs) = self.bearer_token.as_ref().and_then(|token| token.expires_in_secs()) {
-            println!("Token expires in: {:?}", expires_in_secs);
-            
-        }
         if !force {
             if let Some(token) = self.bearer_token.as_ref() {
                 if !token.is_expirable() {
@@ -595,7 +590,6 @@ impl FusionCredentials {
                 }
             }
         }
-        print!("Refreshing bearer token 2");
         self._ensure_http_client()?;
         let client = self.http_client.as_ref().ok_or_else(|| {
             CredentialError::new_err(
