@@ -19,13 +19,13 @@ def test_product_class() -> None:
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
-    assert test_product.shortAbstract == ""
+    assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
-    assert test_product.region is None
-    assert test_product.publisher is None
+    assert test_product.region == ["Global"]
+    assert test_product.publisher == "J.P. Morgan"
     assert test_product.subCategory is None
     assert test_product.tag is None
     assert test_product.deliveryChannel == ["API"]
@@ -52,13 +52,13 @@ def test_product_class_from_series() -> None:
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
-    assert test_product.shortAbstract == ""
+    assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
-    assert test_product.region is None
-    assert test_product.publisher is None
+    assert test_product.region == ["Global"]
+    assert test_product.publisher == "J.P. Morgan"
     assert test_product.subCategory is None
     assert test_product.tag is None
     assert test_product.deliveryChannel == ["API"]
@@ -83,13 +83,13 @@ def test_product_class_from_dict() -> None:
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
-    assert test_product.shortAbstract == ""
+    assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
-    assert test_product.region is None
-    assert test_product.publisher is None
+    assert test_product.region == ["Global"]
+    assert test_product.publisher == "J.P. Morgan"
     assert test_product.subCategory is None
     assert test_product.tag is None
     assert test_product.deliveryChannel == ["API"]
@@ -108,13 +108,13 @@ def test_product_class_from_csv(mock_product_pd_read_csv: Generator[pd.DataFrame
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
-    assert test_product.shortAbstract == ""
+    assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
-    assert test_product.region is None
-    assert test_product.publisher is None
+    assert test_product.region == ["Global"]
+    assert test_product.publisher == "J.P. Morgan"
     assert test_product.subCategory is None
     assert test_product.tag is None
     assert test_product.deliveryChannel == ["API"]
@@ -201,13 +201,13 @@ def test_product_class_from_object_dict() -> None:
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
-    assert test_product.shortAbstract == ""
+    assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
-    assert test_product.region is None
-    assert test_product.publisher is None
+    assert test_product.region == ["Global"]
+    assert test_product.publisher == "J.P. Morgan"
     assert test_product.subCategory is None
     assert test_product.tag is None
     assert test_product.deliveryChannel == ["API"]
@@ -234,13 +234,13 @@ def test_product_class_from_object_series() -> None:
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
-    assert test_product.shortAbstract == ""
+    assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
-    assert test_product.region is None
-    assert test_product.publisher is None
+    assert test_product.region == ["Global"]
+    assert test_product.publisher == "J.P. Morgan"
     assert test_product.subCategory is None
     assert test_product.tag is None
     assert test_product.deliveryChannel == ["API"]
@@ -259,13 +259,13 @@ def test_product_class_from_object_csv(mock_product_pd_read_csv: Generator[pd.Da
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
-    assert test_product.shortAbstract == ""
+    assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
-    assert test_product.region is None
-    assert test_product.publisher is None
+    assert test_product.region == ["Global"]
+    assert test_product.publisher == "J.P. Morgan"
     assert test_product.subCategory is None
     assert test_product.tag is None
     assert test_product.deliveryChannel == ["API"]
@@ -292,13 +292,13 @@ def test_product_class_from_object_json() -> None:
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
-    assert test_product.shortAbstract == ""
+    assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
-    assert test_product.region is None
-    assert test_product.publisher is None
+    assert test_product.region == ["Global"]
+    assert test_product.publisher == "J.P. Morgan"
     assert test_product.subCategory is None
     assert test_product.tag is None
     assert test_product.deliveryChannel == ["API"]

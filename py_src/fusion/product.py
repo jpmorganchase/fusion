@@ -63,7 +63,7 @@ class Product(metaclass=CamelCaseMeta):
     is_active: bool = True
     is_restricted: bool | None = None
     maintainer: str | list[str] | None = None
-    region: str | list[str] | None = None
+    region: str | list[str]  = field(default_factory=lambda: ["Global"])
     publisher: str = "J.P. Morgan"
     sub_category: str | list[str] | None = None
     tag: str | list[str] | None = None
@@ -178,7 +178,7 @@ class Product(metaclass=CamelCaseMeta):
             is_active=series.get("isactive", True),
             is_restricted=series.get("isrestricted", None),
             maintainer=series.get("maintainer", None),
-            region=series.get("region", None),
+            region=series.get("region", "Global"),
             publisher=series.get("publisher", "J.P. Morgan"),
             sub_category=series.get("subcategory", None),
             tag=series.get("tags", None),
