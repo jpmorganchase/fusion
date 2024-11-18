@@ -583,7 +583,6 @@ impl FusionCredentials {
             println!("Token expires in: {:?}", expires_in_secs);
             
         }
-        println!("Is token expirable: {:?}", self.bearer_token.as_ref().unwrap().is_expirable());
         if !force {
             if let Some(token) = self.bearer_token.as_ref() {
                 if !token.is_expirable() {
