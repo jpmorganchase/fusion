@@ -784,8 +784,6 @@ impl FusionCredentials {
         let token = response["access_token"].as_str().unwrap().to_string();
         let expires_in_secs = response["expires_in"].as_i64();
         debug!("Got Fusion token, expires in: {:?}", expires_in_secs);
-        println!("Token url is: {:?}", url);
-        println!("Fusion token is: {:?}", token);
         Ok((token, expires_in_secs))
     }
 
