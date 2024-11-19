@@ -85,7 +85,7 @@ events = [
 ]
 
 
-[tool.rye]
+[tool.uv]
 managed = true
 dev-dependencies = [
     "aioresponses>=0.7.6",
@@ -131,6 +131,10 @@ dev-dependencies = [
     "pkginfo>=1.11",
 ]
 
+[tool.uv.pip]
+link-mode = "copy"
+generate-hashes = true
+universal = true
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -155,9 +159,9 @@ extend-select = [
     'UP',    # pyupgrade
     'YTT',   # flake8-2020
     'ASYNC', # flake8-async
-    'TRIO',  # Trio
+    'ASYNC1',# Trio
     'BLE',   # flake8-blind-except
-    #'FBT',   # flake8-boolean-trap
+    #'FBT',  # flake8-boolean-trap
     'ANN',   # flake8-annotations
     'B',     # flake8-bugbear
     'A',     # flake8-builtins

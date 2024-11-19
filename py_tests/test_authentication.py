@@ -112,7 +112,7 @@ def test_fusion_oauth_adapter_send_no_bearer_token_exp(fusion_oauth_adapter: Fus
         fusion_oauth_adapter.send(Mock())
 
 
-@pytest.fixture()
+@pytest.fixture
 def local_fsspec_fs() -> Generator[tuple[fsspec.filesystem, str], None, None]:
     with TemporaryDirectory() as tmp_dir, patch("fsspec.filesystem") as mock_fs:
         # Configure the mock to return a LocalFileSystem that points to our temporary directory
