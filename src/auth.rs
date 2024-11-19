@@ -285,7 +285,6 @@ impl Default for AuthToken {
 }
 
 fn build_client(proxies: &Option<HashMap<String, String>>) -> PyResult<reqwest::Client> {
-
     client_builder_from_proxies(proxies.as_ref().unwrap_or(&HashMap::new()))
         .use_rustls_tls()
         .tls_built_in_native_certs(true)

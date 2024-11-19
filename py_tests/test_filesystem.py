@@ -13,7 +13,7 @@ from fusion._fusion import FusionCredentials
 from fusion.fusion_filesystem import FusionHTTPFileSystem
 
 
-@pytest.fixture()
+@pytest.fixture
 def http_fs_instance(credentials_examples: Path) -> FusionHTTPFileSystem:
     """Fixture to create a new instance for each test."""
     creds = FusionCredentials.from_file(credentials_examples)
@@ -44,7 +44,7 @@ def test_filesystem(
         FusionHTTPFileSystem(None, **kwargs)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_not_found_status(http_fs_instance: FusionHTTPFileSystem) -> None:
     # Create a mock response object
     response = mock.MagicMock(spec=ClientResponse)
@@ -56,7 +56,7 @@ async def test_not_found_status(http_fs_instance: FusionHTTPFileSystem) -> None:
         await http_fs_instance._async_raise_not_found_for_status(response, "http://example.com")
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_other_error_status(credentials: FusionCredentials) -> None:
     # Create a mock response object
     response = mock.MagicMock(spec=ClientResponse)
@@ -75,7 +75,7 @@ async def test_other_error_status(credentials: FusionCredentials) -> None:
         assert response.reason == "Internal server error", "The reason should be updated to the response text"
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_successful_status(http_fs_instance: FusionHTTPFileSystem) -> None:
     # Create a mock response object with a successful status code
     response = mock.MagicMock(spec=ClientResponse)
@@ -90,7 +90,7 @@ async def test_successful_status(http_fs_instance: FusionHTTPFileSystem) -> None
         pytest.fail(f"No exception should be raised for a successful response, but got: {e}")
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_decorate_url_with_http_async(http_fs_instance: FusionHTTPFileSystem) -> None:
     url = "resource/path"
     exp_res = f"{http_fs_instance.client_kwargs['root_url']}catalogs/{url}"
@@ -98,7 +98,7 @@ async def test_decorate_url_with_http_async(http_fs_instance: FusionHTTPFileSyst
     assert result == exp_res
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_isdir_true(http_fs_instance: FusionHTTPFileSystem) -> None:
     http_fs_instance._decorate_url = AsyncMock(return_value="decorated_path_dir")  # type: ignore
     http_fs_instance._info = AsyncMock(return_value={"type": "directory"})
@@ -106,7 +106,7 @@ async def test_isdir_true(http_fs_instance: FusionHTTPFileSystem) -> None:
     assert result
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_isdir_false(http_fs_instance: FusionHTTPFileSystem) -> None:
     http_fs_instance._decorate_url = AsyncMock(return_value="decorated_path_file")  # type: ignore
     http_fs_instance._info = AsyncMock(return_value={"type": "file"})
@@ -114,7 +114,7 @@ async def test_isdir_false(http_fs_instance: FusionHTTPFileSystem) -> None:
     assert not result
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @patch("aiohttp.ClientSession")
 async def test_stream_file(mock_client_session: mock.AsyncMock) -> None:
     url = "http://example.com/data"
@@ -148,7 +148,7 @@ async def test_stream_file(mock_client_session: mock.AsyncMock) -> None:
     assert results == (True, output_file.path, None)  # type: ignore
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @patch("aiohttp.ClientSession")
 async def test_stream_file_exception(mock_client_session: mock.AsyncMock) -> None:
     url = "http://example.com/data"
@@ -183,7 +183,7 @@ async def test_stream_file_exception(mock_client_session: mock.AsyncMock) -> Non
     assert results == (False, output_file.path, "Test exception")  # type: ignore
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @patch("fsspec.asyn._run_coros_in_chunks", new_callable=AsyncMock)
 async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMock) -> None:
     # Define the mock return value
@@ -219,7 +219,7 @@ async def test_download_single_file_async(mock_run_coros_in_chunks: mock.AsyncMo
     output_file.close.assert_called()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @patch("aiohttp.ClientSession")
 async def test_fetch_range_exception(mock_client_session: mock.AsyncMock) -> None:
     output_file = MagicMock(spec=io.IOBase)
@@ -251,7 +251,7 @@ async def test_fetch_range_exception(mock_client_session: mock.AsyncMock) -> Non
     output_file.write.assert_not_called()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @patch("aiohttp.ClientSession")
 async def test_fetch_range_success(mock_client_session: mock.AsyncMock) -> None:
     url = "http://example.com/data"
@@ -341,7 +341,7 @@ def test_get(
     mock_get_default_fs.return_value.open.assert_not_called()
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("overwrite", "preserve_original_name", "expected_lpath"),
     [
