@@ -5,7 +5,7 @@ use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use pyo3::exceptions::{PyFileNotFoundError, PyValueError};
 use pyo3::import_exception;
 use pyo3::prelude::*;
-use pyo3::types::{PyDate, PyDateAccess, PyType};
+use pyo3::types::{PyBool, PyDate, PyDateAccess, PyType};
 use reqwest::Proxy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -577,15 +577,15 @@ impl FusionCredentials {
         py: Python,
         force: bool,
         max_remain_secs: u32,
-    ) -> PyResult<()> {
+    ) -> PyResult<bool> {
         if !force {
             if let Some(token) = self.bearer_token.as_ref() {
                 if !token.is_expirable() {
-                    return Ok(());
+                    return Ok(false);
                 }
                 if let Some(expires_in_secs) = token.expires_in_secs() {
                     if expires_in_secs > max_remain_secs as i64 {
-                        return Ok(());
+                        return Ok(false);
                     }
                 }
             }
@@ -668,7 +668,7 @@ impl FusionCredentials {
                 ],
                 "bearer" => {
                     // Nothing to do
-                    return Ok(());
+                    return Ok(true);
                 }
                 _ => {
                     return Err(PyValueError::new_err("Unrecognized grant type"));
@@ -807,7 +807,7 @@ impl FusionCredentials {
             }
         }
 
-        self._refresh_bearer_token(py, false, 15 * 60)?;
+        let is_bearer_refreshed = self._refresh_bearer_token(py, false, 15 * 60)?;
         let bearer_token_tup = self
             .bearer_token
             .as_ref()
@@ -833,7 +833,7 @@ impl FusionCredentials {
             std::collections::hash_map::Entry::Occupied(mut entry) => {
                 let token = entry.get_mut();
                 if let Some(expires_in_secs) = token.expires_in_secs() {
-                    if expires_in_secs > 15 * 60 {
+                    if expires_in_secs < 15 * 60 || is_bearer_refreshed {
                         (None, Some(self._gen_fusion_token(py, fusion_tk_url)?))
                     } else {
                         (Some(token.as_fusion_header()?), None)
