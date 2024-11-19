@@ -5,7 +5,7 @@ use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use pyo3::exceptions::{PyFileNotFoundError, PyValueError};
 use pyo3::import_exception;
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyDate, PyDateAccess, PyType};
+use pyo3::types::{PyDate, PyDateAccess, PyType};
 use reqwest::Proxy;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -713,7 +713,7 @@ impl FusionCredentials {
             }
         }
         self.put_bearer_token(token, expires_in_secs);
-        Ok(())
+        Ok((true))
     }
 
     #[pyo3(signature = (bearer_token, expires_in_secs=None))]
