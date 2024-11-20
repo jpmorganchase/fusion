@@ -671,3 +671,51 @@ class Dataset(metaclass=CamelCaseMeta):
         dataset_obj.set_client(client_to)
         resp = dataset_obj.create(client=client_to, catalog=catalog_to, return_resp_obj=True)
         return resp if return_resp_obj else None
+    
+    def activate(
+        self,
+        catalog: str | None = None,
+        client: Fusion | None = None,
+    ) -> None:
+        """_summary_
+
+        Args:
+            catalog (str | None, optional): _description_. Defaults to None.
+            client (Fusion | None, optional): _description_. Defaults to None.
+        """
+        if client is None:
+            client = self._client
+        catalog = client._use_catalog(catalog)
+        dataset_obj = self.from_catalog(catalog=catalog, client=client)
+        dataset_obj.is_active = True
+        dataset_obj.update(catalog=catalog, client=client)
+
+    def add_to_product(
+        self,
+        product: str,
+        catalog: str | None = None,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """_summary_
+
+        Args:
+            product (str): _description_
+            catalog (str | None, optional): _description_. Defaults to None.
+            client (Fusion | None, optional): _description_. Defaults to None.
+        """
+        if client is None:
+            client = self._client
+        catalog = client._use_catalog(catalog)
+        url = f"{client.root_url}catalogs/{catalog}/productsDatasets"
+        data = {
+            "product": product,
+            "datasets": [
+                self.identifier
+            ]
+        }
+        resp = client.session.put(url=url, json=data)
+
+        requests_raise_for_status(resp)
+        
+        return resp if return_resp_obj else None

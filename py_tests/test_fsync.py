@@ -36,7 +36,7 @@ def test_download(
     mock_delayed: mock.Mock,
     mock_parallel: mock.Mock,
     mock_fs_class: mock.AsyncMock,
-    mock_set_session: mock.AsyncMock,
+    mock_set_session: mock.AsyncMock,  # noqa: ARG001
     example_creds_dict: dict[str, Any],
     tmp_path: Path,
 ) -> None:
@@ -62,10 +62,10 @@ def test_download(
     )
 
     # Mock the delayed function to return the function itself
-    mock_delayed.side_effect = lambda func, *args, **kwargs: func
+    mock_delayed.side_effect = lambda func, *args, **kwargs: func  # noqa: ARG005
 
     # Mock the Parallel object to return a callable that returns the expected result
-    mock_parallel.return_value = lambda *args, **kwargs: [
+    mock_parallel.return_value = lambda *args, **kwargs: [  # noqa: ARG005
         (True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)
     ]
 
@@ -82,7 +82,7 @@ def test_download_no_progress(
     mock_delayed: mock.Mock,
     mock_parallel: mock.Mock,
     mock_fs_class: mock.AsyncMock,
-    mock_set_session: mock.AsyncMock,
+    mock_set_session: mock.AsyncMock,  # noqa: ARG001
     example_creds_dict: dict[str, Any],
     tmp_path: Path,
 ) -> None:
@@ -108,10 +108,10 @@ def test_download_no_progress(
     )
 
     # Mock the delayed function to return the function itself
-    mock_delayed.side_effect = lambda func, *args, **kwargs: func
+    mock_delayed.side_effect = lambda func, *args, **kwargs: func  # noqa: ARG005
 
     # Mock the Parallel object to return a callable that returns the expected result
-    mock_parallel.return_value = lambda *args, **kwargs: [
+    mock_parallel.return_value = lambda *args, **kwargs: [  # noqa: ARG005
         (True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)
     ]
 
@@ -124,7 +124,7 @@ def test_download_no_progress(
 @patch("fsspec.AbstractFileSystem", autospec=True)
 def test_download_empty_df(
     mock_fs_class: mock.AsyncMock,
-    mock_set_session: mock.AsyncMock,
+    mock_set_session: mock.AsyncMock,  # noqa: ARG001
     example_creds_dict: dict[str, Any],
     tmp_path: Path,
 ) -> None:
@@ -158,7 +158,7 @@ def test_download_empty_df(
 @patch("fsspec.AbstractFileSystem", autospec=True)
 def test_upload(
     mock_fs_class: mock.AsyncMock,
-    mock_set_session: mock.AsyncMock,
+    mock_set_session: mock.AsyncMock,  # noqa: ARG001
     example_creds_dict: dict[str, Any],
     tmp_path: Path,
 ) -> None:
