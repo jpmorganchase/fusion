@@ -696,6 +696,13 @@ class Dataset(metaclass=CamelCaseMeta):
             client (Fusion | None, optional):  A Fusion client object. Defaults to the instance's _client.
                 If instantiated from a Fusion object, then the client is set automatically.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.dataset("my_dataset").activate(catalog="my_catalog")
+
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
@@ -719,6 +726,13 @@ class Dataset(metaclass=CamelCaseMeta):
             catalog (str | None, optional): A catalog identifier. Defaults to "common".
             client (Fusion | None, optional):  A Fusion client object. Defaults to the instance's _client.
                 If instantiated from a Fusion object, then the client is set automatically.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.dataset("my_dataset").add_to_product(product="MY_PRODUCT", catalog="my_catalog")
+
         """
         client = self._client if client is None else client
         catalog = client._use_catalog(catalog)
