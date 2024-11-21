@@ -158,9 +158,7 @@ class Attribute(metaclass=CamelCaseMeta):
             to_replace=np.nan, value=None
         )
         data_type = series.get("datatype", cast(Types, Types.String))
-        if data_type is None:
-            data_type = series.get("type", cast(Types, Types.String))
-
+        data_type = series.get("type", cast(Types, Types.String)) if data_type is None else data_type
         source = series.get("source", None)
         source = source.strip() if isinstance(source, str) else source
 

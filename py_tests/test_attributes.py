@@ -3,6 +3,7 @@
 from typing import cast
 
 import pandas as pd
+import pytest
 import requests
 import requests_mock
 
@@ -400,6 +401,24 @@ def test_attributes_remove_attributes() -> None:
     assert test_attributes.attributes == []
 
 
+def test_attributes_remove_attributes_doesnt_exist() -> None:
+    """Test attributes class remove attributes method."""
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
+            )
+        ]
+    )
+    test_attributes.remove_attribute("test_attribute2")
+    assert test_attributes.attributes[0].title == "Test Attribute"
+
+
 def test_attributes_get_attribute() -> None:
     """Test attributes class get_attribute method."""
     test_attributes = Attributes(
@@ -417,6 +436,24 @@ def test_attributes_get_attribute() -> None:
     attr = test_attributes.get_attribute("test_attribute")
     assert attr is not None
     assert attr.title == "Test Attribute"
+
+
+def test_attributes_get_attribute_doesnt_exist() -> None:
+    """Test attributes class get_attribute method."""
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
+            )
+        ]
+    )
+    attr = test_attributes.get_attribute("test_attribute2")
+    assert attr is None
 
 
 def test_attributes_to_dict() -> None:
@@ -569,6 +606,45 @@ def test_attributes_from_object_list_dict() -> None:
     assert test_attributes.attributes[0].attributeType is None
 
 
+def test_attributes_from_object_list_attrs() -> None:
+    """Test attributes class from_object"""
+    test_attributes_input = [Attribute(
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
+    )]
+    test_attributes = Attributes().from_object(test_attributes_input)
+    assert test_attributes.attributes[0].title == "Test Attribute"
+    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].index == 0
+    assert test_attributes.attributes[0].isDatasetKey
+    assert test_attributes.attributes[0].dataType == Types.String
+    assert test_attributes.attributes[0].description == "Test Attribute"
+    assert test_attributes.attributes[0].source is None
+    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].isInternalDatasetKey is None
+    assert test_attributes.attributes[0].isExternallyVisible is True
+    assert test_attributes.attributes[0].unit is None
+    assert test_attributes.attributes[0].multiplier == 1.0
+    assert test_attributes.attributes[0].isMetric is None
+    assert test_attributes.attributes[0].isPropagationEligible is None
+    assert test_attributes.attributes[0].availableFrom == "2020-05-05"
+    assert test_attributes.attributes[0].deprecatedFrom is None
+    assert test_attributes.attributes[0].term == "bizterm1"
+    assert test_attributes.attributes[0].dataset is None
+    assert test_attributes.attributes[0].attributeType is None
+
+
+def test_attributes_from_object_value_error() -> None:
+    """Test from object method for attributes with ValueError."""
+    attr = "attributes"
+    with pytest.raises(ValueError, match=f"Could not resolve the object provided: {attr}"):
+        Attributes().from_object(attr)  # type: ignore
+
+
 def test_attributes_from_object_dataframe() -> None:
     """Test attributes class from_dataframe method."""
     test_df = pd.DataFrame(
@@ -601,6 +677,47 @@ def test_attributes_from_object_dataframe() -> None:
     assert test_attributes.attributes[0].term == "bizterm1"
     assert test_attributes.attributes[0].dataset is None
     assert test_attributes.attributes[0].attributeType is None
+
+
+def test_from_object_attribute() -> None:
+    """Test from object method for attribute."""
+    test_attribute = Attribute(
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
+    )
+
+    test_attribute.from_object(test_attribute)
+    assert test_attribute.title == "Test Attribute"
+    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.index == 0
+    assert test_attribute.isDatasetKey
+    assert test_attribute.dataType == Types.String
+    assert test_attribute.description == "Test Attribute"
+    assert test_attribute.source is None
+    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.isInternalDatasetKey is None
+    assert test_attribute.isExternallyVisible is True
+    assert test_attribute.unit is None
+    assert test_attribute.multiplier == 1.0
+    assert test_attribute.isMetric is None
+    assert test_attribute.isPropagationEligible is None
+    assert test_attribute.availableFrom == "2020-05-05"
+    assert test_attribute.deprecatedFrom is None
+    assert test_attribute.term == "bizterm1"
+    assert test_attribute.dataset is None
+    assert test_attribute.attributeType is None
+
+
+def test_from_object_value_error() -> None:
+    """Test from object method for attribute with ValueError."""
+    attribute_source = "test_attribute"
+
+    with pytest.raises(ValueError, match=f"Could not resolve the object provided: {attribute_source}"):
+        Attribute(identifier="test_attribute", index=0).from_object(attribute_source)  # type: ignore
 
 
 def test_attributes_to_dataframe() -> None:
@@ -759,6 +876,52 @@ def test_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
     assert resp.status_code == status_code
 
 
+def test_attributes_create_no_client() -> None:
+    """Test create attribute without client."""
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
+            )
+        ]
+    )
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    with pytest.raises(ValueError, match="Client must be provided"):
+        test_attributes.create(catalog=catalog, dataset=dataset, return_resp_obj=True)
+
+
+def test_attributes_from_catalog_no_catalog() -> None:
+    """Test attributes class from_catalog method."""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+
+    with pytest.raises(ValueError, match="Client must be provided"):
+        Attributes().from_catalog(catalog=catalog, dataset=dataset)
+
+
+def test_attribute_create_no_client() -> None:
+    """Test create attribute without client."""
+    test_attribute = Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
+            )
+
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    with pytest.raises(ValueError, match="Client must be provided"):
+        test_attribute.create(catalog=catalog, dataset=dataset, return_resp_obj=True)
+
+
 def test_attributes_delete(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test deletion of multiple attributes."""
     catalog = "my_catalog"
@@ -780,6 +943,43 @@ def test_attributes_delete(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
     assert resp is not None
     assert isinstance(resp[0], requests.Response)
     assert resp[0].status_code == status_code
+
+
+def test_attributes_delete_no_client() -> None:
+    """Test create attribute without client."""
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
+            )
+        ]
+    )
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    with pytest.raises(ValueError, match="Client must be provided"):
+        test_attributes.delete(catalog=catalog, dataset=dataset, return_resp_obj=True)
+
+
+def test_attribute_delete_no_client() -> None:
+    """Test create attribute without client."""
+    test_attribute = Attribute(
+                title="Test Attribute",
+                identifier="Test Attribute",
+                index=0,
+                is_dataset_key=True,
+                data_type=cast(Types, "string"),
+                available_from="May 5, 2020",
+            )
+
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    with pytest.raises(ValueError, match="Client must be provided"):
+        test_attribute.delete(catalog=catalog, dataset=dataset, return_resp_obj=True)
 
 
 def test_attribute_case_switching() -> None:
@@ -836,3 +1036,51 @@ def test_attribute_case_switching() -> None:
     assert attribute_from_camel_dict.availableFrom == attribute_from_camel_dict.available_from
     assert attribute_from_camel_dict.sourceFieldId == attribute_from_camel_dict.source_field_id
     assert attribute_from_camel_dict.attributeType == attribute_from_camel_dict.attribute_type
+
+
+def test_attribute_getattr() -> None:
+    """Test __getattr__ method for Attribute class."""
+    test_attribute = Attribute(
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
+    )
+    assert test_attribute.title == "Test Attribute"
+    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.index == 0
+    assert test_attribute.isDatasetKey is True
+    assert test_attribute.dataType == Types.String
+    assert test_attribute.description == "Test Attribute"
+    assert test_attribute.source is None
+    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.isInternalDatasetKey is None
+    assert test_attribute.isExternallyVisible is True
+    assert test_attribute.unit is None
+    assert test_attribute.multiplier == 1.0
+    assert test_attribute.isMetric is None
+    assert test_attribute.isPropagationEligible is None
+    assert test_attribute.availableFrom == "2020-05-05"
+    assert test_attribute.deprecatedFrom is None
+    assert test_attribute.term == "bizterm1"
+    assert test_attribute.dataset is None
+    assert test_attribute.attributeType is None
+
+    # Test accessing attributes using camelCase
+    assert test_attribute.isDatasetKey == test_attribute.is_dataset_key
+    assert test_attribute.dataType == test_attribute.data_type
+    assert test_attribute.sourceFieldId == test_attribute.source_field_id
+    assert test_attribute.isInternalDatasetKey == test_attribute.is_internal_dataset_key
+    assert test_attribute.isExternallyVisible == test_attribute.is_externally_visible
+    assert test_attribute.isPropagationEligible == test_attribute.is_propagation_eligible
+    assert test_attribute.isMetric == test_attribute.is_metric
+    assert test_attribute.availableFrom == test_attribute.available_from
+    assert test_attribute.deprecatedFrom == test_attribute.deprecated_from
+
+    # Test accessing non-existent attribute
+    with pytest.raises(AttributeError) as error_info:
+        _ = test_attribute.nonExistentAttribute
+    assert str(error_info.value) ==  "'Attribute' object has no attribute 'nonExistentAttribute'"
+
