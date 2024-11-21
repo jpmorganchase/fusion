@@ -43,6 +43,7 @@ from .utils import (
     read_csv,
     read_json,
     read_parquet,
+    requests_raise_for_status,
     # stream_single_file_new_session,
     upload_files,
     validate_file_names,
@@ -1901,6 +1902,7 @@ class Fusion:
         for series_member in series_members:
             url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series_member}"
             resp = self.session.delete(url)
+            requests_raise_for_status(resp)
             responses.append(resp)
         return responses if return_resp_obj else None
 
@@ -1929,4 +1931,5 @@ class Fusion:
         catalog = self._use_catalog(catalog)
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
         resp = self.session.delete(url)
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None
