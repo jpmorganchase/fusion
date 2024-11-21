@@ -164,8 +164,7 @@ class Product(metaclass=CamelCaseMeta):
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
         series = series.rename({"tag": "tags", "dataset": "datasets"})
         short_abstract = series.get("abstract", "")
-        if short_abstract is None:
-            short_abstract = series.get("shortabstract", "")
+        short_abstract = series.get("shortabstract", "") if short_abstract is None else short_abstract
 
         return cls(
             title=series.get("title", ""),

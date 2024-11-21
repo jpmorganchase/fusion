@@ -189,6 +189,37 @@ def test_product_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj: F
     assert isinstance(my_product._client, Fusion)
 
 
+def test_product_class_from_object_product() -> None:
+    """Test the Product class."""
+    test_product_input = Product(
+        identifier="TEST_PRODUCT",
+        title="Test Product",
+        release_date="May 5, 2020"
+    )
+
+    test_product = Product(identifier="TEST_PRODUCT").from_object(test_product_input)
+    assert test_product.title == "Test Product"
+    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.category is None
+    assert test_product.shortAbstract == "Test Product"
+    assert test_product.description == "Test Product"
+    assert test_product.isActive is True
+    assert test_product.isRestricted is None
+    assert test_product.maintainer is None
+    assert test_product.region == ["Global"]
+    assert test_product.publisher == "J.P. Morgan"
+    assert test_product.subCategory is None
+    assert test_product.tag is None
+    assert test_product.deliveryChannel == ["API"]
+    assert test_product.theme is None
+    assert test_product.releaseDate == "2020-05-05"
+    assert test_product.language == "English"
+    assert test_product.status == "Available"
+    assert test_product.image == ""
+    assert test_product.logo == ""
+    assert test_product.dataset is None
+
+
 def test_product_class_from_object_dict() -> None:
     """Test the Product class."""
     test_product = Product(identifier="TEST_PRODUCT").from_object(
@@ -569,4 +600,70 @@ def test_product_case_switching() -> None:
     assert product_from_camel_dict.release_date == product_from_camel_dict.releaseDate
     assert product_from_camel_dict.is_active == product_from_camel_dict.isActive
     assert product_from_camel_dict.is_restricted == product_from_camel_dict.isRestricted
+
+
+def test_product_repr() -> None:
+    """Test the __repr__ method of the Product class."""
+    test_product = Product(
+        title="Test Product",
+        identifier="Test Product",
+        release_date="May 5, 2020",
+        short_abstract="Short Abstract",
+        description="Description",
+        is_active=True,
+        is_restricted=False,
+        maintainer="Maintainer",
+        region="Region",
+        publisher="Publisher",
+        sub_category="Sub Category",
+        tag="Tag",
+        delivery_channel="API",
+        theme="Theme",
+        language="English",
+        status="Available",
+    )
+
+    expected_repr = (
+        "Product(\n"
+        "identifier='TEST_PRODUCT',\n "
+        "title='Test Product',\n "
+        "category=None,\n "
+        "short_abstract='Short Abstract',\n "
+        "description='Description',\n "
+        "is_active=True,\n "
+        "is_restricted=False,\n "
+        "maintainer=['Maintainer'],\n "
+        "region=['Region'],\n "
+        "publisher='Publisher',\n "
+        "sub_category=['Sub Category'],\n "
+        "tag=['Tag'],\n "
+        "delivery_channel=['API'],\n "
+        "theme='Theme',\n "
+        "release_date='2020-05-05',\n "
+        "language='English',\n "
+        "status='Available',\n "
+        "image='',\n "
+        "logo='',\n "
+        "dataset=None\n"
+        ")"
+    )
+
+    assert repr(test_product) == expected_repr
+
+def test_product_getattr_existing_attribute() -> None:
+    """Test the __getattr__ method for an existing attribute."""
+    test_product = Product(title="Test Product", identifier="Test Product", release_date="May 5, 2020")
+    assert test_product.shortAbstract == "Test Product"
+    assert test_product.isActive is True
+    assert test_product.releaseDate == "2020-05-05"
+
+
+def test_product_getattr_non_existing_attribute() -> None:
+    """Test the __getattr__ method for a non-existing attribute."""
+    test_product = Product(title="Test Product", identifier="Test Product", release_date="May 5, 2020")
+    with pytest.raises(AttributeError) as error_info:
+        _ = test_product.nonExistingAttribute
+    assert str(error_info.value) == "'Product' object has no attribute 'nonExistingAttribute'"
+
+
 
