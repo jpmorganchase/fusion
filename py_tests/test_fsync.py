@@ -10,7 +10,7 @@ import fsspec
 import pandas as pd
 
 from fusion._fusion import FusionCredentials
-from fusion.fs_sync import _download, _generate_sha256_token, _get_fusion_df, _upload, _url_to_path
+from fusion.fs_sync import _download, _generate_sha256_token, _get_fusion_df, _get_local_state, _upload, _url_to_path
 from fusion.fusion_filesystem import FusionHTTPFileSystem
 
 
@@ -457,6 +457,190 @@ def test_get_fusion_df_no_changes(mock_fs: mock.Mock) -> None:
     # Define the expected DataFrame
     expected_df = pd.DataFrame(columns=["path", "url", "size", "sha256"])
     expected_df = expected_df.astype("object")
+
+    # Assert the result
+    pd.testing.assert_frame_equal(result_df.reset_index(drop=True), expected_df)
+
+
+@patch("fusion.fs_sync._generate_sha256_token", return_value="47DEQpnsdfno3489HBFAQ=AF+sdjgbw3=")
+@patch("fusion.fs_sync.is_dataset_raw", return_value=[False])
+@patch("fusion.fs_sync.validate_file_names", return_value=[True])
+@patch("fusion.fs_sync.fsspec.filesystem")
+@patch("fusion.fs_sync.relpath", return_value="20241119/DATASET__catalog__20241119.csv")
+def test_get_local_state(
+    mock_relpath: mock.Mock,
+    mock_fs: mock.Mock,
+    mock_validate_file_names: mock.Mock,
+    mock_is_dataset_raw: mock.Mock,
+    mock_generate_sha256_token: mock.Mock
+) -> None:
+    """Test the _get_local_state function of the fs_sync module."""
+    mock_fs_instance = mock_fs.return_value
+
+    mock_fs_instance.exists.return_value = True
+
+    mock_fs_instance.find.return_value = [
+        "/home/catalog/DATASET/20241119/DATASET__catalog__20241119.csv",
+    ]
+
+    # mock .info() call
+    mock_fs_instance.info.return_value = {
+        "size": 0,
+        "mtime": 1223582952.09089,
+    }
+
+    # Define the input parameters
+    fs = mock_fs_instance
+    catalog = "catalog"
+    dataset = "DATASET"
+
+    # Call the function
+    result_df = _get_local_state(fs, fs, datasets=[dataset], dataset_format="csv", catalog=catalog)
+
+    # Define the expected DataFrame
+    expected_data = {
+        "path": [
+            Path("catalog/DATASET/20241119/DATASET__catalog__20241119.csv"),
+        ],
+        "url": [
+            "catalog/datasets/DATASET/datasetseries/20241119/distributions/csv",
+        ],
+        "mtime": [1223582952.09089],
+        "local_path": [
+            "/home/catalog/DATASET/20241119/DATASET__catalog__20241119.csv",
+        ],
+        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="]
+    }
+    expected_df = pd.DataFrame(expected_data)
+    expected_df["mtime"] = expected_df["mtime"].astype("object")
+
+    # Assert the result
+    pd.testing.assert_frame_equal(result_df.reset_index(drop=True), expected_df)
+
+
+@patch("fusion.fs_sync._generate_sha256_token", return_value="47DEQpnsdfno3489HBFAQ=AF+sdjgbw3=")
+@patch("fusion.fs_sync.is_dataset_raw", return_value=[False])
+@patch("fusion.fs_sync.validate_file_names", return_value=[True])
+@patch("fusion.fs_sync.fsspec.filesystem")
+@patch("fusion.fs_sync.relpath", return_value="20241119/DATASET__catalog__20241119.csv")
+def test_get_local_state_mkdir(
+    mock_relpath: mock.Mock,
+    mock_fs: mock.Mock,
+    mock_validate_file_names: mock.Mock,
+    mock_is_dataset_raw: mock.Mock,
+    mock_generate_sha256_token: mock.Mock
+) -> None:
+    """Test the _get_local_state function when fs_local.exists is False."""
+    mock_fs_instance = mock_fs.return_value
+
+    mock_fs_instance.exists.return_value = False
+
+    mock_fs_instance.find.return_value = [
+        "/home/catalog/DATASET/20241119/DATASET__catalog__20241119.csv",
+    ]
+
+    # mock .info() call
+    mock_fs_instance.info.return_value = {
+        "size": 0,
+        "mtime": 1223582952.09089,
+    }
+
+    # Define the input parameters
+    fs = mock_fs_instance
+    catalog = "catalog"
+    dataset = "DATASET"
+
+    # Call the function
+    result_df = _get_local_state(fs, fs, datasets=[dataset], dataset_format="csv", catalog=catalog)
+
+    # Define the expected DataFrame
+    expected_data = {
+        "path": [
+            Path("catalog/DATASET/20241119/DATASET__catalog__20241119.csv"),
+        ],
+        "url": [
+            "catalog/datasets/DATASET/datasetseries/20241119/distributions/csv",
+        ],
+        "mtime": [1223582952.09089],
+        "local_path": [
+            "/home/catalog/DATASET/20241119/DATASET__catalog__20241119.csv",
+        ],
+        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="]
+    }
+    expected_df = pd.DataFrame(expected_data)
+    expected_df["mtime"] = expected_df["mtime"].astype("object")
+
+    # Assert the result
+    pd.testing.assert_frame_equal(result_df.reset_index(drop=True), expected_df)
+
+    # Assert that mkdir was called
+    mock_fs_instance.mkdir.assert_called_with("catalog/DATASET", exist_ok=True, create_parents=True)
+
+
+@patch("fusion.fs_sync._generate_sha256_token", return_value="47DEQpnsdfno3489HBFAQ=AF+sdjgbw3=")
+@patch("fusion.fs_sync.is_dataset_raw", return_value=[False])
+@patch("fusion.fs_sync.validate_file_names", return_value=[True])
+@patch("fusion.fs_sync.fsspec.filesystem")
+@patch("fusion.fs_sync.relpath", return_value="20241119/DATASET__catalog__20241119.csv")
+def test_get_local_state_with_local_state(
+    mock_relpath: mock.Mock,
+    mock_fs: mock.Mock,
+    mock_validate_file_names: mock.Mock,
+    mock_is_dataset_raw: mock.Mock,
+    mock_generate_sha256_token: mock.Mock
+) -> None:
+    """Test the _get_local_state function when local_state is non-None and len(local_state) > 0."""
+    mock_fs_instance = mock_fs.return_value
+
+    mock_fs_instance.exists.return_value = True
+
+    mock_fs_instance.find.return_value = [
+        "/home/catalog/DATASET/20241119/DATASET__catalog__20241119.csv",
+    ]
+
+    # mock .info() call
+    mock_fs_instance.info.return_value = {
+        "size": 0,
+        "mtime": 1223582952.09089,
+    }
+
+    # Define the input parameters
+    fs = mock_fs_instance
+    catalog = "catalog"
+    dataset = "DATASET"
+
+    # Define the local_state DataFrame
+    local_state_data = {
+        "path": [
+            Path("catalog/DATASET/20241119/DATASET__catalog__20241119.csv"),
+        ],
+        "url": [
+            "catalog/datasets/DATASET/datasetseries/20241119/distributions/csv",
+        ],
+        "mtime": [1223582952.09089],
+        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="]
+    }
+    local_state = pd.DataFrame(local_state_data)
+
+    # Call the function
+    result_df = _get_local_state(fs, fs, datasets=[dataset], dataset_format="csv", catalog=catalog, local_state=local_state)
+
+    # Define the expected DataFrame
+    expected_data = {
+        "path": [
+            Path("catalog/DATASET/20241119/DATASET__catalog__20241119.csv"),
+        ],
+        "url": [
+            "catalog/datasets/DATASET/datasetseries/20241119/distributions/csv",
+        ],
+        "mtime": [1223582952.09089],
+        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="]
+    }
+    expected_df = pd.DataFrame(expected_data)
+    expected_df["mtime"] = expected_df["mtime"].astype("object")
+
+    # Convert the 'path' column in result_df to PosixPath
+    result_df["path"] = result_df["path"].apply(lambda p: Path(p))
 
     # Assert the result
     pd.testing.assert_frame_equal(result_df.reset_index(drop=True), expected_df)
