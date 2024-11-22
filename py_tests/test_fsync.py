@@ -4,13 +4,23 @@ import json
 from pathlib import Path
 from typing import Any
 from unittest import mock
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import fsspec
 import pandas as pd
+import pytest
 
 from fusion._fusion import FusionCredentials
-from fusion.fs_sync import _download, _generate_sha256_token, _get_fusion_df, _get_local_state, _upload, _url_to_path
+from fusion.fs_sync import (
+    _download,
+    _generate_sha256_token,
+    _get_fusion_df,
+    _get_local_state,
+    _synchronize,
+    _upload,
+    _url_to_path,
+    fsync,
+)
 from fusion.fusion_filesystem import FusionHTTPFileSystem
 
 
@@ -617,8 +627,8 @@ def test_get_local_state_with_local_state(
         "url": [
             "catalog/datasets/DATASET/datasetseries/20241119/distributions/csv",
         ],
-        "mtime": [1223582952.09089],
-        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="]
+        "mtime": [122358.09089],
+        "sha256": ["old_sha256_value"]
     }
     local_state = pd.DataFrame(local_state_data)
 
@@ -639,8 +649,370 @@ def test_get_local_state_with_local_state(
     expected_df = pd.DataFrame(expected_data)
     expected_df["mtime"] = expected_df["mtime"].astype("object")
 
-    # Convert the 'path' column in result_df to PosixPath
-    result_df["path"] = result_df["path"].apply(lambda p: Path(p))
-
     # Assert the result
     pd.testing.assert_frame_equal(result_df.reset_index(drop=True), expected_df)
+
+
+@pytest.fixture()
+def mock_filesystems() -> tuple[MagicMock, MagicMock]:
+    """Mock the filesystems for testing."""
+    fs_fusion = MagicMock()
+    fs_local = MagicMock()
+    return fs_fusion, fs_local
+
+
+@pytest.fixture()
+def mock_dataframes() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """"Mock the dataframes for testing."""
+    df_local = pd.DataFrame({
+        "url": ["url1", "url2"],
+        "sha256_local": ["hash1", "hash2"]
+    })
+    df_fusion = pd.DataFrame({
+        "url": ["url1", "url2"],
+        "sha256_fusion": ["hash1", "hash3"]
+    })
+    return df_local, df_fusion
+
+
+@patch("fusion.fs_sync._upload")
+@patch("fusion.fs_sync.cpu_count", return_value=2)
+def test_synchronize_upload(
+    mock_cpu_count: Any,
+    mock_upload: Any,
+    mock_filesystems: tuple[MagicMock, MagicMock],
+    mock_dataframes: tuple[pd.DataFrame, pd.DataFrame]
+) -> None:
+    """Test the _synchronize function with direction='upload'."""
+    fs_fusion, fs_local = mock_filesystems
+    df_local, df_fusion = mock_dataframes
+
+    mock_upload.return_value = [(True, "url1", None), (True, "url2", None)]
+
+    result = _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction="upload")
+
+    len_check = 2
+    assert len(result) == len_check
+    assert all(res[0] for res in result)
+    mock_upload.assert_called_once()
+
+
+@patch("fusion.fs_sync._download")
+@patch("fusion.fs_sync.cpu_count", return_value=2)
+def test_synchronize_download(
+    mock_cpu_count: Any,
+    mock_download: Any,
+    mock_filesystems: tuple[MagicMock, MagicMock],
+    mock_dataframes: tuple[pd.DataFrame, pd.DataFrame],
+) -> None:
+    """Test the _synchronize function with direction='download'."""
+    fs_fusion, fs_local = mock_filesystems
+    df_local, df_fusion = mock_dataframes
+
+    mock_download.return_value = [(True, "url1", None), (True, "url2", None)]
+
+    result = _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction="download")
+
+    assert len(result) == 2
+    assert all(res[0] for res in result)
+    mock_download.assert_called_once()
+
+
+def test_synchronize_invalid_direction(
+    mock_filesystems: tuple[MagicMock, MagicMock],
+    mock_dataframes: tuple[pd.DataFrame, pd.DataFrame]
+) -> None:
+    """Test the _synchronize function with an invalid direction."""
+    fs_fusion, fs_local = mock_filesystems
+    df_local, df_fusion = mock_dataframes
+
+    with pytest.raises(ValueError, match="Unknown direction of operation."):
+        _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction="invalid")
+
+
+def test_synchronize_no_local_data(mock_filesystems: tuple[MagicMock, MagicMock]) -> None:
+    """Test the _synchronize function with no local data."""
+    fs_fusion, fs_local = mock_filesystems
+    df_local = pd.DataFrame()
+    df_fusion = pd.DataFrame({
+        "url": ["url1", "url2"],
+        "sha256_fusion": ["hash1", "hash2"]
+    })
+
+    with patch("fusion.fs_sync.warnings.warn") as mock_warn:
+        result = _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction="upload")
+        assert result == []
+        mock_warn.assert_called_once_with("No dataset members available for upload for your dataset selection.", stacklevel=2)
+
+
+def test_synchronize_no_fusion_data(mock_filesystems: tuple[MagicMock, MagicMock]) -> None:
+    """Test the _synchronize function with no fusion"""
+    fs_fusion, fs_local = mock_filesystems
+    df_local = pd.DataFrame({
+        "url": ["url1", "url2"],
+        "sha256_local": ["hash1", "hash2"]
+    })
+    df_fusion = pd.DataFrame()
+
+    with patch("fusion.fs_sync.warnings.warn") as mock_warn:
+        result = _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction="download")
+        assert result == []
+        mock_warn.assert_called_once_with("No dataset members available for download for your dataset selection.", stacklevel=2)
+
+
+# @mock.patch("fusion.fs_sync._get_local_state")
+# @mock.patch("fusion.fs_sync._get_fusion_df")
+# @mock.patch("fusion.fs_sync._synchronize")
+# @mock.patch("fusion.fs_sync.logger")
+# @mock.patch("fusion.fs_sync.fsspec.filesystem")
+# def test_fsync_upload(
+#     mock_fs: mock.Mock,
+#     mock_logger: Any,
+#     mock_synchronize: Any,
+#     mock_get_fusion_df: Any,
+#     mock_get_local_state: Any
+# ) -> None:
+#     """Test the fsync function with direction='upload'."""
+#     mock_fs_instance = mock_fs.return_value
+
+#     # Mock necessary filesystem operations
+#     mock_fs_instance.exists.return_value = True
+#     mock_fs_instance.find.return_value = [
+#         "/local/path/catalog/DATASET/20241119/DATASET__catalog__20241119.csv",
+#     ]
+#     mock_fs_instance.info.return_value = {
+#         "size": 0,
+#         "mtime": 1223582952.09089,
+#     }
+#     mock_fs_instance.cat.return_value = json.dumps({
+#         "resources": [
+#             {"identifier": "dataset1"}
+#         ]
+#     }).encode("utf-8")
+
+#     fs_fusion = mock_fs_instance
+#     fs_local = mock_fs_instance
+#     products = ["product1"]
+#     datasets = ["dataset1"]
+#     catalog = "test_catalog"
+#     direction = "upload"
+#     flatten = False
+#     dataset_format = None
+#     n_par = 1
+#     show_progress = False
+#     local_path = "/local/path"
+#     log_level = 25
+#     log_path = "."
+
+#     mock_get_local_state.return_value = pd.DataFrame({
+#         "path": ["path1"],
+#         "url": ["url1"],
+#         "mtime": [1234567890],
+#         "sha256": ["sha256_1"]
+#     })
+#     mock_get_fusion_df.return_value = pd.DataFrame({
+#         "path": ["path1"],
+#         "url": ["url1"],
+#         "size": [100],
+#         "sha256": ["sha256_2"]
+#     })
+#     mock_synchronize.side_effect = [  # Simulate normal return first, then KeyboardInterrupt
+#         [(True, "path1", None)],
+#         KeyboardInterrupt
+#     ]
+
+#     try:
+#         fsync(
+#             fs_fusion,
+#             fs_local,
+#             products,
+#             datasets,
+#             catalog,
+#             direction,
+#             flatten,
+#             dataset_format,
+#             n_par,
+#             show_progress,
+#             local_path,
+#             log_level,
+#             log_path
+#         )
+#     except KeyboardInterrupt:
+#         pass
+
+#     mock_get_local_state.assert_called_once()
+#     mock_get_fusion_df.assert_called_once()
+#     assert mock_synchronize.call_count == 2  # Ensure it was called twice
+#     mock_logger.warning.assert_not_called()
+
+
+# @mock.patch("fusion.fs_sync._get_local_state")
+# @mock.patch("fusion.fs_sync._get_fusion_df")
+# @mock.patch("fusion.fs_sync._synchronize")
+# @mock.patch("fusion.fs_sync.logger")
+# @mock.patch("fusion.fs_sync.fsspec.filesystem")
+# def test_fsync_download(
+#     mock_fs: mock.Mock,
+#     mock_logger: Any,
+#     mock_synchronize: Any,
+#     mock_get_fusion_df: Any,
+#     mock_get_local_state: Any
+# ) -> None:
+#     """Test the fsync function with direction='download'."""
+#     mock_fs_instance = mock_fs.return_value
+
+#     # Mock necessary filesystem operations
+#     mock_fs_instance.exists.return_value = True
+#     mock_fs_instance.find.return_value = [
+#         "/local/path/catalog/DATASET/20241119/DATASET__catalog__20241119.csv",
+#     ]
+#     mock_fs_instance.info.return_value = {
+#         "size": 0,
+#         "mtime": 1223582952.09089,
+#     }
+#     mock_fs_instance.cat.return_value = json.dumps({
+#         "resources": [
+#             {"identifier": "dataset1"}
+#         ]
+#     }).encode("utf-8")
+
+#     fs_fusion = mock_fs_instance
+#     fs_local = mock_fs_instance
+#     products = ["product1"]
+#     datasets = ["dataset1"]
+#     catalog = "test_catalog"
+#     direction = "download"
+#     flatten = False
+#     dataset_format = None
+#     n_par = 1
+#     show_progress = False
+#     local_path = "/local/path"
+#     log_level = 25
+#     log_path = "."
+
+#     mock_get_local_state.return_value = pd.DataFrame({
+#         "path": ["path1"],
+#         "url": ["url1"],
+#         "mtime": [1234567890],
+#         "sha256": ["sha256_1"]
+#     })
+#     mock_get_fusion_df.return_value = pd.DataFrame({
+#         "path": ["path1"],
+#         "url": ["url1"],
+#         "size": [100],
+#         "sha256": ["sha256_2"]
+#     })
+#     mock_synchronize.side_effect = [  # Simulate normal return first, then KeyboardInterrupt
+#         [(True, "path1", None)],
+#         KeyboardInterrupt
+#     ]
+
+#     try:
+#         fsync(
+#             fs_fusion,
+#             fs_local,
+#             products,
+#             datasets,
+#             catalog,
+#             direction,
+#             flatten,
+#             dataset_format,
+#             n_par,
+#             show_progress,
+#             local_path,
+#             log_level,
+#             log_path
+#         )
+#     except KeyboardInterrupt:
+#         pass
+
+#     mock_get_local_state.assert_called_once()
+#     mock_get_fusion_df.assert_called_once()
+#     assert mock_synchronize.call_count == 2  # Ensure it was called twice
+#     mock_logger.warning.assert_not_called()
+
+
+@mock.patch("fusion.fs_sync._get_local_state")
+@mock.patch("fusion.fs_sync._get_fusion_df")
+@mock.patch("fusion.fs_sync._synchronize")
+@mock.patch("fusion.fs_sync.logger")
+def test_fsync_no_datasets(
+    mock_logger: Any,
+    mock_synchronize: Any,
+    mock_get_fusion_df: Any,
+    mock_get_local_state: Any
+) -> None:
+    """Test the fsync function with no datasets."""
+    fs_fusion = fsspec.filesystem("memory")
+    fs_local = fsspec.filesystem("memory")
+    products: list[str] = []
+    datasets: list[str] = []
+    catalog = "test_catalog"
+    direction = "upload"
+    flatten = False
+    dataset_format = None
+    n_par = 1
+    show_progress = False
+    local_path = "/local/path"
+    log_level = 25
+    log_path = "."
+
+    with pytest.raises(AssertionError, match="At least one list products or datasets should be non-empty."):
+        fsync(
+            fs_fusion,
+            fs_local,
+            products,
+            datasets,
+            catalog,
+            direction,
+            flatten,
+            dataset_format,
+            n_par,
+            show_progress,
+            local_path,
+            log_level,
+            log_path
+        )
+
+
+@mock.patch("fusion.fs_sync._get_local_state")
+@mock.patch("fusion.fs_sync._get_fusion_df")
+@mock.patch("fusion.fs_sync._synchronize")
+@mock.patch("fusion.fs_sync.logger")
+def test_fsync_invalid_direction(
+    mock_logger: Any,
+    mock_synchronize: Any,
+    mock_get_fusion_df: Any,
+    mock_get_local_state: Any
+) -> None:
+    """Test the fsync function with an invalid direction."""
+    fs_fusion = fsspec.filesystem("memory")
+    fs_local = fsspec.filesystem("memory")
+    products = ["product1"]
+    datasets = ["dataset1"]
+    catalog = "test_catalog"
+    direction = "invalid_direction"
+    flatten = False
+    dataset_format = None
+    n_par = 1
+    show_progress = False
+    local_path = "/local/path"
+    log_level = 25
+    log_path = "."
+
+    with pytest.raises(AssertionError, match="The direction must be either upload or download."):
+        fsync(
+            fs_fusion,
+            fs_local,
+            products,
+            datasets,
+            catalog,
+            direction,
+            flatten,
+            dataset_format,
+            n_par,
+            show_progress,
+            local_path,
+            log_level,
+            log_path
+        )
