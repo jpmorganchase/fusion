@@ -1,6 +1,7 @@
 use bincode::{deserialize, serialize};
 use chrono::{NaiveDate, Utc};
 use json;
+use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use pyo3::exceptions::{PyFileNotFoundError, PyValueError};
 use pyo3::import_exception;
 use pyo3::prelude::*;
@@ -207,6 +208,8 @@ struct FusionCredsPersistent {
     //#[serde(deserialize_with = "deserialize_fusion_e2e")]
     fusion_e2e: Option<String>,
     headers: Option<HashMap<String, String>>,
+    kid: Option<String>,
+    private_key: Option<String>,
 }
 
 #[pyclass(module = "fusion._fusion")]
@@ -302,11 +305,13 @@ pub struct FusionCredentials {
 
     #[pyo3(get, set)]
     username: Option<String>,
+
     #[pyo3(get, set)]
     password: Option<String>,
 
     #[pyo3(get, set)]
     resource: Option<String>,
+
     #[pyo3(get, set)]
     auth_url: Option<String>,
 
@@ -330,6 +335,12 @@ pub struct FusionCredentials {
 
     #[serde(skip)]
     http_client: Option<reqwest::Client>,
+
+    #[pyo3(get, set)]
+    kid: Option<String>,
+
+    #[pyo3(get, set)]
+    private_key: Option<String>,
 }
 
 impl Default for FusionCredentials {
@@ -347,9 +358,21 @@ impl Default for FusionCredentials {
             grant_type: "client_credentials".to_string(),
             fusion_e2e: None,
             headers: HashMap::new(),
+            kid: None,
+            private_key: None,
             http_client: None,
         }
     }
+}
+
+#[derive(Serialize, Debug)]
+struct Claims {
+    iss: String,
+    aud: String,
+    sub: String,
+    iat: i64,
+    exp: i64,
+    jti: String,
 }
 
 #[pymethods]
@@ -363,7 +386,6 @@ impl FusionCredentials {
         Ok(())
     }
 
-    #[allow(clippy::type_complexity)]
     fn __getnewargs__(
         &self,
     ) -> PyResult<(
@@ -395,7 +417,7 @@ impl FusionCredentials {
     }
 
     #[classmethod]
-    #[pyo3(signature = (client_id=None, client_secret=None, resource=None, auth_url=None, proxies=None, fusion_e2e=None, headers=None))]
+    #[pyo3(signature = (client_id=None, client_secret=None, resource=None, auth_url=None, proxies=None, fusion_e2e=None, headers=None, kid=None, private_key=None))]
     fn from_client_id(
         _cls: &Bound<'_, PyType>,
         client_id: Option<String>,
@@ -405,6 +427,8 @@ impl FusionCredentials {
         proxies: Option<HashMap<String, String>>,
         fusion_e2e: Option<String>,
         headers: Option<HashMap<String, String>>,
+        kid: Option<String>,
+        private_key: Option<String>,
     ) -> PyResult<Self> {
         Ok(Self {
             client_id,
@@ -415,6 +439,8 @@ impl FusionCredentials {
             grant_type: "client_credentials".to_string(),
             fusion_e2e,
             headers: headers.unwrap_or_default(),
+            kid,
+            private_key,
             fusion_token: HashMap::new(),
             bearer_token: None,
             username: None,
@@ -432,7 +458,7 @@ impl FusionCredentials {
     }
 
     #[classmethod]
-    #[pyo3(signature = (client_id=None, username=None, password=None, resource=None, auth_url=None, proxies=None, fusion_e2e=None, headers=None))]
+    #[pyo3(signature = (client_id=None, username=None, password=None, resource=None, auth_url=None, proxies=None, fusion_e2e=None, headers=None, kid=None, private_key=None))]
     fn from_user_id(
         _cls: &Bound<'_, PyType>,
         client_id: Option<String>,
@@ -443,6 +469,8 @@ impl FusionCredentials {
         proxies: Option<HashMap<String, String>>,
         fusion_e2e: Option<String>,
         headers: Option<HashMap<String, String>>,
+        kid: Option<String>,
+        private_key: Option<String>,
     ) -> PyResult<Self> {
         Ok(Self {
             client_id,
@@ -454,6 +482,8 @@ impl FusionCredentials {
             grant_type: "password".to_string(),
             fusion_e2e,
             headers: headers.unwrap_or_default(),
+            kid,
+            private_key,
             fusion_token: HashMap::new(),
             bearer_token: None,
             client_secret: None,
@@ -499,12 +529,14 @@ impl FusionCredentials {
             username: None,
             password: None,
             http_client: None,
+            kid: None,
+            private_key: None,
         })
     }
 
-    #[allow(clippy::too_many_arguments)]
+    // #[allow(clippy::too_many_arguments)]
     #[new]
-    #[pyo3(signature = (client_id=None, client_secret=None, username=None, password=None, resource=None, auth_url=None, bearer_token=None, proxies=None, grant_type=None, fusion_e2e=None, headers=None))]
+    #[pyo3(signature = (client_id=None, client_secret=None, username=None, password=None, resource=None, auth_url=None, bearer_token=None, proxies=None, grant_type=None, fusion_e2e=None, headers=None, kid=None, private_key=None))]
     fn new(
         client_id: Option<String>,
         client_secret: Option<String>,
@@ -517,6 +549,8 @@ impl FusionCredentials {
         grant_type: Option<String>,
         fusion_e2e: Option<String>,
         headers: Option<HashMap<String, String>>,
+        kid: Option<String>,
+        private_key: Option<String>,
     ) -> PyResult<Self> {
         Ok(FusionCredentials {
             client_id,
@@ -531,6 +565,8 @@ impl FusionCredentials {
             grant_type: grant_type.unwrap_or_else(|| "client_credentials".to_string()),
             fusion_e2e,
             headers: headers.unwrap_or_default(),
+            kid,
+            private_key,
             http_client: None,
         })
     }
@@ -541,52 +577,105 @@ impl FusionCredentials {
         py: Python,
         force: bool,
         max_remain_secs: u32,
-    ) -> PyResult<()> {
+    ) -> PyResult<bool> {
         if !force {
             if let Some(token) = self.bearer_token.as_ref() {
                 if !token.is_expirable() {
-                    return Ok(());
+                    return Ok(false);
                 }
                 if let Some(expires_in_secs) = token.expires_in_secs() {
                     if expires_in_secs > max_remain_secs as i64 {
-                        return Ok(());
+                        return Ok(false);
                     }
                 }
             }
         }
-
         self._ensure_http_client()?;
         let client = self.http_client.as_ref().ok_or_else(|| {
             CredentialError::new_err(
                 "HTTP client not initialized. Use from_* methods to create credentials",
             )
         })?;
-        let payload = match self.grant_type.clone().as_str() {
-            "client_credentials" => {
-                vec![
-                    ("grant_type", self.grant_type.as_str()),
-                    ("client_id", self.client_id.as_ref().unwrap()),
-                    ("client_secret", self.client_secret.as_ref().unwrap()),
-                    ("aud", self.resource.as_ref().unwrap()),
-                ]
-            }
-            "password" => {
-                vec![
-                    ("grant_type", self.grant_type.as_str()),
-                    ("client_id", self.client_id.as_ref().unwrap()),
-                    ("username", self.username.as_ref().unwrap()),
-                    ("password", self.password.as_ref().unwrap()),
-                    ("resource", self.resource.as_ref().unwrap()),
-                ]
-            }
-            "bearer" => {
-                // Nothing to do
-                return Ok(());
-            }
-            _ => {
-                return Err(PyValueError::new_err("Unrecognized grant type"));
+
+        let payload = if let (Some(_kid), Some(private_key)) = (&self.kid, &self.private_key) {
+            // Create JWT claims
+            let claims = Claims {
+                iss: self.client_id.clone().unwrap_or_default(),
+                aud: self.auth_url.clone().unwrap_or_default(),
+                sub: self.client_id.clone().unwrap_or_default(),
+                iat: Utc::now().timestamp(),
+                exp: Utc::now().timestamp() + 3600,
+                jti: "id001".to_string(),
+            };
+            // Encode the JWT
+            let private_key_bytes = private_key.as_bytes();
+            let encoding_key =
+                EncodingKey::from_rsa_pem(private_key_bytes).expect("Invalid RSA private key");
+            let mut header = Header::new(Algorithm::RS256);
+            header.kid = Some(self.kid.clone().unwrap_or_default());
+            let private_key_jwt =
+                encode(&header, &claims, &encoding_key).expect("Failed to encode JWT");
+
+            // Build the payload vector
+            vec![
+                ("grant_type".to_string(), self.grant_type.clone()),
+                (
+                    "client_id".to_string(),
+                    self.client_id.clone().unwrap_or_default(),
+                ),
+                (
+                    "client_assertion_type".to_string(),
+                    "urn:ietf:params:oauth:client-assertion-type:jwt-bearer".to_string(),
+                ),
+                ("client_assertion".to_string(), private_key_jwt),
+                (
+                    "resource".to_string(),
+                    self.resource.clone().unwrap_or_default(),
+                ),
+            ]
+        } else {
+            match self.grant_type.as_str() {
+                "client_credentials" => vec![
+                    ("grant_type".to_string(), self.grant_type.clone()),
+                    (
+                        "client_id".to_string(),
+                        self.client_id.clone().unwrap_or_default(),
+                    ),
+                    (
+                        "client_secret".to_string(),
+                        self.client_secret.clone().unwrap_or_default(),
+                    ),
+                    ("aud".to_string(), self.resource.clone().unwrap_or_default()),
+                ],
+                "password" => vec![
+                    ("grant_type".to_string(), self.grant_type.clone()),
+                    (
+                        "client_id".to_string(),
+                        self.client_id.clone().unwrap_or_default(),
+                    ),
+                    (
+                        "username".to_string(),
+                        self.username.clone().unwrap_or_default(),
+                    ),
+                    (
+                        "password".to_string(),
+                        self.password.clone().unwrap_or_default(),
+                    ),
+                    (
+                        "resource".to_string(),
+                        self.resource.clone().unwrap_or_default(),
+                    ),
+                ],
+                "bearer" => {
+                    // Nothing to do
+                    return Ok(true);
+                }
+                _ => {
+                    return Err(PyValueError::new_err("Unrecognized grant type"));
+                }
             }
         };
+
         let rt = &get_tokio_runtime(py).0;
 
         let response_res: PyResult<json::JsonValue> = rt.block_on(async {
@@ -624,7 +713,7 @@ impl FusionCredentials {
             }
         }
         self.put_bearer_token(token, expires_in_secs);
-        Ok(())
+        Ok((true))
     }
 
     #[pyo3(signature = (bearer_token, expires_in_secs=None))]
@@ -718,7 +807,7 @@ impl FusionCredentials {
             }
         }
 
-        self._refresh_bearer_token(py, false, 30)?;
+        let is_bearer_refreshed = self._refresh_bearer_token(py, false, 15 * 60)?;
         let bearer_token_tup = self
             .bearer_token
             .as_ref()
@@ -744,7 +833,7 @@ impl FusionCredentials {
             std::collections::hash_map::Entry::Occupied(mut entry) => {
                 let token = entry.get_mut();
                 if let Some(expires_in_secs) = token.expires_in_secs() {
-                    if expires_in_secs > 30 {
+                    if expires_in_secs < 15 * 60 || is_bearer_refreshed {
                         (None, Some(self._gen_fusion_token(py, fusion_tk_url)?))
                     } else {
                         (Some(token.as_fusion_header()?), None)
@@ -820,6 +909,8 @@ impl FusionCredentials {
                 Some(untyped_proxies(credentials.proxies)),
                 credentials.fusion_e2e,
                 credentials.headers,
+                credentials.kid,
+                credentials.private_key,
             )?,
             "bearer" => FusionCredentials::from_bearer_token(
                 cls,
@@ -839,6 +930,8 @@ impl FusionCredentials {
                 Some(untyped_proxies(credentials.proxies)),
                 credentials.fusion_e2e,
                 credentials.headers,
+                credentials.kid,
+                credentials.private_key,
             )?,
             _ => {
                 return Err(pyo3::exceptions::PyValueError::new_err(
@@ -849,7 +942,6 @@ impl FusionCredentials {
         Ok(full_creds)
     }
 }
-
 // Tests
 
 #[cfg(test)]
@@ -1050,6 +1142,8 @@ mod tests {
             Some("grant_type".to_string()),
             Some("fusion_e2e".to_string()),
             Some(HashMap::new()),
+            Some("kid".to_string()),
+            Some("private_key".to_string()),
         )
         .unwrap();
 
@@ -1094,6 +1188,8 @@ mod tests {
             Some("grant_type".to_string()),
             Some("fusion_e2e".to_string()),
             Some(HashMap::new()),
+            Some("kid".to_string()),
+            Some("private_key".to_string()),
         )
         .unwrap();
 
@@ -1124,6 +1220,8 @@ mod tests {
             Some("grant_type".to_string()),
             Some("fusion_e2e".to_string()),
             Some(HashMap::new()),
+            Some("kid".to_string()),
+            Some("private_key".to_string()),
         )
         .unwrap();
 
@@ -1155,6 +1253,8 @@ mod tests {
             Some("grant_type".to_string()),
             Some("fusion_e2e".to_string()),
             Some(HashMap::new()),
+            Some("kid".to_string()),
+            Some("private_key".to_string()),
         )
         .unwrap();
 
@@ -1183,6 +1283,8 @@ mod tests {
         assert!(headers.is_some());
         assert_eq!(grant_type, Some("grant_type".to_string()));
         assert_eq!(fusion_e2e, Some("fusion_e2e".to_string()));
+        // assert_eq!(kid, Some("kid".to_string()));
+        // assert_eq!(private_key, Some("private_key".to_string()));
     }
 
     #[test]
@@ -1195,6 +1297,8 @@ mod tests {
                 Some("client_secret".to_string()),
                 Some("resource".to_string()),
                 Some("auth_url".to_string()),
+                None,
+                None,
                 None,
                 None,
                 None,
@@ -1220,6 +1324,8 @@ mod tests {
                 Some("password".to_string()),
                 Some("resource".to_string()),
                 Some("auth_url".to_string()),
+                None,
+                None,
                 None,
                 None,
                 None,

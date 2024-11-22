@@ -697,10 +697,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                             await self._async_raise_not_found_for_status(resp, url)
                             return await resp.json()  # type: ignore
                         except Exception as ex:  # noqa: BLE001
+                            # wait 3 seconds before retrying
+                            await asyncio.sleep(3 * (ex_cnt + 1))
+                            logger.debug(f"Failed to upload file: {ex}")
                             ex_cnt += 1
                             last_ex = ex
 
-                raise Exception(f"Failed to upload file: {last_ex}, failed after {ex_cnt} exceptions.")
+                raise Exception(f"Failed to upload file: {last_ex}, failed after {ex_cnt} exceptions. {last_ex}")
 
             context = nullcontext(lpath)
 
