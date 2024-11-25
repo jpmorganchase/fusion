@@ -379,7 +379,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         def get_file() -> None:
             session = self.sync_session
-            with session.get(url, **self.kwargs) as r:
+            get_file_kwargs = self.kwargs.copy()
+            get_file_kwargs.pop("proxy", None)
+            with session.get(url, **get_file_kwargs) as r:
                 r.raise_for_status()
                 byte_cnt = 0
                 for chunk in r.iter_content(block_size):
