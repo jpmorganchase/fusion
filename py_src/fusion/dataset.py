@@ -170,7 +170,13 @@ class Dataset(metaclass=CamelCaseMeta):
         snake_name = camel_to_snake(name)
         self.__dict__[snake_name] = value
 
-    def set_client(self, client: Any) -> None:
+    @property
+    def client(self) -> Fusion | None:
+        """Return the client."""
+        return self._client
+    
+    @client.setter
+    def client(self, client: Fusion | None) -> None:
         """Set the client for the Dataset. Set automatically, if the Dataset is instantiated from a Fusion object.
 
         Args:
@@ -180,10 +186,23 @@ class Dataset(metaclass=CamelCaseMeta):
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> dataset = fusion.dataset("my_dataset")
-            >>> dataset.set_client(fusion)
+            >>> dataset.client = fusion
 
         """
         self._client = client
+
+
+    def _use_client(self, client: Fusion | None) -> Fusion | None:
+        """Set the client for the Dataset. Set automatically, if the Dataset is instantiated from a Fusion object.
+
+        Args:
+            client (Any): Fusion client object.
+
+        """
+        if client is None:
+            return self.client
+        
+        return client
 
     @classmethod
     def _from_series(cls: type[Dataset], series: pd.Series[Any]) -> Dataset:
@@ -400,7 +419,7 @@ class Dataset(metaclass=CamelCaseMeta):
         else:
             raise TypeError(f"Could not resolve the object provided: {dataset_source}")
 
-        dataset.set_client(self._client)
+        dataset._use_client(self._client)
 
         return dataset
 
@@ -431,7 +450,7 @@ class Dataset(metaclass=CamelCaseMeta):
         list_datasets = resp.json()["resources"]
         dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset][0]
         dataset_obj = Dataset._from_dict(dict_)
-        dataset_obj.set_client(client)
+        dataset_obj._use_client(client)
 
         prod_df = client.list_product_dataset_mapping(catalog=catalog)
 
@@ -679,7 +698,7 @@ class Dataset(metaclass=CamelCaseMeta):
         if client_to is None:
             client_to = client
         dataset_obj = self.from_catalog(catalog=catalog_from, client=client)
-        dataset_obj.set_client(client_to)
+        dataset_obj._use_client(client_to)
         resp = dataset_obj.create(client=client_to, catalog=catalog_to, return_resp_obj=True)
         return resp if return_resp_obj else None
     
