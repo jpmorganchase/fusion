@@ -168,7 +168,7 @@ class Dataset(metaclass=CamelCaseMeta):
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name == "client":
-        # Use the property setter for client
+            # Use the property setter for client
             object.__setattr__(self, name, value)
         else:
             snake_name = camel_to_snake(name)
@@ -178,7 +178,7 @@ class Dataset(metaclass=CamelCaseMeta):
     def client(self) -> Fusion | None:
         """Return the client."""
         return self._client
-    
+
     @client.setter
     def client(self, client: Fusion | None) -> None:
         """Set the client for the Dataset. Set automatically, if the Dataset is instantiated from a Fusion object.
@@ -194,13 +194,14 @@ class Dataset(metaclass=CamelCaseMeta):
 
         """
         self._client = client
-    
-    def _use_client(self, client: Fusion | None) -> None:
+
+    def _use_client(self, client: Fusion | None) -> Fusion:
         """Determine client."""
-        if client is None:
-            return self.client
-        
-        return client
+
+        res = self._client if client is None else client
+        if res is None:
+            raise ValueError("A Fusion client object is required.")
+        return res
 
     @classmethod
     def _from_series(cls: type[Dataset], series: pd.Series[Any]) -> Dataset:
@@ -470,11 +471,7 @@ class Dataset(metaclass=CamelCaseMeta):
             >>> dataset_dict = dataset.to_dict()
 
         """
-        dataset_dict = {
-            snake_to_camel(k): v
-            for k, v in self.__dict__.items()
-            if not k.startswith("_")
-        }
+        dataset_dict = {snake_to_camel(k): v for k, v in self.__dict__.items() if not k.startswith("_")}
 
         return dataset_dict
 
@@ -698,7 +695,7 @@ class Dataset(metaclass=CamelCaseMeta):
         dataset_obj.client = client_to
         resp = dataset_obj.create(client=client_to, catalog=catalog_to, return_resp_obj=True)
         return resp if return_resp_obj else None
-    
+
     def activate(
         self,
         catalog: str | None = None,
@@ -753,14 +750,9 @@ class Dataset(metaclass=CamelCaseMeta):
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}catalogs/{catalog}/productsDatasets"
-        data = {
-            "product": product,
-            "datasets": [
-                self.identifier
-            ]
-        }
+        data = {"product": product, "datasets": [self.identifier]}
         resp = client.session.put(url=url, json=data)
 
         requests_raise_for_status(resp)
-        
+
         return resp if return_resp_obj else None
