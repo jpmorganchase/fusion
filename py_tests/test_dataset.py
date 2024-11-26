@@ -707,7 +707,7 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
     assert my_dataset.is_confidential is False
     assert my_dataset.is_highly_confidential is False
     assert my_dataset.is_active is False
-    assert isinstance(my_dataset._client, Fusion)
+    assert isinstance(my_dataset.client, Fusion)
 
 
 def test_dataset_class_from_catalog_client_implied(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -774,7 +774,7 @@ def test_dataset_class_from_catalog_client_implied(requests_mock: requests_mock.
     }
     requests_mock.get(url2, json=expected_data2)
     my_dataset_id = Dataset(identifier="TEST_DATASET")
-    my_dataset_id.set_client(fusion_obj)
+    my_dataset_id.client = fusion_obj
     my_dataset = my_dataset_id.from_catalog(catalog=catalog)
     assert isinstance(my_dataset, Dataset)
     assert my_dataset.title == "Test Dataset"

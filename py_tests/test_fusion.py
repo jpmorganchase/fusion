@@ -1041,7 +1041,7 @@ def test_fusion_dataset(fusion_obj: Fusion) -> None:
     assert test_dataset.is_confidential is None
     assert test_dataset.is_highly_confidential is None
     assert test_dataset.is_active is None
-    assert test_dataset._client == fusion_obj
+    assert test_dataset.client == fusion_obj
 
 
 def test_fusion_attribute(fusion_obj: Fusion) -> None:

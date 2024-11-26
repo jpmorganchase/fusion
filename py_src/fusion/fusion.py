@@ -1747,7 +1747,7 @@ class Fusion:
             application_id=application_id,
             **kwargs,
         )
-        dataset_obj.set_client(self)
+        dataset_obj.client = self
         return dataset_obj
 
     def attribute(  # noqa: PLR0913

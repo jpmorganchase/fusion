@@ -111,7 +111,7 @@ class Dataset(metaclass=CamelCaseMeta):
     owners: list[str] | None = None
     application_id: str | dict[str, str] | None = None
 
-    _client: Any = field(init=False, repr=False, compare=False, default=None)
+    _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __repr__(self: Dataset) -> str:
         """Return an object representation of the Dataset object.
@@ -167,8 +167,12 @@ class Dataset(metaclass=CamelCaseMeta):
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __setattr__(self, name: str, value: Any) -> None:
-        snake_name = camel_to_snake(name)
-        self.__dict__[snake_name] = value
+        if name == "client":
+        # Use the property setter for client
+            object.__setattr__(self, name, value)
+        else:
+            snake_name = camel_to_snake(name)
+            self.__dict__[snake_name] = value
 
     @property
     def client(self) -> Fusion | None:
@@ -190,15 +194,9 @@ class Dataset(metaclass=CamelCaseMeta):
 
         """
         self._client = client
-
-
-    def _use_client(self, client: Fusion | None) -> Fusion | None:
-        """Set the client for the Dataset. Set automatically, if the Dataset is instantiated from a Fusion object.
-
-        Args:
-            client (Any): Fusion client object.
-
-        """
+    
+    def _use_client(self, client: Fusion | None) -> None:
+        """Determine client."""
         if client is None:
             return self.client
         
@@ -419,7 +417,7 @@ class Dataset(metaclass=CamelCaseMeta):
         else:
             raise TypeError(f"Could not resolve the object provided: {dataset_source}")
 
-        dataset._use_client(self._client)
+        dataset.client = self._client
 
         return dataset
 
@@ -441,8 +439,7 @@ class Dataset(metaclass=CamelCaseMeta):
             >>> dataset = fusion.dataset("my_dataset").from_catalog(catalog="my_catalog")
 
         """
-        if client is None:
-            client = self._client
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         dataset = self.identifier
         resp = client.session.get(f"{client.root_url}catalogs/{catalog}/datasets")
@@ -450,7 +447,7 @@ class Dataset(metaclass=CamelCaseMeta):
         list_datasets = resp.json()["resources"]
         dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset][0]
         dataset_obj = Dataset._from_dict(dict_)
-        dataset_obj._use_client(client)
+        dataset_obj.client = client
 
         prod_df = client.list_product_dataset_mapping(catalog=catalog)
 
@@ -577,7 +574,7 @@ class Dataset(metaclass=CamelCaseMeta):
             >>> dataset.create(catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
 
         self.created_date = self.created_date if self.created_date else pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -619,7 +616,7 @@ class Dataset(metaclass=CamelCaseMeta):
             >>> dataset.update(catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
 
         self.created_date = self.created_date if self.created_date else pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -656,7 +653,7 @@ class Dataset(metaclass=CamelCaseMeta):
             >>> fusion.dataset("my_dataset").delete(catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
 
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
@@ -692,13 +689,13 @@ class Dataset(metaclass=CamelCaseMeta):
             >>> dataset = fusion.dataset("my_dataset").copy(catalog_from="my_catalog", catalog_to="my_new_catalog")
 
         """
-        client = self._client if client is None else client
+        client = self._use_client(client)
         catalog_from = client._use_catalog(catalog_from)
 
         if client_to is None:
             client_to = client
         dataset_obj = self.from_catalog(catalog=catalog_from, client=client)
-        dataset_obj._use_client(client_to)
+        dataset_obj.client = client_to
         resp = dataset_obj.create(client=client_to, catalog=catalog_to, return_resp_obj=True)
         return resp if return_resp_obj else None
     
@@ -723,7 +720,7 @@ class Dataset(metaclass=CamelCaseMeta):
             >>> fusion.dataset("my_dataset").activate(catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         dataset_obj = self.from_catalog(catalog=catalog, client=client)
         dataset_obj.is_active = True
@@ -753,7 +750,7 @@ class Dataset(metaclass=CamelCaseMeta):
             >>> fusion.dataset("my_dataset").add_to_product(product="MY_PRODUCT", catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}catalogs/{catalog}/productsDatasets"
         data = {
