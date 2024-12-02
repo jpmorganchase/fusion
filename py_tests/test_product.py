@@ -674,4 +674,10 @@ def test_product_getattr_non_existing_attribute() -> None:
     assert str(error_info.value) == "'Product' object has no attribute 'nonExistingAttribute'"
 
 
+def test_product_client_property(fusion_obj: Fusion) -> None:
+    """Test the client property getter."""
+    test_product = Product(identifier="Test Product")
+    assert test_product.client is None
 
+    test_product.client = fusion_obj
+    assert test_product.client is fusion_obj
