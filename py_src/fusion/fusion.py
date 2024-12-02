@@ -1615,7 +1615,7 @@ class Fusion:
             dataset=dataset,
             **kwargs,
         )
-        product_obj.set_client(self)
+        product_obj.client = self
         return product_obj
 
     def dataset(  # noqa: PLR0913
