@@ -38,8 +38,8 @@ def test_product_class() -> None:
     assert test_product.dataset is None
 
 
-def test_dataset_client_value_error() -> None:
-    """Test Dataset class."""
+def test_product_client_value_error() -> None:
+    """Test product client value error."""
     my_product = Product(identifier="Test Product")
     with pytest.raises(ValueError, match="A Fusion client object is required.") as error_info:
         my_product._use_client(client=None)

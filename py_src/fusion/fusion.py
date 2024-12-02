@@ -1838,7 +1838,7 @@ class Fusion:
             attribute_type=attribute_type,
             **kwargs,
         )
-        attribute_obj.set_client(self)
+        attribute_obj.client = self
         return attribute_obj
 
     def attributes(
@@ -1865,7 +1865,7 @@ class Fusion:
 
         """
         attributes_obj = Attributes(attributes=attributes or [])
-        attributes_obj.set_client(self)
+        attributes_obj.client = self
         return attributes_obj
 
     def delete_datasetmembers(

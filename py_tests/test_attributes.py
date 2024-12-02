@@ -45,6 +45,27 @@ def test_attribute_class() -> None:
     assert test_attribute.attributeType is None
 
 
+
+def test_attribute_client_value_error() -> None:
+    """Test attribute client value error."""
+    my_attribute = Attribute(
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+    )
+    with pytest.raises(ValueError, match="A Fusion client object is required.") as error_info:
+        my_attribute._use_client(client=None)
+    assert str(error_info.value) == "A Fusion client object is required."
+
+
+def test_attributes_client_value_error() -> None:
+    """Test attribute client value error."""
+    my_attributes = Attributes()
+    with pytest.raises(ValueError, match="A Fusion client object is required.") as error_info:
+        my_attributes._use_client(client=None)
+    assert str(error_info.value) == "A Fusion client object is required."
+
+
 def test_attribute_class_from_series() -> None:
     """Test attribute class from series."""
     test_series = pd.Series(
@@ -292,9 +313,9 @@ def test_attribute_class_set_client(fusion_obj: Fusion) -> None:
         data_type=cast(Types, "string"),
         available_from="May 5, 2020",
     )
-    test_attribute.set_client(fusion_obj)
-    assert test_attribute._client is not None
-    assert test_attribute._client == fusion_obj
+    test_attribute.client = fusion_obj
+    assert test_attribute.client is not None
+    assert test_attribute.client == fusion_obj
 
 
 def test_attributes_class() -> None:
@@ -345,9 +366,9 @@ def test_attributes_class_set_client(fusion_obj: Fusion) -> None:
             )
         ]
     )
-    test_attributes.set_client(fusion_obj)
-    assert test_attributes._client is not None
-    assert test_attributes._client == fusion_obj
+    test_attributes.client = fusion_obj
+    assert test_attributes.client is not None
+    assert test_attributes.client == fusion_obj
 
 
 def test_attributes_add_attribute() -> None:
@@ -892,16 +913,16 @@ def test_attributes_create_no_client() -> None:
     )
     catalog = "my_catalog"
     dataset = "TEST_DATASET"
-    with pytest.raises(ValueError, match="Client must be provided"):
+    with pytest.raises(ValueError, match="A Fusion client object is required."):
         test_attributes.create(catalog=catalog, dataset=dataset, return_resp_obj=True)
 
 
-def test_attributes_from_catalog_no_catalog() -> None:
+def test_attributes_from_catalog_no_client() -> None:
     """Test attributes class from_catalog method."""
     catalog = "my_catalog"
     dataset = "TEST_DATASET"
 
-    with pytest.raises(ValueError, match="Client must be provided"):
+    with pytest.raises(ValueError, match="A Fusion client object is required."):
         Attributes().from_catalog(catalog=catalog, dataset=dataset)
 
 
@@ -918,7 +939,7 @@ def test_attribute_create_no_client() -> None:
 
     catalog = "my_catalog"
     dataset = "TEST_DATASET"
-    with pytest.raises(ValueError, match="Client must be provided"):
+    with pytest.raises(ValueError, match="A Fusion client object is required."):
         test_attribute.create(catalog=catalog, dataset=dataset, return_resp_obj=True)
 
 
@@ -961,7 +982,7 @@ def test_attributes_delete_no_client() -> None:
     )
     catalog = "my_catalog"
     dataset = "TEST_DATASET"
-    with pytest.raises(ValueError, match="Client must be provided"):
+    with pytest.raises(ValueError, match="A Fusion client object is required."):
         test_attributes.delete(catalog=catalog, dataset=dataset, return_resp_obj=True)
 
 
@@ -978,7 +999,7 @@ def test_attribute_delete_no_client() -> None:
 
     catalog = "my_catalog"
     dataset = "TEST_DATASET"
-    with pytest.raises(ValueError, match="Client must be provided"):
+    with pytest.raises(ValueError, match="A Fusion client object is required."):
         test_attribute.delete(catalog=catalog, dataset=dataset, return_resp_obj=True)
 
 
