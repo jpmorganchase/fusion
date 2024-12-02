@@ -158,6 +158,14 @@ def test_dataset_class_application_id_dict() -> None:
     assert test_dataset.application_id == {"id": "12345", "type": "Alternative (TYPE)"}
 
 
+def test_dataset_client_value_error() -> None:
+    """Test Dataset class."""
+    my_dataset = Dataset(identifier="Test Dataset")
+    with pytest.raises(ValueError, match="A Fusion client object is required.") as error_info:
+        my_dataset._use_client(client=None)
+    assert str(error_info.value) == "A Fusion client object is required."
+
+
 def test_dataset_class_from_series() -> None:
     """Test Dataset class."""
     test_dataset = Dataset._from_series(
