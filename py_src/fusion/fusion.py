@@ -334,6 +334,7 @@ class Fusion:
         max_results: int = -1,
         display_all_columns: bool = False,
         status: str | None = None,
+        dataset_type: str | None = None,
     ) -> pd.DataFrame:
         """Get the datasets contained in a catalog.
 
@@ -352,6 +353,7 @@ class Fusion:
             display_all_columns (bool, optional): If True displays all columns returned by the API,
                 otherwise only the key columns are displayed
             status (str, optional): filter the datasets by status, default is to show all results.
+            dataset_type (str, optional): filter the datasets by type, default is to show all results.
 
         Returns:
             class:`pandas.DataFrame`: a dataframe with a row for each dataset.
@@ -398,12 +400,16 @@ class Fusion:
                 "coverageEndDate",
                 "description",
                 "status",
+                "type",
             ]
             cols = [c for c in cols if c in ds_df.columns]
             ds_df = ds_df[cols]
 
         if status is not None:
             ds_df = ds_df[ds_df["status"] == status]
+        
+        if dataset_type is not None:
+            ds_df = ds_df[ds_df["type"] == dataset_type]
 
         if output:
             pass
