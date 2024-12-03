@@ -1341,8 +1341,6 @@ class Fusion:
                 return pd.DataFrame(lst)
             except Exception as e:
                 raise e
-            finally:
-                return None  # noqa: B012, SIM107
         else:
             return self.events
 
