@@ -1341,6 +1341,8 @@ class Fusion:
                 return pd.DataFrame(lst)
             except Exception as e:
                 raise e
+            finally:
+                return pd.DataFrame(lst)
         else:
             return self.events
 
