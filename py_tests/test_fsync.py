@@ -287,14 +287,14 @@ def test_get_fusion_df(mock_fs: mock.Mock) -> None:
     expected_data = {
         "path": [
             "catalog/DATASET/20241119//DATASET__catalog__20241119.csv",
-            "catalog/DATASET/20241119//DATASET__catalog__20241119.parquet"
+            "catalog/DATASET/20241119//DATASET__catalog__20241119.parquet",
         ],
         "url": [
             "catalog/datasets/DATASET/datasetseries/20241119/distributions/csv",
-            "catalog/datasets/DATASET/datasetseries/20241119/distributions/parquet"
+            "catalog/datasets/DATASET/datasetseries/20241119/distributions/parquet",
         ],
         "size": [3075, 3104],
-        "sha256": ["dfaVNJAE49Y34AURPVB", "lSDBHAGQ4dfjlbse8934tgd"]
+        "sha256": ["dfaVNJAE49Y34AURPVB", "lSDBHAGQ4dfjlbse8934tgd"],
     }
     expected_df = pd.DataFrame(expected_data)
     expected_df["size"] = expected_df["size"].astype("object")
@@ -360,14 +360,14 @@ def test_get_fusion_df_flatten(mock_fs: mock.Mock) -> None:
     expected_data = {
         "path": [
             "catalog/DATASET/DATASET__catalog__20241119.csv",
-            "catalog/DATASET/DATASET__catalog__20241119.parquet"
+            "catalog/DATASET/DATASET__catalog__20241119.parquet",
         ],
         "url": [
             "catalog/datasets/DATASET/datasetseries/20241119/distributions/csv",
-            "catalog/datasets/DATASET/datasetseries/20241119/distributions/parquet"
+            "catalog/datasets/DATASET/datasetseries/20241119/distributions/parquet",
         ],
         "size": [3075, 3104],
-        "sha256": ["dfaVNJAE49Y34AURPVB", "lSDBHAGQ4dfjlbse8934tgd"]
+        "sha256": ["dfaVNJAE49Y34AURPVB", "lSDBHAGQ4dfjlbse8934tgd"],
     }
     expected_df = pd.DataFrame(expected_data)
     expected_df["size"] = expected_df["size"].astype("object")
@@ -431,14 +431,10 @@ def test_get_fusion_df_dataset_format(mock_fs: mock.Mock) -> None:
 
     # Define the expected DataFrame
     expected_data = {
-        "path": [
-            "catalog/DATASET/20241119//DATASET__catalog__20241119.csv"
-        ],
-        "url": [
-            "catalog/datasets/DATASET/datasetseries/20241119/distributions/csv"
-        ],
+        "path": ["catalog/DATASET/20241119//DATASET__catalog__20241119.csv"],
+        "url": ["catalog/datasets/DATASET/datasetseries/20241119/distributions/csv"],
         "size": [3075],
-        "sha256": ["dfaVNJAE49Y34AURPVB"]
+        "sha256": ["dfaVNJAE49Y34AURPVB"],
     }
     expected_df = pd.DataFrame(expected_data)
     expected_df["size"] = expected_df["size"].astype("object")
@@ -478,11 +474,11 @@ def test_get_fusion_df_no_changes(mock_fs: mock.Mock) -> None:
 @patch("fusion.fs_sync.fsspec.filesystem")
 @patch("fusion.fs_sync.relpath", return_value="20241119/DATASET__catalog__20241119.csv")
 def test_get_local_state(
-    mock_relpath: mock.Mock,
+    mock_relpath: mock.Mock,  # noqa: ARG001
     mock_fs: mock.Mock,
-    mock_validate_file_names: mock.Mock,
-    mock_is_dataset_raw: mock.Mock,
-    mock_generate_sha256_token: mock.Mock
+    mock_validate_file_names: mock.Mock,  # noqa: ARG001
+    mock_is_dataset_raw: mock.Mock,  # noqa: ARG001
+    mock_generate_sha256_token: mock.Mock,  # noqa: ARG001
 ) -> None:
     """Test the _get_local_state function of the fs_sync module."""
     mock_fs_instance = mock_fs.return_value
@@ -519,7 +515,7 @@ def test_get_local_state(
         "local_path": [
             "/home/catalog/DATASET/20241119/DATASET__catalog__20241119.csv",
         ],
-        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="]
+        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="],
     }
     expected_df = pd.DataFrame(expected_data)
     expected_df["mtime"] = expected_df["mtime"].astype("object")
@@ -534,11 +530,11 @@ def test_get_local_state(
 @patch("fusion.fs_sync.fsspec.filesystem")
 @patch("fusion.fs_sync.relpath", return_value="20241119/DATASET__catalog__20241119.csv")
 def test_get_local_state_mkdir(
-    mock_relpath: mock.Mock,
+    mock_relpath: mock.Mock,  # noqa: ARG001
     mock_fs: mock.Mock,
-    mock_validate_file_names: mock.Mock,
-    mock_is_dataset_raw: mock.Mock,
-    mock_generate_sha256_token: mock.Mock
+    mock_validate_file_names: mock.Mock,  # noqa: ARG001
+    mock_is_dataset_raw: mock.Mock,  # noqa: ARG001
+    mock_generate_sha256_token: mock.Mock,  # noqa: ARG001
 ) -> None:
     """Test the _get_local_state function when fs_local.exists is False."""
     mock_fs_instance = mock_fs.return_value
@@ -575,7 +571,7 @@ def test_get_local_state_mkdir(
         "local_path": [
             "/home/catalog/DATASET/20241119/DATASET__catalog__20241119.csv",
         ],
-        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="]
+        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="],
     }
     expected_df = pd.DataFrame(expected_data)
     expected_df["mtime"] = expected_df["mtime"].astype("object")
@@ -593,11 +589,11 @@ def test_get_local_state_mkdir(
 @patch("fusion.fs_sync.fsspec.filesystem")
 @patch("fusion.fs_sync.relpath", return_value="20241119/DATASET__catalog__20241119.csv")
 def test_get_local_state_with_local_state(
-    mock_relpath: mock.Mock,
+    mock_relpath: mock.Mock,  # noqa: ARG001
     mock_fs: mock.Mock,
-    mock_validate_file_names: mock.Mock,
-    mock_is_dataset_raw: mock.Mock,
-    mock_generate_sha256_token: mock.Mock
+    mock_validate_file_names: mock.Mock,  # noqa: ARG001
+    mock_is_dataset_raw: mock.Mock,  # noqa: ARG001
+    mock_generate_sha256_token: mock.Mock,  # noqa: ARG001
 ) -> None:
     """Test the _get_local_state function when local_state is non-None and len(local_state) > 0."""
     mock_fs_instance = mock_fs.return_value
@@ -628,12 +624,14 @@ def test_get_local_state_with_local_state(
             "catalog/datasets/DATASET/datasetseries/20241119/distributions/csv",
         ],
         "mtime": [122358.09089],
-        "sha256": ["old_sha256_value"]
+        "sha256": ["old_sha256_value"],
     }
     local_state = pd.DataFrame(local_state_data)
 
     # Call the function
-    result_df = _get_local_state(fs, fs, datasets=[dataset], dataset_format="csv", catalog=catalog, local_state=local_state)
+    result_df = _get_local_state(
+        fs, fs, datasets=[dataset], dataset_format="csv", catalog=catalog, local_state=local_state
+    )
 
     # Define the expected DataFrame
     expected_data = {
@@ -644,7 +642,7 @@ def test_get_local_state_with_local_state(
             "catalog/datasets/DATASET/datasetseries/20241119/distributions/csv",
         ],
         "mtime": [1223582952.09089],
-        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="]
+        "sha256": ["47DEQpnsdfno3489HBFAQ=AF+sdjgbw3="],
     }
     expected_df = pd.DataFrame(expected_data)
     expected_df["mtime"] = expected_df["mtime"].astype("object")
@@ -663,25 +661,19 @@ def mock_filesystems() -> tuple[MagicMock, MagicMock]:
 
 @pytest.fixture()
 def mock_dataframes() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """"Mock the dataframes for testing."""
-    df_local = pd.DataFrame({
-        "url": ["url1", "url2"],
-        "sha256_local": ["hash1", "hash2"]
-    })
-    df_fusion = pd.DataFrame({
-        "url": ["url1", "url2"],
-        "sha256_fusion": ["hash1", "hash3"]
-    })
+    """ "Mock the dataframes for testing."""
+    df_local = pd.DataFrame({"url": ["url1", "url2"], "sha256_local": ["hash1", "hash2"]})
+    df_fusion = pd.DataFrame({"url": ["url1", "url2"], "sha256_fusion": ["hash1", "hash3"]})
     return df_local, df_fusion
 
 
 @patch("fusion.fs_sync._upload")
 @patch("fusion.fs_sync.cpu_count", return_value=2)
 def test_synchronize_upload(
-    mock_cpu_count: Any,
+    mock_cpu_count: Any,  # noqa: ARG001
     mock_upload: Any,
     mock_filesystems: tuple[MagicMock, MagicMock],
-    mock_dataframes: tuple[pd.DataFrame, pd.DataFrame]
+    mock_dataframes: tuple[pd.DataFrame, pd.DataFrame],
 ) -> None:
     """Test the _synchronize function with direction='upload'."""
     fs_fusion, fs_local = mock_filesystems
@@ -700,7 +692,7 @@ def test_synchronize_upload(
 @patch("fusion.fs_sync._download")
 @patch("fusion.fs_sync.cpu_count", return_value=2)
 def test_synchronize_download(
-    mock_cpu_count: Any,
+    mock_cpu_count: Any,  # noqa: ARG001
     mock_download: Any,
     mock_filesystems: tuple[MagicMock, MagicMock],
     mock_dataframes: tuple[pd.DataFrame, pd.DataFrame],
@@ -713,14 +705,14 @@ def test_synchronize_download(
 
     result = _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction="download")
 
-    assert len(result) == 2
+    exp_len = 2
+    assert len(result) == exp_len
     assert all(res[0] for res in result)
     mock_download.assert_called_once()
 
 
 def test_synchronize_invalid_direction(
-    mock_filesystems: tuple[MagicMock, MagicMock],
-    mock_dataframes: tuple[pd.DataFrame, pd.DataFrame]
+    mock_filesystems: tuple[MagicMock, MagicMock], mock_dataframes: tuple[pd.DataFrame, pd.DataFrame]
 ) -> None:
     """Test the _synchronize function with an invalid direction."""
     fs_fusion, fs_local = mock_filesystems
@@ -734,30 +726,28 @@ def test_synchronize_no_local_data(mock_filesystems: tuple[MagicMock, MagicMock]
     """Test the _synchronize function with no local data."""
     fs_fusion, fs_local = mock_filesystems
     df_local = pd.DataFrame()
-    df_fusion = pd.DataFrame({
-        "url": ["url1", "url2"],
-        "sha256_fusion": ["hash1", "hash2"]
-    })
+    df_fusion = pd.DataFrame({"url": ["url1", "url2"], "sha256_fusion": ["hash1", "hash2"]})
 
     with patch("fusion.fs_sync.warnings.warn") as mock_warn:
         result = _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction="upload")
         assert result == []
-        mock_warn.assert_called_once_with("No dataset members available for upload for your dataset selection.", stacklevel=2)
+        mock_warn.assert_called_once_with(
+            "No dataset members available for upload for your dataset selection.", stacklevel=2
+        )
 
 
 def test_synchronize_no_fusion_data(mock_filesystems: tuple[MagicMock, MagicMock]) -> None:
     """Test the _synchronize function with no fusion"""
     fs_fusion, fs_local = mock_filesystems
-    df_local = pd.DataFrame({
-        "url": ["url1", "url2"],
-        "sha256_local": ["hash1", "hash2"]
-    })
+    df_local = pd.DataFrame({"url": ["url1", "url2"], "sha256_local": ["hash1", "hash2"]})
     df_fusion = pd.DataFrame()
 
     with patch("fusion.fs_sync.warnings.warn") as mock_warn:
         result = _synchronize(fs_fusion, fs_local, df_local, df_fusion, direction="download")
         assert result == []
-        mock_warn.assert_called_once_with("No dataset members available for download for your dataset selection.", stacklevel=2)
+        mock_warn.assert_called_once_with(
+            "No dataset members available for download for your dataset selection.", stacklevel=2
+        )
 
 
 @mock.patch("fusion.fs_sync._get_local_state")
@@ -765,10 +755,10 @@ def test_synchronize_no_fusion_data(mock_filesystems: tuple[MagicMock, MagicMock
 @mock.patch("fusion.fs_sync._synchronize")
 @mock.patch("fusion.fs_sync.logger")
 def test_fsync_no_datasets(
-    mock_logger: Any,
-    mock_synchronize: Any,
-    mock_get_fusion_df: Any,
-    mock_get_local_state: Any
+    mock_logger: Any,  # noqa: ARG001
+    mock_synchronize: Any,  # noqa: ARG001
+    mock_get_fusion_df: Any,  # noqa: ARG001
+    mock_get_local_state: Any,  # noqa: ARG001
 ) -> None:
     """Test the fsync function with no datasets."""
     fs_fusion = fsspec.filesystem("memory")
@@ -799,7 +789,7 @@ def test_fsync_no_datasets(
             show_progress,
             local_path,
             log_level,
-            log_path
+            log_path,
         )
 
 
@@ -808,10 +798,10 @@ def test_fsync_no_datasets(
 @mock.patch("fusion.fs_sync._synchronize")
 @mock.patch("fusion.fs_sync.logger")
 def test_fsync_invalid_direction(
-    mock_logger: Any,
-    mock_synchronize: Any,
-    mock_get_fusion_df: Any,
-    mock_get_local_state: Any
+    mock_logger: Any,  # noqa: ARG001
+    mock_synchronize: Any,  # noqa: ARG001
+    mock_get_fusion_df: Any,  # noqa: ARG001
+    mock_get_local_state: Any,  # noqa: ARG001
 ) -> None:
     """Test the fsync function with an invalid direction."""
     fs_fusion = fsspec.filesystem("memory")
@@ -842,5 +832,5 @@ def test_fsync_invalid_direction(
             show_progress,
             local_path,
             log_level,
-            log_path
+            log_path,
         )
