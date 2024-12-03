@@ -1,6 +1,6 @@
 [package]
 name = "pyfusion"
-version = "2.0.2"
+version = "2.0.4"
 edition = "2021"
 
 
@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 
 
 [dependencies]
-pyo3 = { version = "0.22.1" }
+pyo3 = { version = "0.22.4"}
 pyo3-log = { version = "0.11.0" }
 log = { version = "~0.4.4", default-features = false, features = ["std"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -23,6 +23,7 @@ reqwest = { version = "0.12.7", features = ["json", "rustls-tls", "rustls-tls-na
 tokio = { version = "1.40", features = ["rt-multi-thread", "full"] }
 url = { version = "2.5", features = [] }
 json = { version = "0.12" }
+jsonwebtoken = {version = "9.3.0"}
 state = { version = "0.6"}
 
 

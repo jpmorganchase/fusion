@@ -379,7 +379,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         def get_file() -> None:
             session = self.sync_session
-            with session.get(url, **self.kwargs) as r:
+            get_file_kwargs = self.kwargs.copy()
+            get_file_kwargs.pop("proxy", None)
+            with session.get(url, **get_file_kwargs) as r:
                 r.raise_for_status()
                 byte_cnt = 0
                 for chunk in r.iter_content(block_size):
@@ -697,10 +699,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                             await self._async_raise_not_found_for_status(resp, url)
                             return await resp.json()  # type: ignore
                         except Exception as ex:  # noqa: BLE001
+                            # wait 3 seconds before retrying
+                            await asyncio.sleep(3 * (ex_cnt + 1))
+                            logger.debug(f"Failed to upload file: {ex}")
                             ex_cnt += 1
                             last_ex = ex
 
-                raise Exception(f"Failed to upload file: {last_ex}, failed after {ex_cnt} exceptions.")
+                raise Exception(f"Failed to upload file: {last_ex}, failed after {ex_cnt} exceptions. {last_ex}")
 
             context = nullcontext(lpath)
 
