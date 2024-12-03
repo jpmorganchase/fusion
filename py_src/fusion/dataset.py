@@ -732,7 +732,7 @@ class Dataset(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Add dataset to a product.
+        """Map dataset to a product.
 
         Args:
             product (str): A product identifier.
@@ -752,6 +752,38 @@ class Dataset(metaclass=CamelCaseMeta):
         url = f"{client.root_url}catalogs/{catalog}/productsDatasets"
         data = {"product": product, "datasets": [self.identifier]}
         resp = client.session.put(url=url, json=data)
+
+        requests_raise_for_status(resp)
+
+        return resp if return_resp_obj else None
+
+    def remove_from_product(
+        self,
+        product: str,
+        catalog: str | None = None,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Delete dataset to product mapping.
+
+        Args:
+            product (str): A product identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to "common".
+            client (Fusion | None, optional):  A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.dataset("my_dataset").remove_from_product(product="MY_PRODUCT", catalog="my_catalog")
+
+        """
+        client = self._use_client(client)
+        catalog = client._use_catalog(catalog)
+        dataset = self.identifier
+        url = f"{client.root_url}catalogs/{catalog}/productsDatasets/{product}/{dataset}"
+        resp = client.session.delete(url=url)
 
         requests_raise_for_status(resp)
 

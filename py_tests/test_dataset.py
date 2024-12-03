@@ -1456,3 +1456,18 @@ def test_dataset_getattr_non_existing_attribute() -> None:
     assert str(error_info.value) == "'Dataset' object has no attribute 'non_existing_attribute'"
 
 
+def test_remove_from_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test remove_from_product method."""
+    catalog = "my_catalog"
+    product = "TEST_PRODUCT"
+    dataset = "TEST_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productsDatasets/{product}/{dataset}"
+
+    requests_mock.delete(url)
+
+    dataset_obj = Dataset(identifier=dataset)
+    resp = dataset_obj.remove_from_product(product=product, client=fusion_obj, catalog=catalog, return_resp_obj=True)
+
+    assert isinstance(resp, requests.Response)
+    status_code = 200
+    assert resp.status_code == status_code
