@@ -1323,6 +1323,7 @@ class Fusion:
             from sseclient import SSEClient
 
             _ = self.list_catalogs()  # refresh token
+            interrupted = False
             messages = SSEClient(
                 session=self.session,
                 url=f"{url}catalogs/{catalog}/notifications/subscribe",
