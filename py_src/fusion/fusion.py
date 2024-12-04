@@ -1338,11 +1338,12 @@ class Fusion:
                     if event["type"] != "HeartBeatNotification":
                         lst.append(event)
             except KeyboardInterrupt:
-                return pd.DataFrame(lst)
+                interrupted = True
             except Exception as e:
                 raise e
             finally:
-                return pd.DataFrame(lst)
+                result = pd.DataFrame(lst) if interrupted or lst else None
+            return result
         else:
             return self.events
 
