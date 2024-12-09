@@ -1272,13 +1272,15 @@ class Fusion:
                 session=session,
                 **kwargs,
             ) as messages:
+                lst = []
                 try:
                     async for msg in messages:
                         event = json.loads(msg.data)
+                        lst.append(event)
                         if self.events is None:
                             self.events = pd.DataFrame()
                         else:
-                            self.events = pd.concat([self.events, pd.DataFrame(event)], ignore_index=True)
+                            self.events = pd.concat([self.events, pd.DataFrame(lst)], ignore_index=True)
                 except TimeoutError as ex:
                     raise ex from None
                 except BaseException:
