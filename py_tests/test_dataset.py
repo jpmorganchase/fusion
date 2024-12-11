@@ -1406,7 +1406,7 @@ def test_add_to_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     catalog = "my_catalog"
     product = "TEST_PRODUCT"
     dataset = "TEST_DATASET"
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/productsDatasets"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
 
     expected_data = {
         "product": product,
@@ -1461,7 +1461,7 @@ def test_remove_from_product(requests_mock: requests_mock.Mocker, fusion_obj: Fu
     catalog = "my_catalog"
     product = "TEST_PRODUCT"
     dataset = "TEST_DATASET"
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/productsDatasets/{product}/{dataset}"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets/{product}/{dataset}"
 
     requests_mock.delete(url)
 

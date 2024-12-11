@@ -749,7 +749,7 @@ class Dataset(metaclass=CamelCaseMeta):
         """
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
-        url = f"{client.root_url}catalogs/{catalog}/productsDatasets"
+        url = f"{client.root_url}catalogs/{catalog}/productDatasets"
         data = {"product": product, "datasets": [self.identifier]}
         resp = client.session.put(url=url, json=data)
 
@@ -782,7 +782,7 @@ class Dataset(metaclass=CamelCaseMeta):
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         dataset = self.identifier
-        url = f"{client.root_url}catalogs/{catalog}/productsDatasets/{product}/{dataset}"
+        url = f"{client.root_url}catalogs/{catalog}/productDatasets/{product}/{dataset}"
         resp = client.session.delete(url=url)
 
         requests_raise_for_status(resp)
