@@ -43,6 +43,7 @@ from .utils import (
     read_csv,
     read_json,
     read_parquet,
+    requests_raise_for_status,
     # stream_single_file_new_session,
     upload_files,
     validate_file_names,
@@ -333,6 +334,7 @@ class Fusion:
         max_results: int = -1,
         display_all_columns: bool = False,
         status: str | None = None,
+        dataset_type: str | None = None,
     ) -> pd.DataFrame:
         """Get the datasets contained in a catalog.
 
@@ -351,6 +353,7 @@ class Fusion:
             display_all_columns (bool, optional): If True displays all columns returned by the API,
                 otherwise only the key columns are displayed
             status (str, optional): filter the datasets by status, default is to show all results.
+            dataset_type (str, optional): filter the datasets by type, default is to show all results.
 
         Returns:
             class:`pandas.DataFrame`: a dataframe with a row for each dataset.
@@ -397,12 +400,16 @@ class Fusion:
                 "coverageEndDate",
                 "description",
                 "status",
+                "type",
             ]
             cols = [c for c in cols if c in ds_df.columns]
             ds_df = ds_df[cols]
 
         if status is not None:
             ds_df = ds_df[ds_df["status"] == status]
+        
+        if dataset_type is not None:
+            ds_df = ds_df[ds_df["type"] == dataset_type]
 
         if output:
             pass
@@ -1265,13 +1272,15 @@ class Fusion:
                 session=session,
                 **kwargs,
             ) as messages:
+                lst = []
                 try:
                     async for msg in messages:
                         event = json.loads(msg.data)
+                        lst.append(event)
                         if self.events is None:
                             self.events = pd.DataFrame()
                         else:
-                            self.events = pd.concat([self.events, pd.DataFrame(event)], ignore_index=True)
+                            self.events = pd.concat([self.events, pd.DataFrame(lst)], ignore_index=True)
                 except TimeoutError as ex:
                     raise ex from None
                 except BaseException:
@@ -1316,6 +1325,7 @@ class Fusion:
             from sseclient import SSEClient
 
             _ = self.list_catalogs()  # refresh token
+            interrupted = False
             messages = SSEClient(
                 session=self.session,
                 url=f"{url}catalogs/{catalog}/notifications/subscribe",
@@ -1331,11 +1341,12 @@ class Fusion:
                     if event["type"] != "HeartBeatNotification":
                         lst.append(event)
             except KeyboardInterrupt:
-                return pd.DataFrame(lst)
+                interrupted = True
             except Exception as e:
                 raise e
             finally:
-                return None  # noqa: B012, SIM107
+                result = pd.DataFrame(lst) if interrupted or lst else None
+            return result
         else:
             return self.events
 
@@ -1536,8 +1547,8 @@ class Fusion:
         is_active: bool = True,
         is_restricted: bool | None = None,
         maintainer: str | list[str] | None = None,
-        region: str | list[str] | None = None,
-        publisher: str | None = None,
+        region: str | list[str] = "Global",
+        publisher: str = "J.P. Morgan",
         sub_category: str | list[str] | None = None,
         tag: str | list[str] | None = None,
         delivery_channel: str | list[str] = "API",
@@ -1608,7 +1619,7 @@ class Fusion:
             dataset=dataset,
             **kwargs,
         )
-        product_obj.set_client(self)
+        product_obj.client = self
         return product_obj
 
     def dataset(  # noqa: PLR0913
@@ -1746,7 +1757,7 @@ class Fusion:
             application_id=application_id,
             **kwargs,
         )
-        dataset_obj.set_client(self)
+        dataset_obj.client = self
         return dataset_obj
 
     def attribute(  # noqa: PLR0913
@@ -1831,7 +1842,7 @@ class Fusion:
             attribute_type=attribute_type,
             **kwargs,
         )
-        attribute_obj.set_client(self)
+        attribute_obj.client = self
         return attribute_obj
 
     def attributes(
@@ -1858,7 +1869,7 @@ class Fusion:
 
         """
         attributes_obj = Attributes(attributes=attributes or [])
-        attributes_obj.set_client(self)
+        attributes_obj.client = self
         return attributes_obj
 
     def delete_datasetmembers(
@@ -1901,6 +1912,7 @@ class Fusion:
         for series_member in series_members:
             url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series_member}"
             resp = self.session.delete(url)
+            requests_raise_for_status(resp)
             responses.append(resp)
         return responses if return_resp_obj else None
 
@@ -1929,4 +1941,5 @@ class Fusion:
         catalog = self._use_catalog(catalog)
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
         resp = self.session.delete(url)
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None

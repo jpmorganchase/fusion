@@ -74,23 +74,7 @@ class Attribute(metaclass=CamelCaseMeta):
     dataset: int | None = None
     attribute_type: str | None = None
 
-    _client: Fusion | None = None
-
-    def set_client(self, client: Any) -> None:
-        """Set the client for the Attribute. Set automatically, if the Attribute is instantiated from a Fusion object.
-
-        Args:
-            client (Any): Fusion client object.
-
-        Examples:
-
-            >>> from fusion import Fusion
-            >>> fusion = Fusion()
-            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
-            >>> attribute.set_client(fusion)
-
-        """
-        self._client = client
+    _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __str__(self: Attribute) -> str:
         """Format string representation."""
@@ -123,8 +107,41 @@ class Attribute(metaclass=CamelCaseMeta):
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __setattr__(self, name: str, value: Any) -> None:
-        snake_name = camel_to_snake(name)
-        self.__dict__[snake_name] = value
+        if name == "client":
+            # Use the property setter for client
+            object.__setattr__(self, name, value)
+        else:
+            snake_name = camel_to_snake(name)
+            self.__dict__[snake_name] = value
+
+    @property
+    def client(self) -> Fusion | None:
+        """Return the client."""
+        return self._client
+
+    @client.setter
+    def client(self, client: Fusion | None) -> None:
+        """Set the client for the Dataset. Set automatically, if the Dataset is instantiated from a Fusion object.
+
+        Args:
+            client (Any): Fusion client object.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0)
+            >>> attribute.client = fusion
+
+        """
+        self._client = client
+
+    def _use_client(self, client: Fusion | None) -> Fusion:
+        """Determine client."""
+
+        res = self._client if client is None else client
+        if res is None:
+            raise ValueError("A Fusion client object is required.")
+        return res
         
     @classmethod
     def _from_series(
@@ -158,9 +175,7 @@ class Attribute(metaclass=CamelCaseMeta):
             to_replace=np.nan, value=None
         )
         data_type = series.get("datatype", cast(Types, Types.String))
-        if data_type is None:
-            data_type = series.get("type", cast(Types, Types.String))
-
+        data_type = series.get("type", cast(Types, Types.String)) if data_type is None else data_type
         source = series.get("source", None)
         source = source.strip() if isinstance(source, str) else source
 
@@ -285,7 +300,7 @@ class Attribute(metaclass=CamelCaseMeta):
             attribute = self._from_series(attribute_source)
         else:
             raise ValueError(f"Could not resolve the object provided: {attribute_source}")
-        attribute.set_client(self._client)
+        attribute.client = self._client
         return attribute
 
     def to_dict(self: Attribute) -> dict[str, Any]:
@@ -367,10 +382,7 @@ class Attribute(metaclass=CamelCaseMeta):
             >>> attribute.create(dataset="my_dataset", catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
-
-        if client is None:
-            raise ValueError("Client must be provided")
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         data = self.to_dict()
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
@@ -403,9 +415,7 @@ class Attribute(metaclass=CamelCaseMeta):
             >>> fusion.attribute(identifier="my_attribute", index=0).delete(dataset="my_dataset", catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
-        if client is None:
-            raise ValueError("Client must be provided")
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
         resp = client.session.delete(url)
@@ -437,22 +447,34 @@ class Attributes:
         """Object representation of the Attributes collection."""
         return self.__str__()
 
-    def set_client(self, client: Any) -> None:
-        """Set the client for the Attributes object. Set automatically,
-            if the Attributes object is instantiated from a Fusion object.
+    @property
+    def client(self) -> Fusion | None:
+        """Return the client."""
+        return self._client
+
+    @client.setter
+    def client(self, client: Fusion | None) -> None:
+        """Set the client for the Dataset. Set automatically, if the Dataset is instantiated from a Fusion object.
 
         Args:
             client (Any): Fusion client object.
 
         Examples:
-
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> attributes = fusion.attributes()
-            >>> attributes.set_client(fusion)
+            >>> attributes.client = fusion
 
         """
         self._client = client
+
+    def _use_client(self, client: Fusion | None) -> Fusion:
+        """Determine client."""
+
+        res = self._client if client is None else client
+        if res is None:
+            raise ValueError("A Fusion client object is required.")
+        return res
 
     def add_attribute(self, attribute: Attribute) -> None:
         """Add an Attribute instance to the collection.
@@ -655,7 +677,7 @@ class Attributes:
             attributes = Attributes._from_dataframe(attributes_source)
         else:
             raise ValueError(f"Could not resolve the object provided: {attributes_source}")
-        attributes.set_client(self._client)
+        attributes.client = self._client
         return attributes
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -697,9 +719,7 @@ class Attributes:
             >>> attributes = fusion.attributes().from_catalog(dataset="my_dataset", catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
-        if client is None:
-            raise ValueError("Client must be provided")
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
         response = client.session.get(url)
@@ -780,9 +800,7 @@ class Attributes:
             >>> attributes.create(dataset="my_new_dataset", catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
-        if client is None:
-            raise ValueError("Client must be provided")
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         data = self.to_dict()
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
@@ -817,9 +835,7 @@ class Attributes:
             >>> attributes.delete(dataset="my_dataset", catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
-        if client is None:
-            raise ValueError("Client must be provided")
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         responses = []
         for attr in self.attributes:

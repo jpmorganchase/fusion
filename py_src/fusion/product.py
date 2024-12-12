@@ -63,8 +63,8 @@ class Product(metaclass=CamelCaseMeta):
     is_active: bool = True
     is_restricted: bool | None = None
     maintainer: str | list[str] | None = None
-    region: str | list[str] | None = None
-    publisher: str | None = None
+    region: str | list[str]  = field(default_factory=lambda: ["Global"])
+    publisher: str = "J.P. Morgan"
     sub_category: str | list[str] | None = None
     tag: str | list[str] | None = None
     delivery_channel: str | list[str] = field(default_factory=lambda: ["API"])
@@ -76,7 +76,7 @@ class Product(metaclass=CamelCaseMeta):
     logo: str = ""
     dataset: str | list[str] | None = None
 
-    _client: Any = field(init=False, repr=False, compare=False, default=None)
+    _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __repr__(self: Product) -> str:
         """Return an object representation of the Product object.
@@ -93,7 +93,7 @@ class Product(metaclass=CamelCaseMeta):
         self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description != "" else self.title
-        self.short_abstract = tidy_string(self.short_abstract)
+        self.short_abstract = tidy_string(self.short_abstract) if self.short_abstract != "" else self.title
         self.description = tidy_string(self.description)
         self.category = (
             self.category if isinstance(self.category, list) or self.category is None else make_list(self.category)
@@ -132,10 +132,20 @@ class Product(metaclass=CamelCaseMeta):
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
     def __setattr__(self, name: str, value: Any) -> None:
-        snake_name = camel_to_snake(name)
-        self.__dict__[snake_name] = value
+        if name == "client":
+            # Use the property setter for client
+            object.__setattr__(self, name, value)
+        else:
+            snake_name = camel_to_snake(name)
+            self.__dict__[snake_name] = value
 
-    def set_client(self, client: Any) -> None:
+    @property
+    def client(self) -> Fusion | None:
+        """Return the client."""
+        return self._client
+
+    @client.setter
+    def client(self, client: Fusion | None) -> None:
         """Set the client for the Product. Set automatically, if the Product is instantiated from a Fusion object.
 
         Args:
@@ -145,10 +155,18 @@ class Product(metaclass=CamelCaseMeta):
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> product = fusion.product("my_product")
-            >>> product.set_client(fusion)
+            >>> product.client = fusion
 
         """
         self._client = client
+
+    def _use_client(self, client: Fusion | None) -> Fusion:
+        """Determine client."""
+
+        res = self._client if client is None else client
+        if res is None:
+            raise ValueError("A Fusion client object is required.")
+        return res
 
     @classmethod
     def _from_series(cls: type[Product], series: pd.Series[Any]) -> Product:
@@ -164,8 +182,7 @@ class Product(metaclass=CamelCaseMeta):
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
         series = series.rename({"tag": "tags", "dataset": "datasets"})
         short_abstract = series.get("abstract", "")
-        if short_abstract is None:
-            short_abstract = series.get("shortabstract", "")
+        short_abstract = series.get("shortabstract", "") if short_abstract is None else short_abstract
 
         return cls(
             title=series.get("title", ""),
@@ -178,8 +195,8 @@ class Product(metaclass=CamelCaseMeta):
             is_active=series.get("isactive", True),
             is_restricted=series.get("isrestricted", None),
             maintainer=series.get("maintainer", None),
-            region=series.get("region", None),
-            publisher=series.get("publisher", None),
+            region=series.get("region", "Global"),
+            publisher=series.get("publisher", "J.P. Morgan"),
             sub_category=series.get("subcategory", None),
             tag=series.get("tags", None),
             delivery_channel=series.get("deliverychannel", "API"),
@@ -341,7 +358,7 @@ class Product(metaclass=CamelCaseMeta):
             product = Product._from_series(product_source)
         else:
             raise TypeError(f"Could not resolve the object provided: {product_source}")
-        product.set_client(self._client)
+        product.client = self._client
         return product
 
     def from_catalog(self, catalog: str | None = None, client: Fusion | None = None) -> Product:
@@ -361,15 +378,15 @@ class Product(metaclass=CamelCaseMeta):
             >>> product = fusion.product("my_product").from_catalog(catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
-
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
+
         resp = client.session.get(f"{client.root_url}catalogs/{catalog}/products")
         requests_raise_for_status(resp)
         list_products = resp.json()["resources"]
         dict_ = [dict_ for dict_ in list_products if dict_["identifier"] == self.identifier][0]
         product_obj = Product._from_dict(dict_)
-        product_obj.set_client(client)
+        product_obj.client = client
 
         return product_obj
 
@@ -475,7 +492,7 @@ class Product(metaclass=CamelCaseMeta):
             >>> product.create(catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
 
         release_date = self.release_date if self.release_date else pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -517,7 +534,7 @@ class Product(metaclass=CamelCaseMeta):
             >>> product.update(catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
 
         release_date = self.release_date if self.release_date else pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -557,7 +574,7 @@ class Product(metaclass=CamelCaseMeta):
             >>> fusion.product("my_product").delete(catalog="my_catalog")
 
         """
-        client = self._client if client is None else client
+        client = self._use_client(client)
         catalog = client._use_catalog(catalog)
 
         url = f"{client.root_url}catalogs/{catalog}/products/{self.identifier}"
@@ -593,11 +610,11 @@ class Product(metaclass=CamelCaseMeta):
             >>> fusion.product("my_product").copy(catalog_from="my_catalog", catalog_to="my_new_catalog")
 
         """
-        client = self._client if client is None else client
+        client = self._use_client(client)
         catalog_from = client._use_catalog(catalog_from)
         if client_to is None:
             client_to = client
         product_obj = self.from_catalog(catalog=catalog_from, client=client)
-        product_obj.set_client(client_to)
+        product_obj.client = client_to
         resp = product_obj.create(catalog=catalog_to, return_resp_obj=True)
         return resp if return_resp_obj else None

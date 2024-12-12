@@ -294,6 +294,51 @@ def test_list_datasets_success(requests_mock: requests_mock.Mocker, fusion_obj: 
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
+def test_list_datasets_type_filter(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
+    server_mock_data = {
+        "resources": [
+            {
+                "identifier": "ONE",
+                "description": "some desc",
+                "category": ["FX"],
+                "region": ["US"],
+                "status": "active",
+                "type": "type1",
+            },
+            {
+                "identifier": "TWO",
+                "description": "some desc",
+                "category": ["FX"],
+                "region": ["US", "EU"],
+                "status": "inactive",
+                "type": "type2",
+            },
+        ]
+    }
+    expected_data = {
+        "resources": [
+            {
+                "identifier": "ONE",
+                "region": "US",
+                "category": "FX",
+                "description": "some desc",
+                "status": "active",
+                "type": "type1",
+            }
+        ]
+    }
+
+    expected_df = pd.DataFrame(expected_data["resources"])
+
+    requests_mock.get(url, json=server_mock_data)
+
+    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, dataset_type="type1")
+
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
 def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
@@ -975,13 +1020,13 @@ def test_fusion_product(fusion_obj: Fusion) -> None:
     assert test_product.title == "Test Product"
     assert test_product.identifier == "TEST_PRODUCT"
     assert test_product.category is None
-    assert test_product.shortAbstract == ""
+    assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
     assert test_product.isActive is True
     assert test_product.isRestricted is None
     assert test_product.maintainer is None
-    assert test_product.region is None
-    assert test_product.publisher is None
+    assert test_product.region == ["Global"]
+    assert test_product.publisher == "J.P. Morgan"
     assert test_product.subCategory is None
     assert test_product.tag is None
     assert test_product.deliveryChannel == ["API"]
@@ -1041,7 +1086,7 @@ def test_fusion_dataset(fusion_obj: Fusion) -> None:
     assert test_dataset.is_confidential is None
     assert test_dataset.is_highly_confidential is None
     assert test_dataset.is_active is None
-    assert test_dataset._client == fusion_obj
+    assert test_dataset.client == fusion_obj
 
 
 def test_fusion_attribute(fusion_obj: Fusion) -> None:
