@@ -128,6 +128,7 @@ dev-dependencies = [
     "nox[uv]>=2024.4.15",
     "beeprint>=2.4.11",
     "typer>=0.12.3",
+    "pkginfo>=1.11",
 ]
 
 
