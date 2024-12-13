@@ -46,8 +46,8 @@ jobs:
     
     - name: Sync dependencies using uv
       run: |
-        uv pin ${{ matrix.python-versions }}
-        uv sync
+        # uv pin ${{ matrix.python-versions }}
+        uv sync -p ${{ matrix.python-versions }}
       shell: bash
 
     # required for tox testing on mike
@@ -118,7 +118,8 @@ jobs:
 
     - name: Run tox
       run: |
-        uv pin ${{ matrix.python-versions }}
+        # uv pin ${{ matrix.python-versions }}
+        uv python pin ${{ matrix.python-versions }}
         uv run tox -e lint,doc
 
     # Build and upload the sdist, wheels will be done on arch specific images
@@ -413,8 +414,8 @@ jobs:
 
     - name: Sync dependencies using uv
       run: |
-        uv pin ${{ matrix.python-versions }}
-        uv sync
+        # uv python pin ${{ matrix.python-versions }}
+        uv sync -p ${{ matrix.python-versions }}
         
     - name: Build Wheels - musllinux
       uses: PyO3/maturin-action@v1
@@ -500,8 +501,8 @@ jobs:
 
     - name: Sync dependencies using uv
       run: |
-        uv pin ${{ matrix.python-versions }}
-        uv sync
+        # uv pin ${{ matrix.python-versions }}
+        uv sync -p ${{ matrix.python-versions }}
       shell: pwsh
 
     - name: Build wheels
@@ -566,8 +567,8 @@ jobs:
 
     - name: Sync dependencies using uv
       run: |
-        uv pin ${{ matrix.python-versions }}
-        uv sync
+        # uv pin ${{ matrix.python-versions }}
+        uv sync -p ${{ matrix.python-versions }}
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
@@ -634,8 +635,8 @@ jobs:
     
     - name: Sync dependencies using uv
       run: |
-        uv pin ${{ matrix.python-versions }}
-        uv sync
+        # uv pin ${{ matrix.python-versions }}
+        uv sync -p ${{ matrix.python-versions }}
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
