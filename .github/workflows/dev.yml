@@ -77,7 +77,7 @@ jobs:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
     - name: List Directory
-      run: ls -l $(eval echo ../.venv/bin/python)
+      run: ls -l ../.venv/bin/python
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
