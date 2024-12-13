@@ -46,7 +46,6 @@ jobs:
     
     - name: Sync dependencies using uv
       run: |
-        # uv pin ${{ matrix.python-versions }}
         uv sync -p ${{ matrix.python-versions }}
       shell: bash
 
@@ -66,7 +65,7 @@ jobs:
       id: set-env-var
       run: |
         PYTHON_INFO=$(cat python_info.txt)
-        FULL_PYTHON_LIB_PATH=$(eval echo .venv/bin/python)
+        FULL_PYTHON_LIB_PATH=$(eval echo /usr/bin/python)
         echo "PYTHON_INFO=$PYTHON_INFO" >> $GITHUB_ENV
         echo "LD_LIBRARY_PATH=${FULL_PYTHON_LIB_PATH}:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
         echo "RUSTFLAGS=-L ${FULL_PYTHON_LIB_PATH}" >> $GITHUB_ENV
@@ -78,8 +77,8 @@ jobs:
 
     - name: List Directory
       run: |
-        which python
-        ls -l ../.venv/bin/python
+        # which python
+        ls -l /usr/bin/python
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
