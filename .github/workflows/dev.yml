@@ -56,55 +56,55 @@ jobs:
           git config --local user.name "github-actions[bot]"
       shell: bash
 
-    # - name: Get Python Info
-    #   id: get-python-info
-    #   run: |
-    #     python -c "import platform; print(f'{platform.python_implementation().lower()}@{platform.python_version()}')" > python_info.txt
+    - name: Get Python Info
+      id: get-python-info
+      run: |
+        python -c "import platform; print(f'{platform.python_implementation().lower()}@{platform.python_version()}')" > python_info.txt
 
-    # - name: Set python native lib path
-    #   id: set-env-var
-    #   run: |
-    #     PYTHON_INFO=$(cat python_info.txt)
-    #     FULL_PYTHON_LIB_PATH=$(eval echo /usr/bin/python)
-    #     echo "PYTHON_INFO=$PYTHON_INFO" >> $GITHUB_ENV
-    #     echo "LD_LIBRARY_PATH=${FULL_PYTHON_LIB_PATH}:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
-    #     echo "RUSTFLAGS=-L ${FULL_PYTHON_LIB_PATH}" >> $GITHUB_ENV
+    - name: Set python native lib path
+      id: set-env-var
+      run: |
+        PYTHON_INFO=$(cat python_info.txt)
+        FULL_PYTHON_LIB_PATH=$(eval echo /usr/bin/python${{ matrix.python-versions }})
+        echo "PYTHON_INFO=$PYTHON_INFO" >> $GITHUB_ENV
+        echo "LD_LIBRARY_PATH=${FULL_PYTHON_LIB_PATH}:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
+        echo "RUSTFLAGS=-L ${FULL_PYTHON_LIB_PATH}" >> $GITHUB_ENV
 
-    # - name: Display Python Info
-    #   run: echo $PYTHON_INFO
-    #   env:
-    #     PYTHON_INFO: ${{ env.PYTHON_INFO }}
+    - name: Display Python Info
+      run: echo $PYTHON_INFO
+      env:
+        PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
-    # - name: List Directory
-    #   run: |
-    #     ls -l /usr/bin/python
-    #   env:
-    #     PYTHON_INFO: ${{ env.PYTHON_INFO }}
+    - name: List Directory
+      run: |
+        ls -l /usr/bin/python
+      env:
+        PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
-    # - name: Debug Environment Variables
-    #   run: |
-    #     echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
-    #     echo "RUSTFLAGS: $RUSTFLAGS"
-    #     echo "PYTHON_INFO: $PYTHON_INFO"
-    #   env:
-    #     LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
-    #     RUSTFLAGS: ${{ env.RUSTFLAGS }}
-    #     PYTHON_INFO: ${{ env.PYTHON_INFO }}
+    - name: Debug Environment Variables
+      run: |
+        echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+        echo "RUSTFLAGS: $RUSTFLAGS"
+        echo "PYTHON_INFO: $PYTHON_INFO"
+      env:
+        LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
+        RUSTFLAGS: ${{ env.RUSTFLAGS }}
+        PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
-    # - name: Show Library Paths
-    #   run: |
-    #     echo "Library paths:"
-    #     ldconfig -v 2>/dev/null | grep -v ^$'\t'
-    #   env:
-    #     LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
+    - name: Show Library Paths
+      run: |
+        echo "Library paths:"
+        ldconfig -v 2>/dev/null | grep -v ^$'\t'
+      env:
+        LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
 
-    # - name: Check Python Library
-    #   run: |
-    #     ls -l usr/lib/python${{ matrix.python-versions }}/*/libpython*.so
-    #   env:
-    #     PYTHON_INFO: ${{ env.PYTHON_INFO }}
+    - name: Check Python Library
+      run: |
+        ls -l usr/lib/python${{ matrix.python-versions }}/*/libpython*.so
+      env:
+        PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
-    - name: UV tests
+    - name: Rust tests
       run: |
         source .venv/bin/activate
         python --version
