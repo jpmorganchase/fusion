@@ -91,12 +91,12 @@ jobs:
     #     RUSTFLAGS: ${{ env.RUSTFLAGS }}
     #     PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
-    # - name: Show Library Paths
-    #   run: |
-    #     echo "Library paths:"
-    #     ldconfig -v 2>/dev/null | grep -v ^$'\t'
-    #   env:
-    #     LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
+    - name: Show Library Paths
+      run: |
+        echo "Library paths:"
+        ldconfig -v 2>/dev/null | grep -v ^$'\t'
+      env:
+        LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
 
     # - name: Check Python Library
     #   run: |
