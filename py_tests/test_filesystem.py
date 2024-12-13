@@ -208,7 +208,7 @@ async def test_download_single_file_async(
     n_threads = 3
 
     credentials_file = tmp_path / "client_credentials.json"
-    with Path(credentials_file).open("w") as f: # noqa: ASYNC101
+    with Path(credentials_file).open("w") as f: # noqa: ASYNC101, ASYNC230
         json.dump(example_creds_dict, f)
     creds = FusionCredentials.from_file(credentials_file)
 
@@ -216,7 +216,7 @@ async def test_download_single_file_async(
     http_fs_instance = FusionHTTPFileSystem(credentials=creds)
     http_fs_instance.set_session = AsyncMock(return_value=AsyncMock())
 
-    # Mock the _fetch_range method
+    # Mock the _fetch_range methodA
     http_fs_instance._fetch_range = AsyncMock()  # type: ignore
 
     # Run the async function
@@ -261,7 +261,7 @@ async def test_fetch_range_exception(
     mock_client_session.return_value.__aenter__.return_value = mock_session
 
     credentials_file = tmp_path / "client_credentials.json"
-    with Path(credentials_file).open("w") as f:  # noqa: ASYNC101
+    with Path(credentials_file).open("w") as f:  # noqa: ASYNC101, ASYNC230
         json.dump(example_creds_dict, f)
     creds = FusionCredentials.from_file(credentials_file)
 
@@ -303,7 +303,7 @@ async def test_fetch_range_success(
     mock_client_session.return_value.__aenter__.return_value = mock_session
 
     credentials_file = tmp_path / "client_credentials.json"
-    with Path(credentials_file).open("w") as f:  # noqa: ASYNC101
+    with Path(credentials_file).open("w") as f:  # noqa: ASYNC101, ASYNC230
         json.dump(example_creds_dict, f)
     creds = FusionCredentials.from_file(credentials_file)
 
