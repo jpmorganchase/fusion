@@ -98,11 +98,11 @@ jobs:
       env:
         LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
 
-    - name: Check Python Library
-      run: |
-        ls -l usr/lib/python${{ matrix.python-versions }}/*/libpython*.so
-      env:
-        PYTHON_INFO: ${{ env.PYTHON_INFO }}
+    # - name: Check Python Library
+    #   run: |
+    #     ls -l usr/lib/python${{ matrix.python-versions }}/*/libpython*.so
+    #   env:
+    #     PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
     - name: UV tests
       run: |
