@@ -110,7 +110,7 @@ jobs:
         python --version
         uv sync
         uv run maturin develop -r
-        cargo test -r
+        uv run cargo test -r
       # env:
       #   LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
       #   RUSTFLAGS: ${{ env.RUSTFLAGS }}
