@@ -109,7 +109,7 @@ jobs:
         source .venv/bin/activate
         python --version
         uv sync
-        maturin develop -r
+        uv run maturin develop -r
         cargo test -r
       # env:
       #   LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
