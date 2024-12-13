@@ -58,7 +58,9 @@ jobs:
     - name: Get Python Info
       id: get-python-info
       run: |
+        . .venv/bin/activate
         python -c "import platform; print(f'{platform.python_version()}')" > python_info.txt
+        ls -l $(readlink $(uv run which python))
 
     - name: Set python native lib path
       id: set-env-var
