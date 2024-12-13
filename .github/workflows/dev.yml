@@ -493,7 +493,7 @@ jobs:
     #     rye.exe --version
     #   shell: pwsh
 
-     - name: Install uv
+    - name: Install uv
       run: |
         pip install uv
       shell: pwsh
