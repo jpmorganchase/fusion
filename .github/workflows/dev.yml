@@ -100,7 +100,7 @@ jobs:
 
     - name: Check Python Library
       run: |
-        ls -l usr/lib/python${{ matrix.python-versions }}/*/libpython*.so
+        ls -l usr/lib/*/libpython*.so
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
