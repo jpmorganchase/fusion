@@ -77,7 +77,6 @@ jobs:
 
     - name: List Directory
       run: |
-        # which python
         ls -l /usr/bin/python
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
@@ -101,7 +100,7 @@ jobs:
 
     - name: Check Python Library
       run: |
-        ls -l usr/lib/${{ env.PYTHON_INFO }}/*/libpython*.so
+        ls -l usr/lib/python${{ matrix.python-versions }}/*/libpython*.so
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
