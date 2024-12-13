@@ -66,7 +66,7 @@ jobs:
       id: set-env-var
       run: |
         PYTHON_INFO=$(cat python_info.txt)
-        FULL_PYTHON_LIB_PATH=$(eval echo .venv/bin/python
+        FULL_PYTHON_LIB_PATH=$(eval echo .venv/bin/python)
         echo "PYTHON_INFO=$PYTHON_INFO" >> $GITHUB_ENV
         echo "LD_LIBRARY_PATH=${FULL_PYTHON_LIB_PATH}:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
         echo "RUSTFLAGS=-L ${FULL_PYTHON_LIB_PATH}" >> $GITHUB_ENV
