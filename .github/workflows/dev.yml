@@ -495,15 +495,23 @@ jobs:
     #   shell: pwsh
 
     - name: Install uv
-      run: |
-        pip install uv
-      shell: pwsh
+      uses: astral-sh/setup-uv@v4
+  
+    - name: Set up Python ${{ matrix.python-versions }}
+      run: uv python install ${{ matrix.python-versions }}
 
-    - name: Sync dependencies using uv
-      run: |
-        # uv pin ${{ matrix.python-versions }}
-        uv sync -p ${{ matrix.python-versions }}
-      shell: pwsh
+    - name: Install the project
+      run: uv sync --all-extras --dev
+
+    # - name: Install uv
+    #   run: |
+    #     pip install uv
+    #   shell: pwsh
+
+    # - name: Sync dependencies using uv
+    #   run: |
+    #     uv sync -p ${{ matrix.python-versions }}
+    #   shell: pwsh
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
