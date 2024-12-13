@@ -101,7 +101,7 @@ jobs:
 
     - name: Check Python Library
       run: |
-        ls -l $HOME/.uv/py/${{ env.PYTHON_INFO }}/lib/libpython*.so
+        ls -l usr/lib/${{ env.PYTHON_INFO }}/*/libpython*.so
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
