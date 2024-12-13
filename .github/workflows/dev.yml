@@ -62,24 +62,24 @@ jobs:
       run: |
         python -c "import platform; print(f'{platform.python_implementation().lower()}@{platform.python_version()}')" > python_info.txt
 
-    - name: Set python native lib path
-      id: set-env-var
-      run: |
-        PYTHON_INFO=$(cat python_info.txt)
-        FULL_PYTHON_LIB_PATH=$(eval echo \$HOME/.uv/py/\$PYTHON_INFO/lib)
-        echo "PYTHON_INFO=$PYTHON_INFO" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=${FULL_PYTHON_LIB_PATH}:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "RUSTFLAGS=-L ${FULL_PYTHON_LIB_PATH}" >> $GITHUB_ENV
+    # - name: Set python native lib path
+    #   id: set-env-var
+    #   run: |
+    #     PYTHON_INFO=$(cat python_info.txt)
+    #     FULL_PYTHON_LIB_PATH=$(eval echo \$HOME/.uv/py/\$PYTHON_INFO/lib)
+    #     echo "PYTHON_INFO=$PYTHON_INFO" >> $GITHUB_ENV
+    #     echo "LD_LIBRARY_PATH=${FULL_PYTHON_LIB_PATH}:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
+    #     echo "RUSTFLAGS=-L ${FULL_PYTHON_LIB_PATH}" >> $GITHUB_ENV
 
     - name: Display Python Info
       run: echo $PYTHON_INFO
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
-    - name: List Directory
-      run: ls -l $HOME/.uv/py/${{ env.PYTHON_INFO }}/lib
-      env:
-        PYTHON_INFO: ${{ env.PYTHON_INFO }}
+    # - name: List Directory
+    #   run: ls -l $HOME/.uv/py/${{ env.PYTHON_INFO }}/lib
+    #   env:
+    #     PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
     - name: Debug Environment Variables
       run: |
@@ -98,11 +98,11 @@ jobs:
       env:
         LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
 
-    - name: Check Python Library
-      run: |
-        ls -l $HOME/.uv/py/${{ env.PYTHON_INFO }}/lib/libpython*.so
-      env:
-        PYTHON_INFO: ${{ env.PYTHON_INFO }}
+    # - name: Check Python Library
+    #   run: |
+    #     ls -l $HOME/.uv/py/${{ env.PYTHON_INFO }}/lib/libpython*.so
+    #   env:
+    #     PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
     - name: UV tests
       run: |
