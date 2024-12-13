@@ -77,7 +77,9 @@ jobs:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
     - name: List Directory
-      run: ls -l ../.venv/bin/python
+      run: |
+        which python
+        ls -l ../.venv/bin/python
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
