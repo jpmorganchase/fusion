@@ -41,24 +41,13 @@ jobs:
 
     - name: Install rye and uv
       run: |
-        curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.rye/env" >> $GITHUB_PATH
-        echo "$HOME/.rye/shims" >> $GITHUB_PATH
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-        source $HOME/.rye/env
-      shell: bash
-
-    - name: Setup rye
-      run: |
-        rye config --set-bool behavior.use-uv=true
-        rye --version
+        pip install uv
       shell: bash
     
-    - name: Sync dependencies using rye
+    - name: Sync dependencies using uv
       run: |
-        rye pin ${{ matrix.python-versions }}
-        rye sync
+        uv pin ${{ matrix.python-versions }}
+        uv sync
       shell: bash
 
     # required for tox testing on mike
@@ -77,7 +66,7 @@ jobs:
       id: set-env-var
       run: |
         PYTHON_INFO=$(cat python_info.txt)
-        FULL_PYTHON_LIB_PATH=$(eval echo \$HOME/.rye/py/\$PYTHON_INFO/lib)
+        FULL_PYTHON_LIB_PATH=$(eval echo \$HOME/.uv/py/\$PYTHON_INFO/lib)
         echo "PYTHON_INFO=$PYTHON_INFO" >> $GITHUB_ENV
         echo "LD_LIBRARY_PATH=${FULL_PYTHON_LIB_PATH}:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
         echo "RUSTFLAGS=-L ${FULL_PYTHON_LIB_PATH}" >> $GITHUB_ENV
@@ -88,7 +77,7 @@ jobs:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
     - name: List Directory
-      run: ls -l $HOME/.rye/py/${{ env.PYTHON_INFO }}/lib
+      run: ls -l $HOME/.uv/py/${{ env.PYTHON_INFO }}/lib
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
@@ -111,7 +100,7 @@ jobs:
 
     - name: Check Python Library
       run: |
-        ls -l $HOME/.rye/py/${{ env.PYTHON_INFO }}/lib/libpython*.so
+        ls -l $HOME/.uv/py/${{ env.PYTHON_INFO }}/lib/libpython*.so
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
@@ -129,12 +118,12 @@ jobs:
 
     - name: Run tox
       run: |
-        rye pin ${{ matrix.python-versions }}
-        rye run tox -e lint,doc
+        uv pin ${{ matrix.python-versions }}
+        uv run tox -e lint,doc
 
     # Build and upload the sdist, wheels will be done on arch specific images
     - name: Build sdist
-      run: rye build --sdist 
+      run: uv build --sdist 
       shell: bash
 
     - name: Integration test artifact
@@ -417,24 +406,15 @@ jobs:
       with:
         python-version: ${{ matrix.python-versions }}
 
-    - name: Install rye
+    - name: Install uv
       run: |
-        curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
-        echo "$HOME/.rye/env" >> $GITHUB_PATH
-        echo "$HOME/.rye/shims" >> $GITHUB_PATH
-      shell: bash
-  
-    - name: Setup rye
-      run: |
-        rye config --set-bool behavior.use-uv=true
-        rye --version
-      shell: bash
-  
+        pip install uv
+      shell: bash 
 
-    - name: Sync dependencies using rye
+    - name: Sync dependencies using uv
       run: |
-        rye pin ${{ matrix.python-versions }}
-        rye sync
+        uv pin ${{ matrix.python-versions }}
+        uv sync
         
     - name: Build Wheels - musllinux
       uses: PyO3/maturin-action@v1
@@ -495,28 +475,33 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Set install environment variables
-      run: |
-        $env:RYE_INSTALL_OPTION="--yes"
-        $env:RYE_TOOLCHAIN_VERSION = "${{ matrix.python-versions }}"
-      shell: pwsh
+    # - name: Set install environment variables
+    #   run: |
+    #     $env:RYE_INSTALL_OPTION="--yes"
+    #     $env:RYE_TOOLCHAIN_VERSION = "${{ matrix.python-versions }}"
+    #   shell: pwsh
   
-    - name: Download Rye executable
+    # - name: Download Rye executable
+    #   run: |
+    #     Invoke-WebRequest -Uri "https://github.com/astral-sh/rye/releases/latest/download/rye-x86_64-windows.exe" -OutFile "$env:USERPROFILE\rye.exe"
+    #     Add-Content $env:GITHUB_PATH "$env:USERPROFILE"
+    #   shell: pwsh
+
+    # - name: Download Rye executable
+    #   run: |
+    #     rye.exe config --set-bool behavior.use-uv=true
+    #     rye.exe --version
+    #   shell: pwsh
+
+     - name: Install uv
       run: |
-        Invoke-WebRequest -Uri "https://github.com/astral-sh/rye/releases/latest/download/rye-x86_64-windows.exe" -OutFile "$env:USERPROFILE\rye.exe"
-        Add-Content $env:GITHUB_PATH "$env:USERPROFILE"
+        pip install uv
       shell: pwsh
 
-    - name: Download Rye executable
+    - name: Sync dependencies using uv
       run: |
-        rye.exe config --set-bool behavior.use-uv=true
-        rye.exe --version
-      shell: pwsh
-
-    - name: Sync dependencies using Rye
-      run: |
-        rye.exe pin ${{ matrix.python-versions }}
-        rye.exe sync
+        uv pin ${{ matrix.python-versions }}
+        uv sync
       shell: pwsh
 
     - name: Build wheels
@@ -533,7 +518,7 @@ jobs:
       if: true
       run: |
         Get-ChildItem dist -Filter *.whl | ForEach-Object {
-          rye.exe run uv venv .integ --seed
+          uv venv .integ --seed
           .\.integ\Scripts\pip.exe install $_.FullName pytest pytest-random-order --force-reinstall
           .\.integ\Scripts\pytest.exe -v py_integ -s
         }
@@ -568,23 +553,21 @@ jobs:
       with:
         python-version: ${{ matrix.python-versions }}
 
-    - name: Install rye
+    - name: Install uv
       run: |
-        curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
-        echo "$HOME/.rye/env" >> $GITHUB_PATH
-        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+        pip install uv
       shell: bash
 
-    - name: Setup rye
-      run: |
-        rye config --set-bool behavior.use-uv=true
-        rye --version
-      shell: bash
+    # - name: Setup rye
+    #   run: |
+    #     rye config --set-bool behavior.use-uv=true
+    #     rye --version
+    #   shell: bash
 
-    - name: Sync dependencies using rye
+    - name: Sync dependencies using uv
       run: |
-        rye pin ${{ matrix.python-versions }}
-        rye sync
+        uv pin ${{ matrix.python-versions }}
+        uv sync
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
@@ -602,7 +585,7 @@ jobs:
       run: |
         ls -l dist
         for pkg in dist/*; do
-          rye run uv venv .integ --seed
+          uv venv .integ --seed
           .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
           .integ/bin/pytest -v py_integ -s
         done
@@ -638,23 +621,21 @@ jobs:
       with:
         python-version: ${{ matrix.python-versions }}
 
-    - name: Set up rye
+    - name: Set up uv
       run: |
-        curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
-        echo "$HOME/.rye/env" >> $GITHUB_PATH
-        echo "$HOME/.rye/shims" >> $GITHUB_PATH
+        pip install uv
       shell: bash
 
-    - name: Add Rye to PATH
-      run: |
-        rye config --set-bool behavior.use-uv=true
-        rye --version
-      shell: bash
+    # - name: Add Rye to PATH
+    #   run: |
+    #     rye config --set-bool behavior.use-uv=true
+    #     rye --version
+    #   shell: bash
     
-    - name: Sync dependencies using rye
+    - name: Sync dependencies using uv
       run: |
-        rye pin ${{ matrix.python-versions }}
-        rye sync
+        uv pin ${{ matrix.python-versions }}
+        uv sync
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1
@@ -672,7 +653,7 @@ jobs:
       run: |
         ls -l dist
         for pkg in dist/*; do
-          rye run uv venv .integ --seed
+          uv venv .integ --seed
           .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
           .integ/bin/pytest -v py_integ -s
         done
