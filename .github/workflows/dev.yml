@@ -111,9 +111,9 @@ jobs:
         uv sync
         uv run maturin develop -r
         cargo test -r
-      # env:
-      #   LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
-      #   RUSTFLAGS: ${{ env.RUSTFLAGS }}
+      env:
+        LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
+        RUSTFLAGS: ${{ env.RUSTFLAGS }}
       shell: bash
 
     - name: Run tox
