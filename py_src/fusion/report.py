@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from fusion.dataset import Dataset
-from fusion.fusion import Fusion
+from fusion.utils import requests_raise_for_status
+
+if TYPE_CHECKING:
+    import requests
+
+    from fusion.fusion import Fusion
 
 
 @dataclass
@@ -19,10 +25,23 @@ class Report(Dataset):
     def add_registered_attribute(
         self: Report,
         attribute_identifier: str,
-        application_id: str | dict[str, str],
+        is_kde: bool,
+        application_id: str | dict[str, str],  # noqa: ARG002
         catalog: str | None = None,
-        is_critical_data_element: bool = True,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
-    ) -> None:
-        
+    ) -> requests.Response | None:
+        client = self._use_client(client)
+        catalog = client._use_catalog(catalog)
+        dataset = self.identifier
+
+        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}?attributes/{attribute_identifier}/registration"
+
+        data = {
+            "isCriticalDataElement": is_kde,
+        }
+
+        resp: requests.Response = client.session.post(url, json=data)
+        requests_raise_for_status(resp)
+
+        return resp if return_resp_obj else None

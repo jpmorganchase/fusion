@@ -50,6 +50,8 @@ class Attribute(metaclass=CamelCaseMeta):
         term (str, optional): Term. Defaults to "bizterm1".
         dataset (int | None, optional): Dataset. Defaults to None.
         attribute_type (str | None, optional): Attribute type. Defaults to None.
+        application_id (str | dict[str, str] | None, optional): The seal ID of the dataset in string format,
+            or a dictionary containing 'id' and 'type'. Defaults to None.
         _client (Fusion | None, optional): Fusion client object. Defaults to None.
 
     """
@@ -64,7 +66,7 @@ class Attribute(metaclass=CamelCaseMeta):
     source_field_id: str | None = None
     is_internal_dataset_key: bool | None = None
     is_externally_visible: bool | None = True
-    unit: Any | None = None  # add units handling
+    unit: Any | None = None
     multiplier: float = 1.0
     is_propagation_eligible: bool | None = None
     is_metric: bool | None = None
@@ -73,6 +75,7 @@ class Attribute(metaclass=CamelCaseMeta):
     term: str = "bizterm1"
     dataset: int | None = None
     attribute_type: str | None = None
+    application_id: str | dict[str, str] | None = None
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
@@ -98,6 +101,11 @@ class Attribute(metaclass=CamelCaseMeta):
         self.available_from = convert_date_format(self.available_from) if self.available_from else None
         self.deprecated_from = convert_date_format(self.deprecated_from) if self.deprecated_from else None
         self.data_type = Types[str(self.data_type).strip().rsplit(".", maxsplit=1)[-1].title()]
+        self.application_id = (
+            {"id": str(self.application_id), "type": "Application (SEAL)"}
+            if isinstance(self.application_id, str)
+            else self.application_id
+        )
 
     def __getattr__(self, name: str) -> Any:
         # Redirect attribute access to the snake_case version
@@ -732,12 +740,12 @@ class Attributes:
 
     def create(
         self,
-        dataset: str,
+        dataset: str | None = None,
         catalog: str | None = None,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Upload the Attributes  to a dataset in a Fusion catalog.
+        """Upload the Attributes to a dataset in a Fusion catalog. If dataset not provided, uploads to the catalog.
 
         Args:
             dataset (str): Dataset identifier.
@@ -803,10 +811,17 @@ class Attributes:
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         data = self.to_dict()
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
-        resp = client.session.put(url, json=data)
-        requests_raise_for_status(resp)
-        return resp if return_resp_obj else None
+        if dataset:
+            url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
+            resp = client.session.put(url, json=data)
+            requests_raise_for_status(resp)
+            return resp if return_resp_obj else None
+        else:
+            url = f"{client.root_url}catalogs/{catalog}/attributes"
+            data_ = data.get("attributes", None)
+            resp = client.session.post(url, json=data_)
+            requests_raise_for_status(resp)
+            return resp if return_resp_obj else None
 
     def delete(
         self,

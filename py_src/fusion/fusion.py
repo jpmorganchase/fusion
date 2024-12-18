@@ -1660,7 +1660,7 @@ class Fusion:
         is_highly_confidential: bool | None = None,
         is_active: bool | None = None,
         owners: list[str] | None = None,
-        application_id: str | None = None,
+        application_id: str | dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Dataset:
         """Instantiate a Dataset object with this client for metadata creation.
@@ -1781,6 +1781,7 @@ class Fusion:
         term: str = "bizterm1",
         dataset: int | None = None,
         attribute_type: str | None = None,
+        application_id: str | dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Attribute:
         """Instantiate an Attribute object with this client for metadata creation.
@@ -1840,6 +1841,7 @@ class Fusion:
             term=term,
             dataset=dataset,
             attribute_type=attribute_type,
+            application_id=application_id,
             **kwargs,
         )
         attribute_obj.client = self
@@ -1943,3 +1945,45 @@ class Fusion:
         resp = self.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
+
+    def list_registered_attributes(
+        self,
+        catalog: str | None = None,
+        output: bool = False,
+        display_all_columns: bool = False,
+    ) -> pd.DataFrame:
+        """Returns the list of attributes in a catalog.
+
+        Args:
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+            display_all_columns (bool, optional): If True displays all columns returned by the API,
+                otherwise only the key columns are displayed
+
+        Returns:
+            class:`pandas.DataFrame`: A dataframe with a row for each attribute
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = f"{self.root_url}catalogs/{catalog}/attributes"
+        ds_attr_df = Fusion._call_for_dataframe(url, self.session).sort_values(by="index").reset_index(drop=True)
+
+        if not display_all_columns:
+            ds_attr_df = ds_attr_df[
+                ds_attr_df.columns.intersection(
+                    [
+                        "identifier",
+                        "title",
+                        "dataType",
+                        "isDatasetKey",
+                        "description",
+                        "source",
+                    ]
+                )
+            ]
+
+        if output:
+            pass
+
+        return ds_attr_df
