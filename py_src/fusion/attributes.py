@@ -76,6 +76,8 @@ class Attribute(metaclass=CamelCaseMeta):
     dataset: int | None = None
     attribute_type: str | None = None
     application_id: str | dict[str, str] | None = None
+    publisher: str | None = None
+    is_kde: bool | None = None
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
@@ -328,6 +330,8 @@ class Attribute(metaclass=CamelCaseMeta):
         result = {snake_to_camel(k): v for k, v in self.__dict__.items() if not k.startswith("_")}
         result["unit"] = str(self.unit) if self.unit is not None else None
         result["dataType"] = self.data_type.name
+        if "isKde" in result:
+            result["isCriticalDataElement"] = result.pop("isKde")
         return result
 
     def create(
@@ -817,6 +821,11 @@ class Attributes:
             requests_raise_for_status(resp)
             return resp if return_resp_obj else None
         else:
+            for attr in self.attributes:
+                if attr.publisher is None:
+                    raise ValueError("The 'publisher' attribute is required for catalog attributes.")
+                if attr.application_id is None:
+                    raise ValueError("The 'application_id' attribute is required for catalog attributes.")
             url = f"{client.root_url}catalogs/{catalog}/attributes"
             data_ = data.get("attributes", None)
             resp = client.session.post(url, json=data_)
