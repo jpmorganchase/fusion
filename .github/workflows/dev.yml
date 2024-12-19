@@ -414,7 +414,6 @@ jobs:
 
     - name: Sync dependencies using uv
       run: |
-        # uv python pin ${{ matrix.python-versions }}
         uv sync -p ${{ matrix.python-versions }}
         
     - name: Build Wheels - musllinux
@@ -502,16 +501,6 @@ jobs:
 
     - name: Install the project
       run: uv sync --all-extras --dev
-
-    # - name: Install uv
-    #   run: |
-    #     pip install uv
-    #   shell: pwsh
-
-    # - name: Sync dependencies using uv
-    #   run: |
-    #     uv sync -p ${{ matrix.python-versions }}
-    #   shell: pwsh
 
     - name: Build wheels
       uses: PyO3/maturin-action@v1

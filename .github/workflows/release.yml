@@ -94,23 +94,9 @@ jobs:
     - name: Set up uv
       run: pip install uv
 
-    # - name: Add Rye to PATH
-    #   run: |
-    #     echo "$HOME/.rye/env" >> $GITHUB_PATH
-    #     echo "$HOME/.rye/shims" >> $GITHUB_PATH
-    #   shell: bash
-
-    # - name: Use uv instead of pip
-    #   run: rye config --set-bool behavior.use-uv=true
-
-    # - name: Verify Rye Installation
-    #   run: rye --version
-    #   shell: bash
-
     - name: Sync dependencies using uv
       run: |
-        uv pin ${{ env.DOCS_PY_VERSION }}
-        uv sync --all-features
+        uv sync -p ${{ env.DOCS_PY_VERSION }} --all-features
 
     - name: Setup main repo deploy git user
       run: |
