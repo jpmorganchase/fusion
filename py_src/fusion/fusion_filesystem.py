@@ -550,7 +550,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 context = nullcontext(lpath)
                 use_seek = False  # might not support seeking
             else:
-                context = open(lpath, "rb")  # noqa: SIM115, PTH123, ASYNC101
+                context = open(lpath, "rb")  # noqa: SIM115, PTH123, ASYNC101, ASYNC230
                 use_seek = True
 
             with context as f:
@@ -746,8 +746,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             headers["File-Name"] = file_name
 
         if additional_headers:
-            for k, v in additional_headers.items():
-                headers[k] = v
+            headers.update(additional_headers)
 
         lpath.seek(0)
 

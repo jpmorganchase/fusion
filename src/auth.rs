@@ -713,7 +713,7 @@ impl FusionCredentials {
             }
         }
         self.put_bearer_token(token, expires_in_secs);
-        Ok((true))
+        Ok(true)
     }
 
     #[pyo3(signature = (bearer_token, expires_in_secs=None))]

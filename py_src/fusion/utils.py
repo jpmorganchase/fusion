@@ -875,8 +875,8 @@ class CamelCaseMeta(type):
             snake_name = camel_to_snake(anno_name)
             new_annotations[snake_name] = anno_type
         new_namespace["__annotations__"] = new_annotations
-        cls = super().__new__(cls, name, bases, new_namespace)
-        return cls
+        new_cls = super().__new__(cls, name, bases, new_namespace)
+        return new_cls
 
     def __call__(cls: Any, *args: Any, **kwargs: Any) -> Any:
         # Convert keyword arguments to snake_case before initialization

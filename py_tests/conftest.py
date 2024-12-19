@@ -42,7 +42,7 @@ def change_dir(destination: PathLike) -> Generator[None, None, None]:
         os.chdir(cwd)
 
 
-@pytest.fixture()
+@pytest.fixture
 def example_creds_dict() -> dict[str, Any]:
     return {
         "client_id": "vf3tdjK0jdp7MdY3",
@@ -56,7 +56,7 @@ def example_creds_dict() -> dict[str, Any]:
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def example_creds_dict_from_env(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     example_client_id = "vf3tdjK0jdp7MdY3"
     example_client_secret = "vswag2iet7Merdkdwe64YcI9gxbemjMsh5jgimrwpcghsqc2mnj4w4qQffrfhtKz0ba3u48tqJrbp1y"
@@ -73,7 +73,7 @@ def example_creds_dict_from_env(monkeypatch: pytest.MonkeyPatch) -> dict[str, An
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def example_creds_dict_https_pxy() -> dict[str, Any]:
     return {
         "client_id": "vf3tdjK0jdp7MdY3",
@@ -86,7 +86,7 @@ def example_creds_dict_https_pxy() -> dict[str, Any]:
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def example_creds_dict_https_pxy_e2e() -> dict[str, Any]:
     return {
         "client_id": "vf3tdjK0jdp7MdY3",
@@ -100,13 +100,13 @@ def example_creds_dict_https_pxy_e2e() -> dict[str, Any]:
     }
 
 
-@pytest.fixture()
+@pytest.fixture
 def example_creds_dict_no_pxy(example_creds_dict: dict[str, Any]) -> dict[str, Any]:
     example_creds_dict.pop("proxies")
     return example_creds_dict
 
 
-@pytest.fixture()
+@pytest.fixture
 def example_creds_dict_empty_pxy(example_creds_dict: dict[str, Any]) -> dict[str, Any]:
     example_creds_dict["proxies"].pop("http")
     example_creds_dict["proxies"].pop("https")
@@ -131,7 +131,7 @@ def credentials_examples(request: pytest.FixtureRequest, tmp_path: Path) -> Path
     return credentials_file
 
 
-@pytest.fixture()
+@pytest.fixture
 def good_json() -> str:
     return """{
         "client_id": "vf3tdjK0jdp7MdY3",
@@ -145,7 +145,7 @@ def good_json() -> str:
         }"""
 
 
-@pytest.fixture()
+@pytest.fixture
 def credentials(example_creds_dict: dict[str, Any], tmp_path: Path) -> FusionCredentials:
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
@@ -155,35 +155,35 @@ def credentials(example_creds_dict: dict[str, Any], tmp_path: Path) -> FusionCre
     return creds
 
 
-@pytest.fixture()
+@pytest.fixture
 def fusion_oauth_adapter(credentials: FusionCredentials) -> FusionOAuthAdapter:
     return FusionOAuthAdapter(credentials)
 
 
-@pytest.fixture()
+@pytest.fixture
 def fusion_obj(credentials: FusionCredentials) -> Fusion:
     fusion = Fusion(credentials=credentials)
     return fusion
 
 
-@pytest.fixture()
+@pytest.fixture
 def data_table() -> pl.DataFrame:
     return pl.DataFrame(
         {"col_1": range(10), "col_2": [str(x) for x in range(10)], "col_3": [x / 3.14159 for x in range(10)]}
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def data_table_as_csv(data_table: pl.DataFrame) -> str:
     return data_table.write_csv(None)
 
 
-@pytest.fixture()
+@pytest.fixture
 def data_table_as_json(data_table: pl.DataFrame) -> str:
     return data_table.write_json(None)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_product_pd_read_csv() -> Generator[pd.DataFrame, Any, None]:
     """Mock the pd.read_csv function."""
     product_df = pd.DataFrame(
@@ -197,7 +197,7 @@ def mock_product_pd_read_csv() -> Generator[pd.DataFrame, Any, None]:
         yield mock
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_dataset_pd_read_csv() -> Generator[pd.DataFrame, Any, None]:
     """Mock the pd.read_csv function."""
     dataset_df = pd.DataFrame(
