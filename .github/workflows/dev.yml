@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
     name: sdist and tests
     runs-on: ubuntu-latest
     steps:
@@ -153,7 +153,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         platform:
           - target: "x86_64-unknown-linux-gnu"
 
@@ -203,7 +203,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         platform:
           - target: "aarch64-unknown-linux-gnu"
             arch: aarch64
@@ -273,7 +273,7 @@ jobs:
       strategy:
         fail-fast: false
         matrix:
-          python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+          python-versions: ["3.9", "3.10", "3.11", "3.12"]
           platform:
             - target: "armv7-unknown-linux-gnueabihf"
               arch: armv7
@@ -310,7 +310,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         platform:
           - target: powerpc64le-unknown-linux-gnu
             arch: ppc64le
@@ -381,7 +381,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: [
           "x86_64-unknown-linux-musl",
         ]
@@ -457,7 +457,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: ["x64"]
 
     steps:
@@ -509,7 +509,7 @@ jobs:
     runs-on: macos-13
     strategy:
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: ["x86_64"]
 
     steps:
@@ -576,7 +576,7 @@ jobs:
     runs-on: macos-14
     strategy:
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12"]
         target: ["aarch64"]
 
     steps:
