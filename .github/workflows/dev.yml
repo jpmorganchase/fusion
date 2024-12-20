@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     name: sdist and tests
     runs-on: ubuntu-latest
     steps:
@@ -153,13 +153,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         platform:
           - target: "x86_64-unknown-linux-gnu"
-          # - target: "i686-unknown-linux-gnu"
-          #- target: "aarch64-unknown-linux-gnu"
-          #- target: "armv7-unknown-linux-gnueabihf"
-          #- target: "powerpc64le-unknown-linux-gnu"
 
     steps:
     - uses: actions/checkout@v4
@@ -207,12 +203,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         platform:
           - target: "aarch64-unknown-linux-gnu"
             arch: aarch64
-          # - target: "armv7-unknown-linux-gnueabihf"
-          #   arch: armv7
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -278,10 +273,8 @@ jobs:
       strategy:
         fail-fast: false
         matrix:
-          python-versions: ["3.9", "3.10", "3.11", "3.12"]
+          python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
           platform:
-            # - target: "aarch64-unknown-linux-gnu"
-            #   arch: aarch64
             - target: "armv7-unknown-linux-gnueabihf"
               arch: armv7
       steps:
@@ -317,7 +310,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         platform:
           - target: powerpc64le-unknown-linux-gnu
             arch: ppc64le
@@ -388,10 +381,9 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         target: [
           "x86_64-unknown-linux-musl",
-          # "powerpc64le-unknown-linux-musl", # diasble powerpc64le until we decide to build via container quay.io/pypa/musllinux_1_1_ppc64le
         ]
 
     steps:
@@ -465,7 +457,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         target: ["x64"]
 
     steps:
@@ -517,7 +509,7 @@ jobs:
     runs-on: macos-13
     strategy:
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         target: ["x86_64"]
 
     steps:
@@ -584,7 +576,7 @@ jobs:
     runs-on: macos-14
     strategy:
       matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12"]
+        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         target: ["aarch64"]
 
     steps:
@@ -602,12 +594,6 @@ jobs:
       run: |
         pip install uv
       shell: bash
-
-    # - name: Add Rye to PATH
-    #   run: |
-    #     rye config --set-bool behavior.use-uv=true
-    #     rye --version
-    #   shell: bash
     
     - name: Sync dependencies using uv
       run: |
