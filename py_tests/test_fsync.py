@@ -651,7 +651,7 @@ def test_get_local_state_with_local_state(
     pd.testing.assert_frame_equal(result_df.reset_index(drop=True), expected_df)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_filesystems() -> tuple[MagicMock, MagicMock]:
     """Mock the filesystems for testing."""
     fs_fusion = MagicMock()
@@ -659,7 +659,7 @@ def mock_filesystems() -> tuple[MagicMock, MagicMock]:
     return fs_fusion, fs_local
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_dataframes() -> tuple[pd.DataFrame, pd.DataFrame]:
     """ "Mock the dataframes for testing."""
     df_local = pd.DataFrame({"url": ["url1", "url2"], "sha256_local": ["hash1", "hash2"]})

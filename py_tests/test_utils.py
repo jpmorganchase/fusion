@@ -40,31 +40,31 @@ from fusion.utils import (
 )
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_csv_path(tmp_path: Path) -> Path:
     csv_path = tmp_path / "sample.csv"
     csv_path.write_text("col1,col2\nvalue1,value2\n")
     return csv_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_csv_path_str(sample_csv_path: Path) -> str:
     return str(sample_csv_path)
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_json_path(tmp_path: Path) -> Path:
     json_path = tmp_path / "sample.json"
     json_path.write_text('{"col1": "value1", "col2": "value2"}\n')
     return json_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_json_path_str(sample_json_path: Path) -> str:
     return str(sample_json_path)
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_parquet_path(tmp_path: Path) -> Path:
     parquet_path = tmp_path / "sample.parquet"
 
@@ -79,7 +79,7 @@ def sample_parquet_path(tmp_path: Path) -> Path:
     return parquet_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_parquet_paths(tmp_path: Path) -> list[Path]:
     parquet_paths = []
     for i in range(3):
@@ -97,7 +97,7 @@ def sample_parquet_paths(tmp_path: Path) -> list[Path]:
     return parquet_paths
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_parquet_paths_str(sample_parquet_paths: list[Path]) -> list[str]:
     return [str(p) for p in sample_parquet_paths]
 
@@ -465,17 +465,17 @@ def test_read_json_with_polars_dataframe_type(sample_json_path_str: str) -> None
     assert list(dataframe_selected_filtered.columns) == ["col1"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def fs_fusion() -> MagicMock:
     return MagicMock()
 
 
-@pytest.fixture()
+@pytest.fixture
 def fs_local() -> MagicMock:
     return MagicMock()
 
 
-@pytest.fixture()
+@pytest.fixture
 def loop() -> pd.DataFrame:
     import pandas as pd
 
@@ -582,7 +582,7 @@ def test_distribution_to_filename() -> None:
 TmpFsT = tuple[fsspec.spec.AbstractFileSystem, str]
 
 
-@pytest.fixture()
+@pytest.fixture
 def temp_fs() -> Generator[TmpFsT, None, None]:
     with (
         tempfile.TemporaryDirectory() as tmpdirname,
@@ -610,7 +610,7 @@ def test_progress_update() -> None:
     assert len(res) == num_inputs
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_fs_fusion() -> MagicMock:
     fs = MagicMock()
     fs.ls.side_effect = lambda path: {
@@ -678,7 +678,7 @@ def test_get_session(mocker: MockerFixture, credentials: FusionCredentials, fusi
             assert mnt == "https://"
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_fs_fusion_w_cat() -> MagicMock:
     fs = MagicMock()
     # Mock the 'cat' method to return JSON strings as bytes
@@ -722,7 +722,7 @@ def test_is_dataset_raw_caching_of_results(mock_fs_fusion_w_cat: MagicMock) -> N
     mock_fs_fusion_w_cat.cat.assert_called_once()
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_fs() -> tuple[fsspec.AbstractFileSystem, fsspec.AbstractFileSystem]:
     fs_fusion = MagicMock(spec=fsspec.AbstractFileSystem)
     fs_local = MagicMock(spec=fsspec.AbstractFileSystem)
@@ -731,12 +731,12 @@ def setup_fs() -> tuple[fsspec.AbstractFileSystem, fsspec.AbstractFileSystem]:
     return fs_fusion, fs_local
 
 
-@pytest.fixture()
+@pytest.fixture
 def upload_row() -> pd.Series:  # type: ignore
     return pd.Series({"url": "http://example.com/file", "path": "localfile/path/file.txt"})
 
 
-@pytest.fixture()
+@pytest.fixture
 def upload_rows() -> pd.DataFrame:
     return pd.DataFrame(
         {
