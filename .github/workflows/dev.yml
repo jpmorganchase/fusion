@@ -58,7 +58,7 @@ jobs:
     - name: Get Python Info
       id: get-python-info
       run: |
-        python -c "import platform; print(f'{platform.python_version()}')" > python_info.txt
+        uv run python -c "import platform; print(f'{platform.python_version()}')" > python_info.txt
         ls -l $(readlink $(uv run which python))
 
     - name: Set python native lib path
