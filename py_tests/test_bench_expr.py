@@ -80,12 +80,12 @@ ITERS = 10
 ROUNDS = 5_000
 
 
-@pytest.fixture()
+@pytest.fixture
 def example_dict() -> dict[str, Any]:
     return {"i64_1": 42, "i64_2": 69, "str_1": "ME", "str_2": "YOU", "str_3": "HIM", "str_4": "HER"}
 
 
-@pytest.fixture()
+@pytest.fixture
 def example_file(tmp_path: Path, example_dict: dict[str, Any]) -> Path:
     in_file = tmp_path / "example.json"
     with Path(in_file).open("w") as f:
@@ -93,7 +93,7 @@ def example_file(tmp_path: Path, example_dict: dict[str, Any]) -> Path:
     return in_file
 
 
-@pytest.fixture()
+@pytest.fixture
 def empty_file(tmp_path: Path) -> Path:
     in_file = tmp_path / "example.json"
     with Path(in_file).open("w") as f:
@@ -101,37 +101,37 @@ def empty_file(tmp_path: Path) -> Path:
     return in_file
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="class__init__")
 def test_rs_py_cl(benchmark: Any) -> None:
     benchmark.pedantic(TestPy, args=(1, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS)
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="class__init__")
 def test_rs_py_cl_ts(benchmark: Any) -> None:
     benchmark.pedantic(TestPy, args=(1234, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS)
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="class__init__")
 def test_rs_rs_cls(benchmark: Any) -> None:
     benchmark.pedantic(RustTestClass, args=(1, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS)
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="factory")
 def test_rs_py_fac(benchmark: Any) -> None:
     benchmark.pedantic(TestPy.factory, args=(1, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS)
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="factory")
 def test_rs_rs_fac(benchmark: Any) -> None:
     benchmark.pedantic(RustTestClass.factory, args=(1, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS)
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="class_w_file")
 def test_rs_py_fac_wf(benchmark: Any, example_file: Path) -> None:
     benchmark.pedantic(
@@ -139,7 +139,7 @@ def test_rs_py_fac_wf(benchmark: Any, example_file: Path) -> None:
     )
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="class_w_file")
 def test_rs_rs_fac_wf(benchmark: Any, example_file: Path) -> None:
     benchmark.pedantic(
@@ -150,19 +150,19 @@ def test_rs_rs_fac_wf(benchmark: Any, example_file: Path) -> None:
     )
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="deser")
 def test_rs_py_fac_dsr(benchmark: Any, example_file: Path) -> None:
     benchmark.pedantic(TestPy.factory_with_deser, args=(example_file,), iterations=ITERS, rounds=ROUNDS)
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="deser")
 def test_rs_rs_fac_dsr(benchmark: Any, example_file: Path) -> None:
     benchmark.pedantic(RustTestClass.factory_with_file_serde, args=(example_file,), iterations=ITERS, rounds=ROUNDS)
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="factory_env")
 def test_rs_py_fac_env(benchmark: Any, empty_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TEST_I64_1_VAR", "101")
@@ -175,7 +175,7 @@ def test_rs_py_fac_env(benchmark: Any, empty_file: Path, monkeypatch: pytest.Mon
     benchmark.pedantic(TestPy.factory_with_deser, args=(empty_file,), iterations=ITERS, rounds=ROUNDS)
 
 
-@pytest.mark.experiments()
+@pytest.mark.experiments
 @pytest.mark.benchmark(group="factory_env")
 def test_rs_rs_fac_env(benchmark: Any, empty_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TEST_I64_1_VAR", "101")

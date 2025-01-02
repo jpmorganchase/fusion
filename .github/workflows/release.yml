@@ -91,26 +91,12 @@ jobs:
       with:
         python-version: ${{ env.DOCS_PY_VERSION }}
 
-    - name: Set up rye
-      run: curl -sSf https://rye.astral.sh/get | RYE_INSTALL_OPTION="--yes" bash
+    - name: Set up uv
+      run: pip install uv
 
-    - name: Add Rye to PATH
+    - name: Sync dependencies using uv
       run: |
-        echo "$HOME/.rye/env" >> $GITHUB_PATH
-        echo "$HOME/.rye/shims" >> $GITHUB_PATH
-      shell: bash
-
-    - name: Use uv instead of pip
-      run: rye config --set-bool behavior.use-uv=true
-
-    - name: Verify Rye Installation
-      run: rye --version
-      shell: bash
-
-    - name: Sync dependencies using rye
-      run: |
-        rye pin ${{ env.DOCS_PY_VERSION }}
-        rye sync --all-features
+        uv sync -p ${{ env.DOCS_PY_VERSION }} --all-features
 
     - name: Setup main repo deploy git user
       run: |
@@ -123,11 +109,11 @@ jobs:
         git fetch origin fusion_release --depth=1
         if [[ "${{ steps.tag_name.outputs.current_version }}" != *.dev* ]]; then
           # Commands for regular release
-            rye run mike deploy --branch fusion_release --deploy-prefix docs --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
-            rye run mike set-default --branch fusion_release --deploy-prefix docs --push latest
+            uv run mike deploy --branch fusion_release --deploy-prefix docs --push --update-aliases ${{ steps.tag_name.outputs.current_version }} latest
+            uv run mike set-default --branch fusion_release --deploy-prefix docs --push latest
           else
           # Commands for pre-release
-            rye run mike deploy --branch fusion_release --deploy-prefix docs --push ${{ steps.tag_name.outputs.current_version }}
+            uv run mike deploy --branch fusion_release --deploy-prefix docs --push ${{ steps.tag_name.outputs.current_version }}
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -156,4 +142,4 @@ jobs:
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: rye run twine upload dist/*
+      run: uv run twine upload dist/*

@@ -85,7 +85,7 @@ events = [
 ]
 
 
-[tool.rye]
+[tool.uv]
 managed = true
 dev-dependencies = [
     "aioresponses>=0.7.6",
@@ -119,6 +119,7 @@ dev-dependencies = [
     "types-requests >=2",
     "types-tabulate >= 0.8.8",
     "types-tqdm>=4",
+    "types-python-dateutil",
     "virtualenv",
     "ziglang>=0.11.0; sys_platform=='linux'",
     "pytest-aiohttp>=1.0.5",
@@ -131,6 +132,10 @@ dev-dependencies = [
     "pkginfo>=1.11",
 ]
 
+[tool.uv.pip]
+link-mode = "copy"
+generate-hashes = true
+universal = true
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -155,9 +160,9 @@ extend-select = [
     'UP',    # pyupgrade
     'YTT',   # flake8-2020
     'ASYNC', # flake8-async
-    'TRIO',  # Trio
+    'ASYNC1',# Trio
     'BLE',   # flake8-blind-except
-    #'FBT',   # flake8-boolean-trap
+    #'FBT',  # flake8-boolean-trap
     'ANN',   # flake8-annotations
     'B',     # flake8-bugbear
     'A',     # flake8-builtins
