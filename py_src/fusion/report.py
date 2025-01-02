@@ -8,7 +8,7 @@ from fusion.dataset import Dataset
 @dataclass
 class Report(Dataset):
     report: dict[str, str] | None = None
-    type_: str = "Report"
+    type_: str | None = "Report"
 
     def __post_init__(self: Report) -> None:
         super().__post_init__()

@@ -22,6 +22,7 @@ from fusion.attributes import Attribute, Attributes
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
+from fusion.report import Report
 
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
@@ -1987,3 +1988,143 @@ class Fusion:
             pass
 
         return ds_attr_df
+    
+    def report(  # noqa: PLR0913
+        self,
+        identifier: str,
+        title: str = "",
+        category: str | list[str] | None = None,
+        description: str = "",
+        frequency: str = "Once",
+        is_internal_only_dataset: bool = False,
+        is_third_party_data: bool = True,
+        is_restricted: bool | None = None,
+        is_raw_data: bool = True,
+        maintainer: str | None = "J.P. Morgan Fusion",
+        source: str | list[str] | None = None,
+        region: str | list[str] | None = None,
+        publisher: str = "J.P. Morgan",
+        product: str | list[str] | None = None,
+        sub_category: str | list[str] | None = None,
+        tags: str | list[str] | None = None,
+        created_date: str | None = None,
+        modified_date: str | None = None,
+        delivery_channel: str | list[str] = "API",
+        language: str = "English",
+        status: str = "Available",
+        type_: str | None = "Report",
+        container_type: str | None = "Snapshot-Full",
+        snowflake: str | None = None,
+        complexity: str | None = None,
+        is_immutable: bool | None = None,
+        is_mnpi: bool | None = None,
+        is_pci: bool | None = None,
+        is_pii: bool | None = None,
+        is_client: bool | None = None,
+        is_public: bool | None = None,
+        is_internal: bool | None = None,
+        is_confidential: bool | None = None,
+        is_highly_confidential: bool | None = None,
+        is_active: bool | None = None,
+        owners: list[str] | None = None,
+        application_id: str | dict[str, str] | None = None,
+        report: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> Dataset:
+        """Instantiate a Report object with this client for metadata creation.
+
+        Args:
+            identifier (str): Dataset identifier.
+            title (str, optional): Dataset title. If not provided, defaults to identifier.
+            category (str | list[str] | None, optional): A category or list of categories for the dataset.
+            Defaults to None.
+            description (str, optional): Dataset description. If not provided, defaults to identifier.
+            frequency (str, optional): The frequency of the dataset. Defaults to "Once".
+            is_internal_only_dataset (bool, optional): Flag for internal datasets. Defaults to False.
+            is_third_party_data (bool, optional): Flag for third party data. Defaults to True.
+            is_restricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
+            is_raw_data (bool, optional): Flag for raw datasets. Defaults to True.
+            maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
+            source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
+            region (str | list[str] | None, optional): Region. Defaults to None.
+            publisher (str, optional): Name of vendor that publishes the data. Defaults to "J.P. Morgan".
+            product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
+            sub_category (str | list[str] | None, optional): Sub-category. Defaults to None.
+            tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
+            created_date (str | None, optional): Created date. Defaults to None.
+            modified_date (str | None, optional): Modified date. Defaults to None.
+            delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
+            language (str, optional): Language. Defaults to "English".
+            status (str, optional): Status. Defaults to "Available".
+            type_ (str | None, optional): Dataset type. Defaults to "Source".
+            container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
+            snowflake (str | None, optional): Snowflake account connection. Defaults to None.
+            complexity (str | None, optional): Complexity. Defaults to None.
+            is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
+            is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
+            is_pci (bool | None, optional): is_pci. Defaults to None.
+            is_pii (bool | None, optional): is_pii. Defaults to None.
+            is_client (bool | None, optional): is_client. Defaults to None.
+            is_public (bool | None, optional): is_public. Defaults to None.
+            is_internal (bool | None, optional): is_internal. Defaults to None.
+            is_confidential (bool | None, optional): is_confidential. Defaults to None.
+            is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
+            is_active (bool | None, optional): is_active. Defaults to None.
+            owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
+            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
+
+        Returns:
+            Dataset: Fusion Dataset class.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.report(identifier="DATASET_1")
+
+        Note:
+            See the dataset module for more information on functionalities of dataset objects.
+
+        """
+        report_obj = Report(
+            identifier=identifier,
+            title=title,
+            category=category,
+            description=description,
+            frequency=frequency,
+            is_internal_only_dataset=is_internal_only_dataset,
+            is_third_party_data=is_third_party_data,
+            is_restricted=is_restricted,
+            is_raw_data=is_raw_data,
+            maintainer=maintainer,
+            source=source,
+            region=region,
+            publisher=publisher,
+            product=product,
+            sub_category=sub_category,
+            tags=tags,
+            created_date=created_date,
+            modified_date=modified_date,
+            delivery_channel=delivery_channel,
+            language=language,
+            status=status,
+            type_=type_,
+            container_type=container_type,
+            snowflake=snowflake,
+            complexity=complexity,
+            is_immutable=is_immutable,
+            is_mnpi=is_mnpi,
+            is_pci=is_pci,
+            is_pii=is_pii,
+            is_client=is_client,
+            is_public=is_public,
+            is_internal=is_internal,
+            is_confidential=is_confidential,
+            is_highly_confidential=is_highly_confidential,
+            is_active=is_active,
+            owners=owners,
+            application_id=application_id,
+            report=report,
+            **kwargs,
+        )
+        report_obj.client = self
+        return report_obj
