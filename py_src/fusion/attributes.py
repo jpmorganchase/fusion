@@ -142,7 +142,7 @@ class Attribute(metaclass=CamelCaseMeta):
         if res is None:
             raise ValueError("A Fusion client object is required.")
         return res
-        
+
     @classmethod
     def _from_series(
         cls: type[Attribute],

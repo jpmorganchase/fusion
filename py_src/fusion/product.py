@@ -63,7 +63,7 @@ class Product(metaclass=CamelCaseMeta):
     is_active: bool = True
     is_restricted: bool | None = None
     maintainer: str | list[str] | None = None
-    region: str | list[str]  = field(default_factory=lambda: ["Global"])
+    region: str | list[str] = field(default_factory=lambda: ["Global"])
     publisher: str = "J.P. Morgan"
     sub_category: str | list[str] | None = None
     tag: str | list[str] | None = None
@@ -403,11 +403,7 @@ class Product(metaclass=CamelCaseMeta):
             >>> product_dict = product.to_dict()
 
         """
-        product_dict = {
-            snake_to_camel(k): v
-            for k, v in self.__dict__.items()
-            if not k.startswith("_")
-        }
+        product_dict = {snake_to_camel(k): v for k, v in self.__dict__.items() if not k.startswith("_")}
         return product_dict
 
     def create(

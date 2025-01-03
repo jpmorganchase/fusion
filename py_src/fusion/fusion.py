@@ -407,7 +407,7 @@ class Fusion:
 
         if status is not None:
             ds_df = ds_df[ds_df["status"] == status]
-        
+
         if dataset_type is not None:
             ds_df = ds_df[ds_df["type"] == dataset_type]
 
