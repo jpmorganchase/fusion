@@ -17,7 +17,7 @@ import fsspec
 import fsspec.asyn
 import pandas as pd
 import requests
-from fsspec.callbacks import _DEFAULT_CALLBACK
+from fsspec.callbacks import Callback, _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
 
@@ -116,7 +116,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     logger.exception(VERBOSE_LVL, f"{url} cannot be parsed to json")
                     out = {}
             return out
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001, PERF203
             logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
             raise ex
 
@@ -663,104 +663,208 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         dt_to: str,
         dt_created: str,
         chunk_size: int = 5 * 2**20,
-        callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
+        callback: Callback = _DEFAULT_CALLBACK,
         method: str = "put",
         file_name: Optional[str] = None,
         additional_headers: Optional[dict[str, str]] = None,
+        concurrency: int = 10,
+        queue_size: int = 10,
     ) -> None:
+        """
+        A version of _cloud_copy that uses a producer/consumer approach
+        with a bounded queue so we don't keep all chunks in memory at once.
+
+        concurrency: how many upload tasks run in parallel
+        queue_size: maximum number of chunks in the queue at any time
+        """
+
         async def _get_operation_id(kw: dict[str, str]) -> dict[str, Any]:
             session = await self.set_session()
             async with session.post(rpath + "/operationType/upload", **kw) as r:
                 await self._async_raise_not_found_for_status(r, rpath + "/operationType/upload")
-                res: dict[str, Any] = await r.json()
-                return res
+                return await r.json()
 
-        async def _finish_operation(operation_id: Any, kw: Any) -> None:
+        async def _finish_operation(operation_id: Any, parts_resps: list[Any], kw: Any) -> None:
             session = await self.set_session()
             async with session.post(
                 url=rpath + f"/operations/upload?operationId={operation_id}",
-                json={"parts": resps},
+                json={"parts": parts_resps},
                 **kw,
             ) as r:
                 await self._async_raise_not_found_for_status(
                     r, rpath + f"/operations/upload?operationId={operation_id}"
                 )
 
-        def put_data() -> Generator[dict[str, Any], None, None]:
-            async def _meth(url: Any, kw: Any) -> None:
-                session = await self.set_session()
-                meth = getattr(session, method)
-                retry_num = 3
-                ex_cnt = 0
-                last_ex = None
-                while ex_cnt < retry_num:
-                    async with meth(url=url, data=chunk, **kw) as resp:
-                        try:
-                            await self._async_raise_not_found_for_status(resp, url)
-                            return await resp.json()  # type: ignore
-                        except Exception as ex:  # noqa: BLE001
-                            # wait 3 seconds before retrying
-                            await asyncio.sleep(3 * (ex_cnt + 1))
-                            logger.debug(f"Failed to upload file: {ex}")
-                            ex_cnt += 1
-                            last_ex = ex
+        async def _meth(
+            url: str,
+            kw: dict[str, Any],
+            chunk_data: bytes,
+            part_number: int,
+            retry_num: int = 3
+        ) -> dict[str, Any]:
+            session = await self.set_session()
+            http_method = getattr(session, method)
+            ex_cnt = 0
+            last_ex = None
 
-                raise Exception(f"Failed to upload file: {last_ex}, failed after {ex_cnt} exceptions. {last_ex}")
+            while ex_cnt < retry_num:
+                try:
+                    async with http_method(url=url, data=chunk_data, **kw) as resp:
+                        await self._async_raise_not_found_for_status(resp, url)
+                        return await resp.json()  # server response
+                except Exception as ex:  # noqa: BLE001, PERF203
+                    await asyncio.sleep(3 * (ex_cnt + 1))
+                    logger.debug(f"Failed to upload chunk #{part_number}: {ex}")
+                    ex_cnt += 1
+                    last_ex = ex
 
+            raise Exception(
+                f"Failed to upload chunk #{part_number}: {last_ex}, "
+                f"failed after {ex_cnt} attempts."
+            )
+
+        async def producer(
+            fobj: io.IOBase,
+            queue: asyncio.Queue,
+            overall_hash: "hashlib._Hash",  # the entire file's hash
+            headers: dict[str, str],
+            additional_headers: Optional[dict[str, str]],
+        ) -> None:
+            """
+            Reads chunks from `fobj` and puts them into the queue.
+            """
+            part_number = 1
+            while True:
+                chunk_data = fobj.read(chunk_size)
+                if not chunk_data:
+                    break
+
+                # Compute chunk-level hash
+                chunk_sha256 = hashlib.sha256()
+                chunk_sha256.update(chunk_data)
+
+                # Update overall hash
+                overall_hash.update(chunk_sha256.digest())
+
+                # Prepare chunk-level headers
+                chunk_headers = {
+                    "Content-Type": "application/octet-stream",
+                    "Digest": "SHA-256=" + base64.b64encode(chunk_sha256.digest()).decode(),
+                }
+                kw_chunk = self.kwargs.copy()
+                kw_chunk.update({"headers": chunk_headers})
+                kw_chunk = FusionHTTPFileSystem._update_kwargs(kw_chunk, headers, additional_headers)
+
+                # Build the upload URL
+                url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={part_number}"
+
+                # Wait for space in the queue if it's full
+                await queue.put((url, kw_chunk, chunk_data, part_number))
+                callback.relative_update(len(chunk_data))
+
+                part_number += 1
+
+            # Signal consumers to stop by sending None
+            for _ in range(concurrency):
+                await queue.put(None)
+
+        async def consumer(queue: asyncio.Queue, parts_resps: dict[int, Any]) -> None:
+            """
+            Uploads chunks from the queue until a sentinel (None) is received.
+            Stores results in parts_resps[part_number].
+            """
+            while True:
+                item = await queue.get()
+                if item is None:
+                    # Sentinel => no more items; put it back for other consumers
+                    queue.task_done()
+                    break
+
+                url, kw_chunk, chunk_data, part_number = item
+                try:
+                    resp = await _meth(url, kw_chunk, chunk_data, part_number)
+                    parts_resps[part_number] = resp
+                except Exception as e:  # noqa: BLE001, PERF203
+                    logger.error(f"Upload for part {part_number} failed: {e}")
+                finally:
+                    queue.task_done()
+
+        async def _cloud_copy_async() -> None:
+            # Basic method check
+            if method.lower() not in ("put", "post"):
+                raise ValueError(f"method must be either 'post' or 'put', not {method!r}")
+
+            # Prepare top-level headers
+            base_headers = {
+                "Content-Type": "application/json",
+                "x-jpmc-distribution-created-date": dt_created,
+                "x-jpmc-distribution-from-date": dt_from,
+                "x-jpmc-distribution-to-date": dt_to,
+                "Digest": "",  # updated later with the overall file hash
+            }
+            if file_name:
+                base_headers["File-Name"] = file_name
+            if additional_headers:
+                base_headers.update(additional_headers)
+
+            # Use a nullcontext so that lpath is used directly if it's already an open file,
+            # or otherwise a standard open/close if needed.
+            lpath.seek(0)
             context = nullcontext(lpath)
 
+            # 1) Acquire operation_id
+            kw_op = self.kwargs.copy()
+            kw_op = FusionHTTPFileSystem._update_kwargs(kw_op, base_headers, additional_headers)
+            op_res = await _get_operation_id(kw_op)
+            nonlocal operation_id  # noqa: PLE0017
+            operation_id = op_res["operationId"]
+
+            # 2) Create a queue and spawn consumers
+            queue_ = asyncio.Queue(maxsize=queue_size)
+            parts_resps = {}  # store part_number => server response
+
+            # A single overall hash for the entire file
+            file_hash_sha256 = hashlib.sha256()
+
             with context as f:
+                # If the file has a known size, send it to the callback
                 callback.get_size(getattr(f, "size", None))
 
-            chunk = f.read(chunk_size)
-            i = 0
-            headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
-            while chunk:
-                hash_sha256_chunk = hashlib.sha256()
-                hash_sha256_chunk.update(chunk)
-                hash_sha256_lst[0].update(hash_sha256_chunk.digest())
-                headers_chunks = deepcopy(headers_chunks)
-                headers_chunks["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
-                kw = self.kwargs.copy()
-                kw.update({"headers": headers_chunks})
-                kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
-                url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
-                yield sync(self.loop, _meth, url, kw)
-                i += 1
-                callback.relative_update(len(chunk))
-                chunk = f.read(chunk_size)
+                # Start consumer tasks
+                consumer_tasks = [
+                    asyncio.create_task(consumer(queue_, parts_resps)) for _ in range(concurrency)
+                ]
 
-        method = method.lower()
-        if method not in ("put", "post"):
-            raise ValueError(f"method has to be either 'post' or 'put', not {method!r}")
-        hash_sha256 = hashlib.sha256()
-        hash_sha256_lst = [hash_sha256]
-        headers = {
-            "Content-Type": "application/json",
-            "x-jpmc-distribution-created-date": dt_created,
-            "x-jpmc-distribution-from-date": dt_from,
-            "x-jpmc-distribution-to-date": dt_to,
-            "Digest": "",  # to be changed to x-jpmc-digest
-        }
-        if file_name:
-            headers["File-Name"] = file_name
+                # Start producer
+                await producer(
+                    f,
+                    queue_,
+                    file_hash_sha256,
+                    base_headers,
+                    additional_headers,
+                )
 
-        if additional_headers:
-            headers.update(additional_headers)
+                # Wait until all tasks are done
+                await queue_.join()
 
-        lpath.seek(0)
+                # Cancel consumers (so they exit cleanly if still running)
+                for c in consumer_tasks:
+                    c.cancel()
 
-        kw_op = self.kwargs.copy()
-        kw_op = FusionHTTPFileSystem._update_kwargs(kw_op, headers, additional_headers)
+            # Build final header with overall file hash
+            overall_digest_b64 = base64.b64encode(file_hash_sha256.digest()).decode()
+            base_headers["Digest"] = "SHA-256=" + overall_digest_b64
+            final_kw = self.kwargs.copy()
+            final_kw.update({"headers": base_headers})
+            final_kw = FusionHTTPFileSystem._update_kwargs(final_kw, base_headers, additional_headers)
 
-        operation_id = sync(self.loop, _get_operation_id, kw_op)["operationId"]
-        resps = list(put_data())
-        hash_sha256 = hash_sha256_lst[0]
-        headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
-        kw = self.kwargs.copy()
-        kw.update({"headers": headers})
-        kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
-        sync(self.loop, _finish_operation, operation_id, kw)
+            # Finalize the operation
+            parts_resps_sorted = [parts_resps[i] for i in sorted(parts_resps)]
+            await _finish_operation(operation_id, parts_resps_sorted, final_kw)
+
+        # Execute the async logic in our event loop
+        operation_id = ""
+        sync(self.loop, _cloud_copy_async)
 
     def put(  # noqa: PLR0913
         self,
