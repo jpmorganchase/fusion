@@ -2072,6 +2072,7 @@ class Fusion:
             is_active (bool | None, optional): is_active. Defaults to None.
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
+            report (dict[str, str] | None, optional): Report metadata. Defaults to None.
 
         Returns:
             Dataset: Fusion Dataset class.

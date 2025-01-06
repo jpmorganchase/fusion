@@ -1391,3 +1391,80 @@ def test_fusion_delete_datasetmembers_multiple(requests_mock: requests_mock.Mock
     assert resp[1].status_code == status_code
     resp_len = 2
     assert len(resp) == resp_len
+
+
+def test_fusion_delete_all_datasetmembers(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test delete datasetmembers"""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+    requests_mock.delete(url, status_code=200)
+
+    resp = fusion_obj.delete_all_datasetmembers(dataset, catalog=catalog, return_resp_obj=True)
+    status_code = 200
+    assert resp is not None
+    assert isinstance(resp, requests.Response)
+    assert resp.status_code == status_code
+
+
+def test_list_registered_attributes(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list registered attributes."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes"
+    core_cols = [
+        "identifier",
+        "title",
+        "dataType",
+        "publisher",
+        "description",
+        "applicationId",
+    ]
+
+    server_mock_data = {
+        "resources": [
+            {
+                "identifier": "attr_1",
+                "title": "some title",
+                "dataType": "string",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+                "catalog": {"@id": "12345/", "description": "catalog"},
+            },
+            {
+                "identifier": "attr_2",
+                "title": "some title",
+                "dataType": "int",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+                "catalog": {"@id": "12345/", "description": "catalog"},
+            },
+        ]
+    }
+    expected_data = {
+        "resources": [
+            {
+                "identifier": "attr_1",
+                "title": "some title",
+                "dataType": "string",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+            },
+            {
+                "identifier": "attr_2",
+                "title": "some title",
+                "dataType": "int",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+            },
+        ]
+    }
+
+    expected_df = pd.DataFrame(expected_data["resources"])
+
+    requests_mock.get(url, json=server_mock_data)
+
+    # Call the catalog_resources method
+    test_df = fusion_obj.list_registered_attributes(catalog=catalog)
+    # Check if the dataframe is created correctly
+    pd.testing.assert_frame_equal(test_df, expected_df)
+    assert all(col in core_cols for col in test_df.columns)
