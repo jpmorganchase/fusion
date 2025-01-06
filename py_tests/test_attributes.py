@@ -903,6 +903,107 @@ def test_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
     assert resp.status_code == status_code
 
 
+def test_catalog_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test creation of multiple attributes."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes"
+
+    expected_data =  [
+            {
+                "title": "Test Attribute",
+                "identifier": "test_attribute",
+                "dataType": "string",
+                "description": "Test Attribute",
+                "publisher": "J.P. Morgan",
+                "applicationId": {"id": "12345", "type": "Application (SEAL)"},
+            }
+        ]
+
+    requests_mock.post(url, json=expected_data)
+
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="test_attribute",
+                index=0,
+                data_type=cast(Types, "string"),
+                publisher="J.P. Morgan",
+                application_id="12345",
+            )
+        ]
+    )
+    resp = test_attributes.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
+    status_code = 200
+    assert isinstance(resp, requests.Response)
+    assert resp.status_code == status_code
+
+
+def test_catalog_attributes_create_no_publisher(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test creation of multiple attributes."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes"
+
+    expected_data =  [
+            {
+                "title": "Test Attribute",
+                "identifier": "test_attribute",
+                "dataType": "string",
+                "description": "Test Attribute",
+                "applicationId": {"id": "12345", "type": "Application (SEAL)"},
+            }
+        ]
+
+    requests_mock.post(url, json=expected_data)
+
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="test_attribute",
+                index=0,
+                data_type=cast(Types, "string"),
+                application_id="12345",
+            )
+        ]
+    )
+    with pytest.raises(ValueError, match="The 'publisher' attribute is required for catalog attributes."):
+        test_attributes.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
+
+
+def test_catalog_attributes_create_no_app_id(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test creation of multiple attributes."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes"
+
+    expected_data =  [
+            {
+                "title": "Test Attribute",
+                "identifier": "test_attribute",
+                "dataType": "string",
+                "description": "Test Attribute",
+                "publisher": "J.P. Morgan",
+            }
+        ]
+
+    requests_mock.post(url, json=expected_data)
+
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="test_attribute",
+                index=0,
+                data_type=cast(Types, "string"),
+                publisher="J.P. Morgan",
+            )
+        ]
+    )
+    with pytest.raises(ValueError, match="The 'application_id' attribute is required for catalog attributes."):
+        test_attributes.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
+
+
+
 def test_attributes_create_no_client() -> None:
     """Test create attribute without client."""
     test_attributes = Attributes(
