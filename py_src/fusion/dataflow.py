@@ -7,10 +7,10 @@ from fusion.dataset import Dataset
 
 @dataclass
 class InputDataFlow(Dataset):
-    producerApplicationId: dict[str, str] | None = None
-    consumerApplicationId: list[dict[str, str]] | None = None
-    flowDetails: dict[str, str] | None = None
-    type_: str = field(default="Flow", init=False)
+    producer_application_id: dict[str, str] | None = None
+    consumer_application_id: list[dict[str, str]] | None = None
+    flow_details: dict[str, str] | None = field(default_factory=lambda: {"flowDirection": "Input"})
+    type_: str | None = "Flow"
 
     def __repr__(self: InputDataFlow) -> str:
         """Return an object representation of the InputDataFlow object.
@@ -25,10 +25,10 @@ class InputDataFlow(Dataset):
 
 @dataclass
 class OutputDataFlow(Dataset):
-    producerApplicationId: list[dict[str, str]] | None = None
-    consumerApplicationId: dict[str, str] | None = None
-    flowDetails: dict[str, str] | None = None
-    type_: str = field(default="Flow", init=False)
+    producer_application_id: dict[str, str] | None = None
+    consumer_application_id: list[dict[str, str]] | None = None
+    flow_details: dict[str, str] | None = field(default_factory=lambda: {"flowDirection": "Output"})
+    type_: str | None = "Flow"
 
     def __repr__(self: OutputDataFlow) -> str:
         """Return an object representation of the OutputDataFlow object.
