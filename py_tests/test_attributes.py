@@ -236,7 +236,9 @@ def test_attribute_class_to_dict() -> None:
         "term": "bizterm1",
         "dataset": None,
         "attributeType": None,
-        "applicationId": None
+        "applicationId": None,
+        "publisher": None,
+        "isCriticalDataElement": None,
     }
 
 
@@ -517,6 +519,8 @@ def test_attributes_to_dict() -> None:
                 "dataset": None,
                 "attributeType": None,
                 "applicationId": None,
+                "publisher": None,
+                "isCriticalDataElement": None,
             }
         ]
     }
@@ -758,7 +762,7 @@ def test_attributes_to_dataframe() -> None:
         ]
     )
     test_df = test_attributes.to_dataframe()
-    assert test_df.shape == (1, 20)
+    assert test_df.shape == (1, 22)
     assert test_df["title"].iloc[0] == "Test Attribute"
     assert test_df["identifier"].iloc[0] == "test_attribute"
     assert test_df["index"].iloc[0] == 0
@@ -784,7 +788,7 @@ def test_attributes_to_dataframe_empty() -> None:
     """Test attributes class to_dataframe method with empty attributes."""
     test_attributes = Attributes([])
     test_df = test_attributes.to_dataframe()
-    assert test_df.shape == (1, 20)
+    assert test_df.shape == (1, 22)
     assert test_df["title"].iloc[0] == "Example Attribute"
     assert test_df["identifier"].iloc[0] == "example_attribute"
     assert test_df["index"].iloc[0] == 0
@@ -1044,6 +1048,8 @@ def test_attribute_case_switching() -> None:
         "dataset": None,
         "attributeType": None,
         "applicationId": None,
+        "publisher": None,
+        "isCriticalDataElement": None,
     }
 
     attribute_from_camel_dict = Attribute("test_attribute", 0).from_object(my_attribute_dict)
