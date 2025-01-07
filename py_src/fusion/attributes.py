@@ -433,6 +433,67 @@ class Attribute(metaclass=CamelCaseMeta):
         resp = client.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+    
+    def set_lineage(
+        self,
+        attributes: list[Attribute],
+        catalog: str | None = None,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Set the lineage for an attribute in a Fusion catalog.
+
+        Args:
+            attributes (str): List of Attribute objects.
+            client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
+            catalog (str, optional): A catalog identifier. Defaults to None.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
+
+        Returns:
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> my_attr1 = fusion.attribute(identifier="my_attribute1", index=0, application_id="12345")
+            >>> my_attr2 = fusion.attribute(identifier="my_attribute2", index=0, application_id="12345")
+            >>> my_attr3 = fusion.attribute(identifier="my_attribute3", index=0, application_id="12345")
+            >>> attrs = [my_attr2, my_attr3]
+            >>> my_attr2.set_lineage(attributes=attrs, catalog="my_catalog")
+
+        """
+        client = self._use_client(client)
+        catalog = client._use_catalog(catalog)
+
+        if self.application_id is None:
+            raise ValueError("The 'application_id' attribute is required for setting lineage.")
+        target_attributes = []
+        for attribute in attributes:
+            if attribute.application_id is None:
+                raise ValueError(f"The 'application_id' attribute is required for setting lineage.")
+            attr_dict = {
+                    "catalog": catalog,
+                    "attribute": attribute.identifier,
+                    "applicationId": attribute.application_id
+                }
+            target_attributes.append(attr_dict)
+
+        url = f"{client.root_url}catalogs/{catalog}/attributes/lineage"
+        data = [
+            {
+                "source": {
+                    "catalog": catalog,
+                    "attribute": self.identifier,
+                    "applicationId": self.application_id
+            },
+            "targets": target_attributes
+        }
+        ]
+        resp = client.session.post(url, json=data)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
 
 
 @dataclass
