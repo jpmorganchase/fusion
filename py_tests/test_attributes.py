@@ -388,6 +388,134 @@ def test_attribute_class_set_lineage(requests_mock: requests_mock.Mocker, fusion
     assert resp.status_code == status_code
 
 
+def test_attribute_class_set_lineage_value_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test attribute class set lineage"""
+    catalog = "my_catalog"
+
+    test_attribute1 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+    )
+    test_attribute2 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    test_attribute3 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    attributes = [test_attribute2, test_attribute3]
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes/lineage"
+
+    exp_data = [
+            {
+                "source": {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute1",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            },
+            "targets": [
+                {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute2",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            },
+            {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute3",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            }       
+            ]
+        }
+        ]
+
+    requests_mock.post(url, json=exp_data)
+
+    with pytest.raises(ValueError, match="The 'application_id' attribute is required for setting lineage."):
+        test_attribute1.set_lineage(
+            client=fusion_obj,
+            attributes=attributes,
+            catalog=catalog,
+            return_resp_obj=True
+        )
+
+
+def test_attribute_class_set_lineage_value_error2(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test attribute class set lineage"""
+    catalog = "my_catalog"
+
+    test_attribute1 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    test_attribute2 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+    )
+    test_attribute3 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    attributes = [test_attribute2, test_attribute3]
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes/lineage"
+
+    exp_data = [
+            {
+                "source": {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute1",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            },
+            "targets": [
+                {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute2",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            },
+            {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute3",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            }       
+            ]
+        }
+        ]
+
+    requests_mock.post(url, json=exp_data)
+
+    with pytest.raises(ValueError, match="The 'application_id' attribute is required for setting lineage."):
+        test_attribute1.set_lineage(
+            client=fusion_obj,
+            attributes=attributes,
+            catalog=catalog,
+            return_resp_obj=True
+        )
+
+
 def test_attributes_class() -> None:
     """Test attributes class."""
     test_attribute = Attribute(
