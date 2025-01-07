@@ -2216,7 +2216,8 @@ class Fusion:
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
             producer_application_id (dict[str, str] | None, optional): Producer application ID. Defaults to None.
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): Consumer application ID. Defaults to None.
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): Consumer application ID.
+                Defaults to None.
             flow_details (dict[str, str] | None, optional): Flow details. Defaults to None.
 
         Returns:
@@ -2364,7 +2365,8 @@ class Fusion:
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
             producer_application_id (dict[str, str] | None, optional): Producer application ID. Defaults to None.
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): Consumer application ID. Defaults to None.
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): Consumer application ID.
+                Defaults to None.
             flow_details (dict[str, str] | None, optional): Flow details. Defaults to None.
 
         Returns:
