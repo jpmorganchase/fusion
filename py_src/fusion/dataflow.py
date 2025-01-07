@@ -8,9 +8,17 @@ from fusion.dataset import Dataset
 @dataclass
 class InputDataFlow(Dataset):
     producer_application_id: dict[str, str] | None = None
-    consumer_application_id: list[dict[str, str]] | None = None
+    consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None
     flow_details: dict[str, str] | None = field(default_factory=lambda: {"flowDirection": "Input"})
     type_: str | None = "Flow"
+
+    def __post_init__(self: InputDataFlow) -> None:
+        self.consumer_application_id = (
+            [self.consumer_application_id]
+            if isinstance(self.consumer_application_id, dict)
+            else self.consumer_application_id
+        )
+        super().__post_init__()
 
     def __repr__(self: InputDataFlow) -> str:
         """Return an object representation of the InputDataFlow object.
@@ -26,9 +34,17 @@ class InputDataFlow(Dataset):
 @dataclass
 class OutputDataFlow(Dataset):
     producer_application_id: dict[str, str] | None = None
-    consumer_application_id: list[dict[str, str]] | None = None
+    consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None
     flow_details: dict[str, str] | None = field(default_factory=lambda: {"flowDirection": "Output"})
     type_: str | None = "Flow"
+
+    def __post_init__(self: OutputDataFlow) -> None:
+        self.consumer_application_id = (
+            [self.consumer_application_id]
+            if isinstance(self.consumer_application_id, dict)
+            else self.consumer_application_id
+        )
+        super().__post_init__()
 
     def __repr__(self: OutputDataFlow) -> str:
         """Return an object representation of the OutputDataFlow object.

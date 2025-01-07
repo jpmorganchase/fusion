@@ -409,7 +409,7 @@ class Fusion:
 
         if status is not None:
             ds_df = ds_df[ds_df["status"] == status]
-        
+
         if dataset_type is not None:
             ds_df = ds_df[ds_df["type"] == dataset_type]
 
@@ -1948,7 +1948,6 @@ class Fusion:
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
-
     def list_registered_attributes(
         self,
         catalog: str | None = None,
@@ -1989,7 +1988,7 @@ class Fusion:
             pass
 
         return ds_attr_df
-    
+
     def report(  # noqa: PLR0913
         self,
         identifier: str,
@@ -2131,7 +2130,6 @@ class Fusion:
         report_obj.client = self
         return report_obj
 
-
     def input_dataflow(  # noqa: PLR0913
         self,
         identifier: str,
@@ -2172,7 +2170,7 @@ class Fusion:
         owners: list[str] | None = None,
         application_id: str | dict[str, str] | None = None,
         producer_application_id: dict[str, str] | None = None,
-        consumer_application_id: list[dict[str, str]] | None = None,
+        consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None,
         flow_details: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> InputDataFlow:
@@ -2218,7 +2216,7 @@ class Fusion:
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
             producer_application_id (dict[str, str] | None, optional): Producer application ID. Defaults to None.
-            consumer_application_id (list[dict[str, str]] | None, optional): Consumer application ID. Defaults to None.
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): Consumer application ID. Defaults to None.
             flow_details (dict[str, str] | None, optional): Flow details. Defaults to None.
 
         Returns:
@@ -2233,6 +2231,7 @@ class Fusion:
             See the dataset module for more information on functionalities of input dataflow objects.
 
         """
+        flow_details = {"flowDirection": "Input"} if flow_details is None else flow_details
         dataflow_obj = InputDataFlow(
             identifier=identifier,
             title=title,
@@ -2278,7 +2277,6 @@ class Fusion:
         )
         dataflow_obj.client = self
         return dataflow_obj
-    
 
     def output_dataflow(  # noqa: PLR0913
         self,
@@ -2320,7 +2318,7 @@ class Fusion:
         owners: list[str] | None = None,
         application_id: str | dict[str, str] | None = None,
         producer_application_id: dict[str, str] | None = None,
-        consumer_application_id: list[dict[str, str]] | None = None,
+        consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None,
         flow_details: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> OutputDataFlow:
@@ -2366,7 +2364,7 @@ class Fusion:
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
             producer_application_id (dict[str, str] | None, optional): Producer application ID. Defaults to None.
-            consumer_application_id (list[dict[str, str]] | None, optional): Consumer application ID. Defaults to None.
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): Consumer application ID. Defaults to None.
             flow_details (dict[str, str] | None, optional): Flow details. Defaults to None.
 
         Returns:
@@ -2381,6 +2379,7 @@ class Fusion:
             See the dataset module for more information on functionalities of output dataflow objects.
 
         """
+        flow_details = {"flowDirection": "Output"} if flow_details is None else flow_details
         dataflow_obj = OutputDataFlow(
             identifier=identifier,
             title=title,
