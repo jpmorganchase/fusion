@@ -1943,3 +1943,33 @@ class Fusion:
         resp = self.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+    
+    def list_indexes(
+        self,
+        knowledge_base: str,
+        catalog: str | None = None,
+    ) -> pd.DataFrame:
+        """List the indexes in a knowledge base.
+
+        Args:
+            knowledge_base (str): Knowledge base (dataset) identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            pd.DataFrame: a dataframe with a column for each index.
+
+        """
+        catalog = self._use_catalog(catalog)
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{knowledge_base}/indexes/"
+        response = self.session.get(url)
+        requests_raise_for_status(response)
+        df_resp = pd.json_normalize(response.json())
+        df2 = df_resp.transpose()
+        df2.index = df2.index.map(str)
+        df2.columns = pd.Index(df2.loc["settings.index.provided_name"])
+        df2 = df2.rename(columns=lambda x:x.split("index-")[-1])
+        df2.columns.names = ["index_name"]
+        df2.loc["settings.index.creation_date"] = pd.to_datetime(df2.loc["settings.index.creation_date"], unit="ms")
+        multi_index = [index.split(".", 1) for index in df2.index]
+        df2.index = pd.MultiIndex.from_tuples(multi_index)
+        return df2
