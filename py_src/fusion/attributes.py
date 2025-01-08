@@ -461,7 +461,7 @@ class Attribute(metaclass=CamelCaseMeta):
             >>> my_attr2 = fusion.attribute(identifier="my_attribute2", index=0, application_id="12345")
             >>> my_attr3 = fusion.attribute(identifier="my_attribute3", index=0, application_id="12345")
             >>> attrs = [my_attr2, my_attr3]
-            >>> my_attr2.set_lineage(attributes=attrs, catalog="my_catalog")
+            >>> my_attr1.set_lineage(attributes=attrs, catalog="my_catalog")
 
         """
         client = self._use_client(client)
