@@ -441,10 +441,12 @@ class Attribute(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Set the lineage for an attribute in a Fusion catalog.
+        """Map an attribute to existing registered attributes in a Fusion catalog. Attributes from an output data flow
+            can be mapped to existing registered input data flow attributes. This supports the case in which the
+            generating application and receiving application store their attributes with different names.
 
         Args:
-            attributes (str): List of Attribute objects.
+            attributes (str): List of Attribute objects to establish upstream lineage from.
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
                 If instantiated from a Fusion object, then the client is set automatically.
             catalog (str, optional): A catalog identifier. Defaults to None.
@@ -460,8 +462,8 @@ class Attribute(metaclass=CamelCaseMeta):
             >>> my_attr1 = fusion.attribute(identifier="my_attribute1", index=0, application_id="12345")
             >>> my_attr2 = fusion.attribute(identifier="my_attribute2", index=0, application_id="12345")
             >>> my_attr3 = fusion.attribute(identifier="my_attribute3", index=0, application_id="12345")
-            >>> attrs = [my_attr2, my_attr3]
-            >>> my_attr1.set_lineage(attributes=attrs, catalog="my_catalog")
+            >>> attrs = [my_attr1, my_attr2]
+            >>> my_attr3.set_lineage(attributes=attrs, catalog="my_catalog")
 
         """
         client = self._use_client(client)
@@ -810,7 +812,8 @@ class Attributes:
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Upload the Attributes to a dataset in a Fusion catalog. If dataset not provided, uploads to the catalog.
+        """Upload the Attributes to a dataset in a Fusion catalog. If no dataset is provided,
+            attributes are registered to the catalog.
 
         Args:
             dataset (str): Dataset identifier.
@@ -871,6 +874,14 @@ class Attributes:
             >>> fusion = Fusion()
             >>> attributes = fusion.attributes().from_catalog(dataset="my_dataset", catalog="my_catalog")
             >>> attributes.create(dataset="my_new_dataset", catalog="my_catalog")
+
+            Register attributes to a catalog:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0, application_id="123", publisher="JPM")
+            >>> attributes = fusion.attributes(attributes=[attribute])
+            >>> attributes.create(catalog="my_catalog")
 
         """
         client = self._use_client(client)
