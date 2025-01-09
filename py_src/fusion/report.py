@@ -42,6 +42,20 @@ class Report(Dataset):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
+        """Add a registered attribute to the Report.
+
+        Args:
+            attribute_identifier (str): Attribute identifier.
+            is_kde (bool): Key Data Element flag. An attribute can be proposed as a key data element when it is linked
+                to a report. This property is specific to the relationship between the attribute and the report.
+            catalog (str | None, optional): Catalog identifier. Defaults to 'common'.
+            client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
+
+        Returns:
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+        """
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         dataset = self.identifier
