@@ -461,7 +461,10 @@ class Fusion:
         catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
-        ds_attr_df = Fusion._call_for_dataframe(url, self.session).sort_values(by="index").reset_index(drop=True)
+        ds_attr_df = Fusion._call_for_dataframe(url, self.session)
+        
+        if "index" in ds_attr_df.columns: 
+            ds_attr_df = ds_attr_df.sort_values(by="index").reset_index(drop=True)
 
         if not display_all_columns:
             ds_attr_df = ds_attr_df[
