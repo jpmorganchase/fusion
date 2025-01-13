@@ -17,10 +17,12 @@ try:
 except ImportError:
     REQUESTS_AVAILABLE = False
 
-from opensearch.connection.base import Connection
 from opensearchpy.compat import reraise_exceptions, string_types
+from opensearchpy.connection.base import Connection
 from opensearchpy.exceptions import (
-    ConnectionError,
+    ConnectionError as OpenSearchConnectionError,
+)
+from opensearchpy.exceptions import (
     ConnectionTimeout,
     ImproperlyConfigured,
     SSLError,
@@ -223,12 +225,11 @@ class RequestsHttpConnection(Connection):
 
         return url
 
-
     def perform_request(  # noqa: PLR0913
         self,
         method: str,
         url: str,
-        params: Mapping[str, Any] | None = None,
+        params: Mapping[str, Any] | None = None,  # noqa: ARG002
         body: bytes | None = None,
         timeout: float | None = None,
         allow_redirects: bool | None = True,
@@ -285,7 +286,7 @@ class RequestsHttpConnection(Connection):
                 raise SSLError("N/A", str(e), e) from e
             if isinstance(e, requests.Timeout):
                 raise ConnectionTimeout("TIMEOUT", str(e), e) from e
-            raise ConnectionError("N/A", str(e), e) from e
+            raise OpenSearchConnectionError("N/A", str(e), e) from e
         finally:
             self.metrics.request_end()
 

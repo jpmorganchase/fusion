@@ -83,6 +83,9 @@ events = [
     "sseclient",
     "aiohttp-sse-client"
 ]
+embeddings = [
+    "opensearch-py>=2.8.0",
+]
 
 
 [tool.uv]
