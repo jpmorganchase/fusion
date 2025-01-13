@@ -25,7 +25,7 @@ def test_add_registered_attribute(requests_mock: requests_mock.Mocker, fusion_ob
     report_obj.client = fusion_obj
     resp = report_obj.add_registered_attribute(
         attribute_identifier="my_attribute",
-        is_kde=True,
+        is_key_data_element=True,
         catalog=catalog,
         return_resp_obj=True
     )

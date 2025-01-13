@@ -18,7 +18,7 @@ class Report(Dataset):
     
     Attributes:
         report (dict[str, str]): The report metadata. Specifies the tier of the report.
-        type_ (str): The type of dataset. Defaults to "Report", which is required for creating a Report object.
+        type_ (str): The dataset type. Defaults to "Report", which is the required value for creating a Report object.
 
     """
     report: dict[str, str] | None = field(default_factory=lambda: {"tier": ""})
@@ -37,7 +37,7 @@ class Report(Dataset):
     def add_registered_attribute(
         self: Report,
         attribute_identifier: str,
-        is_kde: bool,
+        is_key_data_element: bool,
         catalog: str | None = None,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
@@ -46,8 +46,9 @@ class Report(Dataset):
 
         Args:
             attribute_identifier (str): Attribute identifier.
-            is_kde (bool): Key Data Element flag. An attribute can be proposed as a key data element when it is linked
-                to a report. This property is specific to the relationship between the attribute and the report.
+            is_key_data_element (bool): Key Data Element flag. An attribute can be proposed as a key data element when
+                it is linked to a report. This property is specific to the relationship between the attribute and the
+                report.
             catalog (str | None, optional): Catalog identifier. Defaults to 'common'.
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
                 If instantiated from a Fusion object, then the client is set automatically.
@@ -63,11 +64,10 @@ class Report(Dataset):
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{attribute_identifier}/registration"
 
         data = {
-            "isCriticalDataElement": is_kde,
+            "isCriticalDataElement": is_key_data_element,
         }
 
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
-

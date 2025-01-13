@@ -67,8 +67,9 @@ class Dataset(metaclass=CamelCaseMeta):
         is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
         is_active (bool | None, optional): is_active. Defaults to None.
         owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-        application_id (str | dict[str, str] | None, optional): The seal ID of the dataset in string format,
-            or a dictionary containing 'id' and 'type'. Defaults to None.
+        application_id (str | dict[str, str] | None, optional): The application (most commonly seal ID) that the 
+            dataset/report/flow is owned by. Accepts string format for seal IDs, or a dictionary containing 'id' and
+            'type' as keys. Defaults to None.
         _client (Any, optional): A Fusion client object. Defaults to None.
 
     """

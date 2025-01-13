@@ -17,9 +17,11 @@ class DataFlow(Dataset):
     """Dataflow class for maintaining data flow metadata.
 
     Attributes:
-        producer_application_id (dict[str, str] | None): The producer application ID.
-        consumer_application_id (list[dict[str, str]] | dict[str, str] | None): The consumer application ID.
-        flow_details (dict[str, str] | None): The flow details.
+        producer_application_id (dict[str, str] | None): The producer application ID (upstream application
+            producing the flow).
+        consumer_application_id (list[dict[str, str]] | dict[str, str] | None): The consumer application ID (downstream
+            application, consuming the flow).
+        flow_details (dict[str, str] | None): The flow details. Specifies input versus output flow.
         type_ (str | None): The type of dataset. Defaults to "Flow".
 
     """
