@@ -40,7 +40,6 @@ class DataFlow(Dataset):
     def add_registered_attribute(
         self: DataFlow,
         attribute_identifier: str,
-        is_kde: bool,
         catalog: str | None = None,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
@@ -66,7 +65,7 @@ class DataFlow(Dataset):
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{attribute_identifier}/registration"
 
         data = {
-            "isCriticalDataElement": is_kde,
+            "isCriticalDataElement": False,
         }
 
         resp: requests.Response = client.session.post(url, json=data)
