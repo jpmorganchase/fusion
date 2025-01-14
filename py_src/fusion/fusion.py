@@ -20,6 +20,7 @@ from tabulate import tabulate
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute, Attributes
 from fusion.dataset import Dataset
+from fusion.embeddings import FusionEmbeddingsConnection
 from fusion.fusion_types import Types
 from fusion.product import Product
 
@@ -52,6 +53,7 @@ from .utils import (
 if TYPE_CHECKING:
     import fsspec
     import requests
+    from opensearchpy import OpenSearch
 
     from .types import PyArrowFilterT
 
@@ -1960,7 +1962,7 @@ class Fusion:
 
         """
         catalog = self._use_catalog(catalog)
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{knowledge_base}/indexes/"
+        url = f"{self.root_url}dataspaces/{catalog}/datasets/{knowledge_base}/indexes/"
         response = self.session.get(url)
         requests_raise_for_status(response)
         df_resp = pd.json_normalize(response.json())
@@ -1973,3 +1975,19 @@ class Fusion:
         multi_index = [index.split(".", 1) for index in df2.index]
         df2.index = pd.MultiIndex.from_tuples(multi_index)
         return df2
+    
+    def get_fusion_opensearch_client(self, knowledge_base: str, catalog: str | None = None) -> OpenSearch:
+        """Creates Fusion Filesystem.
+
+        Returns: Fusion Filesystem
+
+        """
+        from opensearchpy import OpenSearch
+        catalog = self._use_catalog(catalog)
+        return OpenSearch(
+            connection_class=FusionEmbeddingsConnection,
+            catalog=catalog,
+            knowledge_base=knowledge_base,
+            root_url=self.root_url,
+            credentials=self.credentials
+        )

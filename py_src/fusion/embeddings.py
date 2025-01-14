@@ -38,9 +38,16 @@ HTTP_MULTIPLE_CHOICES = 300
 
 logger = logging.getLogger(__name__)
 
-class RequestsHttpConnection(Connection):  # type: ignore
+class FusionEmbeddingsConnection(Connection):  # type: ignore
     """
-    Connection using the `requests` library.
+    Class responsible for maintaining HTTP connection to the Fusion Embedding API using OpenSearch. This class is a 
+    customized version of the `RequestsHttpConnection` class from the `opensearchpy` library, tailored to work with an
+    internal vector database.
+
+    The `FusionEmbeddingsConnection` class provides the following enhancements:
+    - Establishes and manages HTTP connections to the Fusion Embedding API.
+    - Integrates with the Fusion API for authentication and session management.
+    - Provides methods for modifying and validating URLs specific to the Fusion Embedding API.
 
     :arg http_auth: optional http auth information as either ':' separated
         string or a tuple. Any value will be passed into requests as `auth`.
@@ -91,10 +98,16 @@ class RequestsHttpConnection(Connection):  # type: ignore
             )
 
         # Initialize Session so .headers works before calling super().__init__().
-        fusion_root_url: str = kwargs.get("fusion_root_url", "https://fusion.jpmorgan.com/api/v1/")
-        self.credentials = FusionCredentials.from_file(Path(kwargs.get("credentials", "config/credentials.json")))
+        fusion_root_url: str = kwargs.get("root_url", "https://fusion.jpmorgan.com/api/v1/")
+        credentials: FusionCredentials | str | None = kwargs.get("credentials", "config/client_credentials.json")
+        if isinstance(credentials, FusionCredentials):
+            self.credentials = credentials
+        elif isinstance(credentials, str):
+            self.credentials = FusionCredentials.from_file(Path(credentials))
+        else:
+            raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
         self.catalog = kwargs.get("catalog", "common")
-        self.dataset = kwargs.get("dataset")
+        self.knowledge_base = kwargs.get("knowledge_base")
 
         self.session = get_session(self.credentials, fusion_root_url)
         self.base_url = fusion_root_url
@@ -156,7 +169,7 @@ class RequestsHttpConnection(Connection):  # type: ignore
                 f"Connecting to {self.host} using SSL with verify_certs=False is insecure.",
                 stacklevel=2
             )
-        self.url_prefix = f"dataspaces/{self.catalog}/datasets/{self.dataset}/indexes"
+        self.url_prefix = f"dataspaces/{self.catalog}/datasets/{self.knowledge_base}/indexes/"
         self.index_name: str | None = None
     
     def _tidy_url(self, url: str) -> str:
@@ -216,7 +229,7 @@ class RequestsHttpConnection(Connection):  # type: ignore
             except (json.JSONDecodeError, KeyError, TypeError) as e:
                 logger.exception(f"An error occurred during modification of langchain POST response: {e}")
             
-            return raw_data
+        return raw_data
         
     @staticmethod
     def _modify_post_haystack(body: Any, method: str) -> Any:
@@ -232,8 +245,8 @@ class RequestsHttpConnection(Connection):  # type: ignore
                 joined_str = "\n".join(json_strings_mod)
                 body = joined_str.encode("utf-8")
 
-            except (json.JSONDecodeError, KeyError, TypeError):
-                pass
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.exception(f"An error occurred during modification of haystack POST body: {e}")
 
             body_str = body.decode("utf-8")
             if "query" in body_str:
@@ -335,6 +348,8 @@ class RequestsHttpConnection(Connection):  # type: ignore
             (response.headers["warning"],) if "warning" in response.headers else ()
         )
         self._raise_warnings(warnings_headers)
+
+        raw_data = RequestsHttpConnection._modify_post_response_langchain(raw_data)
 
         # raise errors based on http status codes, let the client handle those if needed
         if (
