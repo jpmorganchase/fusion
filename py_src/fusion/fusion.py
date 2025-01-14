@@ -20,7 +20,6 @@ from tabulate import tabulate
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute, Attributes
 from fusion.dataset import Dataset
-from fusion.embeddings import FusionEmbeddingsConnection
 from fusion.fusion_types import Types
 from fusion.product import Product
 
@@ -409,7 +408,7 @@ class Fusion:
 
         if status is not None:
             ds_df = ds_df[ds_df["status"] == status]
-        
+
         if dataset_type is not None:
             ds_df = ds_df[ds_df["type"] == dataset_type]
 
@@ -1945,7 +1944,7 @@ class Fusion:
         resp = self.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
-    
+
     def list_indexes(
         self,
         knowledge_base: str,
@@ -1969,13 +1968,13 @@ class Fusion:
         df2 = df_resp.transpose()
         df2.index = df2.index.map(str)
         df2.columns = pd.Index(df2.loc["settings.index.provided_name"])
-        df2 = df2.rename(columns=lambda x:x.split("index-")[-1])
+        df2 = df2.rename(columns=lambda x: x.split("index-")[-1])
         df2.columns.names = ["index_name"]
         df2.loc["settings.index.creation_date"] = pd.to_datetime(df2.loc["settings.index.creation_date"], unit="ms")
         multi_index = [index.split(".", 1) for index in df2.index]
         df2.index = pd.MultiIndex.from_tuples(multi_index)
         return df2
-    
+
     def get_fusion_opensearch_client(self, knowledge_base: str, catalog: str | None = None) -> OpenSearch:
         """Creates Fusion Filesystem.
 
@@ -1983,11 +1982,15 @@ class Fusion:
 
         """
         from opensearchpy import OpenSearch
+
+        from fusion.embeddings import FusionEmbeddingsConnection
+
+
         catalog = self._use_catalog(catalog)
         return OpenSearch(
             connection_class=FusionEmbeddingsConnection,
             catalog=catalog,
             knowledge_base=knowledge_base,
             root_url=self.root_url,
-            credentials=self.credentials
+            credentials=self.credentials,
         )

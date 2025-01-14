@@ -199,11 +199,7 @@ def test_product_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj: F
 
 def test_product_class_from_object_product() -> None:
     """Test the Product class."""
-    test_product_input = Product(
-        identifier="TEST_PRODUCT",
-        title="Test Product",
-        release_date="May 5, 2020"
-    )
+    test_product_input = Product(identifier="TEST_PRODUCT", title="Test Product", release_date="May 5, 2020")
 
     test_product = Product(identifier="TEST_PRODUCT").from_object(test_product_input)
     assert test_product.title == "Test Product"
@@ -657,6 +653,7 @@ def test_product_repr() -> None:
     )
 
     assert repr(test_product) == expected_repr
+
 
 def test_product_getattr_existing_attribute() -> None:
     """Test the __getattr__ method for an existing attribute."""

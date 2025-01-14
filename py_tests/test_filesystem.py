@@ -208,7 +208,7 @@ async def test_download_single_file_async(
     n_threads = 3
 
     credentials_file = tmp_path / "client_credentials.json"
-    with Path(credentials_file).open("w") as f: # noqa: ASYNC101, ASYNC230
+    with Path(credentials_file).open("w") as f:  # noqa: ASYNC101, ASYNC230
         json.dump(example_creds_dict, f)
     creds = FusionCredentials.from_file(credentials_file)
 

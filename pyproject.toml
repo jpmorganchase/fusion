@@ -62,23 +62,18 @@ doc = [
     "mike",
     "notebook >=6.0,<7.0"
 ]
-
 aws = [
     "s3fs"
 ]
-
 gcs = [
     "gcsfs"
 ]
-
 azr = [
     "adlfs"
 ]
-
 polars = [
     "polars"
 ]
-
 events = [
     "sseclient",
     "aiohttp-sse-client"

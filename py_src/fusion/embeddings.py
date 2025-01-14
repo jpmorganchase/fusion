@@ -1,4 +1,5 @@
 """HTTP Connectivity to Fusion Embeddings API"""
+
 from __future__ import annotations
 
 import json
@@ -38,9 +39,10 @@ HTTP_MULTIPLE_CHOICES = 300
 
 logger = logging.getLogger(__name__)
 
+
 class FusionEmbeddingsConnection(Connection):  # type: ignore
     """
-    Class responsible for maintaining HTTP connection to the Fusion Embedding API using OpenSearch. This class is a 
+    Class responsible for maintaining HTTP connection to the Fusion Embedding API using OpenSearch. This class is a
     customized version of the `RequestsHttpConnection` class from the `opensearchpy` library, tailored to work with an
     internal vector database.
 
@@ -73,7 +75,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         and reporting metrics related to the client's operations;
     """
 
-    def __init__(  # noqa: PLR0913, PLR0912
+    def __init__(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         host: str = "localhost",
         port: int | None = None,
@@ -93,9 +95,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
     ) -> None:
         self.metrics = metrics
         if not REQUESTS_AVAILABLE:
-            raise ImproperlyConfigured(
-                "Please install requests to use RequestsHttpConnection."
-            )
+            raise ImproperlyConfigured("Please install requests to use FusionEmbeddingsConnection.")
 
         # Initialize Session so .headers works before calling super().__init__().
         fusion_root_url: str = kwargs.get("root_url", "https://fusion.jpmorgan.com/api/v1/")
@@ -152,9 +152,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             self.session.cert = (client_cert, client_key)
         if ca_certs:
             if not verify_certs:
-                raise ImproperlyConfigured(
-                    "You cannot pass CA certificates when verify SSL is off."
-                )
+                raise ImproperlyConfigured("You cannot pass CA certificates when verify SSL is off.")
             self.session.verify = ca_certs
         elif verify_certs:
             ca_certs = self.default_ca_certs()
@@ -165,20 +163,17 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             requests.packages.urllib3.disable_warnings()  # type: ignore
 
         if self.use_ssl and not verify_certs and ssl_show_warn:
-            warnings.warn(
-                f"Connecting to {self.host} using SSL with verify_certs=False is insecure.",
-                stacklevel=2
-            )
+            warnings.warn(f"Connecting to {self.host} using SSL with verify_certs=False is insecure.", stacklevel=2)
         self.url_prefix = f"dataspaces/{self.catalog}/datasets/{self.knowledge_base}/indexes/"
         self.index_name: str | None = None
-    
+
     def _tidy_url(self, url: str) -> str:
         return self.base_url[:-1] + url.replace("%2F%7B", "/").replace("%7D%2F", "/").replace("%2F", "/")
-    
+
     @staticmethod
     def _remap_endpoints(url: str) -> str:
         return url.replace("_bulk", "embeddings").replace("_search", "search")
-    
+
     @staticmethod
     def _modify_post_body_langchain(body: Any) -> Any:
         if body and "query" in body.decode("utf-8"):
@@ -193,32 +188,26 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
                 if "query" in data and "knn" in data["query"]:
                     # Extract the "knn" dictionary
                     knn_data = data["query"]["knn"]
-                    
+
                     # Create new structure
-                    data["query"] = {
-                        "hybrid": {
-                            "queries": {
-                                    "knn": knn_data
-                                }
-                        }
-                    }
+                    data["query"] = {"hybrid": {"queries": {"knn": knn_data}}}
                 body = json.dumps(data, separators=(",", ":")).encode("utf-8")
             except (json.JSONDecodeError, KeyError, TypeError) as e:
                 logger.exception(f"An error occurred during modification of langchain POST body: {e}")
         return body
-    
+
     @staticmethod
     def _modify_post_response_langchain(raw_data: Any) -> Any:
         if len(raw_data) > 0 and "hits" in json.loads(raw_data):
             try:
                 data = json.loads(raw_data)
                 for hit in data["hits"]:
-                    #Change "source" to "_source" if it exists
+                    # Change "source" to "_source" if it exists
                     if "source" in hit:
                         hit["_source"] = hit.pop("source")
                         hit["_id"] = hit.pop("id")
                         hit["_score"] = hit.pop("score")
-                
+
                 # Wrap the existing "hits" list in another dicitonary wit the key "hits"
                 data["hits"] = {"hits": data["hits"]}
 
@@ -228,9 +217,9 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
 
             except (json.JSONDecodeError, KeyError, TypeError) as e:
                 logger.exception(f"An error occurred during modification of langchain POST response: {e}")
-            
+
         return raw_data
-        
+
     @staticmethod
     def _modify_post_haystack(body: Any, method: str) -> Any:
         if method.lower() == "post":
@@ -262,12 +251,12 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
 
                 body = json.dumps(json_dict, separators=(",", ":")).encode("utf-8")
         return body
-        
+
     def _make_url_valid(self, url: str) -> str:
         if self.index_name is None:
             self.index_name = url.split("/")[-1]
             self.url_prefix = self.url_prefix + self.index_name
-        
+
         if url.split("/")[-1] != self.index_name:
             url = self.base_url + self.url_prefix + "/" + url.split("/")[-1]
         else:
@@ -287,17 +276,16 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         ignore: Collection[int] = (),
         headers: Mapping[str, str] | None = None,
     ) -> Any:
-        
         if method.lower() == "put":
             method = "POST"
-        
+
         url = self._tidy_url(url)
         url = self._make_url_valid(url)
 
         # _refresh endpoint not supported
         if "_refresh" in url:
             return 200, {}, ""
-        
+
         headers = headers or {}
 
         orig_body = body
@@ -305,15 +293,13 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             body = self._gzip_compress(body)
             headers["content-encoding"] = "gzip"  # type: ignore
 
-        body = RequestsHttpConnection._modify_post_body_langchain(body) # langchain specific
-        body = RequestsHttpConnection._modify_post_haystack(body, method)
+        body = FusionEmbeddingsConnection._modify_post_body_langchain(body)  # langchain specific
+        body = FusionEmbeddingsConnection._modify_post_haystack(body, method)
 
         start = time.time()
         request = requests.Request(method=method, headers=headers, url=url, data=body)
         prepared_request = self.session.prepare_request(request)
-        settings = self.session.merge_environment_settings(
-            prepared_request.url, {}, None, None, None
-        )
+        settings = self.session.merge_environment_settings(prepared_request.url, {}, None, None, None)
         send_kwargs: Any = {
             "timeout": timeout or self.timeout,
             "allow_redirects": allow_redirects,
@@ -344,18 +330,13 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             self.metrics.request_end()
 
         # raise warnings if any from the 'Warnings' header.
-        warnings_headers = (
-            (response.headers["warning"],) if "warning" in response.headers else ()
-        )
+        warnings_headers = (response.headers["warning"],) if "warning" in response.headers else ()
         self._raise_warnings(warnings_headers)
 
-        raw_data = RequestsHttpConnection._modify_post_response_langchain(raw_data)
+        raw_data = FusionEmbeddingsConnection._modify_post_response_langchain(raw_data)
 
         # raise errors based on http status codes, let the client handle those if needed
-        if (
-            not (HTTP_OK <= response.status_code < HTTP_MULTIPLE_CHOICES)
-            and response.status_code not in ignore
-        ):
+        if not (HTTP_OK <= response.status_code < HTTP_MULTIPLE_CHOICES) and response.status_code not in ignore:
             self.log_request_fail(
                 method,
                 url,

@@ -45,7 +45,6 @@ def test_attribute_class() -> None:
     assert test_attribute.attributeType is None
 
 
-
 def test_attribute_client_value_error() -> None:
     """Test attribute client value error."""
     my_attribute = Attribute(
@@ -629,14 +628,16 @@ def test_attributes_from_object_list_dict() -> None:
 
 def test_attributes_from_object_list_attrs() -> None:
     """Test attributes class from_object"""
-    test_attributes_input = [Attribute(
-        title="Test Attribute",
-        identifier="Test Attribute",
-        index=0,
-        is_dataset_key=True,
-        data_type=cast(Types, "string"),
-        available_from="May 5, 2020",
-    )]
+    test_attributes_input = [
+        Attribute(
+            title="Test Attribute",
+            identifier="Test Attribute",
+            index=0,
+            is_dataset_key=True,
+            data_type=cast(Types, "string"),
+            available_from="May 5, 2020",
+        )
+    ]
     test_attributes = Attributes().from_object(test_attributes_input)
     assert test_attributes.attributes[0].title == "Test Attribute"
     assert test_attributes.attributes[0].identifier == "test_attribute"
@@ -929,13 +930,13 @@ def test_attributes_from_catalog_no_client() -> None:
 def test_attribute_create_no_client() -> None:
     """Test create attribute without client."""
     test_attribute = Attribute(
-                title="Test Attribute",
-                identifier="Test Attribute",
-                index=0,
-                is_dataset_key=True,
-                data_type=cast(Types, "string"),
-                available_from="May 5, 2020",
-            )
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
+    )
 
     catalog = "my_catalog"
     dataset = "TEST_DATASET"
@@ -989,13 +990,13 @@ def test_attributes_delete_no_client() -> None:
 def test_attribute_delete_no_client() -> None:
     """Test create attribute without client."""
     test_attribute = Attribute(
-                title="Test Attribute",
-                identifier="Test Attribute",
-                index=0,
-                is_dataset_key=True,
-                data_type=cast(Types, "string"),
-                available_from="May 5, 2020",
-            )
+        title="Test Attribute",
+        identifier="Test Attribute",
+        index=0,
+        is_dataset_key=True,
+        data_type=cast(Types, "string"),
+        available_from="May 5, 2020",
+    )
 
     catalog = "my_catalog"
     dataset = "TEST_DATASET"
@@ -1010,7 +1011,7 @@ def test_attribute_case_switching() -> None:
         identifier="Test Attribute",
         index=0,
         is_dataset_key=True,
-        data_type="string", # type: ignore
+        data_type="string",  # type: ignore
         available_from="May 5, 2020",
         is_internal_dataset_key=True,
         is_externally_visible=False,
@@ -1103,5 +1104,4 @@ def test_attribute_getattr() -> None:
     # Test accessing non-existent attribute
     with pytest.raises(AttributeError) as error_info:
         _ = test_attribute.nonExistentAttribute
-    assert str(error_info.value) ==  "'Attribute' object has no attribute 'nonExistentAttribute'"
-
+    assert str(error_info.value) == "'Attribute' object has no attribute 'nonExistentAttribute'"
