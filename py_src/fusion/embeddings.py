@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 import warnings
 from pathlib import Path
@@ -34,6 +35,8 @@ if TYPE_CHECKING:
 
 HTTP_OK = 200
 HTTP_MULTIPLE_CHOICES = 300
+
+logger = logging.getLogger(__name__)
 
 class RequestsHttpConnection(Connection):
     """
@@ -122,7 +125,10 @@ class RequestsHttpConnection(Connection):
             if isinstance(http_auth, (tuple, list)):
                 http_auth = tuple(http_auth)
             elif isinstance(http_auth, string_types):
-                http_auth = tuple(http_auth.split(":", 1))
+                if isinstance(http_auth, bytes):
+                    http_auth = tuple(http_auth.decode("utf-8").split(":", 1))
+                else:
+                    http_auth = tuple(http_auth.split(":", 1))
             self.session.auth = http_auth
 
         self.session.verify = verify_certs
@@ -184,8 +190,8 @@ class RequestsHttpConnection(Connection):
                         }
                     }
                 body = json.dumps(data, separators=(",", ":")).encode("utf-8")
-            except Exception as e: # replace with custom exception?
-                print(f"An error occurred: {e}")
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.exception(f"An error occurred during modification of langchain POST body: {e}")
         return body
     
     @staticmethod
@@ -207,10 +213,42 @@ class RequestsHttpConnection(Connection):
 
                 raw_data = json.dumps(data, separators=(",", ":"))
 
-            except Exception as e: # replace with custom exception?
-                print(f"An error occurred: {e}")
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.exception(f"An error occurred during modification of langchain POST response: {e}")
             
             return raw_data
+        
+    @staticmethod
+    def _modify_post_haystack(body: Any, method: str) -> Any:
+        if method.lower() == "post":
+            body_str = body.decode("utf-8")
+            try:
+                json_strings = body_str.strip().split("\n")
+                dict_list = [json.loads(json_string) for json_string in json_strings]
+                for dct in dict_list:
+                    if "embedding" in dct:
+                        dct["vector"] = dct.pop("embedding")
+                json_strings_mod = [json.dumps(d, separators=(",", ":")) for d in dict_list]
+                joined_str = "\n".join(json_strings_mod)
+                body = joined_str.encode("utf-8")
+
+            except (json.JSONDecodeError, KeyError, TypeError):
+                pass
+
+            body_str = body.decode("utf-8")
+            if "query" in body_str:
+                json_dict = json.loads(body_str)
+                if "bool" in json_dict["query"]:
+                    json_dict["query"]["hybrid"] = {}
+                    json_dict["query"]["hybrid"]["queries"] = json_dict["query"]["bool"].pop("must")
+                    json_dict["query"].pop("bool")
+
+                for i in json_dict["query"]["hybrid"]["queries"]:
+                    if isinstance(i, dict) and "knn" in i and "embedding" in i["knn"]:
+                        i["knn"]["vector"] = i["knn"].pop("embedding")
+
+                body = json.dumps(json_dict, separators=(",", ":")).encode("utf-8")
+        return body
         
     def _make_url_valid(self, url: str) -> str:
         if self.index_name is None:
@@ -225,7 +263,7 @@ class RequestsHttpConnection(Connection):
 
         return url
 
-    def perform_request(  # noqa: PLR0913
+    def perform_request(  # type: ignore  # noqa: PLR0913
         self,
         method: str,
         url: str,
@@ -255,6 +293,8 @@ class RequestsHttpConnection(Connection):
             headers["content-encoding"] = "gzip"  # type: ignore
 
         body = RequestsHttpConnection._modify_post_body_langchain(body) # langchain specific
+        body = RequestsHttpConnection._modify_post_haystack(body, method)
+
         start = time.time()
         request = requests.Request(method=method, headers=headers, url=url, data=body)
         prepared_request = self.session.prepare_request(request)
@@ -331,6 +371,10 @@ class RequestsHttpConnection(Connection):
     @property
     def headers(self) -> Any:
         return self.session.headers
+
+    @headers.setter
+    def headers(self, value: Any) -> None:
+        self.session.headers.update(value)
 
     def close(self) -> None:
         """
