@@ -38,7 +38,7 @@ HTTP_MULTIPLE_CHOICES = 300
 
 logger = logging.getLogger(__name__)
 
-class RequestsHttpConnection(Connection):
+class RequestsHttpConnection(Connection):  # type: ignore
     """
     Connection using the `requests` library.
 
