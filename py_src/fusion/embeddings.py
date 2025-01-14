@@ -263,7 +263,7 @@ class RequestsHttpConnection(Connection):  # type: ignore
 
         return url
 
-    def perform_request(  # type: ignore  # noqa: PLR0913
+    def perform_request(  # noqa: PLR0913
         self,
         method: str,
         url: str,
