@@ -1970,7 +1970,7 @@ class Fusion:
         requests_raise_for_status(response)
         if show_details:
             return _format_full_index_response(response)
-        else :
+        else:
             return _format_summary_index_response(response)
 
     def get_fusion_opensearch_client(self, knowledge_base: str, catalog: str | None = None) -> OpenSearch:
@@ -1982,7 +1982,6 @@ class Fusion:
         from opensearchpy import OpenSearch
 
         from fusion.embeddings import FusionEmbeddingsConnection
-
 
         catalog = self._use_catalog(catalog)
         return OpenSearch(

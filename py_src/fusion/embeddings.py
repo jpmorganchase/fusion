@@ -378,7 +378,8 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         """
         self.session.close()
 
-def format_full_index_name(index_name: str, knowledge_base:str, catalog: str) -> str:
+
+def format_full_index_name(index_name: str, knowledge_base: str, catalog: str) -> str:
     """Generate index name for Embeddings API.
 
     Args:
@@ -392,7 +393,8 @@ def format_full_index_name(index_name: str, knowledge_base:str, catalog: str) ->
     full_index_name = f"dataspaces/{catalog}/datasets/{knowledge_base}/indexes/{index_name}"
     return full_index_name
 
-def format_index_body(number_of_shards: int =2, dimension: int = 1536) -> dict[str, Any]:
+
+def format_index_body(number_of_shards: int = 2, dimension: int = 1536) -> dict[str, Any]:
     """Format index body for Embeddings API.
 
     Args:
@@ -411,18 +413,11 @@ def format_index_body(number_of_shards: int =2, dimension: int = 1536) -> dict[s
         },
         "mappings": {
             "properties": {
-                "vector": {
-                    "type": "knn_vector",
-                    "dimension": dimension
-                },
-                "content": {
-                    "type": "text"
-                },
-                "chunk-id": {
-                    "type": "text"
-                }
+                "vector": {"type": "knn_vector", "dimension": dimension},
+                "content": {"type": "text"},
+                "chunk-id": {"type": "text"},
             }
-        }
+        },
     }
     return index_body
 

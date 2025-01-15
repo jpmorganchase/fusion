@@ -508,7 +508,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             lpath = default_fs.open(lpath, "wb")
 
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
-        n_threads = cpu_count(is_threading=True)
+        n_threads = kwargs.get("n_threads", 1)
         file_size = None
         if "headers" in kwargs and "Content-Length" in kwargs["headers"]:
             file_size = int(kwargs["headers"].get("Content-Length"))
