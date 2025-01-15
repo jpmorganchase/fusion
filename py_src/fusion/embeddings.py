@@ -377,3 +377,51 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         Explicitly closes connections
         """
         self.session.close()
+
+def format_full_index_name(index_name: str, knowledge_base:str, catalog: str) -> str:
+    """Generate index name for Embeddings API.
+
+    Args:
+        index_name (str): Name for index.
+        knowledge_base (str): Knowledge base identifier.
+        catalog (str): Catalog identifier.
+
+    Returns:
+        str: Full index name expected by embeddings API.
+    """
+    full_index_name = f"dataspaces/{catalog}/datasets/{knowledge_base}/indexes/{index_name}"
+    return full_index_name
+
+def format_index_body(number_of_shards: int =2, dimension: int = 1536) -> dict[str, Any]:
+    """Format index body for Embeddings API.
+
+    Args:
+        number_of_shards (int, optional): _description_. Defaults to 2.
+        dimension (int, optional): _description_. Defaults to 1536.
+
+    Returns:
+        dict: Index body expected by embeddings API.
+    """
+    index_body = {
+        "settings": {
+            "index": {
+                "number_of_shards": number_of_shards,
+                "knn": True,
+            }
+        },
+        "mappings": {
+            "properties": {
+                "vector": {
+                    "type": "knn_vector",
+                    "dimension": dimension
+                },
+                "content": {
+                    "type": "text"
+                },
+                "chunk-id": {
+                    "type": "text"
+                }
+            }
+        }
+    }
+    return index_body
