@@ -960,3 +960,55 @@ def requests_raise_for_status(response: requests.Response) -> None:
             response.reason = real_reason
         finally:
             response.raise_for_status()
+
+
+def _format_full_index_response(response: requests.Response) -> pd.DataFrame:
+    """Format get index response.
+
+    Args:
+        response (requests.Response): Response object.
+
+    Returns:
+        pd.DataFrame: Dataframe containing the response formatted with a column for each index.
+    """
+    df_resp = pd.json_normalize(response.json())
+    df2 = df_resp.transpose()
+    df2.index = df2.index.map(str)
+    df2.columns = pd.Index(df2.loc["settings.index.provided_name"])
+    df2 = df2.rename(columns=lambda x: x.split("index-")[-1])
+    df2.columns.names = ["index_name"]
+    df2.loc["settings.index.creation_date"] = pd.to_datetime(df2.loc["settings.index.creation_date"], unit="ms")
+    multi_index = [index.split(".", 1) for index in df2.index]
+    df2.index = pd.MultiIndex.from_tuples(multi_index)
+    return df2
+
+
+def _format_summary_index_response(response: requests.Response) -> pd.DataFrame:
+    """Format summary of get index response.
+
+    Args:
+        response (requests.Response): Response object
+
+    Returns:
+        pd.DataFrame: Dataframe containing the response formatted with a column for each index.
+    """
+    index_list = response.json()
+    idices = []
+    for index in index_list:
+        name = index.get("settings").get("index").get("provided_name").split("index-")[-1]
+        props = index.get("mappings").get("properties")
+        for prop, info in props.items():
+            if info.get("type") == "knn_vector":
+                vector_field_name = prop
+                vector_dimension = info.get("dimension")
+        idices.append(
+            {
+                "index_name": name,
+                "vector_field_name": vector_field_name,
+                "vector_dimension": vector_dimension,
+            }
+        )
+    summary_df = pd.json_normalize(idices)
+    summary_df.set_index("index_name")
+
+    return summary_df.transpose()

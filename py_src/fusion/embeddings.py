@@ -425,3 +425,25 @@ def format_index_body(number_of_shards: int =2, dimension: int = 1536) -> dict[s
         }
     }
     return index_body
+
+
+def format_prompt_template(package: str, task: str = "RAG") -> str:
+    if package.lower() == "langchain" and task == "RAG":
+        template = """Given the following information, answer the question.
+        
+        {context}
+
+        Question: {question}"""
+    if package.lower() == "haystack" and task == "RAG":
+        template = """
+        Given the following information, answer the question.
+        
+        Context:
+        {% for document in documents %}
+            {{ document.content }}
+        {% endfor %}
+
+        Question: {{question}}
+        Answer:
+        """
+    return template

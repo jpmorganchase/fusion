@@ -27,6 +27,8 @@ from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     RECOGNIZED_FORMATS,
+    _format_full_index_response,
+    _format_summary_index_response,
     cpu_count,
     csv_to_table,
     distribution_to_filename,
@@ -1949,12 +1951,14 @@ class Fusion:
         self,
         knowledge_base: str,
         catalog: str | None = None,
+        show_details: bool | None = False,
     ) -> pd.DataFrame:
         """List the indexes in a knowledge base.
 
         Args:
             knowledge_base (str): Knowledge base (dataset) identifier.
             catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            show_details (bool | None, optional): If True then show detailed information. Defaults to False.
 
         Returns:
             pd.DataFrame: a dataframe with a column for each index.
@@ -1964,16 +1968,10 @@ class Fusion:
         url = f"{self.root_url}dataspaces/{catalog}/datasets/{knowledge_base}/indexes/"
         response = self.session.get(url)
         requests_raise_for_status(response)
-        df_resp = pd.json_normalize(response.json())
-        df2 = df_resp.transpose()
-        df2.index = df2.index.map(str)
-        df2.columns = pd.Index(df2.loc["settings.index.provided_name"])
-        df2 = df2.rename(columns=lambda x: x.split("index-")[-1])
-        df2.columns.names = ["index_name"]
-        df2.loc["settings.index.creation_date"] = pd.to_datetime(df2.loc["settings.index.creation_date"], unit="ms")
-        multi_index = [index.split(".", 1) for index in df2.index]
-        df2.index = pd.MultiIndex.from_tuples(multi_index)
-        return df2
+        if show_details:
+            return _format_full_index_response(response)
+        else :
+            return _format_summary_index_response(response)
 
     def get_fusion_opensearch_client(self, knowledge_base: str, catalog: str | None = None) -> OpenSearch:
         """Creates Fusion Filesystem.
