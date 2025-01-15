@@ -50,8 +50,6 @@ class DataFlow(Dataset):
 
         Args:
             attribute_identifier (str): Attribute identifier.
-            is_kde (bool): Key Data Element flag. An attribute can be proposed as a key data element when it is linked
-                to a report. This property is specific to the relationship between the attribute and the report.
             catalog (str | None, optional): Catalog identifier. Defaults to 'common'.
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
                 If instantiated from a Fusion object, then the client is set automatically.

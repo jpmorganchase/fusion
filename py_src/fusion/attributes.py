@@ -51,7 +51,10 @@ class Attribute(metaclass=CamelCaseMeta):
         dataset (int | None, optional): Dataset. Defaults to None.
         attribute_type (str | None, optional): Attribute type. Defaults to None.
         application_id (str | dict[str, str] | None, optional): The seal ID of the dataset in string format,
-            or a dictionary containing 'id' and 'type'. Defaults to None.
+            or a dictionary containing 'id' and 'type'. Used for catalog attributes. Defaults to None.
+        publisher (str | None, optional): Publisher of the attribute. Used for catalog attributes. Defaults to None.
+        is_key_data_element (bool | None, optional): Flag for key data elements. Used for attributes registered to
+            Reports. Defaults to None.
         _client (Fusion | None, optional): Fusion client object. Defaults to None.
 
     """
@@ -77,7 +80,7 @@ class Attribute(metaclass=CamelCaseMeta):
     attribute_type: str | None = None
     application_id: str | dict[str, str] | None = None
     publisher: str | None = None
-    is_kde: bool | None = None
+    is_key_data_element: bool | None = None
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
@@ -330,8 +333,8 @@ class Attribute(metaclass=CamelCaseMeta):
         result = {snake_to_camel(k): v for k, v in self.__dict__.items() if not k.startswith("_")}
         result["unit"] = str(self.unit) if self.unit is not None else None
         result["dataType"] = self.data_type.name
-        if "isKde" in result:
-            result["isCriticalDataElement"] = result.pop("isKde")
+        if "isKeyDataElement" in result:
+            result["isCriticalDataElement"] = result.pop("isKeyDataElement")
         return result
 
     def create(
