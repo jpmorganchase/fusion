@@ -582,6 +582,10 @@ class Dataset(metaclass=CamelCaseMeta):
 
         data = self.to_dict()
 
+        if data.get("report", None) and data["report"]["tier"] == "":
+            raise ValueError("Tier cannot be blank for reports.")
+
+
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
