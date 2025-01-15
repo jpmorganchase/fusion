@@ -2034,7 +2034,7 @@ class Fusion:
         report: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Report:
-        """Instantiate a Report object with this client for metadata creation.
+        """Instantiate Report object with this client for metadata creation for managing regulatory reporting metadata.
 
         Args:
             identifier (str): Dataset identifier.
@@ -2075,7 +2075,8 @@ class Fusion:
             is_active (bool | None, optional): is_active. Defaults to None.
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
-            report (dict[str, str] | None, optional): Report metadata. Defaults to None.
+            report (dict[str, str] | None, optional): The report metadata. Specifies the tier of the report.
+                Required for registered reports to the catalog.
 
         Returns:
             Dataset: Fusion Dataset class.
@@ -2086,7 +2087,7 @@ class Fusion:
             >>> dataset = fusion.report(identifier="DATASET_1")
 
         Note:
-            See the dataset module for more information on functionalities of dataset objects.
+            See the dataset module for more information on functionalities of report objects.
 
         """
         report_obj = Report(
@@ -2202,7 +2203,7 @@ class Fusion:
             delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
             language (str, optional): Language. Defaults to "English".
             status (str, optional): Status. Defaults to "Available".
-            type_ (str | None, optional): Dataset type. Defaults to "Source".
+            type_ (str | None, optional): Dataset type. Defaults to "Flow".
             container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
             snowflake (str | None, optional): Snowflake account connection. Defaults to None.
             complexity (str | None, optional): Complexity. Defaults to None.
@@ -2218,10 +2219,12 @@ class Fusion:
             is_active (bool | None, optional): is_active. Defaults to None.
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
-            producer_application_id (dict[str, str] | None, optional): Producer application ID. Defaults to None.
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): Consumer application ID.
-                Defaults to None.
-            flow_details (dict[str, str] | None, optional): Flow details. Defaults to None.
+            producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
+                producing the flow).
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application 
+                ID (downstream application, consuming the flow).
+            flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
+                Defaults to {"flowDirection": "Input"}.
 
         Returns:
             Dataset: Fusion InputDataFlow class.
@@ -2351,7 +2354,7 @@ class Fusion:
             delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
             language (str, optional): Language. Defaults to "English".
             status (str, optional): Status. Defaults to "Available".
-            type_ (str | None, optional): Dataset type. Defaults to "Source".
+            type_ (str | None, optional): Dataset type. Defaults to "Flow".
             container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
             snowflake (str | None, optional): Snowflake account connection. Defaults to None.
             complexity (str | None, optional): Complexity. Defaults to None.
@@ -2367,10 +2370,12 @@ class Fusion:
             is_active (bool | None, optional): is_active. Defaults to None.
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
-            producer_application_id (dict[str, str] | None, optional): Producer application ID. Defaults to None.
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): Consumer application ID.
-                Defaults to None.
-            flow_details (dict[str, str] | None, optional): Flow details. Defaults to None.
+            producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
+                producing the flow).
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application 
+                ID (downstream application, consuming the flow).
+            flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
+                Defaults to {"flowDirection": "Output"}.
 
         Returns:
             Dataset: Fusion OutputDataFlow class.
@@ -2378,7 +2383,7 @@ class Fusion:
         Examples:
             >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> dataset = fusion.input_dataflow(identifier="MY_DATAFLOW")
+            >>> dataset = fusion.output_dataflow(identifier="MY_DATAFLOW")
 
         Note:
             See the dataset module for more information on functionalities of output dataflow objects.
