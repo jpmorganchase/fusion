@@ -19,9 +19,11 @@ from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute, Attributes
+from fusion.dataflow import InputDataFlow, OutputDataFlow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
+from fusion.report import Report
 
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
@@ -407,7 +409,7 @@ class Fusion:
 
         if status is not None:
             ds_df = ds_df[ds_df["status"] == status]
-        
+
         if dataset_type is not None:
             ds_df = ds_df[ds_df["type"] == dataset_type]
 
@@ -459,7 +461,10 @@ class Fusion:
         catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
-        ds_attr_df = Fusion._call_for_dataframe(url, self.session).sort_values(by="index").reset_index(drop=True)
+        ds_attr_df = Fusion._call_for_dataframe(url, self.session)
+        
+        if "index" in ds_attr_df.columns: 
+            ds_attr_df = ds_attr_df.sort_values(by="index").reset_index(drop=True)
 
         if not display_all_columns:
             ds_attr_df = ds_attr_df[
@@ -1660,7 +1665,7 @@ class Fusion:
         is_highly_confidential: bool | None = None,
         is_active: bool | None = None,
         owners: list[str] | None = None,
-        application_id: str | None = None,
+        application_id: str | dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Dataset:
         """Instantiate a Dataset object with this client for metadata creation.
@@ -1781,6 +1786,7 @@ class Fusion:
         term: str = "bizterm1",
         dataset: int | None = None,
         attribute_type: str | None = None,
+        application_id: str | dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Attribute:
         """Instantiate an Attribute object with this client for metadata creation.
@@ -1840,6 +1846,7 @@ class Fusion:
             term=term,
             dataset=dataset,
             attribute_type=attribute_type,
+            application_id=application_id,
             **kwargs,
         )
         attribute_obj.client = self
@@ -1943,3 +1950,488 @@ class Fusion:
         resp = self.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
+    def list_registered_attributes(
+        self,
+        catalog: str | None = None,
+        output: bool = False,
+        display_all_columns: bool = False,
+    ) -> pd.DataFrame:
+        """Returns the list of attributes in a catalog.
+
+        Args:
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+            display_all_columns (bool, optional): If True displays all columns returned by the API,
+                otherwise only the key columns are displayed
+
+        Returns:
+            class:`pandas.DataFrame`: A dataframe with a row for each attribute
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = f"{self.root_url}catalogs/{catalog}/attributes"
+        ds_attr_df = Fusion._call_for_dataframe(url, self.session).reset_index(drop=True)
+
+        if not display_all_columns:
+            ds_attr_df = ds_attr_df[
+                ds_attr_df.columns.intersection(
+                    [
+                        "identifier",
+                        "title",
+                        "dataType",
+                        "description",
+                        "publisher",
+                        "applicationId",
+                    ]
+                )
+            ]
+
+        if output:
+            pass
+
+        return ds_attr_df
+
+    def report(  # noqa: PLR0913
+        self,
+        identifier: str,
+        title: str = "",
+        category: str | list[str] | None = None,
+        description: str = "",
+        frequency: str = "Once",
+        is_internal_only_dataset: bool = False,
+        is_third_party_data: bool = True,
+        is_restricted: bool | None = None,
+        is_raw_data: bool = True,
+        maintainer: str | None = "J.P. Morgan Fusion",
+        source: str | list[str] | None = None,
+        region: str | list[str] | None = None,
+        publisher: str = "J.P. Morgan",
+        product: str | list[str] | None = None,
+        sub_category: str | list[str] | None = None,
+        tags: str | list[str] | None = None,
+        created_date: str | None = None,
+        modified_date: str | None = None,
+        delivery_channel: str | list[str] = "API",
+        language: str = "English",
+        status: str = "Available",
+        type_: str | None = "Report",
+        container_type: str | None = "Snapshot-Full",
+        snowflake: str | None = None,
+        complexity: str | None = None,
+        is_immutable: bool | None = None,
+        is_mnpi: bool | None = None,
+        is_pci: bool | None = None,
+        is_pii: bool | None = None,
+        is_client: bool | None = None,
+        is_public: bool | None = None,
+        is_internal: bool | None = None,
+        is_confidential: bool | None = None,
+        is_highly_confidential: bool | None = None,
+        is_active: bool | None = None,
+        owners: list[str] | None = None,
+        application_id: str | dict[str, str] | None = None,
+        report: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> Report:
+        """Instantiate Report object with this client for metadata creation for managing regulatory reporting metadata.
+
+        Args:
+            identifier (str): Dataset identifier.
+            title (str, optional): Dataset title. If not provided, defaults to identifier.
+            category (str | list[str] | None, optional): A category or list of categories for the dataset.
+            Defaults to None.
+            description (str, optional): Dataset description. If not provided, defaults to identifier.
+            frequency (str, optional): The frequency of the dataset. Defaults to "Once".
+            is_internal_only_dataset (bool, optional): Flag for internal datasets. Defaults to False.
+            is_third_party_data (bool, optional): Flag for third party data. Defaults to True.
+            is_restricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
+            is_raw_data (bool, optional): Flag for raw datasets. Defaults to True.
+            maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
+            source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
+            region (str | list[str] | None, optional): Region. Defaults to None.
+            publisher (str, optional): Name of vendor that publishes the data. Defaults to "J.P. Morgan".
+            product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
+            sub_category (str | list[str] | None, optional): Sub-category. Defaults to None.
+            tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
+            created_date (str | None, optional): Created date. Defaults to None.
+            modified_date (str | None, optional): Modified date. Defaults to None.
+            delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
+            language (str, optional): Language. Defaults to "English".
+            status (str, optional): Status. Defaults to "Available".
+            type_ (str | None, optional): Dataset type. Defaults to "Source".
+            container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
+            snowflake (str | None, optional): Snowflake account connection. Defaults to None.
+            complexity (str | None, optional): Complexity. Defaults to None.
+            is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
+            is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
+            is_pci (bool | None, optional): is_pci. Defaults to None.
+            is_pii (bool | None, optional): is_pii. Defaults to None.
+            is_client (bool | None, optional): is_client. Defaults to None.
+            is_public (bool | None, optional): is_public. Defaults to None.
+            is_internal (bool | None, optional): is_internal. Defaults to None.
+            is_confidential (bool | None, optional): is_confidential. Defaults to None.
+            is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
+            is_active (bool | None, optional): is_active. Defaults to None.
+            owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
+            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
+            report (dict[str, str] | None, optional): The report metadata. Specifies the tier of the report.
+                Required for registered reports to the catalog.
+
+        Returns:
+            Dataset: Fusion Dataset class.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.report(identifier="DATASET_1")
+
+        Note:
+            See the dataset module for more information on functionalities of report objects.
+
+        """
+        report_obj = Report(
+            identifier=identifier,
+            title=title,
+            category=category,
+            description=description,
+            frequency=frequency,
+            is_internal_only_dataset=is_internal_only_dataset,
+            is_third_party_data=is_third_party_data,
+            is_restricted=is_restricted,
+            is_raw_data=is_raw_data,
+            maintainer=maintainer,
+            source=source,
+            region=region,
+            publisher=publisher,
+            product=product,
+            sub_category=sub_category,
+            tags=tags,
+            created_date=created_date,
+            modified_date=modified_date,
+            delivery_channel=delivery_channel,
+            language=language,
+            status=status,
+            type_=type_,
+            container_type=container_type,
+            snowflake=snowflake,
+            complexity=complexity,
+            is_immutable=is_immutable,
+            is_mnpi=is_mnpi,
+            is_pci=is_pci,
+            is_pii=is_pii,
+            is_client=is_client,
+            is_public=is_public,
+            is_internal=is_internal,
+            is_confidential=is_confidential,
+            is_highly_confidential=is_highly_confidential,
+            is_active=is_active,
+            owners=owners,
+            application_id=application_id,
+            report=report,
+            **kwargs,
+        )
+        report_obj.client = self
+        return report_obj
+
+    def input_dataflow(  # noqa: PLR0913
+        self,
+        identifier: str,
+        title: str = "",
+        category: str | list[str] | None = None,
+        description: str = "",
+        frequency: str = "Once",
+        is_internal_only_dataset: bool = False,
+        is_third_party_data: bool = True,
+        is_restricted: bool | None = None,
+        is_raw_data: bool = True,
+        maintainer: str | None = "J.P. Morgan Fusion",
+        source: str | list[str] | None = None,
+        region: str | list[str] | None = None,
+        publisher: str = "J.P. Morgan",
+        product: str | list[str] | None = None,
+        sub_category: str | list[str] | None = None,
+        tags: str | list[str] | None = None,
+        created_date: str | None = None,
+        modified_date: str | None = None,
+        delivery_channel: str | list[str] = "API",
+        language: str = "English",
+        status: str = "Available",
+        type_: str | None = "Flow",
+        container_type: str | None = "Snapshot-Full",
+        snowflake: str | None = None,
+        complexity: str | None = None,
+        is_immutable: bool | None = None,
+        is_mnpi: bool | None = None,
+        is_pci: bool | None = None,
+        is_pii: bool | None = None,
+        is_client: bool | None = None,
+        is_public: bool | None = None,
+        is_internal: bool | None = None,
+        is_confidential: bool | None = None,
+        is_highly_confidential: bool | None = None,
+        is_active: bool | None = None,
+        owners: list[str] | None = None,
+        application_id: str | dict[str, str] | None = None,
+        producer_application_id: dict[str, str] | None = None,
+        consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None,
+        flow_details: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> InputDataFlow:
+        """Instantiate an Input Dataflow object with this client for metadata creation.
+
+        Args:
+            identifier (str): Dataset identifier.
+            title (str, optional): Dataset title. If not provided, defaults to identifier.
+            category (str | list[str] | None, optional): A category or list of categories for the dataset.
+            Defaults to None.
+            description (str, optional): Dataset description. If not provided, defaults to identifier.
+            frequency (str, optional): The frequency of the dataset. Defaults to "Once".
+            is_internal_only_dataset (bool, optional): Flag for internal datasets. Defaults to False.
+            is_third_party_data (bool, optional): Flag for third party data. Defaults to True.
+            is_restricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
+            is_raw_data (bool, optional): Flag for raw datasets. Defaults to True.
+            maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
+            source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
+            region (str | list[str] | None, optional): Region. Defaults to None.
+            publisher (str, optional): Name of vendor that publishes the data. Defaults to "J.P. Morgan".
+            product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
+            sub_category (str | list[str] | None, optional): Sub-category. Defaults to None.
+            tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
+            created_date (str | None, optional): Created date. Defaults to None.
+            modified_date (str | None, optional): Modified date. Defaults to None.
+            delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
+            language (str, optional): Language. Defaults to "English".
+            status (str, optional): Status. Defaults to "Available".
+            type_ (str | None, optional): Dataset type. Defaults to "Flow".
+            container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
+            snowflake (str | None, optional): Snowflake account connection. Defaults to None.
+            complexity (str | None, optional): Complexity. Defaults to None.
+            is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
+            is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
+            is_pci (bool | None, optional): is_pci. Defaults to None.
+            is_pii (bool | None, optional): is_pii. Defaults to None.
+            is_client (bool | None, optional): is_client. Defaults to None.
+            is_public (bool | None, optional): is_public. Defaults to None.
+            is_internal (bool | None, optional): is_internal. Defaults to None.
+            is_confidential (bool | None, optional): is_confidential. Defaults to None.
+            is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
+            is_active (bool | None, optional): is_active. Defaults to None.
+            owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
+            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
+            producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
+                producing the flow).
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application 
+                ID (downstream application, consuming the flow).
+            flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
+                Defaults to {"flowDirection": "Input"}.
+
+        Returns:
+            Dataset: Fusion InputDataFlow class.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.input_dataflow(identifier="MY_DATAFLOW")
+
+        Note:
+            See the dataset module for more information on functionalities of input dataflow objects.
+
+        """
+        flow_details = {"flowDirection": "Input"} if flow_details is None else flow_details
+        dataflow_obj = InputDataFlow(
+            identifier=identifier,
+            title=title,
+            category=category,
+            description=description,
+            frequency=frequency,
+            is_internal_only_dataset=is_internal_only_dataset,
+            is_third_party_data=is_third_party_data,
+            is_restricted=is_restricted,
+            is_raw_data=is_raw_data,
+            maintainer=maintainer,
+            source=source,
+            region=region,
+            publisher=publisher,
+            product=product,
+            sub_category=sub_category,
+            tags=tags,
+            created_date=created_date,
+            modified_date=modified_date,
+            delivery_channel=delivery_channel,
+            language=language,
+            status=status,
+            type_=type_,
+            container_type=container_type,
+            snowflake=snowflake,
+            complexity=complexity,
+            is_immutable=is_immutable,
+            is_mnpi=is_mnpi,
+            is_pci=is_pci,
+            is_pii=is_pii,
+            is_client=is_client,
+            is_public=is_public,
+            is_internal=is_internal,
+            is_confidential=is_confidential,
+            is_highly_confidential=is_highly_confidential,
+            is_active=is_active,
+            owners=owners,
+            application_id=application_id,
+            producer_application_id=producer_application_id,
+            consumer_application_id=consumer_application_id,
+            flow_details=flow_details,
+            **kwargs,
+        )
+        dataflow_obj.client = self
+        return dataflow_obj
+
+    def output_dataflow(  # noqa: PLR0913
+        self,
+        identifier: str,
+        title: str = "",
+        category: str | list[str] | None = None,
+        description: str = "",
+        frequency: str = "Once",
+        is_internal_only_dataset: bool = False,
+        is_third_party_data: bool = True,
+        is_restricted: bool | None = None,
+        is_raw_data: bool = True,
+        maintainer: str | None = "J.P. Morgan Fusion",
+        source: str | list[str] | None = None,
+        region: str | list[str] | None = None,
+        publisher: str = "J.P. Morgan",
+        product: str | list[str] | None = None,
+        sub_category: str | list[str] | None = None,
+        tags: str | list[str] | None = None,
+        created_date: str | None = None,
+        modified_date: str | None = None,
+        delivery_channel: str | list[str] = "API",
+        language: str = "English",
+        status: str = "Available",
+        type_: str | None = "Flow",
+        container_type: str | None = "Snapshot-Full",
+        snowflake: str | None = None,
+        complexity: str | None = None,
+        is_immutable: bool | None = None,
+        is_mnpi: bool | None = None,
+        is_pci: bool | None = None,
+        is_pii: bool | None = None,
+        is_client: bool | None = None,
+        is_public: bool | None = None,
+        is_internal: bool | None = None,
+        is_confidential: bool | None = None,
+        is_highly_confidential: bool | None = None,
+        is_active: bool | None = None,
+        owners: list[str] | None = None,
+        application_id: str | dict[str, str] | None = None,
+        producer_application_id: dict[str, str] | None = None,
+        consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None,
+        flow_details: dict[str, str] | None = None,
+        **kwargs: Any,
+    ) -> OutputDataFlow:
+        """Instantiate an Output Dataflow object with this client for metadata creation.
+
+        Args:
+            identifier (str): Dataset identifier.
+            title (str, optional): Dataset title. If not provided, defaults to identifier.
+            category (str | list[str] | None, optional): A category or list of categories for the dataset.
+            Defaults to None.
+            description (str, optional): Dataset description. If not provided, defaults to identifier.
+            frequency (str, optional): The frequency of the dataset. Defaults to "Once".
+            is_internal_only_dataset (bool, optional): Flag for internal datasets. Defaults to False.
+            is_third_party_data (bool, optional): Flag for third party data. Defaults to True.
+            is_restricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
+            is_raw_data (bool, optional): Flag for raw datasets. Defaults to True.
+            maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
+            source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
+            region (str | list[str] | None, optional): Region. Defaults to None.
+            publisher (str, optional): Name of vendor that publishes the data. Defaults to "J.P. Morgan".
+            product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
+            sub_category (str | list[str] | None, optional): Sub-category. Defaults to None.
+            tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
+            created_date (str | None, optional): Created date. Defaults to None.
+            modified_date (str | None, optional): Modified date. Defaults to None.
+            delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
+            language (str, optional): Language. Defaults to "English".
+            status (str, optional): Status. Defaults to "Available".
+            type_ (str | None, optional): Dataset type. Defaults to "Flow".
+            container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
+            snowflake (str | None, optional): Snowflake account connection. Defaults to None.
+            complexity (str | None, optional): Complexity. Defaults to None.
+            is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
+            is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
+            is_pci (bool | None, optional): is_pci. Defaults to None.
+            is_pii (bool | None, optional): is_pii. Defaults to None.
+            is_client (bool | None, optional): is_client. Defaults to None.
+            is_public (bool | None, optional): is_public. Defaults to None.
+            is_internal (bool | None, optional): is_internal. Defaults to None.
+            is_confidential (bool | None, optional): is_confidential. Defaults to None.
+            is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
+            is_active (bool | None, optional): is_active. Defaults to None.
+            owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
+            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
+            producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
+                producing the flow).
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application 
+                ID (downstream application, consuming the flow).
+            flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
+                Defaults to {"flowDirection": "Output"}.
+
+        Returns:
+            Dataset: Fusion OutputDataFlow class.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> dataset = fusion.output_dataflow(identifier="MY_DATAFLOW")
+
+        Note:
+            See the dataset module for more information on functionalities of output dataflow objects.
+
+        """
+        flow_details = {"flowDirection": "Output"} if flow_details is None else flow_details
+        dataflow_obj = OutputDataFlow(
+            identifier=identifier,
+            title=title,
+            category=category,
+            description=description,
+            frequency=frequency,
+            is_internal_only_dataset=is_internal_only_dataset,
+            is_third_party_data=is_third_party_data,
+            is_restricted=is_restricted,
+            is_raw_data=is_raw_data,
+            maintainer=maintainer,
+            source=source,
+            region=region,
+            publisher=publisher,
+            product=product,
+            sub_category=sub_category,
+            tags=tags,
+            created_date=created_date,
+            modified_date=modified_date,
+            delivery_channel=delivery_channel,
+            language=language,
+            status=status,
+            type_=type_,
+            container_type=container_type,
+            snowflake=snowflake,
+            complexity=complexity,
+            is_immutable=is_immutable,
+            is_mnpi=is_mnpi,
+            is_pci=is_pci,
+            is_pii=is_pii,
+            is_client=is_client,
+            is_public=is_public,
+            is_internal=is_internal,
+            is_confidential=is_confidential,
+            is_highly_confidential=is_highly_confidential,
+            is_active=is_active,
+            owners=owners,
+            application_id=application_id,
+            producer_application_id=producer_application_id,
+            consumer_application_id=consumer_application_id,
+            flow_details=flow_details,
+            **kwargs,
+        )
+        dataflow_obj.client = self
+        return dataflow_obj

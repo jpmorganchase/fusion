@@ -236,6 +236,9 @@ def test_attribute_class_to_dict() -> None:
         "term": "bizterm1",
         "dataset": None,
         "attributeType": None,
+        "applicationId": None,
+        "publisher": None,
+        "isCriticalDataElement": None,
     }
 
 
@@ -316,6 +319,201 @@ def test_attribute_class_set_client(fusion_obj: Fusion) -> None:
     test_attribute.client = fusion_obj
     assert test_attribute.client is not None
     assert test_attribute.client == fusion_obj
+
+
+def test_attribute_class_set_lineage(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test attribute class set lineage"""
+    catalog = "my_catalog"
+
+    test_attribute1 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    test_attribute2 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    test_attribute3 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    attributes = [test_attribute2, test_attribute3]
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes/lineage"
+
+    exp_data = [
+            {
+                "source": {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute1",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            },
+            "targets": [
+                {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute2",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            },
+            {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute3",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            }       
+            ]
+        }
+        ]
+
+    requests_mock.post(url, json=exp_data)
+
+    resp = test_attribute1.set_lineage(
+        client=fusion_obj,
+        attributes=attributes,
+        catalog=catalog,
+        return_resp_obj=True
+    )
+    status_code = 200
+    assert isinstance(resp, requests.Response)
+    assert resp.status_code == status_code
+
+
+def test_attribute_class_set_lineage_value_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test attribute class set lineage"""
+    catalog = "my_catalog"
+
+    test_attribute1 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+    )
+    test_attribute2 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    test_attribute3 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    attributes = [test_attribute2, test_attribute3]
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes/lineage"
+
+    exp_data = [
+            {
+                "source": {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute1",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            },
+            "targets": [
+                {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute2",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            },
+            {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute3",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            }       
+            ]
+        }
+        ]
+
+    requests_mock.post(url, json=exp_data)
+
+    with pytest.raises(ValueError, match="The 'application_id' attribute is required for setting lineage."):
+        test_attribute1.set_lineage(
+            client=fusion_obj,
+            attributes=attributes,
+            catalog=catalog,
+            return_resp_obj=True
+        )
+
+
+def test_attribute_class_set_lineage_value_error2(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test attribute class set lineage"""
+    catalog = "my_catalog"
+
+    test_attribute1 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    test_attribute2 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+    )
+    test_attribute3 = Attribute(
+        identifier="test_attribute1",
+        index=0,
+        application_id="12345"
+    )
+    attributes = [test_attribute2, test_attribute3]
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes/lineage"
+
+    exp_data = [
+            {
+                "source": {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute1",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            },
+            "targets": [
+                {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute2",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            },
+            {
+                    "catalog": "my_catalog",
+                    "attribute": "test_attribute3",
+                    "applicationId": {
+                        "id": "12345", 
+                        "type": "application"
+                    }
+            }       
+            ]
+        }
+        ]
+
+    requests_mock.post(url, json=exp_data)
+
+    with pytest.raises(ValueError, match="The 'application_id' attribute is required for setting lineage."):
+        test_attribute1.set_lineage(
+            client=fusion_obj,
+            attributes=attributes,
+            catalog=catalog,
+            return_resp_obj=True
+        )
 
 
 def test_attributes_class() -> None:
@@ -515,6 +713,9 @@ def test_attributes_to_dict() -> None:
                 "term": "bizterm1",
                 "dataset": None,
                 "attributeType": None,
+                "applicationId": None,
+                "publisher": None,
+                "isCriticalDataElement": None,
             }
         ]
     }
@@ -756,7 +957,7 @@ def test_attributes_to_dataframe() -> None:
         ]
     )
     test_df = test_attributes.to_dataframe()
-    assert test_df.shape == (1, 19)
+    assert test_df.shape == (1, 22)
     assert test_df["title"].iloc[0] == "Test Attribute"
     assert test_df["identifier"].iloc[0] == "test_attribute"
     assert test_df["index"].iloc[0] == 0
@@ -782,7 +983,7 @@ def test_attributes_to_dataframe_empty() -> None:
     """Test attributes class to_dataframe method with empty attributes."""
     test_attributes = Attributes([])
     test_df = test_attributes.to_dataframe()
-    assert test_df.shape == (1, 19)
+    assert test_df.shape == (1, 22)
     assert test_df["title"].iloc[0] == "Example Attribute"
     assert test_df["identifier"].iloc[0] == "example_attribute"
     assert test_df["index"].iloc[0] == 0
@@ -895,6 +1096,107 @@ def test_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
     status_code = 200
     assert isinstance(resp, requests.Response)
     assert resp.status_code == status_code
+
+
+def test_catalog_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test creation of multiple attributes."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes"
+
+    expected_data =  [
+            {
+                "title": "Test Attribute",
+                "identifier": "test_attribute",
+                "dataType": "string",
+                "description": "Test Attribute",
+                "publisher": "J.P. Morgan",
+                "applicationId": {"id": "12345", "type": "Application (SEAL)"},
+            }
+        ]
+
+    requests_mock.post(url, json=expected_data)
+
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="test_attribute",
+                index=0,
+                data_type=cast(Types, "string"),
+                publisher="J.P. Morgan",
+                application_id="12345",
+            )
+        ]
+    )
+    resp = test_attributes.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
+    status_code = 200
+    assert isinstance(resp, requests.Response)
+    assert resp.status_code == status_code
+
+
+def test_catalog_attributes_create_no_publisher(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test creation of multiple attributes."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes"
+
+    expected_data =  [
+            {
+                "title": "Test Attribute",
+                "identifier": "test_attribute",
+                "dataType": "string",
+                "description": "Test Attribute",
+                "applicationId": {"id": "12345", "type": "Application (SEAL)"},
+            }
+        ]
+
+    requests_mock.post(url, json=expected_data)
+
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="test_attribute",
+                index=0,
+                data_type=cast(Types, "string"),
+                application_id="12345",
+            )
+        ]
+    )
+    with pytest.raises(ValueError, match="The 'publisher' attribute is required for catalog attributes."):
+        test_attributes.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
+
+
+def test_catalog_attributes_create_no_app_id(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test creation of multiple attributes."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes"
+
+    expected_data =  [
+            {
+                "title": "Test Attribute",
+                "identifier": "test_attribute",
+                "dataType": "string",
+                "description": "Test Attribute",
+                "publisher": "J.P. Morgan",
+            }
+        ]
+
+    requests_mock.post(url, json=expected_data)
+
+    test_attributes = Attributes(
+        [
+            Attribute(
+                title="Test Attribute",
+                identifier="test_attribute",
+                index=0,
+                data_type=cast(Types, "string"),
+                publisher="J.P. Morgan",
+            )
+        ]
+    )
+    with pytest.raises(ValueError, match="The 'application_id' attribute is required for catalog attributes."):
+        test_attributes.create(client=fusion_obj, catalog=catalog, return_resp_obj=True)
+
 
 
 def test_attributes_create_no_client() -> None:
@@ -1041,6 +1343,9 @@ def test_attribute_case_switching() -> None:
         "term": "bizterm1",
         "dataset": None,
         "attributeType": None,
+        "applicationId": None,
+        "publisher": None,
+        "isCriticalDataElement": None,
     }
 
     attribute_from_camel_dict = Attribute("test_attribute", 0).from_object(my_attribute_dict)
