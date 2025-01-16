@@ -96,7 +96,7 @@ jobs:
 
     - name: Sync dependencies using uv
       run: |
-        uv sync -p ${{ env.DOCS_PY_VERSION }} --all-features
+        uv sync -p ${{ env.DOCS_PY_VERSION }} --all-extras
 
     - name: Setup main repo deploy git user
       run: |
