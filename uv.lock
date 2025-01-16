@@ -2673,11 +2673,11 @@ wheels = [
 
 [[package]]
 name = "pkginfo"
-version = "1.10.0"
+version = "1.12.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2f/72/347ec5be4adc85c182ed2823d8d1c7b51e13b9a6b0c1aae59582eca652df/pkginfo-1.10.0.tar.gz", hash = "sha256:5df73835398d10db79f8eecd5cd86b1f6d29317589ea70796994d49399af6297", size = 378457 }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/a5/fa2432da887652e3a0c07661ebe4aabe7f4692936c742da489178acd34de/pkginfo-1.12.0.tar.gz", hash = "sha256:8ad91a0445a036782b9366ef8b8c2c50291f83a553478ba8580c73d3215700cf", size = 451375 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/09/054aea9b7534a15ad38a363a2bd974c20646ab1582a387a95b8df1bfea1c/pkginfo-1.10.0-py3-none-any.whl", hash = "sha256:889a6da2ed7ffc58ab5b900d888ddce90bce912f2d2de1dc1c26f4cb9fe65097", size = 30392 },
+    { url = "https://files.pythonhosted.org/packages/21/11/4af184fbd8ae13daa13953212b27a212f4e63772ca8a0dd84d08b60ed206/pkginfo-1.12.0-py3-none-any.whl", hash = "sha256:dcd589c9be4da8973eceffa247733c144812759aa67eaf4bbf97016a02f39088", size = 32322 },
 ]
 
 [[package]]
@@ -3019,7 +3019,7 @@ wheels = [
 
 [[package]]
 name = "pyfusion"
-version = "1.3.4"
+version = "2.0.6"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -3083,6 +3083,7 @@ dev = [
     { name = "pandas-stubs" },
     { name = "patchelf", marker = "sys_platform == 'linux'" },
     { name = "pip" },
+    { name = "pkginfo" },
     { name = "polars" },
     { name = "pytest" },
     { name = "pytest-aiohttp" },
@@ -3102,6 +3103,7 @@ dev = [
     { name = "tox-uv" },
     { name = "twine" },
     { name = "typer" },
+    { name = "types-python-dateutil" },
     { name = "types-requests", version = "2.31.0.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.10.*'" },
     { name = "types-requests", version = "2.32.0.20240914", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "types-tabulate" },
@@ -3148,7 +3150,7 @@ dev = [
     { name = "beeprint", specifier = ">=2.4.11" },
     { name = "bump-my-version" },
     { name = "cffi", marker = "sys_platform == 'darwin'", specifier = ">=1.16.0" },
-    { name = "freezegun", specifier = ">=1.4.0" },
+    { name = "freezegun", specifier = ">=1.4.1" },
     { name = "ipython" },
     { name = "jinja2", specifier = ">=3.1.4" },
     { name = "maturin", specifier = ">=1.6,<2.0" },
@@ -3159,6 +3161,7 @@ dev = [
     { name = "pandas-stubs", specifier = ">1.1" },
     { name = "patchelf", marker = "sys_platform == 'linux'", specifier = ">=0.17.2.1" },
     { name = "pip", specifier = ">=24.0" },
+    { name = "pkginfo", specifier = ">=1.11" },
     { name = "polars" },
     { name = "pytest" },
     { name = "pytest-aiohttp", specifier = ">=1.0.5" },
@@ -3178,6 +3181,7 @@ dev = [
     { name = "tox-uv", specifier = ">=1.7.0" },
     { name = "twine" },
     { name = "typer", specifier = ">=0.12.3" },
+    { name = "types-python-dateutil" },
     { name = "types-requests", specifier = ">=2" },
     { name = "types-tabulate", specifier = ">=0.8.8" },
     { name = "types-tqdm", specifier = ">=4" },
@@ -4244,11 +4248,12 @@ wheels = [
 
 [[package]]
 name = "twine"
-version = "5.1.1"
+version = "6.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "importlib-metadata" },
-    { name = "keyring" },
+    { name = "importlib-metadata", marker = "python_full_version < '3.10'" },
+    { name = "keyring", marker = "platform_machine != 'ppc64le' and platform_machine != 's390x'" },
+    { name = "packaging" },
     { name = "pkginfo" },
     { name = "readme-renderer" },
     { name = "requests" },
@@ -4258,9 +4263,9 @@ dependencies = [
     { name = "urllib3", version = "1.26.20", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.10.*'" },
     { name = "urllib3", version = "2.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/77/68/bd982e5e949ef8334e6f7dcf76ae40922a8750aa2e347291ae1477a4782b/twine-5.1.1.tar.gz", hash = "sha256:9aa0825139c02b3434d913545c7b847a21c835e11597f5255842d457da2322db", size = 225531 }
+sdist = { url = "https://files.pythonhosted.org/packages/2c/33/88b80116504b61759fa2db05e13f2296b0d2e73568f5e731d020c13843b8/twine-6.0.1.tar.gz", hash = "sha256:36158b09df5406e1c9c1fb8edb24fc2be387709443e7376689b938531582ee27", size = 227175 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/ec/00f9d5fd040ae29867355e559a94e9a8429225a0284a3f5f091a3878bfc0/twine-5.1.1-py3-none-any.whl", hash = "sha256:215dbe7b4b94c2c50a7315c0275d2258399280fbb7d04182c7e55e24b5f93997", size = 38650 },
+    { url = "https://files.pythonhosted.org/packages/21/df/dda5f85131ecc0d31e10f6dc6be98440ef9f685947917b86f462eed6864b/twine-6.0.1-py3-none-any.whl", hash = "sha256:9c6025b203b51521d53e200f4a08b116dee7500a38591668c6a6033117bdc218", size = 39398 },
 ]
 
 [[package]]
@@ -4719,14 +4724,10 @@ name = "ziglang"
 version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/14/3587387c715175ed5bb103c94c0df554fabac5bc97de153e9eec2fa905aa/ziglang-0.13.0-py3-none-macosx_12_0_arm64.whl", hash = "sha256:5408ad3a6cb342fb4e4e2351a3725adfcae82eaadebe85fdbbdad9c0ac8b1e24", size = 81237662 },
-    { url = "https://files.pythonhosted.org/packages/4b/38/4f2ef2b1d727d7317b08ef309e52d8c90089272b57d5d940c74524cc4315/ziglang-0.13.0-py3-none-macosx_12_0_x86_64.whl", hash = "sha256:d1b00173b8a5bfbaccb255240b8c091bd523c13743178bc248355ec6484fced7", size = 83910175 },
     { url = "https://files.pythonhosted.org/packages/d0/62/dbd21b026cbe8f5299f8c2d5e9f5963557d3ca928389c7187738726fab5b/ziglang-0.13.0-py3-none-manylinux_2_12_i686.manylinux2010_i686.musllinux_1_1_i686.whl", hash = "sha256:d7feb1b8cd09e17a24a2218e5b4a1ff7463390cf653e9dbaf54d5f2e4c55c3e5", size = 88249460 },
     { url = "https://files.pythonhosted.org/packages/0c/b7/ecfdce6368cc3664d301f7f52db4fe1004aa7da7a12c4a9bf1de534ff6ab/ziglang-0.13.0-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl", hash = "sha256:3ce0c9f16547e5d61b32e0d226926e9a2552ef4b91fccf7ab5ea1a623a77824b", size = 80896325 },
     { url = "https://files.pythonhosted.org/packages/b8/d9/d5e808cbfa20d6b566c27f3445fea30b5ec86d7b45dad237fdc7a8754f53/ziglang-0.13.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.musllinux_1_1_aarch64.whl", hash = "sha256:5714a4d46f9246ba6180a0930e23df2bc8bc26e62b5fe0dc798b4afca1903308", size = 77819666 },
     { url = "https://files.pythonhosted.org/packages/3b/a4/dab4ddb824033b369db78235aeaa5b92f710ec01bf1e255edcb9730097a3/ziglang-0.13.0-py3-none-manylinux_2_17_armv7l.manylinux2014_armv7l.musllinux_1_1_armv7l.whl", hash = "sha256:64458dbe4f8c09ae3f99897d5bf2ac343be5366079dce383e286832f17747e94", size = 78762501 },
-    { url = "https://files.pythonhosted.org/packages/28/e2/1501b497dbdd10300a47729466a30cb78dc11dae952ff01588426947f9cf/ziglang-0.13.0-py3-none-win32.whl", hash = "sha256:36e797eebe1c75e978fb14c4ca5a42f9350cdda1850c173c036573bc480e37e8", size = 84675514 },
-    { url = "https://files.pythonhosted.org/packages/e0/0c/66f4710aedf5544e15779ff9c6e770322986e15daf9299b1a4df0be19e09/ziglang-0.13.0-py3-none-win_amd64.whl", hash = "sha256:b64b2aa936ebbfeecfbb2611df331a5474edebe1246b98c2f56d6ae4d58b71fc", size = 80418705 },
 ]
 
 [[package]]
