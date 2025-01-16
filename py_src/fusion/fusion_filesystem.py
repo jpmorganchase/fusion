@@ -23,7 +23,7 @@ from fsspec.utils import nullcontext
 
 from fusion._fusion import FusionCredentials
 
-from .utils import cpu_count, get_client, get_default_fs, get_session
+from .utils import get_client, get_default_fs, get_session
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
