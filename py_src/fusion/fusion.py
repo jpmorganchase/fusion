@@ -1973,8 +1973,8 @@ class Fusion:
         else:
             return _format_summary_index_response(response)
 
-    def get_fusion_opensearch_client(self, knowledge_base: str, catalog: str | None = None) -> OpenSearch:
-        """Creates Fusion Filesystem.
+    def get_fusion_knowledge_base_client(self, knowledge_base: str, catalog: str | None = None) -> OpenSearch:
+        """Returns Fusion Embeddings Search client.
 
         Returns: Fusion Filesystem
 
