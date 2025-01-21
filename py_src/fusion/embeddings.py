@@ -407,15 +407,24 @@ def format_index_body(number_of_shards: int = 2, dimension: int = 1536) -> dict[
     return index_body
 
 
-def format_prompt_template(package: str, task: str = "RAG") -> str:
-    if package.lower() == "langchain" and task == "RAG":
-        template = """Given the following information, answer the question.
+class PromptTemplateManager:
+    """Class to manage prompt templates for different packages and tasks."""
+
+    def __init__(self) -> None:
+        self.templates: dict[tuple[str, str], str] = {}
+
+        self._load_default_templates()
+
+    
+    def _load_default_templates(self) -> None:
+        """Load default prompt templates."""
+        self.add_template("langchain", "RAG", """Given the following information, answer the question.
         
         {context}
 
-        Question: {question}"""
-    if package.lower() == "haystack" and task == "RAG":
-        template = """
+        Question: {question}""")
+
+        self.add_template("haystack", "RAG", """
         Given the following information, answer the question.
         
         Context:
@@ -425,5 +434,57 @@ def format_prompt_template(package: str, task: str = "RAG") -> str:
 
         Question: {{question}}
         Answer:
+        """)
+
+    def add_template(self, package: str, task: str, template: str) -> None:
+        """Add a new template to the manager.
+
+        Args:
+            package (str): Package name.
+            task (str): Task name.
+            template (str): Template string.
         """
-    return template
+        self.templates[(package, task)] = template
+
+    def get_template(self, package: str, task: str) -> str:
+        """Get the template for the given package and task.
+
+        Args:
+            package (str): Package name.
+            task (str): Task name.
+
+        Returns:
+            str: Template string.
+        """
+        return self.templates.get((package, task), "")
+    
+
+    def remove_template(self, package: str, task: str) -> None:
+        """Remove the template for the given package and task.
+
+        Args:
+            package (str): Package name.
+            task (str): Task name.
+        """
+        self.templates.pop((package, task), None)
+
+    
+    def list_tasks(self, package: str) -> list[str]:
+        """List all tasks for the given package.
+
+        Args:
+            package (str): Package name.
+
+        Returns:
+            list[str]: List of tasks.
+        """
+        return [task for (pkg, task) in self.templates if pkg == package]
+    
+
+    def list_packages(self) -> list[str]:
+        """List all packages.
+
+        Returns:
+            list[str]: List of packages.
+        """
+        return list({pkg for (pkg, task) in self.templates})
