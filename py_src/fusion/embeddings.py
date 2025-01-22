@@ -220,26 +220,29 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         """
         if method.lower() == "post":
             body_str = body.decode("utf-8") if body else ""
-            try:
-                query_dict = json.loads(body_str)
-            except json.JSONDecodeError as e:
-                logger.exception(f"An error occurred during modification of haystack POST body: {e}")
             
-            if query_dict:
-                knn_list = query_dict.get("query", {}).get("bool", {}).get("must", {})
-                for knn in knn_list:
-                    if "knn" in knn and "embedding" in knn["knn"]:
-                        knn["knn"]["vector"] = knn["knn"].pop("embedding")
-                body = json.dumps(query_dict, separators=(",", ":")).encode("utf-8")
-            else:
-                json_strings = body_str.strip().split("\n")
-                dict_list = [json.loads(json_string) for json_string in json_strings]
-                for dct in dict_list:
-                    if "embedding" in dct:
-                        dct["vector"] = dct.pop("embedding")
-                json_strings_mod = [json.dumps(d, separators=(",", ":")) for d in dict_list]
-                joined_str = "\n".join(json_strings_mod)
-                body = joined_str.encode("utf-8")
+            if "query" in body_str:
+                try:
+                    query_dict = json.loads(body_str)
+                    knn_list = query_dict.get("query", {}).get("bool", {}).get("must", {})
+                    for knn in knn_list:
+                        if "knn" in knn and "embedding" in knn["knn"]:
+                            knn["knn"]["vector"] = knn["knn"].pop("embedding")
+                    body = json.dumps(query_dict, separators=(",", ":")).encode("utf-8")
+                except json.JSONDecodeError as e:
+                    logger.exception(f"An error occurred during modification of haystack POST body: {e}")
+            elif body_str != "":
+                try:
+                    json_strings = body_str.strip().split("\n")
+                    dict_list = [json.loads(json_string) for json_string in json_strings]
+                    for dct in dict_list:
+                        if "embedding" in dct:
+                            dct["vector"] = dct.pop("embedding")
+                    json_strings_mod = [json.dumps(d, separators=(",", ":")) for d in dict_list]
+                    joined_str = "\n".join(json_strings_mod)
+                    body = joined_str.encode("utf-8")
+                except json.JSONDecodeError as e:
+                    logger.exception(f"An error occurred during modification of haystack POST body: {e}")
         return body
 
     def _make_url_valid(self, url: str) -> str:
