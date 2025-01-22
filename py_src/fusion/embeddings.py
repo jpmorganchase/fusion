@@ -9,16 +9,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from fusion._fusion import FusionCredentials
-from fusion.utils import get_session
-
-try:
-    import requests
-
-    REQUESTS_AVAILABLE = True
-except ImportError:
-    REQUESTS_AVAILABLE = False
-
+import requests
 from opensearchpy.compat import reraise_exceptions, string_types
 from opensearchpy.connection.base import Connection
 from opensearchpy.exceptions import (
@@ -30,6 +21,9 @@ from opensearchpy.exceptions import (
     SSLError,
 )
 from opensearchpy.metrics import Metrics, MetricsNone
+
+from fusion._fusion import FusionCredentials
+from fusion.utils import get_session
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
@@ -94,8 +88,6 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         **kwargs: Any,
     ) -> None:
         self.metrics = metrics
-        if not REQUESTS_AVAILABLE:
-            raise ImproperlyConfigured("Please install requests to use FusionEmbeddingsConnection.")
 
         # Initialize Session so .headers works before calling super().__init__().
         fusion_root_url: str = kwargs.get("root_url", "https://fusion.jpmorgan.com/api/v1/")

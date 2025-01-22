@@ -1,6 +1,14 @@
 """Test for embeddings module."""
+from __future__ import annotations
 
-from fusion.embeddings import format_index_body
+from typing import Literal
+from unittest.mock import MagicMock, patch
+
+import pytest
+from opensearchpy import ImproperlyConfigured
+
+from fusion._fusion import FusionCredentials
+from fusion.embeddings import FusionEmbeddingsConnection, PromptTemplateManager, format_index_body
 
 
 def test_format_index_body() -> None:
@@ -24,3 +32,327 @@ def test_format_index_body() -> None:
         },
     }
 
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_embeddings_connection(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test for FusionEmbeddingsConnection class."""
+
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    connection = FusionEmbeddingsConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        verify_certs=True,
+        ssl_show_warn=False,
+        ca_certs="path/to/ca_certs",
+        client_cert="path/to/client_cert",
+        client_key="path/to/client_key",
+        headers={"custom-header": "value"},
+        http_compress=True,
+        opaque_id="opaque-id",
+        pool_maxsize=20,
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials="config/client_credentials.json",
+        catalog="common",
+        knowledge_base="knowledge_base",
+    )
+
+    assert connection.host == "https://localhost:9200"
+    assert connection.use_ssl is True
+    assert connection.session.verify == "path/to/ca_certs"
+    assert connection.session.cert == ("path/to/client_cert", "path/to/client_key")
+    assert connection.http_compress is True
+    assert connection.session.auth == ("user", "pass")
+    assert connection.url_prefix == "dataspaces/common/datasets/knowledge_base/indexes/"
+    assert connection.base_url == "https://fusion.jpmorgan.com/api/v1/"
+    assert connection.credentials == mock_credentials
+    assert connection.session == mock_session
+
+
+def test_fusion_embeddings_connection_wrong_creds() -> None:
+    """Test for FusionEmbeddingsConnection class."""
+
+    with pytest.raises(
+        ValueError, match="credentials must be a path to a credentials file or FusionCredentials object"
+        ):
+        FusionEmbeddingsConnection(
+            host="localhost",
+            port=9200,
+            http_auth=("user", "pass"),
+            use_ssl=True,
+            verify_certs=True,
+            ssl_show_warn=False,
+            ca_certs="path/to/ca_certs",
+            client_cert="path/to/client_cert",
+            client_key="path/to/client_key",
+            headers={"custom-header": "value"},
+            http_compress=True,
+            opaque_id="opaque-id",
+            pool_maxsize=20,
+            root_url="https://fusion.jpmorgan.com/api/v1/",
+            credentials={"my_id": "12345", "my_password": "password"},
+            catalog="common",
+            knowledge_base="knowledge_base",
+        )
+
+
+@patch("fusion.embeddings.get_session")
+def test_fusion_embeddings_connection_creds_obj(mock_get_session: MagicMock, credentials: FusionCredentials) -> None:
+    """Test for FusionEmbeddingsConnection class."""
+
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    connection = FusionEmbeddingsConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        verify_certs=True,
+        ssl_show_warn=False,
+        ca_certs="path/to/ca_certs",
+        client_cert="path/to/client_cert",
+        client_key="path/to/client_key",
+        headers={"custom-header": "value"},
+        http_compress=True,
+        opaque_id="opaque-id",
+        pool_maxsize=20,
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials=credentials,
+        catalog="common",
+        knowledge_base="knowledge_base",
+    )
+
+    assert connection.host == "https://localhost:9200"
+    assert connection.use_ssl is True
+    assert connection.session.verify == "path/to/ca_certs"
+    assert connection.session.cert == ("path/to/client_cert", "path/to/client_key")
+    assert connection.http_compress is True
+    assert connection.session.auth == ("user", "pass")
+    assert connection.url_prefix == "dataspaces/common/datasets/knowledge_base/indexes/"
+    assert connection.base_url == "https://fusion.jpmorgan.com/api/v1/"
+    assert connection.credentials == credentials
+    assert connection.session == mock_session
+
+
+def test_prompt_template_manager_initialization() -> None:
+    manager = PromptTemplateManager()
+    assert isinstance(manager.templates, dict)
+    assert len(manager.templates) > 0, "Default templates should be loaded"
+
+
+def test_add_and_retrieve_template() -> None:
+    manager = PromptTemplateManager()
+    manager.add_template("test_package", "test_task", "Test template content")
+
+    retrieved = manager.get_template("test_package", "test_task")
+    assert retrieved == "Test template content"
+
+
+def test_retrieve_nonexistent_template() -> None:
+    manager = PromptTemplateManager()
+    template = manager.get_template("nonexistent_package", "nonexistent_task")
+    assert template == ""
+
+
+def test_remove_templates_single() -> None:
+    manager = PromptTemplateManager()
+    # Add two templates for the same package
+    manager.add_template("my_package", "task_one", "Template 1")
+    manager.add_template("my_package", "task_two", "Template 2")
+
+    manager.remove_template("my_package", "task_one")
+    assert manager.get_template("my_package", "task_one") == ""
+
+
+def test_list_tasks() -> None:
+    manager = PromptTemplateManager()
+    manager.add_template("pkg_one", "task_a", "Template A")
+    manager.add_template("pkg_one", "task_b", "Template B")
+    manager.add_template("pkg_two", "task_c", "Template C")
+
+    tasks = manager.list_tasks(package="pkg_one")
+
+    assert "task_a" in tasks
+    assert "task_b" in tasks
+
+def test_list_packages() -> None:
+    manager = PromptTemplateManager()
+    manager.add_template("pkg_one", "task_a", "Template A")
+    manager.add_template("pkg_one", "task_b", "Template B")
+    manager.add_template("pkg_two", "task_c", "Template C")
+
+    packages = manager.list_packages()
+    assert "pkg_one" in packages
+    assert "pkg_two" in packages
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_clears_session_headers_on_init(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    # Create a session with a dummy header
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+    mock_session.headers = {"X-Test" :"test-value"}
+
+    conn = FusionEmbeddingsConnection(
+            host="localhost",
+            root_url="https://example.com/api",
+            credentials="some_credentials_file.json"
+        )
+
+    assert not conn.session.headers.get("X-Test"), "Session headers should be cleared on init"
+
+
+@pytest.mark.parametrize(("input_auth", "expected"), [
+    (("user", "pass"), ("user", "pass")),
+    (["user", "pass"], ("user", "pass")),
+    (b"user:pass", ("user", "pass")),
+    ("user:pass", ("user", "pass")),
+])
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_embeddings_connection_http_auth(
+    mock_from_file: MagicMock,  # noqa: ARG001
+    mock_get_session: MagicMock,  # noqa: ARG001
+    input_auth: tuple[str, str] | list[str] | Literal[b"user:pass", "user:pass"],
+    expected: tuple[str, str]
+) -> None:
+    conn = FusionEmbeddingsConnection(
+            host="localhost",
+            http_auth=input_auth,
+        )
+    # Verify that the `session.auth` was set to a tuple
+    assert conn.session.auth == expected
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_embeddings_connection_wrong_inputs(mock_from_file: MagicMock, mock_get_session: MagicMock,) -> None:
+    """Test for FusionEmbeddingsConnection class."""
+
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    with pytest.raises(
+        ImproperlyConfigured, match="You cannot pass CA certificates when verify SSL is off."
+        ):
+        FusionEmbeddingsConnection(
+            host="localhost",
+            port=9200,
+            http_auth=("user", "pass"),
+            use_ssl=True,
+            verify_certs=False,
+            ssl_show_warn=False,
+            ca_certs="path/to/ca_certs",
+            client_cert="path/to/client_cert",
+            client_key="path/to/client_key",
+            headers={"custom-header": "value"},
+            http_compress=True,
+            opaque_id="opaque-id",
+            pool_maxsize=20,
+            root_url="https://fusion.jpmorgan.com/api/v1/",
+            credentials="config/client_credentials.json",
+            catalog="common",
+            knowledge_base="knowledge_base",
+        )
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_embeddings_connection_ssl_warning(mock_from_file: MagicMock, mock_get_session: MagicMock,) -> None:
+    """Test for FusionEmbeddingsConnection class."""
+
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    with pytest.warns(
+        UserWarning, match="Connecting to https://localhost:9200 using SSL with verify_certs=False is insecure."
+        ):
+        FusionEmbeddingsConnection(
+            host="localhost",
+            port=9200,
+            http_auth=("user", "pass"),
+            use_ssl=True,
+            verify_certs=False,
+            ssl_show_warn=True,
+            client_cert="path/to/client_cert",
+            client_key="path/to/client_key",
+            headers={"custom-header": "value"},
+            http_compress=True,
+            opaque_id="opaque-id",
+            pool_maxsize=20,
+            root_url="https://fusion.jpmorgan.com/api/v1/",
+            credentials="config/client_credentials.json",
+            catalog="common",
+            knowledge_base="knowledge_base",
+        )
+
+
+@pytest.mark.parametrize(
+    ("base_url", "raw_url", "expected_url"),
+    [
+        (
+            "https://example.com/api/v1/",
+            "%2F%7Bmyindex%7D%2F_test%2Fmock%2F",
+            "https://example.com/api/v1/myindex/_test/mock/"
+        )
+    ],
+)
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_embeddings_connection_tidy_url(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+    base_url:  Literal["https://example.com/api/v1/"],
+    raw_url:Literal["/%2F%7Bmyindex%7D%2F_test%2Fmock%2F"],
+    expected_url: Literal["https://example.com/api/v1/myindex/_test/mock/"],
+) -> None:
+    
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+    
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        root_url=base_url,
+        credentials="dummy_credentials.json",
+    )
+    
+    tidied = conn._tidy_url(raw_url)
+    assert tidied == expected_url
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_embeddings_connection_remap_url(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+) -> None:
+    
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+    
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+    )
+    url = "https://example.com/api/v1/myindex/_test/mock/_bulk/_search"
+
+    remapped = conn._remap_endpoints(url)
+    expected = "https://example.com/api/v1/myindex/_test/mock/embeddings/search"
+
+    assert remapped == expected
