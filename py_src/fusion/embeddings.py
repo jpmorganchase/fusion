@@ -207,7 +207,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         return raw_data
 
     @staticmethod
-    def _modify_post_haystack(body: bytes | None, method: str) -> bytes:
+    def _modify_post_haystack(body: bytes | None, method: str) -> bytes | None:
         """Method to modify haystack POST body to match the embeddings API, which expects the embedding field to be
             named "vector".
 
@@ -219,7 +219,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             bytes: Modified request body.
         """
         if method.lower() == "post":
-            body_str = body.decode("utf-8")
+            body_str = body.decode("utf-8") if body else ""
             try:
                 query_dict = json.loads(body_str)
             except json.JSONDecodeError as e:
@@ -375,7 +375,8 @@ def format_index_body(number_of_shards: int = 1, number_of_replicas: int = 1, di
         number_of_shards (int, optional): Number of primary shards to split the index into. This should be determined
             by the amount of data that will be stored in the index. Defaults to 1.
         number_of_replicas (int, optional): Number of replica shards to create for each primary shard. Defaults to 1.
-        dimension (int, optional): _description_. Defaults to 1536.
+        dimension (int, optional): Dimension of your index, determined by embedding model to be used for your index.
+            Defaults to 1536.
 
     Returns:
         dict: Index body expected by embeddings API.
