@@ -175,29 +175,15 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         return url.replace("_bulk", "embeddings").replace("_search", "search")
 
     @staticmethod
-    def _modify_post_body_langchain(body: Any) -> Any:
-        if body and "query" in body.decode("utf-8"):
-            try:
-                # Decode the bytes to a string
-                json_str = body.decode("utf-8")
+    def _modify_post_response_langchain(raw_data: str | bytes | bytearray) -> str | bytes | bytearray:
+        """Modify the response from langchain POST request to match the expected format.
 
-                # Parse the JSON string into a python dictionary
-                data = json.loads(json_str)
+        Args:
+            raw_data (str | bytes | bytearray): Raw post response data.
 
-                # Check if "query" and "knn" are in the data
-                if "query" in data and "knn" in data["query"]:
-                    # Extract the "knn" dictionary
-                    knn_data = data["query"]["knn"]
-
-                    # Create new structure
-                    data["query"] = {"hybrid": {"queries": {"knn": knn_data}}}
-                body = json.dumps(data, separators=(",", ":")).encode("utf-8")
-            except (json.JSONDecodeError, KeyError, TypeError) as e:
-                logger.exception(f"An error occurred during modification of langchain POST body: {e}")
-        return body
-
-    @staticmethod
-    def _modify_post_response_langchain(raw_data: Any) -> Any:
+        Returns:
+            str | bytes | bytearray: Modified post repsonse data.
+        """
         if len(raw_data) > 0 and "hits" in json.loads(raw_data):
             try:
                 data = json.loads(raw_data)
@@ -221,10 +207,31 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         return raw_data
 
     @staticmethod
-    def _modify_post_haystack(body: Any, method: str) -> Any:
+    def _modify_post_haystack(body: bytes | None, method: str) -> bytes:
+        """Method to modify haystack POST body to match the embeddings API, which expects the embedding field to be
+            named "vector".
+
+        Args:
+            body (bytes): Request body.
+            method (str): Request method.
+
+        Returns:
+            bytes: Modified request body.
+        """
         if method.lower() == "post":
             body_str = body.decode("utf-8")
             try:
+                query_dict = json.loads(body_str)
+            except json.JSONDecodeError as e:
+                logger.exception(f"An error occurred during modification of haystack POST body: {e}")
+            
+            if query_dict:
+                knn_list = query_dict.get("query", {}).get("bool", {}).get("must", {})
+                for knn in knn_list:
+                    if "knn" in knn and "embedding" in knn["knn"]:
+                        knn["knn"]["vector"] = knn["knn"].pop("embedding")
+                body = json.dumps(query_dict, separators=(",", ":")).encode("utf-8")
+            else:
                 json_strings = body_str.strip().split("\n")
                 dict_list = [json.loads(json_string) for json_string in json_strings]
                 for dct in dict_list:
@@ -233,23 +240,6 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
                 json_strings_mod = [json.dumps(d, separators=(",", ":")) for d in dict_list]
                 joined_str = "\n".join(json_strings_mod)
                 body = joined_str.encode("utf-8")
-
-            except (json.JSONDecodeError, KeyError, TypeError) as e:
-                logger.exception(f"An error occurred during modification of haystack POST body: {e}")
-
-            body_str = body.decode("utf-8")
-            if "query" in body_str:
-                json_dict = json.loads(body_str)
-                if "bool" in json_dict["query"]:
-                    json_dict["query"]["hybrid"] = {}
-                    json_dict["query"]["hybrid"]["queries"] = json_dict["query"]["bool"].pop("must")
-                    json_dict["query"].pop("bool")
-
-                for i in json_dict["query"]["hybrid"]["queries"]:
-                    if isinstance(i, dict) and "knn" in i and "embedding" in i["knn"]:
-                        i["knn"]["vector"] = i["knn"].pop("embedding")
-
-                body = json.dumps(json_dict, separators=(",", ":")).encode("utf-8")
         return body
 
     def _make_url_valid(self, url: str) -> str:
@@ -293,7 +283,6 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             body = self._gzip_compress(body)
             headers["content-encoding"] = "gzip"  # type: ignore
 
-        body = FusionEmbeddingsConnection._modify_post_body_langchain(body)  # langchain specific
         body = FusionEmbeddingsConnection._modify_post_haystack(body, method)
 
         start = time.time()
@@ -333,7 +322,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         warnings_headers = (response.headers["warning"],) if "warning" in response.headers else ()
         self._raise_warnings(warnings_headers)
 
-        raw_data = FusionEmbeddingsConnection._modify_post_response_langchain(raw_data)
+        raw_data_modified = FusionEmbeddingsConnection._modify_post_response_langchain(raw_data)
 
         # raise errors based on http status codes, let the client handle those if needed
         if not (HTTP_OK <= response.status_code < HTTP_MULTIPLE_CHOICES) and response.status_code not in ignore:
@@ -344,11 +333,11 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
                 orig_body,
                 duration,
                 response.status_code,
-                raw_data,
+                raw_data_modified,
             )
             self._raise_error(
                 response.status_code,
-                raw_data,
+                raw_data_modified,
                 response.headers.get("Content-Type"),
             )
 
@@ -358,11 +347,11 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             response.request.path_url,
             orig_body,
             response.status_code,
-            raw_data,
+            raw_data_modified,
             duration,
         )
 
-        return response.status_code, response.headers, raw_data
+        return response.status_code, response.headers, raw_data_modified
 
     @property
     def headers(self) -> Any:
@@ -379,11 +368,13 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         self.session.close()
 
 
-def format_index_body(number_of_shards: int = 2, dimension: int = 1536) -> dict[str, Any]:
-    """Format index body for Embeddings API.
+def format_index_body(number_of_shards: int = 1, number_of_replicas: int = 1, dimension: int = 1536) -> dict[str, Any]:
+    """Format index body for index creation in Embeddings API.
 
     Args:
-        number_of_shards (int, optional): _description_. Defaults to 2.
+        number_of_shards (int, optional): Number of primary shards to split the index into. This should be determined
+            by the amount of data that will be stored in the index. Defaults to 1.
+        number_of_replicas (int, optional): Number of replica shards to create for each primary shard. Defaults to 1.
         dimension (int, optional): _description_. Defaults to 1536.
 
     Returns:
@@ -393,6 +384,7 @@ def format_index_body(number_of_shards: int = 2, dimension: int = 1536) -> dict[
         "settings": {
             "index": {
                 "number_of_shards": number_of_shards,
+                "number_of_replicas": number_of_replicas,
                 "knn": True,
             }
         },
