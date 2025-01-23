@@ -356,3 +356,82 @@ def test_fusion_embeddings_connection_remap_url(
     expected = "https://example.com/api/v1/myindex/_test/mock/embeddings/search"
 
     assert remapped == expected
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_modify_post_response_langchain(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+) -> None:
+    
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+    
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+    )
+    raw_data = b"""
+    {
+        "took": 123,
+        "max_score": 0.5,
+        "hits": [
+            {
+                "id": "kfsgkfjg",
+                "score": 0.5,
+                "index": "myindex",
+                "source": {
+                    "id": "dfgjkdf",
+                    "document_id": "dfgjkdf",
+                    "content": "This is a test",
+                    "chunk_seq_num": 1,
+                    "knowledge_base_id": "asfae",
+                    "s3_uri": "s3://mybucket/myfile",
+                    "split_id": "sdfg",
+                    "chunk_id": "sdfg",
+                    "vector": [0.1, 0.2, 0.3, 0.4, 0.5]
+                }
+            }
+        ]
+    }
+    """
+
+    exp_data = (
+        b'{"took":123,"max_score":0.5,"hits":{"hits":[{"index":"myindex","_source":{"id":"dfgjkdf",'
+        b'"document_id":"dfgjkdf","content":"This is a test","chunk_seq_num":1,"knowledge_base_id":"asfae",'
+        b'"s3_uri":"s3://mybucket/myfile","split_id":"sdfg","chunk_id":"sdfg","vector":[0.1,0.2,0.3,0.4,0.5]},'
+        b'"_id":"kfsgkfjg","_score":0.5}]}}'
+    )
+
+    exp_bytes = exp_data.decode("utf-8")
+
+    modified_data = conn._modify_post_response_langchain(raw_data)
+
+    assert modified_data == exp_bytes
+
+
+def test_modify_post_response_langchain_exception(caplog: pytest.LogCaptureFixture) -> None:
+    """Test exception path when JSON is invalid."""
+    raw_data = b"{ invalid_json }"  # Will trigger json.JSONDecodeError
+
+    result = FusionEmbeddingsConnection._modify_post_response_langchain(raw_data)
+
+    # Ensure returned value is the fallback
+    assert isinstance(result, str)
+    assert "invalid_json" in result
+
+    # Check the log for the exception message
+    assert "An error occurred during modification of langchain POST response:" in caplog.text
+
+
+def test_modify_post_response_langchain_no_hits() -> None:
+    """Test final return of raw_data when condition is not met."""
+    # Valid JSON but doesn't contain 'hits'
+    raw_data = b'{"test_key":"test_value"}'
+    result = FusionEmbeddingsConnection._modify_post_response_langchain(raw_data)
+
+    # The function should skip the if-block and return raw_data unchanged
+    assert result == raw_data

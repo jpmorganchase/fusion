@@ -176,27 +176,31 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         Returns:
             str | bytes | bytearray: Modified post repsonse data.
         """
-        if len(raw_data) > 0 and "hits" in json.loads(raw_data):
+        if len(raw_data) > 0:
             try:
                 data = json.loads(raw_data)
-                for hit in data["hits"]:
-                    # Change "source" to "_source" if it exists
-                    if "source" in hit:
-                        hit["_source"] = hit.pop("source")
-                        hit["_id"] = hit.pop("id")
-                        hit["_score"] = hit.pop("score")
+                if "hits" in data:
+                    for hit in data["hits"]:
+                        # Change "source" to "_source" if it exists
+                        if "source" in hit:
+                            hit["_source"] = hit.pop("source")
+                            hit["_id"] = hit.pop("id")
+                            hit["_score"] = hit.pop("score")
 
-                # Wrap the existing "hits" list in another dicitonary wit the key "hits"
-                data["hits"] = {"hits": data["hits"]}
+                    # Wrap the existing "hits" list in another dicitonary wit the key "hits"
+                    data["hits"] = {"hits": data["hits"]}
 
-                # Serialize the modified dictionary back to a JSON string
+                    # Serialize the modified dictionary back to a JSON string
 
-                raw_data = json.dumps(data, separators=(",", ":"))
+                    return json.dumps(data, separators=(",", ":"))
 
             except (json.JSONDecodeError, KeyError, TypeError) as e:
                 logger.exception(f"An error occurred during modification of langchain POST response: {e}")
 
+                return raw_data.decode("utf-8", errors="ignore") if isinstance(raw_data, bytes) else raw_data
+        
         return raw_data
+    
 
     @staticmethod
     def _modify_post_haystack(body: bytes | None, method: str) -> bytes | None:
