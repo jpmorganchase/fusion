@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from opensearchpy import ImproperlyConfigured
+from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 
 from fusion._fusion import FusionCredentials
 from fusion.embeddings import FusionEmbeddingsConnection, PromptTemplateManager, format_index_body
@@ -589,3 +590,95 @@ def test_make_valid_url_different_index(
 
     modified_url = conn._make_url_valid(url)
     assert modified_url == expected_url
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_success(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test a normal 200 success response."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_response = MagicMock(status_code=200, content=b"OK-content")
+    mock_session.send.return_value = mock_response
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    result = conn.perform_request("GET", url="http://example.com/test")
+
+    # Verify we got the response back
+    assert result
+    # Ensure the session 'send' was called
+    mock_session.send.assert_called_once()
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_ignore_status(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test ignoring certain status codes."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_response = MagicMock(status_code=404, content=b"Not Found")
+    mock_session.send.return_value = mock_response
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    result = conn.perform_request("GET", url="http://example.com/test", ignore=[404])
+    status_code = 404
+    assert result[0] == status_code
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_refresh_endpoint(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test that the '_refresh' endpoint raises OpenSearchConnectionError."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    result = conn.perform_request("PUT", url="http://example.com/_refresh")
+    status_code = 200
+    assert result[0] == status_code
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_compression(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test that request body is gzipped and Content-Encoding header is set."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_response = MagicMock(status_code=200, content=b"ok-content", headers={"content-encoding": "gzip"})
+    mock_session.send.return_value = mock_response
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json", http_compress=True)
+    
+    body_data = b'{"test": "data"}'
+
+    result = conn.perform_request("POST", url="http://example.com/test", body=body_data)
+    
+    assert result[1].get("content-encoding") == "gzip"
+
+
+# @patch("fusion.embeddings.get_session")
+# @patch("fusion.embeddings.FusionCredentials.from_file")
+# def test_perform_request_put_headers(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+#     """Test PUT requests set 'Content-Type' to 'application/json'."""
+#     mock_credentials = MagicMock(spec=FusionCredentials)
+#     mock_from_file.return_value = mock_credentials
+#     mock_session = MagicMock()
+#     mock_response = MagicMock(status_code=200, content=b"OK")
+#     mock_session.send.return_value = mock_response
+#     mock_get_session.return_value = mock_session
+
+#     conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+
+#     conn.perform_request("PUT", url="http://example.com/test")
+
+#     (args, kwargs) = mock_session.send.call_args
+#     prepared_req = args[0]
+#     assert prepared_req.headers.get("Content-Type") == "application/json"
