@@ -435,3 +435,157 @@ def test_modify_post_response_langchain_no_hits() -> None:
 
     # The function should skip the if-block and return raw_data unchanged
     assert result == raw_data
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_modify_post_haystack(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+) -> None:
+    
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+    
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+    )
+    raw_data = (
+        b'{"query":{"bool":{"must":[{"knn":{"embedding":{"vector":[0.1,0.2,0.3,0.4,0.5],"k":5}}}]}}, '
+        b'"size":10, "_source":{"excludes":["embedding"]}}'
+    )
+    exp_data = (
+        b'{"query":{"bool":{"must":[{"knn":{"vector":{"vector":[0.1,0.2,0.3,0.4,0.5],"k":5}}}]}},'
+        b'"size":10,"_source":{"excludes":["embedding"]}}'
+    )
+    modified_data = conn._modify_post_haystack(
+        raw_data, "post"
+    )
+    modified_data = conn._modify_post_haystack(raw_data, "post")
+
+    assert modified_data == exp_data
+
+
+def test_modify_post_haystack_json_decode_error(caplog: pytest.LogCaptureFixture) -> None:
+    """Test that invalid JSON input triggers a JSONDecodeError and logs an exception."""
+    # Provide invalid JSON to cause json.JSONDecodeError
+    invalid_body = b"{ query }"
+    method = "POST"
+
+    result = FusionEmbeddingsConnection._modify_post_haystack(invalid_body, method)
+
+    # Check that the function returned the original body
+    # Ensure returned value is the fallback
+    assert isinstance(result, bytes)
+
+    # Check the log for the exception message
+    assert "An error occurred during modification of haystack POST body:" in caplog.text
+
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_modify_post_haystack_no_query(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+) -> None:
+    
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+    
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+    )
+    raw_data = (
+        b'{"create":{"_id":"sjdkfs"}}\n'
+        b'{"id":"sjdkfs","content":"This is a test","embedding":[0.1,0.2,0.3,0.4,0.5]}'
+    )
+    exp_data = (
+        b'{"create":{"_id":"sjdkfs"}}\n'
+        b'{"id":"sjdkfs","content":"This is a test","vector":[0.1,0.2,0.3,0.4,0.5]}'
+    )
+
+    modified_data = conn._modify_post_haystack(
+        raw_data, "post"
+    )
+
+    assert modified_data == exp_data
+
+
+def test_modify_post_haystack_json_decode_error_no_query(caplog: pytest.LogCaptureFixture) -> None:
+    """Test that invalid JSON input triggers a JSONDecodeError and logs an exception."""
+    # Provide invalid JSON to cause json.JSONDecodeError
+    invalid_body = b"{ invalid_json }"
+    method = "POST"
+
+    result = FusionEmbeddingsConnection._modify_post_haystack(invalid_body, method)
+
+    # Check that the function returned the original body
+    # Ensure returned value is the fallback
+    assert isinstance(result, bytes)
+
+    # Check the log for the exception message
+    assert "An error occurred during modification of haystack POST body:" in caplog.text
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_make_valid_url(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+) -> None:
+    
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+    
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+        root_url="https://example.com/api/v1/",
+        index_name="myindex",
+        catalog="mycatalog",
+        knowledge_base="mykb",
+    )
+    url = "https://example.com/api/v1/myindex"
+    exp_url = "https://example.com/api/v1/dataspaces/mycatalog/datasets/mykb/indexes/myindex"
+
+    modified_url = conn._make_url_valid(url)
+    assert modified_url == exp_url
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_make_valid_url_different_index(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+) -> None:
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+        root_url="https://example.com/api/v1/",
+        index_name="myindex",
+        catalog="mycatalog",
+        knowledge_base="mykb",
+    )
+
+    conn.index_name = "myindex"
+
+    # This URL ends with "otherindex" instead of "myindex"
+    url = "https://example.com/api/v1/otherindex"
+    expected_url = "https://example.com/api/v1/dataspaces/mycatalog/datasets/mykb/indexes/otherindex"
+
+    modified_url = conn._make_url_valid(url)
+    assert modified_url == expected_url
