@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from opensearchpy import ImproperlyConfigured
+from opensearchpy import ImproperlyConfigured, RequestError
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 from opensearchpy.exceptions import (
     ConnectionTimeout,
@@ -688,6 +688,30 @@ def test_perform_request_reraise_exceptions(mock_from_file: MagicMock, mock_get_
 
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_reraise_exceptions_recursion(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock
+) -> None:
+    """
+    Test that a RecursionError is re-raised, covering
+    'except reraise_exceptions: raise'.
+    """
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_session = MagicMock()
+    # Trigger a RecursionError to match what's in reraise_exceptions
+    mock_session.send.side_effect = RecursionError("Test recursion error")
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+
+    with pytest.raises(RecursionError, match="Test recursion error"):
+        conn.perform_request("GET", url="http://example.com/test")
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
 def test_perform_request_ssl_error(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
     """Test that an SSLError in requests is re-raised as SSLError from opensearchpy."""
     mock_credentials = MagicMock(spec=FusionCredentials)
@@ -735,3 +759,72 @@ def test_perform_request_other_exception(mock_from_file: MagicMock, mock_get_ses
     with pytest.raises(OpenSearchConnectionError) as exc_info:
         conn.perform_request("GET", url="http://example.com")
     assert "Something went wrong" in str(exc_info.value)
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+@patch("fusion.embeddings.FusionEmbeddingsConnection.log_request_fail")
+def test_perform_request_failure_status(
+    mock_log_fail: MagicMock,
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock
+) -> None:
+    """
+    Test that a 400 response outside the 200 range and not in ignore
+    triggers a failure log and raises an error.
+    """
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_response = MagicMock(status_code=400, content=b"Error content")
+    mock_response.request.path_url = "/test"
+    mock_response.headers = {"Content-Type": "application/json"}
+    mock_session.send.return_value = mock_response
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+
+    # If your _raise_error method raises an exception (e.g. NotFoundError), catch it
+    with pytest.raises(RequestError):
+        conn.perform_request("GET", url="http://example.com", ignore=[404])  # 400 not ignored
+
+    # Ensure log_request_fail was called
+    mock_log_fail.assert_called_once()
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_headers_property(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock
+) -> None:
+    """Test that setting the headers updates the session headers."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_session.headers = {"new-header": "value"}
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    # Verify initial
+
+    # Update headers
+    conn.headers = {"new-header": "value"}
+    assert conn.headers.get("new-header") == "value"
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_close(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock
+) -> None:
+    """Test that close() calls session.close()."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    conn.close()
+    mock_session.close.assert_called_once()
