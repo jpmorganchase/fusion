@@ -278,7 +278,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         headers = headers or {}
 
         body = FusionEmbeddingsConnection._modify_post_haystack(body, method)
-        
+
         orig_body = body
         if self.http_compress and body:
             body = self._gzip_compress(body)

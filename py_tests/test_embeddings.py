@@ -5,8 +5,13 @@ from typing import Literal
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from opensearchpy import ImproperlyConfigured
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
+from opensearchpy.exceptions import (
+    ConnectionTimeout,
+    SSLError,
+)
 
 from fusion._fusion import FusionCredentials
 from fusion.embeddings import FusionEmbeddingsConnection, PromptTemplateManager, format_index_body
@@ -663,22 +668,70 @@ def test_perform_request_compression(mock_from_file: MagicMock, mock_get_session
     
     assert result[1].get("content-encoding") == "gzip"
 
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_reraise_exceptions(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
 
-# @patch("fusion.embeddings.get_session")
-# @patch("fusion.embeddings.FusionCredentials.from_file")
-# def test_perform_request_put_headers(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
-#     """Test PUT requests set 'Content-Type' to 'application/json'."""
-#     mock_credentials = MagicMock(spec=FusionCredentials)
-#     mock_from_file.return_value = mock_credentials
-#     mock_session = MagicMock()
-#     mock_response = MagicMock(status_code=200, content=b"OK")
-#     mock_session.send.return_value = mock_response
-#     mock_get_session.return_value = mock_session
+    mock_session = MagicMock()
+    # Trigger a KeyboardInterrupt to simulate a reraise_exceptions scenario
+    mock_session.send.side_effect = KeyboardInterrupt("Testing raise")
+    mock_get_session.return_value = mock_session
 
-#     conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
 
-#     conn.perform_request("PUT", url="http://example.com/test")
+    # Verify that the exception is indeed re-raised
+    with pytest.raises(KeyboardInterrupt, match="Testing raise"):
+        conn.perform_request("GET", url="http://example.com/test")
 
-#     (args, kwargs) = mock_session.send.call_args
-#     prepared_req = args[0]
-#     assert prepared_req.headers.get("Content-Type") == "application/json"
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_ssl_error(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test that an SSLError in requests is re-raised as SSLError from opensearchpy."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_session = MagicMock()
+    mock_session.send.side_effect = requests.exceptions.SSLError("SSL error occurred")
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    with pytest.raises(SSLError) as exc_info:
+        conn.perform_request("GET", url="http://example.com")
+    assert "SSL error occurred" in str(exc_info.value)
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_timeout_error(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test that a requests.Timeout is re-raised as ConnectionTimeout from opensearchpy."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_session = MagicMock()
+    mock_session.send.side_effect = requests.Timeout("Request timed out")
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    with pytest.raises(ConnectionTimeout) as exc_info:
+        conn.perform_request("GET", url="http://example.com")
+    assert "Request timed out" in str(exc_info.value)
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_other_exception(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test that any other exception is re-raised as OpenSearchConnectionError."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_session = MagicMock()
+    mock_session.send.side_effect = RuntimeError("Something went wrong")
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    with pytest.raises(OpenSearchConnectionError) as exc_info:
+        conn.perform_request("GET", url="http://example.com")
+    assert "Something went wrong" in str(exc_info.value)
