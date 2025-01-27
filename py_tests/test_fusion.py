@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 import requests
 import requests_mock
+from opensearchpy import OpenSearch
 from pytest_mock import MockerFixture
 
 from fusion._fusion import FusionCredentials
@@ -1391,3 +1392,108 @@ def test_fusion_delete_datasetmembers_multiple(requests_mock: requests_mock.Mock
     assert resp[1].status_code == status_code
     resp_len = 2
     assert len(resp) == resp_len
+
+
+def test_fusion_delete_all_datasetmembers(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test delete datasetmembers"""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+    requests_mock.delete(url, status_code=200)
+
+    resp = fusion_obj.delete_all_datasetmembers(dataset, catalog=catalog, return_resp_obj=True)
+    status_code = 200
+    assert resp is not None
+    assert isinstance(resp, requests.Response)
+    assert resp.status_code == status_code
+
+
+def test_list_indexes_summary(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list indexes from client."""
+    catalog = "my_catalog"
+    knowledge_base = "MY_KB"
+    url = f"{fusion_obj.root_url}dataspaces/{catalog}/datasets/{knowledge_base}/indexes/"
+    expected_data = [{
+        "settings": {
+            "index":{
+                "knn": "true",
+                "creation_date": "2020-05-05",
+                "number_of_shards": 1,
+                "number_of_replicas": 1,
+                "provided_name": "dataspace-mydataspace-dataset-mydataset-index-myindex",
+            }
+        },
+        "mappings": {
+            "properties": {
+                "chunk-id": {"type": "text"},
+                "vector": {"type": "knn_vector", "dimension": 1536},
+                "id": {"type": "text",
+                       "fields": '{"keyword": {"type": "keyword", "ignore_above": 256}}'},
+                "content": {"type": "text"}}},
+    }   
+    ]
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_indexes(catalog=catalog, knowledge_base=knowledge_base)
+    exp_df = pd.DataFrame(
+            {
+                "index_name": ["myindex"],
+                "vector_field_name": ["vector"],
+                "vector_dimension": [1536],
+            }
+        ).set_index("index_name").transpose()
+
+    assert all(
+        resp == exp_df
+    )
+
+
+def test_list_indexes_full(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list indexes from client."""
+    catalog = "my_catalog"
+    knowledge_base = "MY_KB"
+    url = f"{fusion_obj.root_url}dataspaces/{catalog}/datasets/{knowledge_base}/indexes/"
+    expected_data = [{
+        "settings": {
+            "index":{
+                "knn": "true",
+                "creation_date": "1737647317617",
+                "number_of_shards": 1,
+                "number_of_replicas": 1,
+                "provided_name": "dataspace-mydataspace-dataset-mydataset-index-myindex",
+            }
+        },
+        "mappings": {
+            "properties": {
+                "chunk-id": {"type": "text"},
+                "vector": {"type": "knn_vector", "dimension": 1536},
+                "id": {"type": "text",
+                       "fields": '{"keyword": {"type": "keyword", "ignore_above": 256}}'},
+                "content": {"type": "text"}}},
+    }   
+    ]
+    requests_mock.get(url, json=expected_data)
+
+    resp = fusion_obj.list_indexes(catalog=catalog, knowledge_base=knowledge_base, show_details=True)
+
+    df_resp = pd.json_normalize(expected_data)
+    df2 = df_resp.transpose()
+    df2.index = df2.index.map(str)
+    df2.columns = pd.Index(df2.loc["settings.index.provided_name"])
+    df2 = df2.rename(columns=lambda x: x.split("index-")[-1])
+    df2.columns.names = ["index_name"]
+    df2.loc["settings.index.creation_date"] = pd.to_datetime(df2.loc["settings.index.creation_date"], unit="ms")
+    multi_index = [index.split(".", 1) for index in df2.index]
+    df2.index = pd.MultiIndex.from_tuples(multi_index)
+
+    assert all(
+        resp == df2
+    )
+
+
+def test_get_fusion_vector_store_client(fusion_obj: Fusion) -> None:
+    """Test the get_fusion_vector_store_client method."""
+
+    result = fusion_obj.get_fusion_vector_store_client("knowledge_base")
+   
+    assert isinstance(result, OpenSearch)

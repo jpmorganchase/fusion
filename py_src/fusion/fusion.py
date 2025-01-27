@@ -1976,7 +1976,12 @@ class Fusion:
     def get_fusion_vector_store_client(self, knowledge_base: str, catalog: str | None = None) -> OpenSearch:
         """Returns Fusion Embeddings Search client.
 
-        Returns: Fusion Filesystem
+        Args:
+            knowledge_base (str): Knowledge base (dataset) identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            OpenSearch: Fusion Embeddings Search client.
 
         """
         from opensearchpy import OpenSearch

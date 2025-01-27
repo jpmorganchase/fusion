@@ -1009,6 +1009,6 @@ def _format_summary_index_response(response: requests.Response) -> pd.DataFrame:
             }
         )
     summary_df = pd.json_normalize(idices)
-    summary_df.set_index("index_name")
+    summary_df = summary_df.set_index("index_name")
 
     return summary_df.transpose()
