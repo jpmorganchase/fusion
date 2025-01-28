@@ -246,7 +246,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             self.url_prefix = self.url_prefix + self.index_name
 
         if url.split("/")[-1] != self.index_name:
-            url = self.base_url + self.url_prefix + url.split("/")[-1]
+            url = self.base_url + self.url_prefix + "/" + url.split("/")[-1]
         else:
             url = self.base_url + self.url_prefix
         url = self._remap_endpoints(url)

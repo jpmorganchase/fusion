@@ -582,10 +582,9 @@ def test_make_valid_url_different_index(
     )
 
     conn.index_name = "myindex"
-
-    # This URL ends with "otherindex" instead of "myindex"
-    url = "https://example.com/api/v1/otherindex"
-    expected_url = "https://example.com/api/v1/dataspaces/mycatalog/datasets/mykb/indexes/otherindex"
+    conn.url_prefix = conn.url_prefix + "myindex"
+    url = "https://example.com/api/v1/_bulk"
+    expected_url = "https://example.com/api/v1/dataspaces/mycatalog/datasets/mykb/indexes/myindex/embeddings"
 
     modified_url = conn._make_url_valid(url)
     assert modified_url == expected_url
