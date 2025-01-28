@@ -344,7 +344,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         coros = []
         session = await self.set_session()
         for start in range(0, file_size, chunk_size):
-            end = min(start + chunk_size - 1, file_size - 1)
+            end = min(start + chunk_size, file_size)
             task = self._fetch_range(session, url, start, end, output_file)
             coros.append(task)
 

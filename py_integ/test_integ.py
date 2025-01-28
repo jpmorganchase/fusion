@@ -33,7 +33,7 @@ download_hashes = {
         st_dt="20231201",
         end_dt="20231208",
         res_shape=None,
-        md5_hash="6e0e369c8f0f2888bd33f33f494a8bf8",
+        md5_hash="17746f55909185c4fae932128fe09e07",
     ),
     "test_download_parquet": DownloadTestSpec(
         client_dl_params={
@@ -47,7 +47,7 @@ download_hashes = {
         st_dt="20231201",
         end_dt="20231208",
         res_shape=None,
-        md5_hash="6e0e369c8f0f2888bd33f33f494a8bf8",
+        md5_hash="17746f55909185c4fae932128fe09e07",
     ),
     "test_to_df_csv": DownloadTestSpec(
         client_dl_params={"dataset": "FXO_SP", "dataset_format": "csv", "dt_str": "20231201:20231208"},
