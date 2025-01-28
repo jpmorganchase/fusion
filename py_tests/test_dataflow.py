@@ -12,6 +12,7 @@ def test_inputdataflow_class_object_representation() -> None:
     dataflow = InputDataFlow(identifier="my_dataflow", flow_details={"key": "value"})
     assert repr(dataflow)
 
+
 def test_outputdataflow_class_object_representation() -> None:
     """Test the object representation of the Dataflow class."""
     dataflow = OutputDataFlow(identifier="my_dataflow", flow_details={"key": "value"})
@@ -30,9 +31,7 @@ def test_add_registered_attribute(requests_mock: requests_mock.Mocker, fusion_ob
     dataflow_obj = InputDataFlow(identifier="TEST_DATAFLOW")
     dataflow_obj.client = fusion_obj
     resp = dataflow_obj.add_registered_attribute(
-        attribute_identifier="my_attribute",
-        catalog=catalog,
-        return_resp_obj=True
+        attribute_identifier="my_attribute", catalog=catalog, return_resp_obj=True
     )
     assert isinstance(resp, requests.Response)
     status_code = 200

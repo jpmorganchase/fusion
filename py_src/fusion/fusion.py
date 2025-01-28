@@ -413,7 +413,6 @@ class Fusion:
         if status is not None:
             ds_df = ds_df[ds_df["status"] == status]
 
-
         if dataset_type is not None:
             ds_df = ds_df[ds_df["type"] == dataset_type]
 
@@ -466,8 +465,8 @@ class Fusion:
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
         ds_attr_df = Fusion._call_for_dataframe(url, self.session)
-        
-        if "index" in ds_attr_df.columns: 
+
+        if "index" in ds_attr_df.columns:
             ds_attr_df = ds_attr_df.sort_values(by="index").reset_index(drop=True)
 
         if not display_all_columns:
@@ -889,8 +888,7 @@ class Fusion:
 
         if len(files) == 0:
             raise APIResponseError(
-                f"No series members for dataset: {dataset} "
-                f"in date or date range: {dt_str} and format: {dataset_format}"
+                f"No series members for dataset: {dataset} in date or date range: {dt_str} and format: {dataset_format}"
             )
         if dataset_format in ["parquet", "parq"]:
             data_df = pd_reader(files, **pd_read_kwargs)  # type: ignore
@@ -1039,8 +1037,7 @@ class Fusion:
 
         if len(files) == 0:
             raise APIResponseError(
-                f"No series members for dataset: {dataset} "
-                f"in date or date range: {dt_str} and format: {dataset_format}"
+                f"No series members for dataset: {dataset} in date or date range: {dt_str} and format: {dataset_format}"
             )
         if dataset_format in ["parquet", "parq"]:
             tbl = reader(files, **read_kwargs)  # type: ignore
@@ -2225,7 +2222,7 @@ class Fusion:
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
             producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
                 producing the flow).
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application 
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application
                 ID (downstream application, consuming the flow).
             flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
                 Defaults to {"flowDirection": "Input"}.
@@ -2376,7 +2373,7 @@ class Fusion:
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
             producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
                 producing the flow).
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application 
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application
                 ID (downstream application, consuming the flow).
             flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
                 Defaults to {"flowDirection": "Output"}.

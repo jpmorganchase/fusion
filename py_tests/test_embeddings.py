@@ -1,4 +1,5 @@
 """Test for embeddings module."""
+
 from __future__ import annotations
 
 from typing import Literal
@@ -86,7 +87,7 @@ def test_fusion_embeddings_connection_wrong_creds() -> None:
 
     with pytest.raises(
         ValueError, match="credentials must be a path to a credentials file or FusionCredentials object"
-        ):
+    ):
         FusionEmbeddingsConnection(
             host="localhost",
             port=9200,
@@ -188,6 +189,7 @@ def test_list_tasks() -> None:
     assert "task_a" in tasks
     assert "task_b" in tasks
 
+
 def test_list_packages() -> None:
     manager = PromptTemplateManager()
     manager.add_template("pkg_one", "task_a", "Template A")
@@ -198,6 +200,7 @@ def test_list_packages() -> None:
     assert "pkg_one" in packages
     assert "pkg_two" in packages
 
+
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
 def test_clears_session_headers_on_init(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
@@ -206,41 +209,46 @@ def test_clears_session_headers_on_init(mock_from_file: MagicMock, mock_get_sess
     mock_from_file.return_value = mock_credentials
     mock_session = MagicMock()
     mock_get_session.return_value = mock_session
-    mock_session.headers = {"X-Test" :"test-value"}
+    mock_session.headers = {"X-Test": "test-value"}
 
     conn = FusionEmbeddingsConnection(
-            host="localhost",
-            root_url="https://example.com/api",
-            credentials="some_credentials_file.json"
-        )
+        host="localhost", root_url="https://example.com/api", credentials="some_credentials_file.json"
+    )
 
     assert not conn.session.headers.get("X-Test"), "Session headers should be cleared on init"
 
 
-@pytest.mark.parametrize(("input_auth", "expected"), [
-    (("user", "pass"), ("user", "pass")),
-    (["user", "pass"], ("user", "pass")),
-    (b"user:pass", ("user", "pass")),
-    ("user:pass", ("user", "pass")),
-])
+@pytest.mark.parametrize(
+    ("input_auth", "expected"),
+    [
+        (("user", "pass"), ("user", "pass")),
+        (["user", "pass"], ("user", "pass")),
+        (b"user:pass", ("user", "pass")),
+        ("user:pass", ("user", "pass")),
+    ],
+)
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
 def test_fusion_embeddings_connection_http_auth(
     mock_from_file: MagicMock,  # noqa: ARG001
     mock_get_session: MagicMock,  # noqa: ARG001
     input_auth: tuple[str, str] | list[str] | Literal[b"user:pass", "user:pass"],
-    expected: tuple[str, str]
+    expected: tuple[str, str],
 ) -> None:
     conn = FusionEmbeddingsConnection(
-            host="localhost",
-            http_auth=input_auth,
-        )
+        host="localhost",
+        http_auth=input_auth,
+    )
     # Verify that the `session.auth` was set to a tuple
     assert conn.session.auth == expected
 
+
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
-def test_fusion_embeddings_connection_wrong_inputs(mock_from_file: MagicMock, mock_get_session: MagicMock,) -> None:
+def test_fusion_embeddings_connection_wrong_inputs(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+) -> None:
     """Test for FusionEmbeddingsConnection class."""
 
     mock_credentials = MagicMock(spec=FusionCredentials)
@@ -248,9 +256,7 @@ def test_fusion_embeddings_connection_wrong_inputs(mock_from_file: MagicMock, mo
     mock_session = MagicMock()
     mock_get_session.return_value = mock_session
 
-    with pytest.raises(
-        ImproperlyConfigured, match="You cannot pass CA certificates when verify SSL is off."
-        ):
+    with pytest.raises(ImproperlyConfigured, match="You cannot pass CA certificates when verify SSL is off."):
         FusionEmbeddingsConnection(
             host="localhost",
             port=9200,
@@ -274,7 +280,10 @@ def test_fusion_embeddings_connection_wrong_inputs(mock_from_file: MagicMock, mo
 
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
-def test_fusion_embeddings_connection_ssl_warning(mock_from_file: MagicMock, mock_get_session: MagicMock,) -> None:
+def test_fusion_embeddings_connection_ssl_warning(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+) -> None:
     """Test for FusionEmbeddingsConnection class."""
 
     mock_credentials = MagicMock(spec=FusionCredentials)
@@ -284,7 +293,7 @@ def test_fusion_embeddings_connection_ssl_warning(mock_from_file: MagicMock, moc
 
     with pytest.warns(
         UserWarning, match="Connecting to https://localhost:9200 using SSL with verify_certs=False is insecure."
-        ):
+    ):
         FusionEmbeddingsConnection(
             host="localhost",
             port=9200,
@@ -311,7 +320,7 @@ def test_fusion_embeddings_connection_ssl_warning(mock_from_file: MagicMock, moc
         (
             "https://example.com/api/v1/",
             "%2F%7Bmyindex%7D%2F_test%2Fmock%2F",
-            "https://example.com/api/v1/myindex/_test/mock/"
+            "https://example.com/api/v1/myindex/_test/mock/",
         )
     ],
 )
@@ -320,22 +329,21 @@ def test_fusion_embeddings_connection_ssl_warning(mock_from_file: MagicMock, moc
 def test_fusion_embeddings_connection_tidy_url(
     mock_from_file: MagicMock,
     mock_get_session: MagicMock,
-    base_url:  Literal["https://example.com/api/v1/"],
-    raw_url:Literal["/%2F%7Bmyindex%7D%2F_test%2Fmock%2F"],
+    base_url: Literal["https://example.com/api/v1/"],
+    raw_url: Literal["/%2F%7Bmyindex%7D%2F_test%2Fmock%2F"],
     expected_url: Literal["https://example.com/api/v1/myindex/_test/mock/"],
 ) -> None:
-    
     mock_credentials = MagicMock(spec=FusionCredentials)
     mock_from_file.return_value = mock_credentials
     mock_session = MagicMock()
     mock_get_session.return_value = mock_session
-    
+
     conn = FusionEmbeddingsConnection(
         host="localhost",
         root_url=base_url,
         credentials="dummy_credentials.json",
     )
-    
+
     tidied = conn._tidy_url(raw_url)
     assert tidied == expected_url
 
@@ -346,12 +354,11 @@ def test_fusion_embeddings_connection_remap_url(
     mock_from_file: MagicMock,
     mock_get_session: MagicMock,
 ) -> None:
-    
     mock_credentials = MagicMock(spec=FusionCredentials)
     mock_from_file.return_value = mock_credentials
     mock_session = MagicMock()
     mock_get_session.return_value = mock_session
-    
+
     conn = FusionEmbeddingsConnection(
         host="localhost",
         credentials="dummy_credentials.json",
@@ -370,12 +377,11 @@ def test_modify_post_response_langchain(
     mock_from_file: MagicMock,
     mock_get_session: MagicMock,
 ) -> None:
-    
     mock_credentials = MagicMock(spec=FusionCredentials)
     mock_from_file.return_value = mock_credentials
     mock_session = MagicMock()
     mock_get_session.return_value = mock_session
-    
+
     conn = FusionEmbeddingsConnection(
         host="localhost",
         credentials="dummy_credentials.json",
@@ -449,12 +455,11 @@ def test_modify_post_haystack(
     mock_from_file: MagicMock,
     mock_get_session: MagicMock,
 ) -> None:
-    
     mock_credentials = MagicMock(spec=FusionCredentials)
     mock_from_file.return_value = mock_credentials
     mock_session = MagicMock()
     mock_get_session.return_value = mock_session
-    
+
     conn = FusionEmbeddingsConnection(
         host="localhost",
         credentials="dummy_credentials.json",
@@ -467,9 +472,7 @@ def test_modify_post_haystack(
         b'{"query":{"bool":{"must":[{"knn":{"vector":{"vector":[0.1,0.2,0.3,0.4,0.5],"k":5}}}]}},'
         b'"size":10,"_source":{"excludes":["embedding"]}}'
     )
-    modified_data = conn._modify_post_haystack(
-        raw_data, "post"
-    )
+    modified_data = conn._modify_post_haystack(raw_data, "post")
     modified_data = conn._modify_post_haystack(raw_data, "post")
 
     assert modified_data == exp_data
@@ -491,35 +494,27 @@ def test_modify_post_haystack_json_decode_error(caplog: pytest.LogCaptureFixture
     assert "An error occurred during modification of haystack POST body:" in caplog.text
 
 
-
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
 def test_modify_post_haystack_no_query(
     mock_from_file: MagicMock,
     mock_get_session: MagicMock,
 ) -> None:
-    
     mock_credentials = MagicMock(spec=FusionCredentials)
     mock_from_file.return_value = mock_credentials
     mock_session = MagicMock()
     mock_get_session.return_value = mock_session
-    
+
     conn = FusionEmbeddingsConnection(
         host="localhost",
         credentials="dummy_credentials.json",
     )
     raw_data = (
-        b'{"create":{"_id":"sjdkfs"}}\n'
-        b'{"id":"sjdkfs","content":"This is a test","embedding":[0.1,0.2,0.3,0.4,0.5]}'
+        b'{"create":{"_id":"sjdkfs"}}\n{"id":"sjdkfs","content":"This is a test","embedding":[0.1,0.2,0.3,0.4,0.5]}'
     )
-    exp_data = (
-        b'{"create":{"_id":"sjdkfs"}}\n'
-        b'{"id":"sjdkfs","content":"This is a test","vector":[0.1,0.2,0.3,0.4,0.5]}'
-    )
+    exp_data = b'{"create":{"_id":"sjdkfs"}}\n{"id":"sjdkfs","content":"This is a test","vector":[0.1,0.2,0.3,0.4,0.5]}'
 
-    modified_data = conn._modify_post_haystack(
-        raw_data, "post"
-    )
+    modified_data = conn._modify_post_haystack(raw_data, "post")
 
     assert modified_data == exp_data
 
@@ -546,12 +541,11 @@ def test_make_valid_url(
     mock_from_file: MagicMock,
     mock_get_session: MagicMock,
 ) -> None:
-    
     mock_credentials = MagicMock(spec=FusionCredentials)
     mock_from_file.return_value = mock_credentials
     mock_session = MagicMock()
     mock_get_session.return_value = mock_session
-    
+
     conn = FusionEmbeddingsConnection(
         host="localhost",
         credentials="dummy_credentials.json",
@@ -661,12 +655,13 @@ def test_perform_request_compression(mock_from_file: MagicMock, mock_get_session
     mock_get_session.return_value = mock_session
 
     conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json", http_compress=True)
-    
+
     body_data = b'{"test": "data"}'
 
     result = conn.perform_request("POST", url="http://example.com/test", body=body_data)
-    
+
     assert result[1].get("content-encoding") == "gzip"
+
 
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
@@ -688,10 +683,7 @@ def test_perform_request_reraise_exceptions(mock_from_file: MagicMock, mock_get_
 
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
-def test_perform_request_reraise_exceptions_recursion(
-    mock_from_file: MagicMock,
-    mock_get_session: MagicMock
-) -> None:
+def test_perform_request_reraise_exceptions_recursion(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
     """
     Test that a RecursionError is re-raised, covering
     'except reraise_exceptions: raise'.
@@ -765,9 +757,7 @@ def test_perform_request_other_exception(mock_from_file: MagicMock, mock_get_ses
 @patch("fusion.embeddings.FusionCredentials.from_file")
 @patch("fusion.embeddings.FusionEmbeddingsConnection.log_request_fail")
 def test_perform_request_failure_status(
-    mock_log_fail: MagicMock,
-    mock_from_file: MagicMock,
-    mock_get_session: MagicMock
+    mock_log_fail: MagicMock, mock_from_file: MagicMock, mock_get_session: MagicMock
 ) -> None:
     """
     Test that a 400 response outside the 200 range and not in ignore
@@ -794,10 +784,7 @@ def test_perform_request_failure_status(
 
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
-def test_headers_property(
-    mock_from_file: MagicMock,
-    mock_get_session: MagicMock
-) -> None:
+def test_headers_property(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
     """Test that setting the headers updates the session headers."""
     mock_credentials = MagicMock(spec=FusionCredentials)
     mock_from_file.return_value = mock_credentials
@@ -815,10 +802,7 @@ def test_headers_property(
 
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
-def test_close(
-    mock_from_file: MagicMock,
-    mock_get_session: MagicMock
-) -> None:
+def test_close(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
     """Test that close() calls session.close()."""
     mock_credentials = MagicMock(spec=FusionCredentials)
     mock_from_file.return_value = mock_credentials

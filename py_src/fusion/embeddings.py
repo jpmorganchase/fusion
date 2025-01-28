@@ -198,9 +198,8 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
                 logger.exception(f"An error occurred during modification of langchain POST response: {e}")
 
                 return raw_data.decode("utf-8", errors="ignore") if isinstance(raw_data, bytes) else raw_data
-        
+
         return raw_data
-    
 
     @staticmethod
     def _modify_post_haystack(body: bytes | None, method: str) -> bytes | None:
@@ -216,7 +215,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         """
         if method.lower() == "post":
             body_str = body.decode("utf-8") if body else ""
-            
+
             if "query" in body_str:
                 try:
                     query_dict = json.loads(body_str)
@@ -267,7 +266,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
     ) -> Any:
         if method.lower() == "put":
             method = "POST"
-    
+
         url = self._tidy_url(url)
         url = self._make_url_valid(url)
 
@@ -283,7 +282,6 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         if self.http_compress and body:
             body = self._gzip_compress(body)
             headers["content-encoding"] = "gzip"  # type: ignore
-
 
         start = time.time()
         request = requests.Request(method=method, headers=headers, url=url, data=body)
@@ -408,16 +406,22 @@ class PromptTemplateManager:
 
         self._load_default_templates()
 
-    
     def _load_default_templates(self) -> None:
         """Load default prompt templates."""
-        self.add_template("langchain", "RAG", """Given the following information, answer the question.
+        self.add_template(
+            "langchain",
+            "RAG",
+            """Given the following information, answer the question.
         
         {context}
 
-        Question: {question}""")
+        Question: {question}""",
+        )
 
-        self.add_template("haystack", "RAG", """
+        self.add_template(
+            "haystack",
+            "RAG",
+            """
         Given the following information, answer the question.
         
         Context:
@@ -427,7 +431,8 @@ class PromptTemplateManager:
 
         Question: {{question}}
         Answer:
-        """)
+        """,
+        )
 
     def add_template(self, package: str, task: str, template: str) -> None:
         """Add a new template to the manager.
@@ -450,7 +455,6 @@ class PromptTemplateManager:
             str: Template string.
         """
         return self.templates.get((package, task), "")
-    
 
     def remove_template(self, package: str, task: str) -> None:
         """Remove the template for the given package and task.
@@ -461,7 +465,6 @@ class PromptTemplateManager:
         """
         self.templates.pop((package, task), None)
 
-    
     def list_tasks(self, package: str) -> list[str]:
         """List all tasks for the given package.
 
@@ -472,7 +475,6 @@ class PromptTemplateManager:
             list[str]: List of tasks.
         """
         return [task for (pkg, task) in self.templates if pkg == package]
-    
 
     def list_packages(self) -> list[str]:
         """List all packages.

@@ -87,11 +87,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 self._raise_not_found_for_status(response, url)
 
     async def _decorate_url_a(self, url: str) -> str:
-        url = urljoin(f'{self.client_kwargs["root_url"]}catalogs/', url) if "http" not in url else url
+        url = urljoin(f"{self.client_kwargs['root_url']}catalogs/", url) if "http" not in url else url
         return url
 
     def _decorate_url(self, url: str) -> str:
-        url = urljoin(f'{self.client_kwargs["root_url"]}catalogs/', url) if "http" not in url else url
+        url = urljoin(f"{self.client_kwargs['root_url']}catalogs/", url) if "http" not in url else url
         url = url[:-1] if url[-1] == "/" else url
         return url
 
@@ -124,7 +124,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         # ignoring URL-encoded arguments
         clean_url = url
         if "http" not in url:
-            url = f'{self.client_kwargs["root_url"]}catalogs/' + url
+            url = f"{self.client_kwargs['root_url']}catalogs/" + url
         kw = self.kwargs.copy()
         kw.update(kwargs)
         session = await self.set_session()
@@ -216,10 +216,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if detail:
             if not keep_protocol:
                 for k in ret:
-                    k["name"] = k["name"].split(f'{self.client_kwargs["root_url"]}catalogs/')[-1]
+                    k["name"] = k["name"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1]
 
         elif not keep_protocol:
-            return [x.split(f'{self.client_kwargs["root_url"]}catalogs/')[-1] for x in ret]
+            return [x.split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
 
         return ret
 
@@ -285,7 +285,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
 
         async def fetch() -> None:
-            async with session.get(url + f"?downloadRange=bytes={start}-{end-1}", **self.kwargs) as response:
+            async with session.get(url + f"?downloadRange=bytes={start}-{end - 1}", **self.kwargs) as response:
                 if response.status in [200, 206]:
                     chunk = await response.read()
                     output_file.seek(start)
@@ -565,7 +565,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 i = 0
                 while chunk:
                     kw = self.kwargs.copy()
-                    url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
+                    url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i + 1}"
                     kw.update({"headers": kwargs["chunk_headers_lst"][i]})
                     kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
                     async with meth(url=url, data=chunk, **kw) as resp:
@@ -725,7 +725,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 kw = self.kwargs.copy()
                 kw.update({"headers": headers_chunks})
                 kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
-                url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i+1}"
+                url = rpath + f"/operations/upload?operationId={operation_id}&partNumber={i + 1}"
                 yield sync(self.loop, _meth, url, kw)
                 i += 1
                 callback.relative_update(len(chunk))
@@ -939,7 +939,7 @@ class FusionFile(HTTPFile):  # type: ignore
         logger.debug(f"Fetch range for {self}: {start}-{end}")
         kwargs = self.kwargs.copy()
         headers = kwargs.pop("headers", {}).copy()
-        url = self.url + f"/operationType/download?downloadRange=bytes={start}-{end-1}"
+        url = self.url + f"/operationType/download?downloadRange=bytes={start}-{end - 1}"
         logger.debug(str(url))
         r = await self.session.get(self.fs.encode_url(url), headers=headers, **kwargs)
         async with r:

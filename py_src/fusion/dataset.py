@@ -67,7 +67,7 @@ class Dataset(metaclass=CamelCaseMeta):
         is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
         is_active (bool | None, optional): is_active. Defaults to None.
         owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-        application_id (str | dict[str, str] | None, optional): The application (most commonly seal ID) that the 
+        application_id (str | dict[str, str] | None, optional): The application (most commonly seal ID) that the
             dataset/report/flow is owned by. Accepts string format for seal IDs, or a dictionary containing 'id' and
             'type' as keys. Defaults to None.
         _client (Any, optional): A Fusion client object. Defaults to None.
@@ -584,7 +584,6 @@ class Dataset(metaclass=CamelCaseMeta):
 
         if data.get("report", None) and data["report"]["tier"] == "":
             raise ValueError("Tier cannot be blank for reports.")
-
 
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
         resp: requests.Response = client.session.post(url, json=data)

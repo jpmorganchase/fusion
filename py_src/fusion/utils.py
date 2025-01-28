@@ -593,9 +593,7 @@ def distribution_to_url(
             f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
             f"{datasetseries}/distributions/{file_format}/operationType/download"
         )
-    return (
-        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/" f"{datasetseries}/distributions/{file_format}"
-    )
+    return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
 
 
 def _get_canonical_root_url(any_url: str) -> str:
