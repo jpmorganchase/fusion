@@ -50,6 +50,11 @@ class Attribute(metaclass=CamelCaseMeta):
         term (str, optional): Term. Defaults to "bizterm1".
         dataset (int | None, optional): Dataset. Defaults to None.
         attribute_type (str | None, optional): Attribute type. Defaults to None.
+        application_id (str | dict[str, str] | None, optional): The seal ID of the dataset in string format,
+            or a dictionary containing 'id' and 'type'. Used for catalog attributes. Defaults to None.
+        publisher (str | None, optional): Publisher of the attribute. Used for catalog attributes. Defaults to None.
+        is_key_data_element (bool | None, optional): Flag for key data elements. Used for attributes registered to
+            Reports. Defaults to None.
         _client (Fusion | None, optional): Fusion client object. Defaults to None.
 
     """
@@ -64,7 +69,7 @@ class Attribute(metaclass=CamelCaseMeta):
     source_field_id: str | None = None
     is_internal_dataset_key: bool | None = None
     is_externally_visible: bool | None = True
-    unit: Any | None = None  # add units handling
+    unit: Any | None = None
     multiplier: float = 1.0
     is_propagation_eligible: bool | None = None
     is_metric: bool | None = None
@@ -73,6 +78,9 @@ class Attribute(metaclass=CamelCaseMeta):
     term: str = "bizterm1"
     dataset: int | None = None
     attribute_type: str | None = None
+    application_id: str | dict[str, str] | None = None
+    publisher: str | None = None
+    is_key_data_element: bool | None = None
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
@@ -98,6 +106,11 @@ class Attribute(metaclass=CamelCaseMeta):
         self.available_from = convert_date_format(self.available_from) if self.available_from else None
         self.deprecated_from = convert_date_format(self.deprecated_from) if self.deprecated_from else None
         self.data_type = Types[str(self.data_type).strip().rsplit(".", maxsplit=1)[-1].title()]
+        self.application_id = (
+            {"id": str(self.application_id), "type": "Application (SEAL)"}
+            if isinstance(self.application_id, str)
+            else self.application_id
+        )
 
     def __getattr__(self, name: str) -> Any:
         # Redirect attribute access to the snake_case version
@@ -320,6 +333,8 @@ class Attribute(metaclass=CamelCaseMeta):
         result = {snake_to_camel(k): v for k, v in self.__dict__.items() if not k.startswith("_")}
         result["unit"] = str(self.unit) if self.unit is not None else None
         result["dataType"] = self.data_type.name
+        if "isKeyDataElement" in result:
+            result["isCriticalDataElement"] = result.pop("isKeyDataElement")
         return result
 
     def create(
@@ -419,6 +434,69 @@ class Attribute(metaclass=CamelCaseMeta):
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{self.identifier}"
         resp = client.session.delete(url)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
+    
+    def set_lineage(
+        self,
+        attributes: list[Attribute],
+        catalog: str | None = None,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Map an attribute to existing registered attributes in a Fusion catalog. Attributes from an output data flow
+            can be mapped to existing registered input data flow attributes. This supports the case in which the
+            generating application and receiving application store their attributes with different names.
+
+        Args:
+            attributes (str): List of Attribute objects to establish upstream lineage from.
+            client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
+                If instantiated from a Fusion object, then the client is set automatically.
+            catalog (str, optional): A catalog identifier. Defaults to None.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
+
+        Returns:
+            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> my_attr1 = fusion.attribute(identifier="my_attribute1", index=0, application_id="12345")
+            >>> my_attr2 = fusion.attribute(identifier="my_attribute2", index=0, application_id="12345")
+            >>> my_attr3 = fusion.attribute(identifier="my_attribute3", index=0, application_id="12345")
+            >>> attrs = [my_attr1, my_attr2]
+            >>> my_attr3.set_lineage(attributes=attrs, catalog="my_catalog")
+
+        """
+        client = self._use_client(client)
+        catalog = client._use_catalog(catalog)
+
+        if self.application_id is None:
+            raise ValueError("The 'application_id' attribute is required for setting lineage.")
+        target_attributes = []
+        for attribute in attributes:
+            if attribute.application_id is None:
+                raise ValueError(f"The 'application_id' attribute is required for setting lineage.")
+            attr_dict = {
+                    "catalog": catalog,
+                    "attribute": attribute.identifier,
+                    "applicationId": attribute.application_id
+                }
+            target_attributes.append(attr_dict)
+
+        url = f"{client.root_url}catalogs/{catalog}/attributes/lineage"
+        data = [
+            {
+                "source": {
+                    "catalog": catalog,
+                    "attribute": self.identifier,
+                    "applicationId": self.application_id
+            },
+            "targets": target_attributes
+        }
+        ]
+        resp = client.session.post(url, json=data)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
@@ -732,12 +810,13 @@ class Attributes:
 
     def create(
         self,
-        dataset: str,
+        dataset: str | None = None,
         catalog: str | None = None,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Upload the Attributes  to a dataset in a Fusion catalog.
+        """Upload the Attributes to a dataset in a Fusion catalog. If no dataset is provided,
+            attributes are registered to the catalog.
 
         Args:
             dataset (str): Dataset identifier.
@@ -799,14 +878,34 @@ class Attributes:
             >>> attributes = fusion.attributes().from_catalog(dataset="my_dataset", catalog="my_catalog")
             >>> attributes.create(dataset="my_new_dataset", catalog="my_catalog")
 
+            Register attributes to a catalog:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attribute = fusion.attribute(identifier="my_attribute", index=0, application_id="123", publisher="JPM")
+            >>> attributes = fusion.attributes(attributes=[attribute])
+            >>> attributes.create(catalog="my_catalog")
+
         """
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         data = self.to_dict()
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
-        resp = client.session.put(url, json=data)
-        requests_raise_for_status(resp)
-        return resp if return_resp_obj else None
+        if dataset:
+            url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
+            resp = client.session.put(url, json=data)
+            requests_raise_for_status(resp)
+            return resp if return_resp_obj else None
+        else:
+            for attr in self.attributes:
+                if attr.publisher is None:
+                    raise ValueError("The 'publisher' attribute is required for catalog attributes.")
+                if attr.application_id is None:
+                    raise ValueError("The 'application_id' attribute is required for catalog attributes.")
+            url = f"{client.root_url}catalogs/{catalog}/attributes"
+            data_ = data.get("attributes", None)
+            resp = client.session.post(url, json=data_)
+            requests_raise_for_status(resp)
+            return resp if return_resp_obj else None
 
     def delete(
         self,

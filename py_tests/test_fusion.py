@@ -1408,6 +1408,245 @@ def test_fusion_delete_all_datasetmembers(requests_mock: requests_mock.Mocker, f
     assert resp.status_code == status_code
 
 
+def test_list_registered_attributes(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list registered attributes."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes"
+    core_cols = [
+        "identifier",
+        "title",
+        "dataType",
+        "publisher",
+        "description",
+        "applicationId",
+    ]
+
+    server_mock_data = {
+        "resources": [
+            {
+                "identifier": "attr_1",
+                "title": "some title",
+                "dataType": "string",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+                "catalog": {"@id": "12345/", "description": "catalog"},
+            },
+            {
+                "identifier": "attr_2",
+                "title": "some title",
+                "dataType": "int",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+                "catalog": {"@id": "12345/", "description": "catalog"},
+            },
+        ]
+    }
+    expected_data = {
+        "resources": [
+            {
+                "identifier": "attr_1",
+                "title": "some title",
+                "dataType": "string",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+            },
+            {
+                "identifier": "attr_2",
+                "title": "some title",
+                "dataType": "int",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+            },
+        ]
+    }
+
+    expected_df = pd.DataFrame(expected_data["resources"])
+
+    requests_mock.get(url, json=server_mock_data)
+
+    # Call the catalog_resources method
+    test_df = fusion_obj.list_registered_attributes(catalog=catalog)
+    # Check if the dataframe is created correctly
+    pd.testing.assert_frame_equal(test_df, expected_df)
+    assert all(col in core_cols for col in test_df.columns)
+
+
+def test_fusion_report(fusion_obj: Fusion) -> None:
+    """Test Fusion Report class from client"""
+    test_report = fusion_obj.report(
+        title="Test Report",
+        identifier="Test Report",
+        category="Test",
+        application_id="12345",
+        report = {"tier": "tier"}
+    )
+
+    assert str(test_report)
+    assert repr(test_report)
+    assert test_report.title == "Test Report"
+    assert test_report.identifier == "TEST_REPORT"
+    assert test_report.category == ["Test"]
+    assert test_report.description == "Test Report"
+    assert test_report.frequency == "Once"
+    assert test_report.is_internal_only_dataset is False
+    assert test_report.is_third_party_data is True
+    assert test_report.is_restricted is None
+    assert test_report.is_raw_data is True
+    assert test_report.maintainer == "J.P. Morgan Fusion"
+    assert test_report.source is None
+    assert test_report.region is None
+    assert test_report.publisher == "J.P. Morgan"
+    assert test_report.product is None
+    assert test_report.sub_category is None
+    assert test_report.tags is None
+    assert test_report.created_date is None
+    assert test_report.modified_date is None
+    assert test_report.delivery_channel == ["API"]
+    assert test_report.language == "English"
+    assert test_report.status == "Available"
+    assert test_report.type_ == "Report"
+    assert test_report.container_type == "Snapshot-Full"
+    assert test_report.snowflake is None
+    assert test_report.complexity is None
+    assert test_report.is_immutable is None
+    assert test_report.is_mnpi is None
+    assert test_report.is_pii is None
+    assert test_report.is_pci is None
+    assert test_report.is_client is None
+    assert test_report.is_public is None
+    assert test_report.is_internal is None
+    assert test_report.is_confidential is None
+    assert test_report.is_highly_confidential is None
+    assert test_report.is_active is None
+    assert test_report.client == fusion_obj
+    assert test_report.application_id == {"id": "12345", "type": "Application (SEAL)"}
+    assert test_report.report == {"tier": "tier"}
+    assert test_report._client == fusion_obj
+    assert test_report.owners is None
+
+
+def test_fusion_input_dataflow(fusion_obj: Fusion) -> None:
+    """Test Fusion Input Dataflow class from client"""
+    test_input_dataflow = fusion_obj.input_dataflow(
+        title="Test Input Dataflow",
+        identifier="Test Input Dataflow",
+        category="Test",
+        application_id="12345",
+        producer_application_id={"id": "12345", "type": "Application (SEAL)"},
+        consumer_application_id={"id": "12345", "type": "Application (SEAL)"},
+    )
+
+    assert str(test_input_dataflow)
+    assert repr(test_input_dataflow)
+    assert test_input_dataflow.title == "Test Input Dataflow"
+    assert test_input_dataflow.identifier == "TEST_INPUT_DATAFLOW"
+    assert test_input_dataflow.category == ["Test"]
+    assert test_input_dataflow.description == "Test Input Dataflow"
+    assert test_input_dataflow.frequency == "Once"
+    assert test_input_dataflow.is_internal_only_dataset is False
+    assert test_input_dataflow.is_third_party_data is True
+    assert test_input_dataflow.is_restricted is None
+    assert test_input_dataflow.is_raw_data is True
+    assert test_input_dataflow.maintainer == "J.P. Morgan Fusion"
+    assert test_input_dataflow.source is None
+    assert test_input_dataflow.region is None
+    assert test_input_dataflow.publisher == "J.P. Morgan"
+    assert test_input_dataflow.product is None
+    assert test_input_dataflow.sub_category is None
+    assert test_input_dataflow.tags is None
+    assert test_input_dataflow.created_date is None
+    assert test_input_dataflow.modified_date is None
+    assert test_input_dataflow.delivery_channel == ["API"]
+    assert test_input_dataflow.language == "English"
+    assert test_input_dataflow.status == "Available"
+    assert test_input_dataflow.type_ == "Flow"
+    assert test_input_dataflow.container_type == "Snapshot-Full"
+    assert test_input_dataflow.snowflake is None
+    assert test_input_dataflow.complexity is None
+    assert test_input_dataflow.is_immutable is None
+    assert test_input_dataflow.is_mnpi is None
+    assert test_input_dataflow.is_pii is None
+    assert test_input_dataflow.is_pci is None
+    assert test_input_dataflow.is_client is None
+    assert test_input_dataflow.is_public is None
+    assert test_input_dataflow.is_internal is None
+    assert test_input_dataflow.is_confidential is None
+    assert test_input_dataflow.is_highly_confidential is None
+    assert test_input_dataflow.is_active is None
+    assert test_input_dataflow.client == fusion_obj
+    assert test_input_dataflow.application_id == {"id": "12345", "type": "Application (SEAL)"}
+    assert test_input_dataflow.producer_application_id == {"id": "12345", "type": "Application (SEAL)"}
+    assert test_input_dataflow.consumer_application_id == [{"id": "12345", "type": "Application (SEAL)"}]
+    assert test_input_dataflow.flow_details == {"flowDirection": "Input"}
+
+
+def test_fusion_output_dataflow(fusion_obj: Fusion) -> None:
+    """Test Fusion Output Dataflow class from client"""
+    test_output_dataflow = fusion_obj.output_dataflow(
+        title="Test Output Dataflow",
+        identifier="Test Output Dataflow",
+        category="Test",
+        application_id="12345",
+        producer_application_id={"id": "12345", "type": "Application (SEAL)"},
+        consumer_application_id={"id": "12345", "type": "Application (SEAL)"},
+    )
+
+    assert str(test_output_dataflow)
+    assert repr(test_output_dataflow)
+    assert test_output_dataflow.title == "Test Output Dataflow"
+    assert test_output_dataflow.identifier == "TEST_OUTPUT_DATAFLOW"
+    assert test_output_dataflow.category == ["Test"]
+    assert test_output_dataflow.description == "Test Output Dataflow"
+    assert test_output_dataflow.frequency == "Once"
+    assert test_output_dataflow.is_internal_only_dataset is False
+    assert test_output_dataflow.is_third_party_data is True
+    assert test_output_dataflow.is_restricted is None
+    assert test_output_dataflow.is_raw_data is True
+    assert test_output_dataflow.maintainer == "J.P. Morgan Fusion"
+    assert test_output_dataflow.source is None
+    assert test_output_dataflow.region is None
+    assert test_output_dataflow.publisher == "J.P. Morgan"
+    assert test_output_dataflow.product is None
+    assert test_output_dataflow.sub_category is None
+    assert test_output_dataflow.tags is None
+    assert test_output_dataflow.created_date is None
+    assert test_output_dataflow.modified_date is None
+    assert test_output_dataflow.delivery_channel == ["API"]
+    assert test_output_dataflow.language == "English"
+    assert test_output_dataflow.status == "Available"
+    assert test_output_dataflow.type_ == "Flow"
+    assert test_output_dataflow.container_type == "Snapshot-Full"
+    assert test_output_dataflow.snowflake is None
+    assert test_output_dataflow.complexity is None
+    assert test_output_dataflow.is_immutable is None
+    assert test_output_dataflow.is_mnpi is None
+    assert test_output_dataflow.is_pii is None
+    assert test_output_dataflow.is_pci is None
+    assert test_output_dataflow.is_client is None
+    assert test_output_dataflow.is_public is None
+    assert test_output_dataflow.is_internal is None
+    assert test_output_dataflow.is_confidential is None
+    assert test_output_dataflow.application_id == {"id": "12345", "type": "Application (SEAL)"}
+    assert test_output_dataflow.producer_application_id == {"id": "12345", "type": "Application (SEAL)"}
+    assert test_output_dataflow.consumer_application_id == [{"id": "12345", "type": "Application (SEAL)"}]
+    assert test_output_dataflow.flow_details == {"flowDirection": "Output"}
+    assert test_output_dataflow.client == fusion_obj
+
+
+def test_fusion_delete_all_datasetmembers(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test delete datasetmembers"""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+    requests_mock.delete(url, status_code=200)
+
+    resp = fusion_obj.delete_all_datasetmembers(dataset, catalog=catalog, return_resp_obj=True)
+    status_code = 200
+    assert resp is not None
+    assert isinstance(resp, requests.Response)
+    assert resp.status_code == status_code
+
+
 def test_list_indexes_summary(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test list indexes from client."""
     catalog = "my_catalog"

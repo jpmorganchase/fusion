@@ -67,8 +67,9 @@ class Dataset(metaclass=CamelCaseMeta):
         is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
         is_active (bool | None, optional): is_active. Defaults to None.
         owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-        application_id (str | dict[str, str] | None, optional): The seal ID of the dataset in string format,
-            or a dictionary containing 'id' and 'type'. Defaults to None.
+        application_id (str | dict[str, str] | None, optional): The application (most commonly seal ID) that the 
+            dataset/report/flow is owned by. Accepts string format for seal IDs, or a dictionary containing 'id' and
+            'type' as keys. Defaults to None.
         _client (Any, optional): A Fusion client object. Defaults to None.
 
     """
@@ -324,9 +325,9 @@ class Dataset(metaclass=CamelCaseMeta):
         data = pd.read_csv(file_path)
 
         return (
-            Dataset._from_series(data[data["identifier"] == identifier].reset_index(drop=True).iloc[0])
+            cls._from_series(data[data["identifier"] == identifier].reset_index(drop=True).iloc[0])
             if identifier
-            else Dataset._from_series(data.reset_index(drop=True).iloc[0])
+            else cls._from_series(data.reset_index(drop=True).iloc[0])
         )
 
     def from_object(
@@ -407,14 +408,14 @@ class Dataset(metaclass=CamelCaseMeta):
         if isinstance(dataset_source, Dataset):
             dataset = dataset_source
         elif isinstance(dataset_source, dict):
-            dataset = Dataset._from_dict(dataset_source)
+            dataset = self._from_dict(dataset_source)
         elif isinstance(dataset_source, str):
             if _is_json(dataset_source):
-                dataset = Dataset._from_dict(js.loads(dataset_source))
+                dataset = self._from_dict(js.loads(dataset_source))
             else:
-                dataset = Dataset._from_csv(dataset_source)
+                dataset = self._from_csv(dataset_source)
         elif isinstance(dataset_source, pd.Series):
-            dataset = Dataset._from_series(dataset_source)
+            dataset = self._from_series(dataset_source)
         else:
             raise TypeError(f"Could not resolve the object provided: {dataset_source}")
 
@@ -447,7 +448,7 @@ class Dataset(metaclass=CamelCaseMeta):
         requests_raise_for_status(resp)
         list_datasets = resp.json()["resources"]
         dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset][0]
-        dataset_obj = Dataset._from_dict(dict_)
+        dataset_obj = self._from_dict(dict_)
         dataset_obj.client = client
 
         prod_df = client.list_product_dataset_mapping(catalog=catalog)
@@ -580,6 +581,10 @@ class Dataset(metaclass=CamelCaseMeta):
         self.product = [product] if product else self.product
 
         data = self.to_dict()
+
+        if data.get("report", None) and data["report"]["tier"] == "":
+            raise ValueError("Tier cannot be blank for reports.")
+
 
         url = f"{client.root_url}catalogs/{catalog}/datasets/{self.identifier}"
         resp: requests.Response = client.session.post(url, json=data)
