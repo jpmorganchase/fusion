@@ -276,3 +276,6 @@ filename = "pyproject.toml"
 
 [[tool.bumpversion.files]]
 filename = "py_src/fusion/__init__.py"
+
+[tool.ruff.lint.flake8-builtins]
+builtins-allowed-modules = ["types"]
