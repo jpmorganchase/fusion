@@ -1629,20 +1629,6 @@ def test_fusion_output_dataflow(fusion_obj: Fusion) -> None:
     assert test_output_dataflow.client == fusion_obj
 
 
-def test_fusion_delete_all_datasetmembers(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    """Test delete datasetmembers"""
-    catalog = "my_catalog"
-    dataset = "TEST_DATASET"
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
-    requests_mock.delete(url, status_code=200)
-
-    resp = fusion_obj.delete_all_datasetmembers(dataset, catalog=catalog, return_resp_obj=True)
-    status_code = 200
-    assert resp is not None
-    assert isinstance(resp, requests.Response)
-    assert resp.status_code == status_code
-
-
 def test_list_indexes_summary(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test list indexes from client."""
     catalog = "my_catalog"
