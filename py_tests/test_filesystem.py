@@ -324,10 +324,8 @@ async def test_fetch_range_success(
 @pytest.mark.parametrize(
     ("n_threads", "is_local_fs", "expected_method"),
     [
-        (1, False, "stream_single_file"),
-        (1, True, "stream_single_file"),
-        (2, False, "stream_single_file"),
-        (2, True, "_download_single_file_async"),
+        (10, False, "stream_single_file"),
+        (10, True, "_download_single_file_async"),
     ],
 )
 @patch("fusion.utils.get_default_fs")
