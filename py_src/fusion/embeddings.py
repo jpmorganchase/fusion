@@ -45,28 +45,35 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
     - Integrates with the Fusion API for authentication and session management.
     - Provides methods for modifying and validating URLs specific to the Fusion Embedding API.
 
-    :arg http_auth: optional http auth information as either ':' separated
-        string or a tuple. Any value will be passed into requests as `auth`.
-    :arg use_ssl: use ssl for the connection if `True`
-    :arg verify_certs: whether to verify SSL certificates
-    :arg ssl_show_warn: show warning when verify certs is disabled
-    :arg ca_certs: optional path to CA bundle. Defaults to configured OpenSSL
-        bundles from environment variables and then certifi before falling
-        back to the standard requests bundle to improve consistency with
-        other Connection implementations
-    :arg client_cert: path to the file containing the private key and the
-        certificate, or cert only if using client_key
-    :arg client_key: path to the file containing the private key if using
-        separate cert and key files (client_cert will contain only the cert)
-    :arg headers: any custom http headers to be add to requests
-    :arg http_compress: Use gzip compression
-    :arg opaque_id: Send this value in the 'X-Opaque-Id' HTTP header
-        For tracing all requests made by this transport.
-    :arg pool_maxsize: Maximum connection pool size used by pool-manager
-        For custom connection-pooling on current session
-    :arg metrics: metrics is an instance of a subclass of the
-        :class:`~opensearchpy.Metrics` class, used for collecting
-        and reporting metrics related to the client's operations;
+    Args:
+        http_auth (str or tuple, optional): HTTP auth information as either ':' separated string or a tuple. 
+            Any value will be passed into requests as `auth`.
+        use_ssl (bool, optional): Use SSL for the connection if `True`.
+        verify_certs (bool, optional): Whether to verify SSL certificates.
+        ssl_show_warn (bool, optional): Show warning when verify certs is disabled.
+        ca_certs (str, optional): Path to CA bundle. Defaults to configured OpenSSL bundles from environment variables 
+            and then certifi before falling back to the standard requests bundle to improve consistency with other 
+            Connection implementations.
+        client_cert (str, optional): Path to the file containing the private key and the certificate, 
+            or cert only if using client_key.
+        client_key (str, optional): Path to the file containing the private key if using separate cert and key files 
+            (client_cert will contain only the cert).
+        headers (dict, optional): Any custom HTTP headers to be added to requests.
+        http_compress (bool, optional): Use gzip compression.
+        opaque_id (str, optional): Send this value in the 'X-Opaque-Id' HTTP header for tracing 
+            all requests made by this transport.
+        pool_maxsize (int, optional): Maximum connection pool size used by pool-manager 
+            for custom connection-pooling on current session.
+        metrics (Metrics, optional): Instance of a subclass of the `opensearchpy.Metrics` class, 
+            used for collecting and reporting metrics related to the client's operations.
+
+    Keyword Args:
+        root_url (str, optional): Root URL for the Fusion API. Defaults to 
+            "https://fusion.jpmorgan.com/api/v1/".
+        credentials (FusionCredentials or str, optional): Credentials for the Fusion API. Can be a `FusionCredentials`
+            object or a path to a credentials file. Defaults to "config/client_credentials.json".
+        catalog (str, optional): Catalog name. Defaults to "common".
+        knowledge_base (str, optional): Knowledge base name. A dataset identifier.
     """
 
     def __init__(  # noqa: PLR0912, PLR0913, PLR0915
