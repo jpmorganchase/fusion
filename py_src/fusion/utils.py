@@ -9,13 +9,13 @@ import multiprocessing as mp
 import os
 import re
 import ssl
+import zipfile
 from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union, cast
 from urllib.parse import urlparse, urlunparse
-import zipfile
 
 import aiohttp
 import certifi
