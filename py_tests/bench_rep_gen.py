@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 from jinja2 import Environment, FileSystemLoader
-from rich import print
+from rich import print as rprint
 
 app = typer.Typer()
 
@@ -24,23 +24,23 @@ def py_bench(py_vers: Annotated[str, PyVerOpt]) -> None:
 
     all_data = {}
     for py_ver in py_vers_list:
-        print(f"Python version: {py_ver}")
+        rprint(f"Python version: {py_ver}")
         bench_list = sorted(Path(".benchmarks").glob(f"*{py_ver}*/*.json"))
         prev_json_file, prev_data = None, None
         if len(bench_list) == 0:
-            print(f"No benchmarks found for Python version {py_ver}")
+            rprint(f"No benchmarks found for Python version {py_ver}")
             continue
         if len(bench_list) > 1:
             prev_json_file = bench_list[-2]
         curr_json_file = bench_list[-1]
-        print(f"Current JSON file: {curr_json_file}")
+        rprint(f"Current JSON file: {curr_json_file}")
         with curr_json_file.open() as f:
             curr_data = json.load(f)
 
         if prev_json_file:
             with prev_json_file.open() as f:
                 prev_data = json.load(f)
-            print(f"Previous JSON file: {prev_json_file}")
+            rprint(f"Previous JSON file: {prev_json_file}")
 
         if prev_data:
             for k, v in curr_data.items():
@@ -68,7 +68,7 @@ def py_bench(py_vers: Annotated[str, PyVerOpt]) -> None:
         env = Environment(loader=FileSystemLoader("."))
         template = env.get_template("py_tests/bench_template.html")
 
-        print(curr_data)
+        rprint(curr_data)
         all_data[py_ver] = curr_data
 
     with Path("test_rep.json").open("w") as f:
@@ -82,7 +82,7 @@ def py_bench(py_vers: Annotated[str, PyVerOpt]) -> None:
     with html_file.open("w") as f:
         f.write(html_content)
 
-    print(f"Generated HTML report at {html_file}")  # noqa: T201
+    rprint(f"Generated HTML report at {html_file}")  # noqa: T201
 
 
 if __name__ == "__main__":

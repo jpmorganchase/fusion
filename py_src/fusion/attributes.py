@@ -155,7 +155,7 @@ class Attribute(metaclass=CamelCaseMeta):
         if res is None:
             raise ValueError("A Fusion client object is required.")
         return res
-        
+
     @classmethod
     def _from_series(
         cls: type[Attribute],
@@ -436,7 +436,7 @@ class Attribute(metaclass=CamelCaseMeta):
         resp = client.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
-    
+
     def set_lineage(
         self,
         attributes: list[Attribute],
@@ -479,22 +479,18 @@ class Attribute(metaclass=CamelCaseMeta):
             if attribute.application_id is None:
                 raise ValueError(f"The 'application_id' attribute is required for setting lineage.")
             attr_dict = {
-                    "catalog": catalog,
-                    "attribute": attribute.identifier,
-                    "applicationId": attribute.application_id
-                }
+                "catalog": catalog,
+                "attribute": attribute.identifier,
+                "applicationId": attribute.application_id,
+            }
             target_attributes.append(attr_dict)
 
         url = f"{client.root_url}catalogs/{catalog}/attributes/lineage"
         data = [
             {
-                "source": {
-                    "catalog": catalog,
-                    "attribute": self.identifier,
-                    "applicationId": self.application_id
-            },
-            "targets": target_attributes
-        }
+                "source": {"catalog": catalog, "attribute": self.identifier, "applicationId": self.application_id},
+                "targets": target_attributes,
+            }
         ]
         resp = client.session.post(url, json=data)
         requests_raise_for_status(resp)
