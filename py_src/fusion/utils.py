@@ -9,6 +9,7 @@ import multiprocessing as mp
 import os
 import re
 import ssl
+import zipfile
 from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
@@ -283,7 +284,7 @@ def parquet_to_table(
 
 
 def read_csv(  # noqa: PLR0912
-    path: str,
+    path: str | zipfile.ZipFile,
     columns: list[str] | None = None,
     filters: PyArrowFilterT | None = None,
     fs: fsspec.filesystem | None = None,
@@ -302,63 +303,66 @@ def read_csv(  # noqa: PLR0912
         Union[pandas.DataFrame, polars.DataFrame]: a dataframe containing the data.
 
     """
-    try:
+    if isinstance(path, zipfile.ZipExtFile):
+        res = pd.read_csv(path, usecols=columns, index_col=False)
+    elif isinstance(path, str):
         try:
-            res = csv_to_table(path, fs, columns=columns, filters=filters)
+            try:
+                res = csv_to_table(path, fs, columns=columns, filters=filters)
 
-            if dataframe_type == "pandas":
-                res = res.to_pandas()
-            elif dataframe_type == "polars":
-                import polars as pl
-
-                res = pl.from_arrow(res)
-            else:
-                raise ValueError(f"Unknown DataFrame type {dataframe_type}")
-        except Exception as err:
-            logger.log(
-                VERBOSE_LVL,
-                "Failed to read %s, with comma delimiter.",
-                path,
-                exc_info=True,
-            )
-            raise ValueError from err
-
-    except Exception:  # noqa: BLE001
-        logger.log(
-            VERBOSE_LVL,
-            "Could not parse %s properly. Trying with pandas csv reader.",
-            path,
-            exc_info=True,
-        )
-        try:  # pragma: no cover
-            with fs.open(path) if fs else nullcontext(path) as f:
                 if dataframe_type == "pandas":
-                    res = pd.read_csv(f, usecols=columns, index_col=False)
+                    res = res.to_pandas()
                 elif dataframe_type == "polars":
                     import polars as pl
 
-                    res = pl.read_csv(f, columns=columns)
+                    res = pl.from_arrow(res)
                 else:
-                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")  # noqa: W0707
+                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+            except Exception as err:
+                logger.log(
+                    VERBOSE_LVL,
+                    "Failed to read %s, with comma delimiter.",
+                    path,
+                    exc_info=True,
+                )
+                raise ValueError from err
 
-        except Exception as err:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
             logger.log(
                 VERBOSE_LVL,
-                "Could not parse %s properly. Trying with pandas csv reader pandas engine.",
+                "Could not parse %s properly. Trying with pandas csv reader.",
                 path,
                 exc_info=True,
             )
-            with fs.open(path) if fs else nullcontext(path) as f:
-                if dataframe_type == "pandas":
-                    res = pd.read_table(  # pragma: no cover
-                        f,
-                        usecols=columns,
-                        index_col=False,
-                        engine="python",
-                        delimiter=None,
-                    )
-                else:
-                    raise ValueError(f"Unknown DataFrame type {dataframe_type}") from err
+            try:  # pragma: no cover
+                with fs.open(path) if fs else nullcontext(path) as f:
+                    if dataframe_type == "pandas":
+                        res = pd.read_csv(f, usecols=columns, index_col=False)
+                    elif dataframe_type == "polars":
+                        import polars as pl
+
+                        res = pl.read_csv(f, columns=columns)
+                    else:
+                        raise ValueError(f"Unknown DataFrame type {dataframe_type}")  # noqa: W0707
+
+            except Exception as err:  # noqa: BLE001
+                logger.log(
+                    VERBOSE_LVL,
+                    "Could not parse %s properly. Trying with pandas csv reader pandas engine.",
+                    path,
+                    exc_info=True,
+                )
+                with fs.open(path) if fs else nullcontext(path) as f:
+                    if dataframe_type == "pandas":
+                        res = pd.read_table(  # pragma: no cover
+                            f,
+                            usecols=columns,
+                            index_col=False,
+                            engine="python",
+                            delimiter=None,
+                        )
+                    else:
+                        raise ValueError(f"Unknown DataFrame type {dataframe_type}") from err
     return res
 
 
@@ -593,9 +597,7 @@ def distribution_to_url(
             f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
             f"{datasetseries}/distributions/{file_format}/operationType/download"
         )
-    return (
-        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/" f"{datasetseries}/distributions/{file_format}"
-    )
+    return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
 
 
 def _get_canonical_root_url(any_url: str) -> str:
@@ -960,3 +962,55 @@ def requests_raise_for_status(response: requests.Response) -> None:
             response.reason = real_reason
         finally:
             response.raise_for_status()
+
+
+def _format_full_index_response(response: requests.Response) -> pd.DataFrame:
+    """Format get index response.
+
+    Args:
+        response (requests.Response): Response object.
+
+    Returns:
+        pd.DataFrame: Dataframe containing the response formatted with a column for each index.
+    """
+    df_resp = pd.json_normalize(response.json())
+    df2 = df_resp.transpose()
+    df2.index = df2.index.map(str)
+    df2.columns = pd.Index(df2.loc["settings.index.provided_name"])
+    df2 = df2.rename(columns=lambda x: x.split("index-")[-1])
+    df2.columns.names = ["index_name"]
+    df2.loc["settings.index.creation_date"] = pd.to_datetime(df2.loc["settings.index.creation_date"], unit="ms")
+    multi_index = [index.split(".", 1) for index in df2.index]
+    df2.index = pd.MultiIndex.from_tuples(multi_index)
+    return df2
+
+
+def _format_summary_index_response(response: requests.Response) -> pd.DataFrame:
+    """Format summary of get index response.
+
+    Args:
+        response (requests.Response): Response object
+
+    Returns:
+        pd.DataFrame: Dataframe containing the response formatted with a column for each index.
+    """
+    index_list = response.json()
+    idices = []
+    for index in index_list:
+        name = index.get("settings").get("index").get("provided_name").split("index-")[-1]
+        props = index.get("mappings").get("properties")
+        for prop, info in props.items():
+            if info.get("type") == "knn_vector":
+                vector_field_name = prop
+                vector_dimension = info.get("dimension")
+        idices.append(
+            {
+                "index_name": name,
+                "vector_field_name": vector_field_name,
+                "vector_dimension": vector_dimension,
+            }
+        )
+    summary_df = pd.json_normalize(idices)
+    summary_df = summary_df.set_index("index_name")
+
+    return summary_df.transpose()

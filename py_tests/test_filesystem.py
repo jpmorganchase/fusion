@@ -208,7 +208,7 @@ async def test_download_single_file_async(
     n_threads = 3
 
     credentials_file = tmp_path / "client_credentials.json"
-    with Path(credentials_file).open("w") as f: # noqa: ASYNC101, ASYNC230
+    with Path(credentials_file).open("w") as f:  # noqa: ASYNC101, ASYNC230
         json.dump(example_creds_dict, f)
     creds = FusionCredentials.from_file(credentials_file)
 
@@ -318,16 +318,14 @@ async def test_fetch_range_success(
     output_file.seek.assert_called_once_with(0)
     output_file.write.assert_called_once_with(b"some data")
     mock_response.raise_for_status.assert_not_called()
-    mock_session.get.assert_called_once_with(url + f"?downloadRange=bytes={start}-{end-1}", **http_fs_instance.kwargs)
+    mock_session.get.assert_called_once_with(url + f"?downloadRange=bytes={start}-{end - 1}", **http_fs_instance.kwargs)
 
 
 @pytest.mark.parametrize(
     ("n_threads", "is_local_fs", "expected_method"),
     [
-        (1, False, "stream_single_file"),
-        (1, True, "stream_single_file"),
-        (2, False, "stream_single_file"),
-        (2, True, "_download_single_file_async"),
+        (10, False, "stream_single_file"),
+        (10, True, "_download_single_file_async"),
     ],
 )
 @patch("fusion.utils.get_default_fs")

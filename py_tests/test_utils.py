@@ -527,7 +527,7 @@ def test_distribution_to_url() -> None:
     file_format = "csv"
     bad_series_chs = ["/", "\\"]
     exp_res = (
-        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/" f"{datasetseries}/distributions/{file_format}"
+        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
     )
     for ch in bad_series_chs:
         datasetseries = f"2020-04-04{ch}"

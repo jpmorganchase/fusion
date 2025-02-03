@@ -29,6 +29,8 @@ from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     RECOGNIZED_FORMATS,
+    _format_full_index_response,
+    _format_summary_index_response,
     cpu_count,
     csv_to_table,
     distribution_to_filename,
@@ -54,6 +56,7 @@ from .utils import (
 if TYPE_CHECKING:
     import fsspec
     import requests
+    from opensearchpy import OpenSearch
 
     from .types import PyArrowFilterT
 
@@ -462,8 +465,8 @@ class Fusion:
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
         ds_attr_df = Fusion._call_for_dataframe(url, self.session)
-        
-        if "index" in ds_attr_df.columns: 
+
+        if "index" in ds_attr_df.columns:
             ds_attr_df = ds_attr_df.sort_values(by="index").reset_index(drop=True)
 
         if not display_all_columns:
@@ -885,15 +888,14 @@ class Fusion:
 
         if len(files) == 0:
             raise APIResponseError(
-                f"No series members for dataset: {dataset} "
-                f"in date or date range: {dt_str} and format: {dataset_format}"
+                f"No series members for dataset: {dataset} in date or date range: {dt_str} and format: {dataset_format}"
             )
         if dataset_format in ["parquet", "parq"]:
             data_df = pd_reader(files, **pd_read_kwargs)  # type: ignore
         elif dataset_format == "raw":
             dataframes = (
                 pd.concat(
-                    [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()],  # type: ignore
+                    [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()],  # type: ignore  # noqa: SIM115
                     ignore_index=True,
                 )
                 for f in files
@@ -1035,8 +1037,7 @@ class Fusion:
 
         if len(files) == 0:
             raise APIResponseError(
-                f"No series members for dataset: {dataset} "
-                f"in date or date range: {dt_str} and format: {dataset_format}"
+                f"No series members for dataset: {dataset} in date or date range: {dt_str} and format: {dataset_format}"
             )
         if dataset_format in ["parquet", "parq"]:
             tbl = reader(files, **read_kwargs)  # type: ignore
@@ -2221,7 +2222,7 @@ class Fusion:
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
             producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
                 producing the flow).
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application 
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application
                 ID (downstream application, consuming the flow).
             flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
                 Defaults to {"flowDirection": "Input"}.
@@ -2372,7 +2373,7 @@ class Fusion:
             application_id (str | None, optional): The application ID of the dataset. Defaults to None.
             producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
                 producing the flow).
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application 
+            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application
                 ID (downstream application, consuming the flow).
             flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
                 Defaults to {"flowDirection": "Output"}.
@@ -2435,3 +2436,53 @@ class Fusion:
         )
         dataflow_obj.client = self
         return dataflow_obj
+
+    def list_indexes(
+        self,
+        knowledge_base: str,
+        catalog: str | None = None,
+        show_details: bool | None = False,
+    ) -> pd.DataFrame:
+        """List the indexes in a knowledge base.
+
+        Args:
+            knowledge_base (str): Knowledge base (dataset) identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            show_details (bool | None, optional): If True then show detailed information. Defaults to False.
+
+        Returns:
+            pd.DataFrame: a dataframe with a column for each index.
+
+        """
+        catalog = self._use_catalog(catalog)
+        url = f"{self.root_url}dataspaces/{catalog}/datasets/{knowledge_base}/indexes/"
+        response = self.session.get(url)
+        requests_raise_for_status(response)
+        if show_details:
+            return _format_full_index_response(response)
+        else:
+            return _format_summary_index_response(response)
+
+    def get_fusion_vector_store_client(self, knowledge_base: str, catalog: str | None = None) -> OpenSearch:
+        """Returns Fusion Embeddings Search client.
+
+        Args:
+            knowledge_base (str): Knowledge base (dataset) identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            OpenSearch: Fusion Embeddings Search client.
+
+        """
+        from opensearchpy import OpenSearch
+
+        from fusion.embeddings import FusionEmbeddingsConnection
+
+        catalog = self._use_catalog(catalog)
+        return OpenSearch(
+            connection_class=FusionEmbeddingsConnection,
+            catalog=catalog,
+            knowledge_base=knowledge_base,
+            root_url=self.root_url,
+            credentials=self.credentials,
+        )

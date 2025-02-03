@@ -15,15 +15,16 @@ if TYPE_CHECKING:
 @dataclass
 class Report(Dataset):
     """Fusion Report class for managing regulatory reporting metadata.
-    
+
     Attributes:
         report (dict[str, str]): The report metadata. Specifies the tier of the report.
         type_ (str): The dataset type. Defaults to "Report", which is the required value for creating a Report object.
 
     """
+
     report: dict[str, str] | None = field(default_factory=lambda: {"tier": ""})
     type_: str | None = "Report"
-        
+
     def __repr__(self: Report) -> str:
         """Return an object representation of the Report object.
 
@@ -33,7 +34,7 @@ class Report(Dataset):
         """
         attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
         return f"Report(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
-    
+
     def add_registered_attribute(
         self: Report,
         attribute_identifier: str,

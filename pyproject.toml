@@ -1,6 +1,6 @@
 [project]
 name = "pyfusion"
-version = "2.0.6"
+version = "2.0.7-dev0"
 
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
@@ -62,26 +62,24 @@ doc = [
     "mike",
     "notebook >=6.0,<7.0"
 ]
-
 aws = [
     "s3fs"
 ]
-
 gcs = [
     "gcsfs"
 ]
-
 azr = [
     "adlfs"
 ]
-
 polars = [
     "polars"
 ]
-
 events = [
     "sseclient",
     "aiohttp-sse-client"
+]
+embeddings = [
+    "opensearch-py>=2.8.0",
 ]
 
 
@@ -243,7 +241,7 @@ exclude_lines = [
 
 
 [tool.bumpversion]
-current_version = "2.0.6"
+current_version = "2.0.7-dev0"
 parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[a-z]+)(?P<candidate>\d+))?'
 serialize = [
     '{major}.{minor}.{patch}-{release}{candidate}',
@@ -278,3 +276,6 @@ filename = "pyproject.toml"
 
 [[tool.bumpversion.files]]
 filename = "py_src/fusion/__init__.py"
+
+[tool.ruff.lint.flake8-builtins]
+builtins-allowed-modules = ["types"]

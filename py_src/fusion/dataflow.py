@@ -25,6 +25,7 @@ class DataFlow(Dataset):
         type_ (str | None): The type of dataset. Defaults to "Flow".
 
     """
+
     producer_application_id: dict[str, str] | None = None
     consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None
     flow_details: dict[str, str] | None = None
@@ -77,6 +78,7 @@ class DataFlow(Dataset):
 @dataclass
 class InputDataFlow(DataFlow):
     """InputDataFlow class for maintaining input data flow metadata."""
+
     flow_details: dict[str, str] | None = field(default_factory=lambda: {"flowDirection": "Input"})
 
     def __repr__(self: InputDataFlow) -> str:
@@ -93,6 +95,7 @@ class InputDataFlow(DataFlow):
 @dataclass
 class OutputDataFlow(DataFlow):
     """OutputDataFlow class for maintaining output data flow metadata."""
+
     flow_details: dict[str, str] | None = field(default_factory=lambda: {"flowDirection": "Output"})
 
     def __repr__(self: OutputDataFlow) -> str:
