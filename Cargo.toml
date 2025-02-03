@@ -30,13 +30,13 @@ state = { version = "0.6"}
 # Struggling to get OPEN_SSL env vars to point to the installed libs on these archs
 # Remove these once we figure out the magic
 [target.'cfg(target_arch = "aarch64")'.dependencies]
-openssl = { version = "0.10.64", features = ["vendored"] }
+openssl = { version = "0.10.70", features = ["vendored"] }
 [target.'cfg(target_arch = "arm")'.dependencies]
-openssl = { version = "0.10.64", features = ["vendored"] }
+openssl = { version = "0.10.70", features = ["vendored"] }
 [target.'cfg(target_arch = "powerpc64")'.dependencies]
-openssl = { version = "0.10.64", features = ["vendored"] }
+openssl = { version = "0.10.70", features = ["vendored"] }
 [target.'cfg(target_env = "musl")'.dependencies]
-openssl = { version = "0.10.64", features = ["vendored"] }
+openssl = { version = "0.10.70", features = ["vendored"] }
 [package.metadata.cargo-llvm-cov]
 # End OPEN_SSL 
 
