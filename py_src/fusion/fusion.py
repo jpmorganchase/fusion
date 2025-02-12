@@ -702,6 +702,15 @@ class Fusion:
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise ValueError(f"Dataset format {dataset_format} is not supported")
+        
+        members = [series[2].strip("/") for series in required_series]
+        for member in members:
+            available_dataset_formats = list(self.list_distributions(dataset, member, catalog)["identifier"])
+
+            if dataset_format not in available_dataset_formats:
+                raise ValueError(
+                    f"Dataset format {dataset_format} is not available for dataset {dataset} series member {member}"
+                )
 
         if not download_folder:
             download_folder = self.download_folder
@@ -744,6 +753,14 @@ class Fusion:
             }
             for i, series in enumerate(required_series)
         ]
+
+
+        # check for access
+        for i in range(len(download_spec)):
+            resp = self.session.get(download_spec[i]["rpath"])
+            access_denied = 403
+            if resp.status_code == access_denied:
+                requests_raise_for_status(resp)
 
         logger.log(
             VERBOSE_LVL,
