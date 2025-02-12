@@ -1256,20 +1256,21 @@ class Fusion:
         self,
         last_event_id: str | None = None,
         catalog: str | None = None,
-        url: str = "https://fusion.jpmorgan.com/api/v1/",
-    ) -> None | pd.DataFrame:
+        url: str | None = None,
+    ) -> None:
         """Run server sent event listener in the background. Retrieve results by running get_events.
 
         Args:
             last_event_id (str): Last event ID (exclusive).
             catalog (str): catalog.
-            url (str): subscription url.
+            url (str): subscription url. Defaults to client's root url.
         Returns:
-            Union[None, class:`pandas.DataFrame`]: If in_background is True then the function returns no output.
-                If in_background is set to False then pandas DataFrame is output upon keyboard termination.
+            None
         """
 
         catalog = self._use_catalog(catalog)
+        url = self.root_url
+
         import asyncio
         import json
         import threading
@@ -1322,7 +1323,6 @@ class Fusion:
             kwargs["proxy"] = self.credentials.proxies["https"]
         th = threading.Thread(target=asyncio.run, args=(async_events(),), daemon=True)
         th.start()
-        return None
 
     def get_events(
         self,
