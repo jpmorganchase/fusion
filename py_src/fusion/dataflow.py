@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from fusion.dataset import Dataset
-from fusion.utils import requests_raise_for_status
+from fusion.utils import process_application_id, requests_raise_for_status
 
 if TYPE_CHECKING:
     import requests
@@ -38,6 +38,17 @@ class DataFlow(Dataset):
             if isinstance(self.consumer_application_id, dict)
             else self.consumer_application_id
         )
+        if self.consumer_application_id:
+            self.consumer_application_id = [
+                # process_application_id(app_id, "consumer_application_id") for app_id in self.consumer_application_id
+                processed
+                for app_id in self.consumer_application_id
+                if (processed := process_application_id(app_id)) is not None
+            ]
+        if self.producer_application_id:
+            self.producer_application_id = process_application_id(
+                self.producer_application_id, "producer_application_id"
+            )
         super().__post_init__()
 
     def add_registered_attribute(
@@ -80,6 +91,16 @@ class InputDataFlow(DataFlow):
     """InputDataFlow class for maintaining input data flow metadata."""
 
     flow_details: dict[str, str] | None = field(default_factory=lambda: {"flowDirection": "Input"})
+
+    def __post_init__(self) -> None:
+        """Ensure consumer_application_id is assigned from application_id."""
+        if self.application_id:
+            self.consumer_application_id = (
+                [{"id": str(self.application_id), "type": "Application (SEAL)"}]
+                if isinstance(self.application_id, str)
+                else [self.application_id]
+            )
+        super().__post_init__()
 
     def __repr__(self: InputDataFlow) -> str:
         """Return an object representation of the InputDataFlow object.

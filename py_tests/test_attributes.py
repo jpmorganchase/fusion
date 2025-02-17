@@ -1,5 +1,6 @@
 """Test case for attributes module."""
 
+import re
 from typing import cast
 
 import pandas as pd
@@ -8,6 +9,7 @@ import requests
 import requests_mock
 
 from fusion import Fusion
+from fusion.application_types import ApplicationType
 from fusion.attributes import Attribute, Attributes
 from fusion.fusion_types import Types
 
@@ -1339,3 +1341,69 @@ def test_attribute_getattr() -> None:
     with pytest.raises(AttributeError) as error_info:
         _ = test_attribute.nonExistentAttribute
     assert str(error_info.value) == "'Attribute' object has no attribute 'nonExistentAttribute'"
+
+
+def test_attribute_post_init_application_id() -> None:
+    """Test that application_id is correctly processed in __post_init__."""
+
+    # Case 1: application_id as a string -> Should be converted to a dictionary with SEAL as the type
+    attr1 = Attribute(
+        title="Test Attribute",
+        identifier="test_attribute",
+        index=0,
+        data_type=cast(Types, "string"),
+        publisher="J.P. Morgan",
+        application_id="12345",
+    )
+    assert attr1.application_id == {"id": "12345", "type": ApplicationType.SEAL.value}
+
+    # Case 2: application_id as a valid dictionary -> Should remain unchanged
+    valid_app_id: dict[str, str] = {"id": "67890", "type": ApplicationType.USER_TOOL.value}
+    attr2 = Attribute(
+        title="Test Attribute",
+        identifier="test_attribute",
+        index=0,
+        data_type=cast(Types, "string"),
+        publisher="J.P. Morgan",
+        application_id=valid_app_id,
+    )
+    assert attr2.application_id == valid_app_id
+
+    # Case 3: application_id as None -> Should return an empty dictionary
+    attr3 = Attribute(
+        title="Test Attribute",
+        identifier="test_attribute",
+        index=0,
+        data_type=cast(Types, "string"),
+        publisher="J.P. Morgan",
+        application_id=None,
+    )
+    assert attr3.application_id is None
+
+    # Case 4: application_id as a dictionary with missing keys -> Should raise ValueError
+    invalid_app_id: dict[str, str] = {"id": "99999"}  # Missing "type"
+    # Allow both orderings of {'id', 'type'} and {'type', 'id'}
+    expected_error_1 = "application_id must contain keys: {'id', 'type'}"
+    expected_error_2 = "application_id must contain keys: {'type', 'id'}"
+    with pytest.raises(ValueError, match=re.escape(expected_error_1) + "|" + re.escape(expected_error_2)):
+        Attribute(
+            title="Test Attribute",
+            identifier="test_attribute",
+            index=0,
+            data_type=cast(Types, "string"),
+            publisher="J.P. Morgan",
+            application_id=invalid_app_id,
+        )
+
+    # Case 5: application_id as a dictionary with an invalid type -> Should raise ValueError
+    invalid_app_id_type: dict[str, str] = {"id": "99999", "type": "Invalid Type"}
+
+    with pytest.raises(ValueError, match="Invalid application_id type: Invalid Type. Must be one of"):
+        Attribute(
+            title="Test Attribute",
+            identifier="test_attribute",
+            index=0,
+            data_type=cast(Types, "string"),
+            publisher="J.P. Morgan",
+            application_id=invalid_app_id_type,
+        )

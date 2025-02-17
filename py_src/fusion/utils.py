@@ -40,6 +40,7 @@ from rich.progress import (
 )
 from urllib3.util.retry import Retry
 
+from .application_types import ApplicationType
 from .authentication import FusionAiohttpSession, FusionOAuthAdapter
 
 if TYPE_CHECKING:
@@ -1014,3 +1015,44 @@ def _format_summary_index_response(response: requests.Response) -> pd.DataFrame:
     summary_df = summary_df.set_index("index_name")
 
     return summary_df.transpose()
+
+
+def process_application_id(
+    application_id: str | dict[str, str] | None, param_name: str = "application_id"
+) -> dict[str, str] | None:
+    """
+    Processes the application_id and converts it into a standardized dictionary format.
+
+    Parameters:
+        application_id (str | dict | None): The application ID of the dataset.
+            - If a string is provided, it will be converted to a dictionary with 'id' and a default 'type' of SEAL.
+            - If a dictionary is provided, it must contain keys 'id' and 'type', where 'type' must be a valid
+              ApplicationType value.
+            - If None is provided, an empty dictionary is returned.
+        param_name (str, optional): The parameter name for error messages. Defaults to "application_id".
+
+    Returns:
+        dict: A validated application_id dictionary with 'id' and 'type' keys.
+
+    Raises:
+        ValueError: If the provided dictionary does not contain the required keys or has an invalid type.
+    """
+    if isinstance(application_id, str):
+        return {"id": str(application_id), "type": ApplicationType.SEAL.value}
+
+    if isinstance(application_id, dict):
+        required_keys = {"id", "type"}
+
+        # Validate required keys are present
+        if not required_keys.issubset(application_id):
+            raise ValueError(f"{param_name} must contain keys: {required_keys}")
+
+        # Validate type against ApplicationType enum
+        if application_id["type"] not in ApplicationType._value2member_map_:
+            valid_types = [e.value for e in ApplicationType]
+            raise ValueError(
+                f"Invalid {param_name} type: {application_id['type']}. Must be one of {', '.join(valid_types)}"
+            )
+
+        return {"id": str(application_id["id"]), "type": application_id["type"]}
+    return application_id

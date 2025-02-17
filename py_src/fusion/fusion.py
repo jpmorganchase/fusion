@@ -1709,7 +1709,13 @@ class Fusion:
             is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
             is_active (bool | None, optional): is_active. Defaults to None.
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
+            application_id (str | dict[str, str] | None, optional): The application ID of the
+                    dataset. Defaults to None. If a string is provided, it will be converted to a dictionary with 'id'
+                    and 'type' keys, type defaults to "Application (SEAL)". If a dictionary is provided, it must
+                    contain keys 'id' and 'type', where 'type' should be one of the values
+                        - "Application (SEAL)"
+                        - "Intelligent Solution"
+                        - "User Tool"
 
         Returns:
             Dataset: Fusion Dataset class.
@@ -1813,6 +1819,13 @@ class Fusion:
             term (str, optional): Term. Defaults to "bizterm1".
             dataset (int | None, optional): Dataset. Defaults to None.
             attribute_type (str | None, optional): Attribute type. Defaults to None.
+            application_id (str | dict[str, str] | None, optional): The application ID of the
+                    dataset. Defaults to None. If a string is provided, it will be converted to a dictionary with 'id'
+                    and 'type' keys, type defaults to "Application (SEAL)". If a dictionary is provided, it must
+                    contain keys 'id' and 'type', where 'type' should be one of the values
+                        - "Application (SEAL)"
+                        - "Intelligent Solution"
+                        - "User Tool"
 
         Returns:
             Attribute: Fusion Attribute class.
@@ -2075,7 +2088,13 @@ class Fusion:
             is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
             is_active (bool | None, optional): is_active. Defaults to None.
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
+            application_id (str | dict[str, str] | None, optional): The application ID of the
+                    dataset. Defaults to None. If a string is provided, it will be converted to a dictionary with 'id'
+                    and 'type' keys, type defaults to "Application (SEAL)". If a dictionary is provided, it must
+                    contain keys 'id' and 'type', where 'type' should be one of the values
+                        - "Application (SEAL)"
+                        - "Intelligent Solution"
+                        - "User Tool"
             report (dict[str, str] | None, optional): The report metadata. Specifies the tier of the report.
                 Required for registered reports to the catalog.
 
@@ -2175,7 +2194,6 @@ class Fusion:
         owners: list[str] | None = None,
         application_id: str | dict[str, str] | None = None,
         producer_application_id: dict[str, str] | None = None,
-        consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None,
         flow_details: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> InputDataFlow:
@@ -2219,11 +2237,19 @@ class Fusion:
             is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
             is_active (bool | None, optional): is_active. Defaults to None.
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
+            application_id (str | dict[str, str] | None, optional): The application ID of the
+                    dataset. Defaults to None. If a string is provided, it will be converted to a dictionary with 'id'
+                    and 'type' keys, type defaults to "Application (SEAL)". If a dictionary is provided, it must
+                    contain keys 'id' and 'type', where 'type' should be one of the values
+                        - "Application (SEAL)"
+                        - "Intelligent Solution"
+                        - "User Tool"
             producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
-                producing the flow).
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application
-                ID (downstream application, consuming the flow).
+                producing the flow). If a dictionary is provided, it must
+                    contain keys 'id' and 'type', where 'type' should be one of the values
+                        - "Application (SEAL)"
+                        - "Intelligent Solution"
+                        - "User Tool"
             flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
                 Defaults to {"flowDirection": "Input"}.
 
@@ -2279,7 +2305,6 @@ class Fusion:
             owners=owners,
             application_id=application_id,
             producer_application_id=producer_application_id,
-            consumer_application_id=consumer_application_id,
             flow_details=flow_details,
             **kwargs,
         )
@@ -2370,13 +2395,27 @@ class Fusion:
             is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
             is_active (bool | None, optional): is_active. Defaults to None.
             owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
+            application_id (str | dict[str, str] | None, optional): The application ID of the
+                dataset. Defaults to None. If a string is provided, it will be converted to a dictionary with 'id'
+                and 'type' keys, type defaults to "Application (SEAL)". If a dictionary is provided, it must
+                contain keys 'id' and 'type', where 'type' should be one of the values
+                - "Application (SEAL)"
+                - "Intelligent Solution"
+                - "User Tool"
             producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
-                producing the flow).
+            producing the flow). If a dictionary is provided, it must
+                contain keys 'id' and 'type', where 'type' should be one of the values
+                - "Application (SEAL)"
+                - "Intelligent Solution"
+                - "User Tool"
             consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application
-                ID (downstream application, consuming the flow).
+            ID (downstream application, consuming the flow). Defaults to None. If a dictionary or List of Dict is
+            provided, dict must contain keys 'id' and 'type', where 'type' should be one of the values
+                - "Application (SEAL)"
+                - "Intelligent Solution"
+                - "User Tool"
             flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
-                Defaults to {"flowDirection": "Output"}.
+            Defaults to {"flowDirection": "Output"}.
 
         Returns:
             Dataset: Fusion OutputDataFlow class.

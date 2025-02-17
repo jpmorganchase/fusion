@@ -14,6 +14,7 @@ from fusion.utils import (
     camel_to_snake,
     convert_date_format,
     make_bool,
+    process_application_id,
     requests_raise_for_status,
     snake_to_camel,
     tidy_string,
@@ -106,11 +107,7 @@ class Attribute(metaclass=CamelCaseMeta):
         self.available_from = convert_date_format(self.available_from) if self.available_from else None
         self.deprecated_from = convert_date_format(self.deprecated_from) if self.deprecated_from else None
         self.data_type = Types[str(self.data_type).strip().rsplit(".", maxsplit=1)[-1].title()]
-        self.application_id = (
-            {"id": str(self.application_id), "type": "Application (SEAL)"}
-            if isinstance(self.application_id, str)
-            else self.application_id
-        )
+        self.application_id = process_application_id(self.application_id)
 
     def __getattr__(self, name: str) -> Any:
         # Redirect attribute access to the snake_case version

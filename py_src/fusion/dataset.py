@@ -15,6 +15,7 @@ from .utils import (
     convert_date_format,
     make_bool,
     make_list,
+    process_application_id,
     requests_raise_for_status,
     snake_to_camel,
     tidy_string,
@@ -154,11 +155,7 @@ class Dataset(metaclass=CamelCaseMeta):
         self.created_date = convert_date_format(self.created_date) if self.created_date else None
         self.modified_date = convert_date_format(self.modified_date) if self.modified_date else None
         self.owners = self.owners if isinstance(self.owners, list) or self.owners is None else make_list(self.owners)
-        self.application_id = (
-            {"id": str(self.application_id), "type": "Application (SEAL)"}
-            if isinstance(self.application_id, str)
-            else self.application_id
-        )
+        self.application_id = process_application_id(self.application_id)
 
     def __getattr__(self, name: str) -> Any:
         # Redirect attribute access to the snake_case version

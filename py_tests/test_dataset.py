@@ -1,6 +1,7 @@
 """Test case for dataset module."""
 
 import json
+import re
 from collections.abc import Generator
 from typing import Any
 
@@ -115,7 +116,7 @@ def test_dataset_class_application_id_dict() -> None:
         identifier="Test Dataset",
         category="Test",
         product="TEST_PRODUCT",
-        application_id={"id": "12345", "type": "Alternative (TYPE)"},
+        application_id={"id": "12345", "type": "Intelligent Solution"},
     )
 
     assert str(test_dataset)
@@ -155,7 +156,7 @@ def test_dataset_class_application_id_dict() -> None:
     assert test_dataset.is_confidential is None
     assert test_dataset.is_highly_confidential is None
     assert test_dataset.is_active is None
-    assert test_dataset.application_id == {"id": "12345", "type": "Alternative (TYPE)"}
+    assert test_dataset.application_id == {"id": "12345", "type": "Intelligent Solution"}
 
 
 def test_dataset_client_value_error() -> None:
@@ -1471,3 +1472,20 @@ def test_remove_from_product(requests_mock: requests_mock.Mocker, fusion_obj: Fu
     assert isinstance(resp, requests.Response)
     status_code = 200
     assert resp.status_code == status_code
+
+
+def test_dataset_class_application_id_invalid_dict() -> None:
+    """Test Dataset with application_id missing required keys."""
+    with pytest.raises(
+        ValueError,
+        match=re.escape("application_id must contain keys: {'id', 'type'}")
+        + "|"
+        + re.escape("application_id must contain keys: {'type', 'id'}"),
+    ):
+        Dataset(identifier="Test Dataset", application_id={"id": "12345"})
+
+
+def test_dataset_class_application_id_invalid_type() -> None:
+    """Test Dataset with application_id having an invalid type."""
+    with pytest.raises(ValueError, match="Invalid application_id type: Invalid Type. Must be one of"):
+        Dataset(identifier="Test Dataset", application_id={"id": "12345", "type": "Invalid Type"})

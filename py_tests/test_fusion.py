@@ -1529,7 +1529,6 @@ def test_fusion_input_dataflow(fusion_obj: Fusion) -> None:
         category="Test",
         application_id="12345",
         producer_application_id={"id": "12345", "type": "Application (SEAL)"},
-        consumer_application_id={"id": "12345", "type": "Application (SEAL)"},
     )
 
     assert str(test_input_dataflow)
