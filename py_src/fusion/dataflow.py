@@ -43,7 +43,7 @@ class DataFlow(Dataset):
                 # process_application_id(app_id, "consumer_application_id") for app_id in self.consumer_application_id
                 processed
                 for app_id in self.consumer_application_id
-                if (processed := process_application_id(app_id)) is not None
+                if (processed := process_application_id(app_id, "consumer_application_id")) is not None
             ]
         if self.producer_application_id:
             self.producer_application_id = process_application_id(
@@ -95,6 +95,7 @@ class InputDataFlow(DataFlow):
     def __post_init__(self) -> None:
         """Ensure consumer_application_id is assigned from application_id."""
         if self.application_id:
+            process_application_id(self.application_id)
             self.consumer_application_id = (
                 [{"id": str(self.application_id), "type": "Application (SEAL)"}]
                 if isinstance(self.application_id, str)
