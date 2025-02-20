@@ -164,6 +164,11 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         if self.use_ssl and not verify_certs and ssl_show_warn:
             warnings.warn(f"Connecting to {self.host} using SSL with verify_certs=False is insecure.", stacklevel=2)
         self.url_prefix = f"dataspaces/{self.catalog}/datasets/{self.knowledge_base}/indexes/"
+        self.multi_dataset_url_prefix = f"dataspaces/{self.catalog}/indexes/"
+
+        if isinstance(self.knowledge_base, list):
+            self.url_prefix = self.multi_dataset_url_prefix
+
         self.index_name: str | None = None
 
     def _tidy_url(self, url: str) -> str:
@@ -208,8 +213,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
 
         return raw_data
 
-    @staticmethod
-    def _modify_post_haystack(body: bytes | None, method: str) -> bytes | None:
+    def _modify_post_haystack(self, body: bytes | None, method: str) -> bytes | None:
         """Method to modify haystack POST body to match the embeddings API, which expects the embedding field to be
             named "vector".
 
@@ -230,6 +234,9 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
                     for knn in knn_list:
                         if "knn" in knn and "embedding" in knn["knn"]:
                             knn["knn"]["vector"] = knn["knn"].pop("embedding")
+                    if isinstance(self.knowledge_base, list):
+                        query_dict["query"] = {"hybrid": {"queries": knn_list}}
+                        query_dict["datasets"] = self.knowledge_base
                     body = json.dumps(query_dict, separators=(",", ":")).encode("utf-8")
                 except json.JSONDecodeError as e:
                     logger.exception(f"An error occurred during modification of haystack POST body: {e}")
@@ -280,10 +287,13 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         # _refresh endpoint not supported
         if "_refresh" in url:
             return 200, {}, ""
+        
+        if isinstance(self.knowledge_base, list) and method.lower() == "post" and "query" not in body.decode("utf-8"):
+                return 200, {}, ""
 
         headers = headers or {}
 
-        body = FusionEmbeddingsConnection._modify_post_haystack(body, method)
+        body = self._modify_post_haystack(body, method)
 
         orig_body = body
         if self.http_compress and body:
