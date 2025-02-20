@@ -473,7 +473,6 @@ def test_modify_post_haystack(
         b'"size":10,"_source":{"excludes":["embedding"]}}'
     )
     modified_data = conn._modify_post_haystack(raw_data, "post")
-    modified_data = conn._modify_post_haystack(raw_data, "post")
 
     assert modified_data == exp_data
 
