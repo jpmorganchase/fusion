@@ -39,3 +39,11 @@ class CredentialError(Exception):
     Args:
         Exception : Exception to wrap.
     """
+
+class FileFormatError(Exception):
+    """FileFormatRequiredError exception wrapper to handle errors in download when file format is not accepted or 
+        cannot be determined.
+
+    Args:
+        Exception : Exception to wrap.
+    """

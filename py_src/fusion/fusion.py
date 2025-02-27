@@ -6,6 +6,7 @@ import json as js
 import logging
 import re
 import sys
+import time
 import warnings
 from io import BytesIO
 from pathlib import Path
@@ -25,7 +26,7 @@ from fusion.fusion_types import Types
 from fusion.product import Product
 from fusion.report import Report
 
-from .exceptions import APIResponseError
+from .exceptions import APIResponseError, FileFormatError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     RECOGNIZED_FORMATS,
@@ -688,6 +689,7 @@ class Fusion:
         Returns:
 
         """
+        download_setup_start = time.time()
         catalog = self._use_catalog(catalog)
 
         valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
@@ -701,16 +703,16 @@ class Fusion:
             required_series = [(catalog, dataset, dt_str, dataset_format)]
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
-            raise ValueError(f"Dataset format {dataset_format} is not supported")
+            raise FileFormatError(f"Dataset format {dataset_format} is not supported")
         
-        members = [series[2].strip("/") for series in required_series]
-        for member in members:
-            available_dataset_formats = list(self.list_distributions(dataset, member, catalog)["identifier"])
+        # members = [series[2].strip("/") for series in required_series]
+        # for member in members:
+        #     available_dataset_formats = list(self.list_distributions(dataset, member, catalog)["identifier"])
 
-            if dataset_format not in available_dataset_formats:
-                raise ValueError(
-                    f"Dataset format {dataset_format} is not available for dataset {dataset} series member {member}"
-                )
+        #     if dataset_format not in available_dataset_formats:
+        #         raise FileFormatError(
+        #             f"Dataset format {dataset_format} is not available for dataset {dataset} series member {member}"
+        #         )
 
         if not download_folder:
             download_folder = self.download_folder
@@ -753,15 +755,21 @@ class Fusion:
             }
             for i, series in enumerate(required_series)
         ]
+        download_set_up_end = time.time()
 
+        print(f"Download set up took {download_set_up_end - download_setup_start:.2f} seconds")
 
-        # check for access
-        for i in range(len(download_spec)):
-            resp = self.session.get(download_spec[i]["rpath"])
-            access_denied = 403
-            if resp.status_code == access_denied:
-                requests_raise_for_status(resp)
+        # access_check_start = time.time()
+        # # check for access
+        # for i in range(len(download_spec)):
+        #     resp = self.session.get(download_spec[i]["rpath"])
+        #     access_denied = 403
+        #     if resp.status_code == access_denied:
+        #         requests_raise_for_status(resp)
+        # access_check_end = time.time()
+        # print(f"Access check took {access_check_end - access_check_start:.2f} seconds")
 
+        download_start = time.time()
         logger.log(
             VERBOSE_LVL,
             f"Beginning {len(download_spec)} downloads in batches of {n_par}",
@@ -775,7 +783,8 @@ class Fusion:
             res = Parallel(n_jobs=n_par)(
                 delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
             )
-
+        download_end = time.time()
+        print(f"Download took {download_end - download_start:.2f} seconds")
         if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
                 if not r[0]:
@@ -827,6 +836,7 @@ class Fusion:
             class:`pandas.DataFrame`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
         """
+        to_df_setup_start = time.time()
         catalog = self._use_catalog(catalog)
 
         # sample data is limited to csv
@@ -835,6 +845,9 @@ class Fusion:
 
         if not download_folder:
             download_folder = self.download_folder
+        to_df_setup_end = time.time()
+        print(f"to_df start up took {to_df_setup_end - to_df_setup_start:.2f} seconds")
+
         download_res = self.download(
             dataset,
             dt_str,

@@ -449,6 +449,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
 
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
+
+        if not overwrite and lfs.exists(lpath):
+            return True, lpath, None
+
         if not lfs.exists(lpath):
             try:
                 lfs.mkdir(Path(lpath).parent, exist_ok=True, create_parents=True)
@@ -471,9 +475,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             logger.info(f"Failed to get headers for {rpath}", ex)
 
         is_local_fs = type(lfs).__name__ == "LocalFileSystem"
-
-        if not overwrite and lfs.exists(lpath):
-            return True, lpath, None
 
         return self.get(
             str(rpath),
