@@ -89,6 +89,7 @@ RECOGNIZED_FORMATS = [
     "mp4",
     "mov",
     "mkv",
+    "gz",
 ]
 
 re_str_1 = re.compile("(.)([A-Z][a-z]+)")
