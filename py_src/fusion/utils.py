@@ -793,6 +793,10 @@ def upload_files(  # noqa: PLR0913
     def _upload(p_url: str, path: str, file_name: str | None = None) -> tuple[bool, str, str | None]:
         try:
             if isinstance(fs_local, BytesIO):
+                fs_local.seek(0, 2)
+                size_in_bytes = fs_local.tell()
+                mp = multipart and size_in_bytes > chunk_size
+                fs_local.seek(0)
                 fs_fusion.put(
                     fs_local,
                     p_url,
