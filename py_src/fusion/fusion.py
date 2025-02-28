@@ -215,13 +215,20 @@ class Fusion:
 
         return catalog
 
-    def get_fusion_filesystem(self) -> FusionHTTPFileSystem:
-        """Creates Fusion Filesystem.
+    def get_fusion_filesystem(self, **kwargs) -> FusionHTTPFileSystem:
+        """Retrieve Fusion file system instance.
+
+        Note: This function always returns a reference to the exact same FFS instance since
+        an FFS instance is based off the FusionCredentials object.
 
         Returns: Fusion Filesystem
 
         """
-        return FusionHTTPFileSystem(client_kwargs={"root_url": self.root_url, "credentials": self.credentials})
+        as_async = kwargs.get("asynchronous", False)
+        return FusionHTTPFileSystem(
+            asynchronous=as_async,
+            client_kwargs={"root_url": self.root_url, "credentials": self.credentials}
+            )
 
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.

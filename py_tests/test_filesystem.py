@@ -114,6 +114,64 @@ async def test_isdir_false(http_fs_instance: FusionHTTPFileSystem) -> None:
     assert not result
 
 
+@pytest.mark.asyncio
+async def test_check_sess_open(http_fs_instance: FusionHTTPFileSystem) -> None:
+    new_fs_session_closed =  not http_fs_instance._check_session_open()
+    assert new_fs_session_closed
+
+    # Corresponds to running .set_session()
+    session_mock = MagicMock()
+    session_mock.closed = False
+    http_fs_instance._session = session_mock
+    fs_session_open = http_fs_instance._check_session_open()
+    assert fs_session_open
+
+    # Corresponds to situation where session was closed
+    session_mock2 = MagicMock()
+    session_mock2.closed = True
+    http_fs_instance._session = session_mock2
+    fs_session_closed = not http_fs_instance._check_session_open()
+    assert fs_session_closed
+
+
+@pytest.mark.asyncio
+async def test_async_startup(http_fs_instance: FusionHTTPFileSystem) -> None:
+    http_fs_instance._session = None
+    with (
+        patch("fusion.fusion_filesystem.FusionHTTPFileSystem.set_session") as SetSessionMock,
+        pytest.raises(RuntimeError) as re
+        ):
+        await http_fs_instance._async_startup()
+    SetSessionMock.assert_called_once()
+    assert re.match("FusionFS session closed before operation")
+
+    # Mock an open session
+    MockClient = MagicMock()
+    MockClient.closed = False
+    http_fs_instance._session = MockClient
+    with patch("fusion.fusion_filesystem.FusionHTTPFileSystem.set_session") as SetSessionMock2:
+        await http_fs_instance._async_startup()
+    SetSessionMock2.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_exists_methods(http_fs_instance: FusionHTTPFileSystem) -> None:
+    with patch("fusion.fusion_filesystem.HTTPFileSystem.exists") as MockExists:
+        MockExists.return_value = True
+        exists_out = http_fs_instance.exists("dummy_path")
+        MockExists.assert_called_once()
+    assert exists_out
+
+    with (
+        patch("fusion.fusion_filesystem.HTTPFileSystem._exists") as Mock_Exists,
+        patch("fusion.fusion_filesystem.FusionHTTPFileSystem._async_startup") as MockStartup):
+        Mock_Exists.return_value = True
+        _exists_out = await http_fs_instance._exists("dummy_path")
+        Mock_Exists.assert_awaited_once()
+        MockStartup.assert_awaited_once()
+    assert _exists_out
+
+
 @patch("requests.Session")
 def test_stream_single_file(mock_session_class: MagicMock, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
     url = "http://example.com/data"
