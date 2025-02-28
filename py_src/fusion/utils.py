@@ -802,7 +802,7 @@ def upload_files(  # noqa: PLR0913
                     p_url,
                     chunk_size=chunk_size,
                     method="put",
-                    multipart=multipart,
+                    multipart=mp,
                     from_date=from_date,
                     to_date=to_date,
                     file_name=file_name,
