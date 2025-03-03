@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
 
+from opensearchpy import AsyncOpenSearch
 import pandas as pd
 import pyarrow as pa
 from joblib import Parallel, delayed
@@ -2483,6 +2484,30 @@ class Fusion:
         catalog = self._use_catalog(catalog)
         return OpenSearch(
             connection_class=FusionEmbeddingsConnection,
+            catalog=catalog,
+            knowledge_base=knowledge_base,
+            root_url=self.root_url,
+            credentials=self.credentials,
+        )
+    
+    def get_async_fusion_vector_store_client(self, knowledge_base: str, catalog: str | None = None) -> AsyncOpenSearch:
+        """Returns Fusion Embeddings Search client.
+
+        Args:
+            knowledge_base (str): Knowledge base (dataset) identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            OpenSearch: Fusion Embeddings Search client.
+
+        """
+        from opensearchpy import AsyncOpenSearch
+
+        from fusion.embeddings import AsyncFusionEmbeddingsConnection
+
+        catalog = self._use_catalog(catalog)
+        return AsyncOpenSearch(
+            connection_class=AsyncFusionEmbeddingsConnection,
             catalog=catalog,
             knowledge_base=knowledge_base,
             root_url=self.root_url,

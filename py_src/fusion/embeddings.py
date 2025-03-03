@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import ssl
 import time
 import warnings
+from collections.abc import Collection, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import requests
-from opensearchpy.compat import reraise_exceptions, string_types
+import urllib3
+from opensearchpy._async._extra_imports import aiohttp, aiohttp_exceptions, yarl  # type: ignore
+from opensearchpy._async.compat import get_running_loop
+from opensearchpy._async.http_aiohttp import AsyncConnection, OpenSearchClientResponse
+from opensearchpy.compat import reraise_exceptions, string_types, urlencode
 from opensearchpy.connection.base import Connection
 from opensearchpy.exceptions import (
     ConnectionError as OpenSearchConnectionError,
@@ -23,13 +30,15 @@ from opensearchpy.exceptions import (
 from opensearchpy.metrics import Metrics, MetricsNone
 
 from fusion._fusion import FusionCredentials
-from fusion.utils import get_session
+from fusion.utils import get_client, get_session
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
 
 HTTP_OK = 200
 HTTP_MULTIPLE_CHOICES = 300
+VERIFY_CERTS_DEFAULT = object()
+SSL_SHOW_WARN_DEFAULT = object()
 
 logger = logging.getLogger(__name__)
 
@@ -383,120 +392,361 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         self.session.close()
 
 
-def format_index_body(number_of_shards: int = 1, number_of_replicas: int = 1, dimension: int = 1536) -> dict[str, Any]:
-    """Format index body for index creation in Embeddings API.
+class AsyncFusionEmbeddingsConnection(AsyncConnection):
+    session: aiohttp.ClientSession
+    ssl_assert_fingerprint: str | None
 
-    Args:
-        number_of_shards (int, optional): Number of primary shards to split the index into. This should be determined
-            by the amount of data that will be stored in the index. Defaults to 1.
-        number_of_replicas (int, optional): Number of replica shards to create for each primary shard. Defaults to 1.
-        dimension (int, optional): Dimension of your index, determined by embedding model to be used for your index.
-            Defaults to 1536.
+    def __init__(  # noqa: PLR0912, PLR0913, PLR0915
+        self,
+        host: str = "localhost",
+        port: int | None = None,
+        timeout: int = 10,
+        http_auth: Any = None,
+        use_ssl: bool = False,
+        verify_certs: Any = VERIFY_CERTS_DEFAULT,
+        ssl_show_warn: Any = SSL_SHOW_WARN_DEFAULT,
+        ca_certs: Any = None,
+        client_cert: Any = None,
+        client_key: Any = None,
+        ssl_version: Any = None,
+        ssl_assert_hostname: bool = True,
+        ssl_assert_fingerprint: Any = None,
+        maxsize: int | None = 10,
+        headers: Any = None,
+        ssl_context: Any = None,
+        http_compress: bool | None = None,
+        opaque_id: str | None = None,
+        loop: Any = None,
+        trust_env: bool | None = False,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Default connection class for ``AsyncOpenSearch`` using the `aiohttp` library and the http protocol.
 
-    Returns:
-        dict: Index body expected by embeddings API.
-    """
-    index_body = {
-        "settings": {
-            "index": {
-                "number_of_shards": number_of_shards,
-                "number_of_replicas": number_of_replicas,
-                "knn": True,
-            }
-        },
-        "mappings": {
-            "properties": {
-                "vector": {"type": "knn_vector", "dimension": dimension},
-                "content": {"type": "text"},
-                "chunk-id": {"type": "text"},
-            }
-        },
-    }
-    return index_body
+        :arg host: hostname of the node (default: localhost)
+        :arg port: port to use (integer, default: 9200)
+        :arg url_prefix: optional url prefix for opensearch
+        :arg timeout: default timeout in seconds (float, default: 10)
+        :arg http_auth: optional http auth information as either ':' separated
+            string or a tuple
+        :arg use_ssl: use ssl for the connection if `True`
+        :arg verify_certs: whether to verify SSL certificates
+        :arg ssl_show_warn: show warning when verify certs is disabled
+        :arg ca_certs: optional path to CA bundle.
+            See https://urllib3.readthedocs.io/en/latest/security.html#using-certifi-with-urllib3
+            for instructions how to get default set
+        :arg client_cert: path to the file containing the private key and the
+            certificate, or cert only if using client_key
+        :arg client_key: path to the file containing the private key if using
+            separate cert and key files (client_cert will contain only the cert)
+        :arg ssl_version: version of the SSL protocol to use. Choices are:
+            SSLv23 (default) SSLv2 SSLv3 TLSv1 (see ``PROTOCOL_*`` constants in the
+            ``ssl`` module for exact options for your environment).
+        :arg ssl_assert_hostname: use hostname verification if not `False`
+        :arg ssl_assert_fingerprint: verify the supplied certificate fingerprint if not `None`
+        :arg maxsize: the number of connections which will be kept open to this
+            host. See https://urllib3.readthedocs.io/en/1.4/pools.html#api for more
+            information.
+        :arg headers: any custom http headers to be add to requests
+        :arg http_compress: Use gzip compression
+        :arg opaque_id: Send this value in the 'X-Opaque-Id' HTTP header
+            For tracing all requests made by this transport.
+        :arg loop: asyncio Event Loop to use with aiohttp. This is set by default to the currently running loop.
+        """
 
+        fusion_root_url: str = kwargs.get("root_url", "https://fusion.jpmorgan.com/api/v1/")
+        credentials: FusionCredentials | str | None = kwargs.get("credentials", "config/client_credentials.json")
+        if isinstance(credentials, FusionCredentials):
+            self.credentials = credentials
+        elif isinstance(credentials, str):
+            self.credentials = FusionCredentials.from_file(Path(credentials))
+        else:
+            raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
+        self.catalog = kwargs.get("catalog", "common")
+        self.knowledge_base = kwargs.get("knowledge_base")
 
-class PromptTemplateManager:
-    """Class to manage prompt templates for different packages and tasks."""
+        self.session = get_client(self.credentials, url=fusion_root_url)
+        self.base_url = fusion_root_url
 
-    def __init__(self) -> None:
-        self.templates: dict[tuple[str, str], str] = {}
+        self.url_prefix = f"dataspaces/{self.catalog}/datasets/{self.knowledge_base}/indexes/"
+        self.multi_dataset_url_prefix = f"dataspaces/{self.catalog}/indexes/"
 
-        self._load_default_templates()
+        if isinstance(self.knowledge_base, list):
+            self.url_prefix = self.multi_dataset_url_prefix
 
-    def _load_default_templates(self) -> None:
-        """Load default prompt templates."""
-        self.add_template(
-            "langchain",
-            "RAG",
-            """Given the following information, answer the question.
-        
-        {context}
+        self.headers = {}
 
-        Question: {question}""",
+        self.index_name: str | None = None
+
+        super().__init__(
+            host=host,
+            port=port,
+            url_prefix=self.url_prefix,
+            timeout=timeout,
+            use_ssl=use_ssl,
+            maxsize=maxsize,
+            headers=headers,
+            http_compress=http_compress,
+            opaque_id=opaque_id,
+            **kwargs,
         )
 
-        self.add_template(
-            "haystack",
-            "RAG",
-            """
-        Given the following information, answer the question.
-        
-        Context:
-        {% for document in documents %}
-            {{ document.content }}
-        {% endfor %}
+        if http_auth is not None:
+            if isinstance(http_auth, (tuple, list)):
+                http_auth = ":".join(http_auth)
+            self.headers.update(urllib3.make_headers(basic_auth=http_auth))  # type: ignore
 
-        Question: {{question}}
-        Answer:
-        """,
+        # if providing an SSL context, raise error if any other SSL related flag is used
+        if ssl_context and (
+            (verify_certs is not VERIFY_CERTS_DEFAULT)
+            or (ssl_show_warn is not SSL_SHOW_WARN_DEFAULT)
+            or ca_certs
+            or client_cert
+            or client_key
+            or ssl_version
+        ):
+            warnings.warn(
+                "When using `ssl_context`, all other SSL related kwargs are ignored", stacklevel=2
+            )
+
+        self.ssl_assert_fingerprint = ssl_assert_fingerprint
+        if self.use_ssl and ssl_context is None:
+            ssl_context = ssl.create_default_context() if ssl_version is None else ssl.SSLContext(ssl_version)
+
+            # Convert all sentinel values to their actual default
+            # values if not using an SSLContext.
+            if verify_certs is VERIFY_CERTS_DEFAULT:
+                verify_certs = True
+            if ssl_show_warn is SSL_SHOW_WARN_DEFAULT:
+                ssl_show_warn = True
+
+            if verify_certs:
+                ssl_context.verify_mode = ssl.CERT_REQUIRED
+                ssl_context.check_hostname = ssl_assert_hostname
+            else:
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+
+            if ca_certs is None:
+                ca_certs = self.default_ca_certs()
+
+            if verify_certs:
+                if not ca_certs:
+                    raise ImproperlyConfigured(
+                        "Root certificates are missing for certificate "
+                        "validation. Either pass them in using the ca_certs parameter or "
+                        "install certifi to use it automatically."
+                    )
+                if Path.is_file(ca_certs):
+                    ssl_context.load_verify_locations(cafile=ca_certs)
+                elif Path.is_dir(ca_certs):
+                    ssl_context.load_verify_locations(capath=ca_certs)
+                else:
+                    raise ImproperlyConfigured("ca_certs parameter is not a path")
+            elif ssl_show_warn:
+                warnings.warn(
+                    f"Connecting to {self.host} using SSL with verify_certs=False is insecure.", stacklevel=2
+                )
+
+            # Use client_cert and client_key variables for SSL certificate configuration.
+            if client_cert and not Path.is_file(client_cert):
+                raise ImproperlyConfigured("client_cert is not a path to a file")
+            if client_key and not Path.is_file(client_key):
+                raise ImproperlyConfigured("client_key is not a path to a file")
+            if client_cert and client_key:
+                ssl_context.load_cert_chain(client_cert, client_key)
+            elif client_cert:
+                ssl_context.load_cert_chain(client_cert)
+
+        self.headers.setdefault("connection", "keep-alive")
+        self.loop = loop
+        self.session = None
+
+        # Align with Sync Interface
+        if "pool_maxsize" in kwargs:
+            maxsize = kwargs.pop("pool_maxsize")
+
+        # Parameters for creating an aiohttp.ClientSession later.
+        self._limit = maxsize
+        self._http_auth = http_auth
+        self._ssl_context = ssl_context
+        self._trust_env = trust_env
+
+    def _tidy_url(self, url: str) -> str:
+        return self.base_url[:-1] + url.replace("%2F%7B", "/").replace("%7D%2F", "/").replace("%2F", "/")
+
+    @staticmethod
+    def _remap_endpoints(url: str) -> str:
+        return url.replace("_bulk", "embeddings").replace("_search", "search")
+    
+    def _make_url_valid(self, url: str) -> str:
+        if self.index_name is None:
+            self.index_name = url.split("/")[-1]
+            self.url_prefix = self.url_prefix + self.index_name
+
+        if url.split("/")[-1] != self.index_name:
+            url = self.base_url + self.url_prefix + "/" + url.split("/")[-1]
+        else:
+            url = self.base_url + self.url_prefix
+        url = self._remap_endpoints(url)
+
+        return url
+
+    async def perform_request(  # noqa: PLR0912
+        self,
+        method: str,
+        url: str,
+        params: Mapping[str, Any] | None = None,
+        body: bytes | None = None,
+        timeout: float | None = None,
+        ignore: Collection[int] = (),
+        headers: Mapping[str, str] | None = None,
+    ) -> Any:
+        if self.session is None:
+            await self._create_aiohttp_session()
+        assert self.session is not None
+
+        if method.lower() == "put":
+            method = "POST"
+
+        url = self._tidy_url(url)
+        url = self._make_url_valid(url)
+
+        # _refresh endpoint not supported
+        if "_refresh" in url:
+            return 200, {}, ""
+        
+        if isinstance(self.knowledge_base, list) and method.lower() == "post" and "query" not in body.decode("utf-8"):
+                return 200, {}, ""
+
+        orig_body = body
+        url_path = self.url_prefix + url
+        query_string = urlencode(params) if params else ""
+
+        # Top-tier tip-toeing happening here. Basically
+        # because Pip's old resolver is bad and wipes out
+        # strict pins in favor of non-strict pins of extras
+        # our [async] extra overrides aiohttp's pin of
+        # yarl. yarl released breaking changes, aiohttp pinned
+        # defensively afterwards, but our users don't get
+        # that nice pin that aiohttp set. :( So to play around
+        # this super-defensively we try to import yarl, if we can't
+        # then we pass a string into ClientSession.request() instead.
+        if yarl:
+            # Provide correct URL object to avoid string parsing in low-level code
+            url = yarl.URL.build(
+                scheme=self.scheme,
+                host=self.hostname,
+                port=self.port,
+                path=url_path,
+                query_string=query_string,
+                encoded=True,
+            )
+        else:
+            url = self.url_prefix + url
+            if query_string:
+                url = f"{url}?{query_string}"
+            url = self.host + url
+
+        timeout = aiohttp.ClientTimeout(
+            total=timeout if timeout is not None else self.timeout
         )
 
-    def add_template(self, package: str, task: str, template: str) -> None:
-        """Add a new template to the manager.
+        req_headers = self.headers.copy()
+        if headers:
+            req_headers.update(headers)
 
-        Args:
-            package (str): Package name.
-            task (str): Task name.
-            template (str): Template string.
+        if self.http_compress and body:
+            body = self._gzip_compress(body)
+            req_headers["content-encoding"] = "gzip"
+
+        start = self.loop.time()
+        try:
+            async with self.session.request(
+                method,
+                url,
+                data=body,
+                headers=req_headers,
+                timeout=timeout,
+                fingerprint=self.ssl_assert_fingerprint,
+            ) as response:
+                raw_data = await response.text()
+                duration = self.loop.time() - start
+
+        # We want to reraise a cancellation or recursion error.
+        except reraise_exceptions:
+            raise
+        except Exception as e:
+            self.log_request_fail(
+                method,
+                url,
+                url_path,
+                orig_body,
+                self.loop.time() - start,
+                exception=e,
+            )
+            if isinstance(e, aiohttp_exceptions.ServerFingerprintMismatch):
+                raise SSLError("N/A", str(e), e) from e
+            if isinstance(
+                e, (asyncio.TimeoutError, aiohttp_exceptions.ServerTimeoutError)
+            ):
+                raise ConnectionTimeout("TIMEOUT", str(e), e) from e
+            raise OpenSearchConnectionError("N/A", str(e), e) from e
+
+        # raise warnings if any from the 'Warnings' header.
+        warning_headers = response.headers.getall("warning", ())
+        self._raise_warnings(warning_headers)
+
+        # raise errors based on http status codes, let the client handle those if needed
+        if not (HTTP_OK <= response.status < HTTP_MULTIPLE_CHOICES) and response.status not in ignore:
+            self.log_request_fail(
+                method,
+                url,
+                url_path,
+                orig_body,
+                duration,
+                status_code=response.status,
+                response=raw_data,
+            )
+            self._raise_error(
+                response.status,
+                raw_data,
+                response.headers.get("content-type"),
+            )
+
+        self.log_request_success(
+            method, url, url_path, orig_body, response.status, raw_data, duration
+        )
+
+        return response.status, response.headers, raw_data
+
+    async def close(self) -> Any:
         """
-        self.templates[(package, task)] = template
-
-    def get_template(self, package: str, task: str) -> str:
-        """Get the template for the given package and task.
-
-        Args:
-            package (str): Package name.
-            task (str): Task name.
-
-        Returns:
-            str: Template string.
+        Explicitly closes connection
         """
-        return self.templates.get((package, task), "")
+        if self.session:
+            await self.session.close()
+            self.session = None
 
-    def remove_template(self, package: str, task: str) -> None:
-        """Remove the template for the given package and task.
-
-        Args:
-            package (str): Package name.
-            task (str): Task name.
+    async def _create_aiohttp_session(self) -> Any:
+        """Creates an aiohttp.ClientSession(). This is delayed until
+        the first call to perform_request() so that AsyncTransport has
+        a chance to set AIOHttpConnection.loop
         """
-        self.templates.pop((package, task), None)
-
-    def list_tasks(self, package: str) -> list[str]:
-        """List all tasks for the given package.
-
-        Args:
-            package (str): Package name.
-
-        Returns:
-            list[str]: List of tasks.
-        """
-        return [task for (pkg, task) in self.templates if pkg == package]
-
-    def list_packages(self) -> list[str]:
-        """List all packages.
-
-        Returns:
-            list[str]: List of packages.
-        """
-        return list({pkg for (pkg, task) in self.templates})
+        if self.loop is None:
+            self.loop = get_running_loop()
+        self.session = aiohttp.ClientSession(
+            headers=self.headers,
+            skip_auto_headers=("accept", "accept-encoding"),
+            auto_decompress=True,
+            loop=self.loop,
+            cookie_jar=aiohttp.DummyCookieJar(),
+            response_class=OpenSearchClientResponse,
+            connector=aiohttp.TCPConnector(
+                limit=self._limit,
+                use_dns_cache=True,
+                enable_cleanup_closed=True,
+                ssl=self._ssl_context,
+            ),
+            trust_env=self._trust_env,
+        )
