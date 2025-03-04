@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 import requests
 import urllib3
-from opensearchpy._async._extra_imports import aiohttp, aiohttp_exceptions, yarl  # type: ignore
+from opensearchpy._async._extra_imports import aiohttp, aiohttp_exceptions, yarl
 from opensearchpy._async.compat import get_running_loop
 from opensearchpy._async.http_aiohttp import AsyncConnection, OpenSearchClientResponse
 from opensearchpy.compat import reraise_exceptions, string_types, urlencode
@@ -296,8 +296,12 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         # _refresh endpoint not supported
         if "_refresh" in url:
             return 200, {}, ""
-        
-        if isinstance(self.knowledge_base, list) and method.lower() == "post" and "query" not in body.decode("utf-8"):
+        if (
+            body 
+            and isinstance(self.knowledge_base, list) 
+            and method.lower() == "post" 
+            and "query" not in body.decode("utf-8")
+        ):
                 return 200, {}, ""
 
         headers = headers or {}
@@ -392,7 +396,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         self.session.close()
 
 
-class AsyncFusionEmbeddingsConnection(AsyncConnection):
+class AsyncFusionEmbeddingsConnection(AsyncConnection):  # type: ignore
     session: aiohttp.ClientSession
     ssl_assert_fingerprint: str | None
 
@@ -616,7 +620,12 @@ class AsyncFusionEmbeddingsConnection(AsyncConnection):
         if "_refresh" in url:
             return 200, {}, ""
         
-        if isinstance(self.knowledge_base, list) and method.lower() == "post" and "query" not in body.decode("utf-8"):
+        if (
+            body 
+            and isinstance(self.knowledge_base, list) 
+            and method.lower() == "post" 
+            and "query" not in body.decode("utf-8")
+        ):
                 return 200, {}, ""
 
         orig_body = body
@@ -750,3 +759,122 @@ class AsyncFusionEmbeddingsConnection(AsyncConnection):
             ),
             trust_env=self._trust_env,
         )
+
+
+def format_index_body(number_of_shards: int = 1, number_of_replicas: int = 1, dimension: int = 1536) -> dict[str, Any]:
+    """Format index body for index creation in Embeddings API.
+
+    Args:
+        number_of_shards (int, optional): Number of primary shards to split the index into. This should be determined
+            by the amount of data that will be stored in the index. Defaults to 1.
+        number_of_replicas (int, optional): Number of replica shards to create for each primary shard. Defaults to 1.
+        dimension (int, optional): Dimension of your index, determined by embedding model to be used for your index.
+            Defaults to 1536.
+
+    Returns:
+        dict: Index body expected by embeddings API.
+    """
+    index_body = {
+        "settings": {
+            "index": {
+                "number_of_shards": number_of_shards,
+                "number_of_replicas": number_of_replicas,
+                "knn": True,
+            }
+        },
+        "mappings": {
+            "properties": {
+                "vector": {"type": "knn_vector", "dimension": dimension},
+                "content": {"type": "text"},
+                "chunk-id": {"type": "text"},
+            }
+        },
+    }
+    return index_body
+
+
+class PromptTemplateManager:
+    """Class to manage prompt templates for different packages and tasks."""
+
+    def __init__(self) -> None:
+        self.templates: dict[tuple[str, str], str] = {}
+
+        self._load_default_templates()
+
+    def _load_default_templates(self) -> None:
+        """Load default prompt templates."""
+        self.add_template(
+            "langchain",
+            "RAG",
+            """Given the following information, answer the question.
+        
+        {context}
+
+        Question: {question}""",
+        )
+
+        self.add_template(
+            "haystack",
+            "RAG",
+            """
+        Given the following information, answer the question.
+        
+        Context:
+        {% for document in documents %}
+            {{ document.content }}
+        {% endfor %}
+
+        Question: {{question}}
+        Answer:
+        """,
+        )
+
+    def add_template(self, package: str, task: str, template: str) -> None:
+        """Add a new template to the manager.
+
+        Args:
+            package (str): Package name.
+            task (str): Task name.
+            template (str): Template string.
+        """
+        self.templates[(package, task)] = template
+
+    def get_template(self, package: str, task: str) -> str:
+        """Get the template for the given package and task.
+
+        Args:
+            package (str): Package name.
+            task (str): Task name.
+
+        Returns:
+            str: Template string.
+        """
+        return self.templates.get((package, task), "")
+
+    def remove_template(self, package: str, task: str) -> None:
+        """Remove the template for the given package and task.
+
+        Args:
+            package (str): Package name.
+            task (str): Task name.
+        """
+        self.templates.pop((package, task), None)
+
+    def list_tasks(self, package: str) -> list[str]:
+        """List all tasks for the given package.
+
+        Args:
+            package (str): Package name.
+
+        Returns:
+            list[str]: List of tasks.
+        """
+        return [task for (pkg, task) in self.templates if pkg == package]
+
+    def list_packages(self) -> list[str]:
+        """List all packages.
+
+        Returns:
+            list[str]: List of packages.
+        """
+        return list({pkg for (pkg, task) in self.templates})

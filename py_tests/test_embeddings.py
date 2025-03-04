@@ -478,13 +478,28 @@ def test_modify_post_haystack(
     assert modified_data == exp_data
 
 
-def test_modify_post_haystack_json_decode_error(caplog: pytest.LogCaptureFixture) -> None:
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_modify_post_haystack_json_decode_error(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test that invalid JSON input triggers a JSONDecodeError and logs an exception."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+    )
     # Provide invalid JSON to cause json.JSONDecodeError
     invalid_body = b"{ query }"
     method = "POST"
 
-    result = FusionEmbeddingsConnection._modify_post_haystack(invalid_body, method)
+    result = conn._modify_post_haystack(body=invalid_body, method=method)
 
     # Check that the function returned the original body
     # Ensure returned value is the fallback
@@ -514,18 +529,33 @@ def test_modify_post_haystack_no_query(
     )
     exp_data = b'{"create":{"_id":"sjdkfs"}}\n{"id":"sjdkfs","content":"This is a test","vector":[0.1,0.2,0.3,0.4,0.5]}'
 
-    modified_data = conn._modify_post_haystack(raw_data, "post")
+    modified_data = conn._modify_post_haystack(body=raw_data, method="post")
 
     assert modified_data == exp_data
 
 
-def test_modify_post_haystack_json_decode_error_no_query(caplog: pytest.LogCaptureFixture) -> None:
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_modify_post_haystack_json_decode_error_no_query(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Test that invalid JSON input triggers a JSONDecodeError and logs an exception."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+    )
     # Provide invalid JSON to cause json.JSONDecodeError
     invalid_body = b"{ invalid_json }"
     method = "POST"
 
-    result = FusionEmbeddingsConnection._modify_post_haystack(invalid_body, method)
+    result = conn._modify_post_haystack(body=invalid_body, method=method)
 
     # Check that the function returned the original body
     # Ensure returned value is the fallback
