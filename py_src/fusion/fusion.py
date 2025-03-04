@@ -2502,11 +2502,11 @@ class Fusion:
         """
         from opensearchpy import AsyncOpenSearch
 
-        from fusion.embeddings import AsyncFusionEmbeddingsConnection
+        from fusion.embeddings import FusionAsyncHttpConnection
 
         catalog = self._use_catalog(catalog)
         return AsyncOpenSearch(
-            connection_class=AsyncFusionEmbeddingsConnection,
+            connection_class=FusionAsyncHttpConnection,
             catalog=catalog,
             knowledge_base=knowledge_base,
             root_url=self.root_url,
