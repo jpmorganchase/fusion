@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
 
-from opensearchpy import AsyncOpenSearch
 import pandas as pd
 import pyarrow as pa
 from joblib import Parallel, delayed
@@ -57,7 +56,7 @@ from .utils import (
 if TYPE_CHECKING:
     import fsspec
     import requests
-    from opensearchpy import OpenSearch
+    from opensearchpy import AsyncOpenSearch, OpenSearch
 
     from .types import PyArrowFilterT
 
