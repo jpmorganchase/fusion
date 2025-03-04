@@ -29,8 +29,8 @@ from opensearchpy.exceptions import (
 from opensearchpy.metrics import Metrics, MetricsNone
 
 from fusion._fusion import FusionCredentials
+from fusion.authentication import FusionAiohttpSession
 from fusion.utils import get_session
-from py_src.fusion.authentication import FusionAiohttpSession
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
