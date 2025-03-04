@@ -47,6 +47,9 @@ module-name = "fusion._fusion"
 features = ["pyo3/extension-module"]
 
 [project.optional-dependencies]
+all = [
+   "pyfusion[doc, awx, gcs, azr, polars, events, embeddings]"
+]
 doc = [
     "mkdocs",
     "docutils",
