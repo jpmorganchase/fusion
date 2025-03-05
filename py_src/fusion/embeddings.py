@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 import requests
 from opensearchpy._async._extra_imports import aiohttp, aiohttp_exceptions, yarl
 from opensearchpy._async.compat import get_running_loop
-from opensearchpy._async.http_aiohttp import AIOHttpConnection, OpenSearchClientResponse
+from opensearchpy._async.http_aiohttp import AIOHttpConnection
 from opensearchpy.compat import reraise_exceptions, string_types, urlencode
 from opensearchpy.connection.base import Connection
 from opensearchpy.exceptions import (
@@ -29,11 +29,12 @@ from opensearchpy.exceptions import (
 from opensearchpy.metrics import Metrics, MetricsNone
 
 from fusion._fusion import FusionCredentials
-from fusion.authentication import FusionAiohttpSession
-from fusion.utils import get_session
+from fusion.utils import get_client, get_session
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
+
+    from fusion.authentication import FusionAiohttpSession
 
 
 HTTP_OK = 200
@@ -448,6 +449,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         super().__init__(
             host=host,
             port=port,
+            url_prefix=self.url_prefix,
             use_ssl=use_ssl,
             headers=headers,
             http_compress=http_compress,
@@ -545,12 +547,12 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
     def _make_url_valid(self, url: str) -> str:
         if self.index_name is None:
             self.index_name = url.split("/")[-1]
-            self.url_prefix = self.url_prefix + self.index_name
+            self.url_prefix = self.url_prefix + "/" + self.index_name
 
         if url.split("/")[-1] != self.index_name:
             url = self.base_url + self.url_prefix + "/" + url.split("/")[-1]
         else:
-            url = self.base_url + self.url_prefix
+            url = self.base_url + self.url_prefix.strip("/")
         url = self._remap_endpoints(url)
 
         return url
@@ -600,10 +602,8 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         # that nice pin that aiohttp set. :( So to play around
         # this super-defensively we try to import yarl, if we can't
         # then we pass a string into ClientSession.request() instead.
-        url = self.url_prefix + url
         if query_string:
             url = f"{url}?{query_string}"
-        url = self.host + url
 
         timeout: aiohttp.ClientTimeout | None = aiohttp.ClientTimeout(  # type: ignore
             total=timeout if timeout is not None else self.timeout
@@ -697,18 +697,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         """
         if self.loop is None:
             self.loop = get_running_loop()
-        self.session = FusionAiohttpSession(
-            headers=self.headers,
-            skip_auto_headers=("accept", "accept-encoding"),
-            auto_decompress=True,
-            loop=self.loop,
-            cookie_jar=aiohttp.DummyCookieJar(),
-            response_class=OpenSearchClientResponse,
-            connector=aiohttp.TCPConnector(
-                limit=self._limit, use_dns_cache=True, ssl=self._ssl_context
-            ),
-        )
-        self.session.post_init(credentials=self.credentials)
+        self.session = await get_client(self.credentials)
 
 
 def format_index_body(number_of_shards: int = 1, number_of_replicas: int = 1, dimension: int = 1536) -> dict[str, Any]:
