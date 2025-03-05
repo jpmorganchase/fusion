@@ -397,7 +397,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         self.session.close()
 
 
-class FusionAsyncHttpConnection(AIOHttpConnection):
+class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
     session: FusionAiohttpSession | None
 
     def __init__(  # noqa: PLR0912, PLR0913, PLR0915
@@ -441,7 +441,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):
         if isinstance(self.knowledge_base, list):
             self.url_prefix = self.multi_dataset_url_prefix
 
-        self.headers = {}
+        self.headers: dict[Any, Any] = {}
 
         self.index_name: str | None = None
 
@@ -459,7 +459,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):
             if isinstance(http_auth, (tuple, list)):
                 http_auth = aiohttp.BasicAuth(login=http_auth[0], password=http_auth[1])
             elif isinstance(http_auth, string_types):
-                login, password = http_auth.split(":", 1)  # type: ignore
+                login, password = http_auth.split(":", 1)
                 http_auth = aiohttp.BasicAuth(login=login, password=password)
 
         # if providing an SSL context, raise error if any other SSL related flag is used
@@ -501,9 +501,9 @@ class FusionAsyncHttpConnection(AIOHttpConnection):
                         "validation. Either pass them in using the ca_certs parameter or "
                         "install certifi to use it automatically."
                     )
-                if Path.isfile(ca_certs):
+                if Path.is_file(ca_certs):
                     ssl_context.load_verify_locations(cafile=ca_certs)
-                elif Path.isdir(ca_certs):
+                elif Path.is_dir(ca_certs):
                     ssl_context.load_verify_locations(capath=ca_certs)
                 else:
                     raise ImproperlyConfigured("ca_certs parameter is not a path")
@@ -513,9 +513,9 @@ class FusionAsyncHttpConnection(AIOHttpConnection):
                 )
 
             # Use client_cert and client_key variables for SSL certificate configuration.
-            if client_cert and not Path.isfile(client_cert):
+            if client_cert and not Path.is_file(client_cert):
                 raise ImproperlyConfigured("client_cert is not a path to a file")
-            if client_key and not Path.isfile(client_key):
+            if client_key and not Path.is_file(client_key):
                 raise ImproperlyConfigured("client_key is not a path to a file")
             if client_cert and client_key:
                 ssl_context.load_cert_chain(client_cert, client_key)
@@ -561,7 +561,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):
         url: str,
         params: Mapping[str, Any] | None = None,
         body: bytes | None = None,
-        timeout: int | None = None,
+        timeout: int | None = None,  # type: ignore
         ignore: Collection[int] = (),
         headers: Mapping[str, str] | None = None,
     ) -> Any:
@@ -605,7 +605,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):
             url = f"{url}?{query_string}"
         url = self.host + url
 
-        timeout = aiohttp.ClientTimeout(
+        timeout: aiohttp.ClientTimeout | None = aiohttp.ClientTimeout(  # type: ignore
             total=timeout if timeout is not None else self.timeout
         )
 
@@ -628,13 +628,13 @@ class FusionAsyncHttpConnection(AIOHttpConnection):
 
         start = self.loop.time()
         try:
-            async with self.session.request(
+            async with self.session.request(  # type: ignore
                 method,
                 yarl.URL(url, encoded=True),
                 data=body,
                 auth=auth,
                 headers=req_headers,
-                timeout=timeout,
+                timeout=timeout,  # type: ignore
                 fingerprint=self.ssl_assert_fingerprint,
             ) as response:
                 raw_data = await response.text()
