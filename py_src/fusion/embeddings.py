@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import requests
+from aiohttp import ClientTimeout
 from opensearchpy._async._extra_imports import aiohttp, aiohttp_exceptions, yarl
 from opensearchpy._async.compat import get_running_loop
 from opensearchpy._async.http_aiohttp import AIOHttpConnection
@@ -605,7 +606,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         if query_string:
             url = f"{url}?{query_string}"
 
-        timeout: aiohttp.ClientTimeout | None = aiohttp.ClientTimeout(  # type: ignore
+        timeout = aiohttp.ClientTimeout(
             total=timeout if timeout is not None else self.timeout
         )
 
@@ -627,6 +628,8 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             }
 
         start = self.loop.time()
+        timeout_obj = ClientTimeout(total=timeout) if isinstance(timeout, int) else timeout
+
         try:
             async with self.session.request(
                 method,
@@ -634,7 +637,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
                 data=body,
                 auth=auth,
                 headers=req_headers,
-                timeout=timeout,
+                timeout=timeout_obj,
             ) as response:
                 raw_data = await response.text()
                 duration = self.loop.time() - start
