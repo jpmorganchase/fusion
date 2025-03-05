@@ -628,13 +628,13 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
 
         start = self.loop.time()
         try:
-            async with self.session.request(  # type: ignore
+            async with self.session.request(
                 method,
                 yarl.URL(url, encoded=True),
                 data=body,
                 auth=auth,
                 headers=req_headers,
-                timeout=timeout,  # type: ignore
+                timeout=timeout,
                 fingerprint=self.ssl_assert_fingerprint,
             ) as response:
                 raw_data = await response.text()
