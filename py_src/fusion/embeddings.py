@@ -634,7 +634,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
                 data=body,
                 auth=auth,
                 headers=req_headers,
-                timeout=aiohttp.ClientTimeout(total=timeout) if timeout is not None else None,
+                timeout=timeout,  # type: ignore
             ) as response:
                 raw_data = await response.text()
                 duration = self.loop.time() - start
