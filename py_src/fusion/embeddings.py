@@ -561,7 +561,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         url: str,
         params: Mapping[str, Any] | None = None,
         body: bytes | None = None,
-        timeout: int | None = None,  # type: ignore
+        timeout: int | None = None,
         ignore: Collection[int] = (),
         headers: Mapping[str, str] | None = None,
     ) -> Any:
