@@ -558,6 +558,83 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
 
         return url
     
+    @staticmethod
+    def _modify_post_response_langchain(raw_data: str | bytes | bytearray) -> str | bytes | bytearray:
+        """Modify the response from langchain POST request to match the expected format.
+
+        Args:
+            raw_data (str | bytes | bytearray): Raw post response data.
+
+        Returns:
+            str | bytes | bytearray: Modified post repsonse data.
+        """
+        if len(raw_data) > 0:
+            try:
+                data = json.loads(raw_data)
+                if "hits" in data:
+                    for hit in data["hits"]:
+                        # Change "source" to "_source" if it exists
+                        if "source" in hit:
+                            hit["_source"] = hit.pop("source")
+                            hit["_id"] = hit.pop("id")
+                            hit["_score"] = hit.pop("score")
+
+                    # Wrap the existing "hits" list in another dicitonary wit the key "hits"
+                    data["hits"] = {"hits": data["hits"]}
+
+                    # Serialize the modified dictionary back to a JSON string
+
+                    return json.dumps(data, separators=(",", ":"))
+
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.exception(f"An error occurred during modification of langchain POST response: {e}")
+
+                return raw_data.decode("utf-8", errors="ignore") if isinstance(raw_data, bytes) else raw_data
+
+        return raw_data
+
+    def _modify_post_haystack(self, body: bytes | None, method: str) -> bytes | None:
+        """Method to modify haystack POST body to match the embeddings API, which expects the embedding field to be
+            named "vector".
+
+        Args:
+            body (bytes): Request body.
+            method (str): Request method.
+
+        Returns:
+            bytes: Modified request body.
+        """
+        if method.lower() == "post":
+            body_str = body.decode("utf-8") if body else ""
+
+            if "query" in body_str:
+                try:
+                    query_dict = json.loads(body_str)
+                    knn_list = query_dict.get("query", {}).get("bool", {}).get("must", {})
+                    for knn in knn_list:
+                        if "knn" in knn and "embedding" in knn["knn"]:
+                            knn["knn"]["vector"] = knn["knn"].pop("embedding")
+                    if isinstance(self.knowledge_base, list):
+                        query_dict["query"] = {"hybrid": {"queries": knn_list}}
+                        query_dict["datasets"] = self.knowledge_base
+                    body = json.dumps(query_dict, separators=(",", ":")).encode("utf-8")
+                except json.JSONDecodeError as e:
+                    logger.exception(f"An error occurred during modification of haystack POST body: {e}")
+            elif body_str != "":
+                try:
+                    json_strings = body_str.strip().split("\n")
+                    dict_list = [json.loads(json_string) for json_string in json_strings]
+                    for dct in dict_list:
+                        if "embedding" in dct:
+                            dct["vector"] = dct.pop("embedding")
+                    json_strings_mod = [json.dumps(d, separators=(",", ":")) for d in dict_list]
+                    joined_str = "\n".join(json_strings_mod)
+                    body = joined_str.encode("utf-8")
+                except json.JSONDecodeError as e:
+                    logger.exception(f"An error occurred during modification of haystack POST body: {e}")
+        return body
+
+
     async def perform_request(  # noqa: PLR0912
         self,
         method: str,
@@ -590,6 +667,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         ):
                 return 200, {}, ""
         
+        body = self._modify_post_haystack(body, method)
         orig_body = body
         url_path = self.url_prefix + url
         query_string = urlencode(params) if params else ""
@@ -666,6 +744,8 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         warning_headers = response.headers.getall("warning", ())
         self._raise_warnings(warning_headers)
 
+        raw_data_modified = str(FusionAsyncHttpConnection._modify_post_response_langchain(raw_data))
+
         # raise errors based on http status codes, let the client handle those if needed
         if not (HTTP_OK <= response.status < HTTP_MULTIPLE_CHOICES) and response.status not in ignore:
             self.log_request_fail(
@@ -675,12 +755,12 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
                 orig_body,
                 duration,
                 status_code=response.status,
-                response=raw_data,
+                response=raw_data_modified,
             )
-            self._raise_error(response.status, raw_data)
+            self._raise_error(response.status, raw_data_modified)
 
         self.log_request_success(
-            method, str(url), url_path, orig_body, response.status, raw_data, duration
+            method, str(url), url_path, orig_body, response.status, raw_data_modified, duration
         )
 
         return response.status, response.headers, raw_data
