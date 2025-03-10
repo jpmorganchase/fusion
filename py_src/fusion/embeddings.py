@@ -437,6 +437,9 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         self.session = None
         self.base_url = fusion_root_url
 
+        if kwargs.get("url_prefix"):
+            kwargs.pop("url_prefix")
+
         self.url_prefix = f"dataspaces/{self.catalog}/datasets/{self.knowledge_base}/indexes/"
         self.multi_dataset_url_prefix = f"dataspaces/{self.catalog}/indexes/"
 
@@ -504,9 +507,9 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
                         "validation. Either pass them in using the ca_certs parameter or "
                         "install certifi to use it automatically."
                     )
-                if Path.is_file(ca_certs):
+                if Path(ca_certs).is_file():
                     ssl_context.load_verify_locations(cafile=ca_certs)
-                elif Path.is_dir(ca_certs):
+                elif Path(ca_certs).is_dir():
                     ssl_context.load_verify_locations(capath=ca_certs)
                 else:
                     raise ImproperlyConfigured("ca_certs parameter is not a path")
@@ -516,9 +519,9 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
                 )
 
             # Use client_cert and client_key variables for SSL certificate configuration.
-            if client_cert and not Path.is_file(client_cert):
+            if client_cert and not Path(client_cert).is_file():
                 raise ImproperlyConfigured("client_cert is not a path to a file")
-            if client_key and not Path.is_file(client_key):
+            if client_key and not Path(client_key).is_file():
                 raise ImproperlyConfigured("client_key is not a path to a file")
             if client_cert and client_key:
                 ssl_context.load_cert_chain(client_cert, client_key)
