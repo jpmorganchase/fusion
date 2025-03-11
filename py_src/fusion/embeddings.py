@@ -672,7 +672,6 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         
         body = self._modify_post_haystack(body, method)
         orig_body = body
-        url_path = self.url_prefix + url
         query_string = urlencode(params) if params else ""
 
         # Top-tier tip-toeing happening here. Basically
@@ -730,7 +729,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             self.log_request_fail(
                 method,
                 str(url),
-                url_path,
+                url,
                 orig_body,
                 self.loop.time() - start,
                 exception=e,
@@ -754,7 +753,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             self.log_request_fail(
                 method,
                 str(url),
-                url_path,
+                url,
                 orig_body,
                 duration,
                 status_code=response.status,
@@ -763,7 +762,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             self._raise_error(response.status, raw_data_modified)
 
         self.log_request_success(
-            method, str(url), url_path, orig_body, response.status, raw_data_modified, duration
+            method, str(url), url, orig_body, response.status, raw_data_modified, duration
         )
 
         return response.status, response.headers, raw_data
