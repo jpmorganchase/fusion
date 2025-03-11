@@ -86,8 +86,21 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             finally:
                 self._raise_not_found_for_status(response, url)
 
+    def _check_session_open(self) -> bool:
+        # Check that _session is active. Expects that if _session is populated with .set_session, result
+        # result was already awaited
+        if self._session is None:
+            return False
+        return not self._session.closed
+
+    async def _async_startup(self) -> None:
+        await self.set_session()
+        if not self._check_session_open():
+            raise RuntimeError("FusionFS session closed before operation")
+
     async def _decorate_url_a(self, url: str) -> str:
         url = urljoin(f"{self.client_kwargs['root_url']}catalogs/", url) if "http" not in url else url
+        url = url[:-1] if url[-1] == "/" else url
         return url
 
     def _decorate_url(self, url: str) -> str:
@@ -105,6 +118,16 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             return False
 
     async def _changes(self, url: str) -> dict[Any, Any]:
+        """Get from given url.
+
+        Currently called within the context of the /changes api endpoint.
+
+        Args:
+            url: str
+
+        Returns:
+            Dict containing json-ified return from endpoint.
+        """
         url = self._decorate_url(url)
         try:
             session = await self.set_session()
@@ -120,7 +143,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
             raise ex
 
-    async def _ls_real(self, url: str, detail: bool = True, **kwargs: Any) -> Any:
+    async def _ls_real(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
         # ignoring URL-encoded arguments
         clean_url = url
         if "http" not in url:
@@ -195,9 +218,21 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return res
 
-    async def _ls(self, url: str, detail: bool = True, **kwargs: Any) -> Any:
-        url = await self._decorate_url_a(url)
-        return await super()._ls(url, detail, **kwargs)
+    async def _info(self, path: str, **kwargs: Any) -> Any:
+        await self._async_startup()
+        path = await self._decorate_url_a(path)
+        kwargs["keep_protocol"] = True
+        res = await super()._ls(path, detail=True, **kwargs)
+        if res[0]["type"] != "file":
+            res = await super()._info(path, **kwargs)
+            if path.split("/")[-2] == "datasets":
+                target = path.split("/")[-1]
+                args = ["/".join(path.split("/")[:-1]) + f"/changes?datasets={quote(target)}"]
+                res["changes"] = await self._changes(*args)
+        split_path = path.split("/")
+        if len(split_path) > 1 and split_path[-2] == "distributions":
+            res = res[0]
+        return res
 
     def ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
         """List resources.
@@ -223,7 +258,21 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return ret
 
-    def exists(self, url: str, detail: bool = True, **kwargs: Any) -> Any:
+    async def _ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
+        await self._async_startup()
+        url = await self._decorate_url_a(url)
+        ret = await super()._ls(url, detail, **kwargs)
+        keep_protocol = kwargs.pop("keep_protocol", False)
+        if detail:
+            if not keep_protocol:
+                for k in ret:
+                    k["name"] = k["name"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1]
+        elif not keep_protocol:
+            return [x.split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
+
+        return ret
+
+    def exists(self, url: str, **kwargs: Any) -> Any:
         """Check existence.
 
         Args:
@@ -235,7 +284,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
         url = self._decorate_url(url)
-        return super().exists(url, detail, **kwargs)
+        return super().exists(url, **kwargs)
+
+    async def _exists(self, url: str, **kwargs: Any) -> Any:
+        await self._async_startup()
+        url = self._decorate_url(url)
+        out = await super()._exists(url, **kwargs)
+        return out
 
     def isfile(self, path: str) -> Union[bool, Any]:
         """Is path a file.
@@ -263,6 +318,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
         url = self._decorate_url(url)
         return super().cat(url, start=start, end=end, **kwargs)
+
+    async def _cat(self, url: str, start: Optional[int] = None, end: Optional[int] = None, **kwargs: Any) -> Any:
+        await self._async_startup()
+        url = self._decorate_url(url)
+        out = await super()._cat(url, start=start, end=end, **kwargs)
+        return out
 
     async def _fetch_range(
         self,
@@ -836,6 +897,12 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         path = self._decorate_url(path)
         return super().find(path, maxdepth=maxdepth, withdirs=withdirs, **kwargs)
 
+    async def _find(self, path: str, maxdepth: Optional[int] = None, withdirs: bool = False, **kwargs: Any) -> Any:
+        await self._async_startup()
+        path = self._decorate_url(path)
+        out = await super()._find(path, maxdepth=maxdepth, withdirs=withdirs, **kwargs)
+        return out
+
     def glob(self, path: str, **kwargs: Any) -> Any:
         """Glob.
 
@@ -848,6 +915,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
 
         return super().glob(path, **kwargs)
+
+    async def _glob(self, path: str, **kwargs: Any) -> Any:
+        out = await super()._glob(path, **kwargs)
+        return out
 
     def open(
         self,
