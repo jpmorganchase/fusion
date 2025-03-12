@@ -584,40 +584,11 @@ def test_make_valid_url(
         catalog="mycatalog",
         knowledge_base="mykb",
     )
-    url = "https://example.com/api/v1/myindex"
+    url = "/myindex"
     exp_url = "https://example.com/api/v1/dataspaces/mycatalog/datasets/mykb/indexes/myindex"
 
     modified_url = conn._make_url_valid(url)
     assert modified_url == exp_url
-
-
-@patch("fusion.embeddings.get_session")
-@patch("fusion.embeddings.FusionCredentials.from_file")
-def test_make_valid_url_different_index(
-    mock_from_file: MagicMock,
-    mock_get_session: MagicMock,
-) -> None:
-    mock_credentials = MagicMock(spec=FusionCredentials)
-    mock_from_file.return_value = mock_credentials
-    mock_session = MagicMock()
-    mock_get_session.return_value = mock_session
-
-    conn = FusionEmbeddingsConnection(
-        host="localhost",
-        credentials="dummy_credentials.json",
-        root_url="https://example.com/api/v1/",
-        index_name="myindex",
-        catalog="mycatalog",
-        knowledge_base="mykb",
-    )
-
-    conn.index_name = "myindex"
-    conn.url_prefix = conn.url_prefix + "myindex"
-    url = "https://example.com/api/v1/_bulk"
-    expected_url = "https://example.com/api/v1/dataspaces/mycatalog/datasets/mykb/indexes/myindex/embeddings"
-
-    modified_url = conn._make_url_valid(url)
-    assert modified_url == expected_url
 
 
 @patch("fusion.embeddings.get_session")

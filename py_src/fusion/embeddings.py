@@ -281,12 +281,12 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
 
         raise ValueError("Index name not found in bulk body")
 
-    def _make_url_valid(self, url: str) -> str:
+    def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
         if url=="/_bulk":
             index_name = self.index_name if self.index_name else self._retrieve_index_name_from_bulk_body(body)
             url = self.base_url + self.url_prefix + "/" + index_name + url
         else:
-            url = self.base_url + self.url_prefix + "/" + url
+            url = self.base_url + self.url_prefix + url.strip("/")
 
         url = self._remap_endpoints(url)
 
@@ -576,7 +576,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
 
         raise ValueError("Index name not found in bulk body")
 
-    def _make_url_valid(self, url: str, body: bytes | None) -> str:
+    def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
         if url=="/_bulk":
             index_name = self.index_name if self.index_name else self._retrieve_index_name_from_bulk_body(body)
             url = self.base_url + self.url_prefix + "/" + index_name + url
