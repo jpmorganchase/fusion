@@ -265,7 +265,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
                 except json.JSONDecodeError as e:
                     logger.exception(f"An error occurred during modification of haystack POST body: {e}")
         return body
-    
+
     def _retrieve_index_name_from_bulk_body(self, body: bytes | None) -> str:
         body_str = body.decode("utf-8") if body else ""
 
@@ -276,13 +276,13 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
                 json_obj = json.loads(json_str)
 
                 if "index" in json_obj and "_index" in json_obj["index"]:
-                    index_name =str(json_obj["index"]["_index"])
+                    index_name = str(json_obj["index"]["_index"])
                     return index_name
 
         raise ValueError("Index name not found in bulk body")
 
     def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
-        if url=="/_bulk":
+        if url == "/_bulk":
             index_name = self.index_name if self.index_name else self._retrieve_index_name_from_bulk_body(body)
             url = self.base_url + self.url_prefix + "/" + index_name + url
         else:
@@ -313,12 +313,12 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         if "_refresh" in url:
             return 200, {}, ""
         if (
-            body 
-            and isinstance(self.knowledge_base, list) 
-            and method.lower() == "post" 
+            body
+            and isinstance(self.knowledge_base, list)
+            and method.lower() == "post"
             and "query" not in body.decode("utf-8")
         ):
-                return 200, {}, ""
+            return 200, {}, ""
 
         headers = headers or {}
 
@@ -490,9 +490,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             or client_key
             or ssl_version
         ):
-            warnings.warn(
-                "When using `ssl_context`, all other SSL related kwargs are ignored", stacklevel=2
-            )
+            warnings.warn("When using `ssl_context`, all other SSL related kwargs are ignored", stacklevel=2)
 
         self.ssl_assert_fingerprint = ssl_assert_fingerprint
         if self.use_ssl and ssl_context is None:
@@ -527,9 +525,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
                 else:
                     raise ImproperlyConfigured("ca_certs parameter is not a path")
             elif ssl_show_warn:
-                warnings.warn(
-                    f"Connecting to {self.host} using SSL with verify_certs=False is insecure.", stacklevel=2
-                )
+                warnings.warn(f"Connecting to {self.host} using SSL with verify_certs=False is insecure.", stacklevel=2)
 
             # Use client_cert and client_key variables for SSL certificate configuration.
             if client_cert and not Path(client_cert).is_file():
@@ -553,14 +549,14 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         self._limit = maxsize
         self._http_auth = http_auth
         self._ssl_context = ssl_context
-    
+
     def _tidy_url(self, url: str) -> str:
         return self.base_url[:-1] + url.replace("%2F%7B", "/").replace("%7D%2F", "/").replace("%2F", "/")
 
     @staticmethod
     def _remap_endpoints(url: str) -> str:
         return url.replace("_bulk", "embeddings").replace("_search", "search")
-    
+
     def _retrieve_index_name_from_bulk_body(self, body: bytes | None) -> str:
         body_str = body.decode("utf-8") if body else ""
 
@@ -571,13 +567,13 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
                 json_obj = json.loads(json_str)
 
                 if "index" in json_obj and "_index" in json_obj["index"]:
-                    index_name =str(json_obj["index"]["_index"])
+                    index_name = str(json_obj["index"]["_index"])
                     return index_name
 
         raise ValueError("Index name not found in bulk body")
 
     def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
-        if url=="/_bulk":
+        if url == "/_bulk":
             index_name = self.index_name if self.index_name else self._retrieve_index_name_from_bulk_body(body)
             url = self.base_url + self.url_prefix + "/" + index_name + url
         else:
@@ -586,7 +582,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         url = self._remap_endpoints(url)
 
         return url
-    
+
     @staticmethod
     def _modify_post_response_langchain(raw_data: str | bytes | bytearray) -> str | bytes | bytearray:
         """Modify the response from langchain POST request to match the expected format.
@@ -663,7 +659,6 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
                     logger.exception(f"An error occurred during modification of haystack POST body: {e}")
         return body
 
-
     async def perform_request(  # noqa: PLR0912
         self,
         method: str,
@@ -687,15 +682,15 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         # _refresh endpoint not supported
         if "_refresh" in url:
             return 200, {}, ""
-        
+
         if (
-            body 
-            and isinstance(self.knowledge_base, list) 
-            and method.lower() == "post" 
+            body
+            and isinstance(self.knowledge_base, list)
+            and method.lower() == "post"
             and "query" not in body.decode("utf-8")
         ):
-                return 200, {}, ""
-        
+            return 200, {}, ""
+
         body = self._modify_post_haystack(body, method)
         orig_body = body
         query_string = urlencode(params) if params else ""
@@ -712,9 +707,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         if query_string:
             url = f"{url}?{query_string}"
 
-        timeout = aiohttp.ClientTimeout(
-            total=timeout if timeout is not None else self.timeout
-        )
+        timeout = aiohttp.ClientTimeout(total=timeout if timeout is not None else self.timeout)
 
         req_headers = self.headers.copy()
         if headers:
@@ -724,9 +717,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             body = self._gzip_compress(body)
             req_headers["content-encoding"] = "gzip"
 
-        auth = (
-            self._http_auth if isinstance(self._http_auth, aiohttp.BasicAuth) else None
-        )
+        auth = self._http_auth if isinstance(self._http_auth, aiohttp.BasicAuth) else None
         if callable(self._http_auth):
             req_headers = {
                 **req_headers,
@@ -762,9 +753,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             )
             if isinstance(e, aiohttp_exceptions.ServerFingerprintMismatch):
                 raise SSLError("N/A", str(e), e) from e
-            if isinstance(
-                e, (asyncio.TimeoutError, aiohttp_exceptions.ServerTimeoutError)
-            ):
+            if isinstance(e, (asyncio.TimeoutError, aiohttp_exceptions.ServerTimeoutError)):
                 raise ConnectionTimeout("TIMEOUT", str(e), e) from e
             raise ConnectionError("N/A", str(e), e) from e
 
@@ -787,9 +776,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             )
             self._raise_error(response.status, raw_data_modified)
 
-        self.log_request_success(
-            method, str(url), url, orig_body, response.status, raw_data_modified, duration
-        )
+        self.log_request_success(method, str(url), url, orig_body, response.status, raw_data_modified, duration)
 
         return response.status, response.headers, raw_data
 

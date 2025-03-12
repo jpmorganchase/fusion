@@ -2494,7 +2494,7 @@ class Fusion:
             root_url=self.root_url,
             credentials=self.credentials,
         )
-    
+
     def get_async_fusion_vector_store_client(self, knowledge_base: str, catalog: str | None = None) -> AsyncOpenSearch:
         """Returns Fusion Embeddings Search client.
 
