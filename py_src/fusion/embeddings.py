@@ -181,7 +181,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         if isinstance(self.knowledge_base, list):
             self.url_prefix = self.multi_dataset_url_prefix
 
-        self.index_name: str | None = None
+        self.index_name: str | None = kwargs.get("index")
 
     def _tidy_url(self, url: str) -> str:
         return self.base_url[:-1] + url.replace("%2F%7B", "/").replace("%7D%2F", "/").replace("%2F", "/")
@@ -265,16 +265,29 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
                 except json.JSONDecodeError as e:
                     logger.exception(f"An error occurred during modification of haystack POST body: {e}")
         return body
+    
+    def _retrieve_index_name_from_bulk_body(self, body: bytes | None) -> str:
+        body_str = body.decode("utf-8") if body else ""
+
+        json_objects = body_str.split("\n")
+
+        for json_str in json_objects:
+            if json_str.strip():
+                json_obj = json.loads(json_str)
+
+                if "index" in json_obj and "_index" in json_obj["index"]:
+                    index_name =str(json_obj["index"]["_index"])
+                    return index_name
+
+        raise ValueError("Index name not found in bulk body")
 
     def _make_url_valid(self, url: str) -> str:
-        if self.index_name is None:
-            self.index_name = url.split("/")[-1]
-            self.url_prefix = self.url_prefix + self.index_name
-
-        if url.split("/")[-1] != self.index_name:
-            url = self.base_url + self.url_prefix + "/" + url.split("/")[-1]
+        if url=="/_bulk":
+            index_name = self.index_name if self.index_name else self._retrieve_index_name_from_bulk_body(body)
+            url = self.base_url + self.url_prefix + "/" + index_name + url
         else:
-            url = self.base_url + self.url_prefix
+            url = self.base_url + self.url_prefix + "/" + url
+
         url = self._remap_endpoints(url)
 
         return url
@@ -448,7 +461,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
 
         self.headers: dict[Any, Any] = {}
 
-        self.index_name: str | None = None
+        self.index_name: str | None = kwargs.get("index")
 
         super().__init__(
             host=host,
@@ -548,15 +561,28 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
     def _remap_endpoints(url: str) -> str:
         return url.replace("_bulk", "embeddings").replace("_search", "search")
     
-    def _make_url_valid(self, url: str) -> str:
-        if self.index_name is None:
-            self.index_name = url.split("/")[-1]
-            self.url_prefix = self.url_prefix + "/" + self.index_name
+    def _retrieve_index_name_from_bulk_body(self, body: bytes | None) -> str:
+        body_str = body.decode("utf-8") if body else ""
 
-        if url.split("/")[-1] != self.index_name:
-            url = self.base_url + self.url_prefix + "/" + url.split("/")[-1]
+        json_objects = body_str.split("\n")
+
+        for json_str in json_objects:
+            if json_str.strip():
+                json_obj = json.loads(json_str)
+
+                if "index" in json_obj and "_index" in json_obj["index"]:
+                    index_name =str(json_obj["index"]["_index"])
+                    return index_name
+
+        raise ValueError("Index name not found in bulk body")
+
+    def _make_url_valid(self, url: str, body: bytes | None) -> str:
+        if url=="/_bulk":
+            index_name = self.index_name if self.index_name else self._retrieve_index_name_from_bulk_body(body)
+            url = self.base_url + self.url_prefix + "/" + index_name + url
         else:
-            url = self.base_url + self.url_prefix.strip("/")
+            url = self.base_url + self.url_prefix + "/" + url
+
         url = self._remap_endpoints(url)
 
         return url
