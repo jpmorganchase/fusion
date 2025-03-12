@@ -58,29 +58,29 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
     - Provides methods for modifying and validating URLs specific to the Fusion Embedding API.
 
     Args:
-        http_auth (str or tuple, optional): HTTP auth information as either ':' separated string or a tuple. 
+        http_auth (str or tuple, optional): HTTP auth information as either ':' separated string or a tuple.
             Any value will be passed into requests as `auth`.
         use_ssl (bool, optional): Use SSL for the connection if `True`.
         verify_certs (bool, optional): Whether to verify SSL certificates.
         ssl_show_warn (bool, optional): Show warning when verify certs is disabled.
-        ca_certs (str, optional): Path to CA bundle. Defaults to configured OpenSSL bundles from environment variables 
-            and then certifi before falling back to the standard requests bundle to improve consistency with other 
+        ca_certs (str, optional): Path to CA bundle. Defaults to configured OpenSSL bundles from environment variables
+            and then certifi before falling back to the standard requests bundle to improve consistency with other
             Connection implementations.
-        client_cert (str, optional): Path to the file containing the private key and the certificate, 
+        client_cert (str, optional): Path to the file containing the private key and the certificate,
             or cert only if using client_key.
-        client_key (str, optional): Path to the file containing the private key if using separate cert and key files 
+        client_key (str, optional): Path to the file containing the private key if using separate cert and key files
             (client_cert will contain only the cert).
         headers (dict, optional): Any custom HTTP headers to be added to requests.
         http_compress (bool, optional): Use gzip compression.
-        opaque_id (str, optional): Send this value in the 'X-Opaque-Id' HTTP header for tracing 
+        opaque_id (str, optional): Send this value in the 'X-Opaque-Id' HTTP header for tracing
             all requests made by this transport.
-        pool_maxsize (int, optional): Maximum connection pool size used by pool-manager 
+        pool_maxsize (int, optional): Maximum connection pool size used by pool-manager
             for custom connection-pooling on current session.
-        metrics (Metrics, optional): Instance of a subclass of the `opensearchpy.Metrics` class, 
+        metrics (Metrics, optional): Instance of a subclass of the `opensearchpy.Metrics` class,
             used for collecting and reporting metrics related to the client's operations.
 
     Keyword Args:
-        root_url (str, optional): Root URL for the Fusion API. Defaults to 
+        root_url (str, optional): Root URL for the Fusion API. Defaults to
             "https://fusion.jpmorgan.com/api/v1/".
         credentials (FusionCredentials or str, optional): Credentials for the Fusion API. Can be a `FusionCredentials`
             object or a path to a credentials file. Defaults to "config/client_credentials.json".
