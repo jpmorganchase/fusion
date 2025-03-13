@@ -184,7 +184,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         self.index_name: str | None = kwargs.get("index")
 
     def _tidy_url(self, url: str) -> str:
-        return self.base_url[:-1] + url.replace("%2F%7B", "/").replace("%7D%2F", "/").replace("%2F", "/")
+        return url.replace("%2F%7B", "/").replace("%7D%2F", "/").replace("%2F", "/")
 
     @staticmethod
     def _remap_endpoints(url: str) -> str:
@@ -277,9 +277,9 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
 
                 if "index" in json_obj and "_index" in json_obj["index"]:
                     index_name = str(json_obj["index"]["_index"])
-                    return index_name
-
-        raise ValueError("Index name not found in bulk body")
+                else:
+                    raise ValueError("Index name not found in bulk body")
+        return index_name
 
     def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
         if url == "/_bulk":
@@ -307,7 +307,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             method = "POST"
 
         url = self._tidy_url(url)
-        url = self._make_url_valid(url)
+        url = self._make_url_valid(url, body)
 
         # _refresh endpoint not supported
         if "_refresh" in url:
@@ -551,7 +551,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         self._ssl_context = ssl_context
 
     def _tidy_url(self, url: str) -> str:
-        return self.base_url[:-1] + url.replace("%2F%7B", "/").replace("%7D%2F", "/").replace("%2F", "/")
+        return url.replace("%2F%7B", "/").replace("%7D%2F", "/").replace("%2F", "/")
 
     @staticmethod
     def _remap_endpoints(url: str) -> str:
@@ -568,9 +568,9 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
 
                 if "index" in json_obj and "_index" in json_obj["index"]:
                     index_name = str(json_obj["index"]["_index"])
-                    return index_name
-
-        raise ValueError("Index name not found in bulk body")
+                else:
+                    raise ValueError("Index name not found in bulk body")
+        return index_name
 
     def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
         if url == "/_bulk":
@@ -677,7 +677,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             method = "POST"
 
         url = self._tidy_url(url)
-        url = self._make_url_valid(url)
+        url = self._make_url_valid(url, body)
 
         # _refresh endpoint not supported
         if "_refresh" in url:
