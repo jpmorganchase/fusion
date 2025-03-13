@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Literal
 from unittest.mock import MagicMock, patch
 
@@ -15,7 +16,7 @@ from opensearchpy.exceptions import (
 )
 
 from fusion._fusion import FusionCredentials
-from fusion.embeddings import FusionEmbeddingsConnection, PromptTemplateManager, format_index_body
+from fusion.embeddings import FusionAsyncHttpConnection, FusionEmbeddingsConnection, PromptTemplateManager, format_index_body
 
 
 def test_format_index_body() -> None:
@@ -320,7 +321,7 @@ def test_fusion_embeddings_connection_ssl_warning(
         (
             "https://example.com/api/v1/",
             "%2F%7Bmyindex%7D%2F_test%2Fmock%2F",
-            "https://example.com/api/v1/myindex/_test/mock/",
+            "/myindex/_test/mock/",
         )
     ],
 )
@@ -812,3 +813,103 @@ def test_close(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
     conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
     conn.close()
     mock_session.close.assert_called_once()
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_async_http_connection(mock_from_file: MagicMock) -> None:
+    """Test for FusionAsyncHttpConnection class."""
+
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    connection = FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        verify_certs=True,
+        ssl_show_warn=False,
+        headers={"custom-header": "value"},
+        http_compress=True,
+        opaque_id="opaque-id",
+        pool_maxsize=20,
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials="config/client_credentials.json",
+        catalog="common",
+        knowledge_base="knowledge_base",
+    )
+
+    assert connection.host == "https://localhost:9200"
+    assert connection.use_ssl is True
+    assert connection.http_compress is True
+    assert connection.url_prefix == "/dataspaces/common/datasets/knowledge_base/indexes"
+    assert connection.base_url == "https://fusion.jpmorgan.com/api/v1/"
+    assert connection.credentials == mock_credentials
+    assert connection.session is None
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_retrieve_index_name_from_bulk_body(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test for _retrieve_index_name_from_bulk_body function."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+
+    # Test case: valid bulk body
+    bulk_body = b'{"index":{"_id":"23134werw", "_index":"test-index"}}\n{"vector":[],"content":"content","metadata":{}}'
+    index_name = conn._retrieve_index_name_from_bulk_body(bulk_body)
+    assert index_name == "test-index"
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_retrieve_index_name_from_bulk_body_no_index(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test for _retrieve_index_name_from_bulk_body function."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    # Test case: bulk body with no index name
+    bulk_body_no_index = b'{"index":{"_id":"23134werw"}}\n{"vector":[],"content":"content","metadata":{}}'
+    with pytest.raises(ValueError, match="Index name not found in bulk body"):
+        conn._retrieve_index_name_from_bulk_body(bulk_body_no_index)
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_retrieve_index_name_from_bulk_body_empty(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test for _retrieve_index_name_from_bulk_body function."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    # Test case: empty bulk body
+    empty_bulk_body = b""
+    with pytest.raises(ValueError, match="Index name not found in bulk body"):
+        conn._retrieve_index_name_from_bulk_body(empty_bulk_body)
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_retrieve_index_name_from_bulk_body_json_decode(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test for _retrieve_index_name_from_bulk_body function."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+    # Test case: bulk body with invalid JSON
+    invalid_json_bulk_body = (
+        b'{"index":{"_id":"23134werw", "_index":"test-index"}}\n'
+        b'{"vector":[],"content":"content","metadata":{}'
+    )
+    with pytest.raises(json.JSONDecodeError):
+        conn._retrieve_index_name_from_bulk_body(invalid_json_bulk_body)
