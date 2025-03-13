@@ -246,7 +246,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
                     for knn in knn_list:
                         if "knn" in knn and "embedding" in knn["knn"]:
                             knn["knn"]["vector"] = knn["knn"].pop("embedding")
-                    if isinstance(self.knowledge_base, list):
+                    if isinstance(self.knowledge_base, list) and knn_list != {}:
                         query_dict["query"] = {"hybrid": {"queries": knn_list}}
                         query_dict["datasets"] = self.knowledge_base
                     body = json.dumps(query_dict, separators=(",", ":")).encode("utf-8")
@@ -639,7 +639,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
                     for knn in knn_list:
                         if "knn" in knn and "embedding" in knn["knn"]:
                             knn["knn"]["vector"] = knn["knn"].pop("embedding")
-                    if isinstance(self.knowledge_base, list):
+                    if isinstance(self.knowledge_base, list) and knn_list != {}:
                         query_dict["query"] = {"hybrid": {"queries": knn_list}}
                         query_dict["datasets"] = self.knowledge_base
                     body = json.dumps(query_dict, separators=(",", ":")).encode("utf-8")
