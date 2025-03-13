@@ -58,6 +58,8 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
     - Provides methods for modifying and validating URLs specific to the Fusion Embedding API.
 
     Args:
+        host (str, optional): Hostname of the server. Defaults to "localhost".
+        port (int, optional): Port number of the server. Defaults to None.
         http_auth (str or tuple, optional): HTTP auth information as either ':' separated string or a tuple.
             Any value will be passed into requests as `auth`.
         use_ssl (bool, optional): Use SSL for the connection if `True`.
@@ -86,6 +88,8 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             object or a path to a credentials file. Defaults to "config/client_credentials.json".
         catalog (str, optional): Catalog name. Defaults to "common".
         knowledge_base (str, optional): Knowledge base name. A dataset identifier.
+        index (str, optional): Index name. Defaults to `None`. Used to determine index when the _bulk operation
+            is attempted. If not provided, it will be extracted from the request body.
     """
 
     def __init__(  # noqa: PLR0912, PLR0913, PLR0915
@@ -436,6 +440,53 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         loop: Any = None,
         **kwargs: Any,
     ) -> None:
+        """
+        Class responsible for maintaining asynchronous HTTP connection to the Fusion Embedding API using OpenSearch.
+        This class is a customized version of the `AsyncHttpConnection` class from the `opensearchpy` library, tailored
+        to work with an internal vector database.
+
+        The `FusionAsyncHttpConnection` class provides the following enhancements:
+        - Establishes and manages asynchronous HTTP connections to the Fusion Embedding API.
+        - Integrates with the Fusion API for authentication and session management.
+        - Provides methods for modifying and validating URLs specific to the Fusion Embedding API.
+
+
+        Args:
+            host (str, optional): Hostname of the server. Defaults to "localhost".
+            port (int | None, optional): Port number of the server. Defaults to None.
+            http_auth (Any, optional): HTTP auth information as either ':' separated string or a tuple.
+            use_ssl (bool, optional): Use SSL for the connection if `True`.
+            verify_certs (Any, optional): Whether to verify SSL certificates.
+            ssl_show_warn (Any, optional): Show warning when verify certs is disabled.
+            ca_certs (Any, optional): Path to CA bundle. See https://urllib3.readthedocs.io/en/latest/security.html#using-certifi-with-urllib3
+                for instructions how to get default set
+            client_cert (Any, optional): Path to the file containing the private key and the certificate,
+            or cert only if using client_key.
+            client_key (Any, optional): Path to the file containing the private key if using separate cert and key files
+            (client_cert will contain only the cert).
+            ssl_version (Any, optional): SSL version to use (e.g. ssl.PROTOCOL_TLSv1). Defaults to None.
+            ssl_assert_fingerprint (Any, optional): Verify the supplied certificate fingerprint if not None.
+            maxsize (int | None, optional): The number of connections which will be kept open to this
+            host. See https://urllib3.readthedocs.io/en/1.4/pools.html#api for more
+            information.
+            headers (Mapping[str, str] | None, optional): Any custom HTTP headers to be added to requests. Defaults to
+                None.
+            ssl_context (Any, optional): SSL context to use for the connection. Defaults to None.
+            http_compress (bool | None, optional): Use gzip compression. Defaults to None.
+            opaque_id (str | None, optional): Send this value in the 'X-Opaque-Id' HTTP header for tracing
+            all requests made by this transport.
+            loop (Any, optional): asyncio Event Loop to use with aiohttp. This is set by default to the currently running loop.
+
+        Keyword Args:
+        root_url (str, optional): Root URL for the Fusion API. Defaults to
+            "https://fusion.jpmorgan.com/api/v1/".
+        credentials (FusionCredentials or str, optional): Credentials for the Fusion API. Can be a `FusionCredentials`
+            object or a path to a credentials file. Defaults to "config/client_credentials.json".
+        catalog (str, optional): Catalog name. Defaults to "common".
+        knowledge_base (str, optional): Knowledge base name. A dataset identifier.
+        index (str, optional): Index name. Defaults to `None`. Used to determine index when the _bulk operation
+            is attempted. If not provided, it will be extracted from the request body.
+        """
         fusion_root_url: str = kwargs.get("root_url", "https://fusion.jpmorgan.com/api/v1/")
         credentials: FusionCredentials | str | None = kwargs.get("credentials", "config/client_credentials.json")
         if isinstance(credentials, FusionCredentials):
