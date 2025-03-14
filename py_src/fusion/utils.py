@@ -1018,3 +1018,19 @@ def _format_summary_index_response(response: requests.Response) -> pd.DataFrame:
     summary_df = summary_df.set_index("index_name")
 
     return summary_df.transpose()
+
+
+def _retrieve_index_name_from_bulk_body(body: bytes | None) -> str:
+    body_str = body.decode("utf-8") if body else ""
+
+    json_objects = body_str.split("\n")
+
+    for json_str in json_objects:
+        if json_str.strip():
+            json_obj = js.loads(json_str)
+
+            if "index" in json_obj and "_index" in json_obj["index"]:
+                index_name = str(json_obj["index"]["_index"])
+                return index_name
+    
+    raise ValueError("Index name not found in bulk body")

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import json
+import ssl
 from typing import Literal
 from unittest.mock import MagicMock, patch
 
+import aiohttp
 import pytest
 import requests
 from opensearchpy import ImproperlyConfigured, RequestError
@@ -16,7 +17,12 @@ from opensearchpy.exceptions import (
 )
 
 from fusion._fusion import FusionCredentials
-from fusion.embeddings import FusionAsyncHttpConnection, FusionEmbeddingsConnection, PromptTemplateManager, format_index_body
+from fusion.embeddings import (
+    FusionAsyncHttpConnection,
+    FusionEmbeddingsConnection,
+    PromptTemplateManager,
+    format_index_body,
+)
 
 
 def test_format_index_body() -> None:
@@ -78,6 +84,48 @@ def test_fusion_embeddings_connection(mock_from_file: MagicMock, mock_get_sessio
     assert connection.http_compress is True
     assert connection.session.auth == ("user", "pass")
     assert connection.url_prefix == "dataspaces/common/datasets/knowledge_base/indexes/"
+    assert connection.base_url == "https://fusion.jpmorgan.com/api/v1/"
+    assert connection.credentials == mock_credentials
+    assert connection.session == mock_session
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_embeddings_connection_multi_kb(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test for FusionEmbeddingsConnection class."""
+
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    connection = FusionEmbeddingsConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        verify_certs=True,
+        ssl_show_warn=False,
+        ca_certs="path/to/ca_certs",
+        client_cert="path/to/client_cert",
+        client_key="path/to/client_key",
+        headers={"custom-header": "value"},
+        http_compress=True,
+        opaque_id="opaque-id",
+        pool_maxsize=20,
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials="config/client_credentials.json",
+        catalog="common",
+        knowledge_base=["knowledge_base", "knowledge_base2"],
+    )
+
+    assert connection.host == "https://localhost:9200"
+    assert connection.use_ssl is True
+    assert connection.session.verify == "path/to/ca_certs"
+    assert connection.session.cert == ("path/to/client_cert", "path/to/client_key")
+    assert connection.http_compress is True
+    assert connection.session.auth == ("user", "pass")
+    assert connection.url_prefix == "dataspaces/common/indexes/"
     assert connection.base_url == "https://fusion.jpmorgan.com/api/v1/"
     assert connection.credentials == mock_credentials
     assert connection.session == mock_session
@@ -481,6 +529,37 @@ def test_modify_post_haystack(
 
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
+def test_modify_post_haystack_multi_kb(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+) -> None:
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+        knowledge_base=["mykb", "mykb2"],
+    )
+
+    raw_data = (
+        b'{"query":{"bool":{"must":[{"knn":{"embedding":{"vector":[0.1,0.2,0.3,0.4,0.5],"k":5}}}]}}, '
+        b'"size":10, "_source":{"excludes":["embedding"]}}'
+    )
+    exp_data = (
+        b'{"query":{"hybrid":{"queries":[{"knn":{"vector":{"vector":[0.1,0.2,0.3,0.4,0.5],"k":5}}}]}},'
+        b'"size":10,"_source":{"excludes":["embedding"]},"datasets":["mykb","mykb2"]}'
+    )
+    modified_data = conn._modify_post_haystack(raw_data, "post")
+    modified_data = conn._modify_post_haystack(raw_data, "post")
+
+    assert modified_data == exp_data
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
 def test_modify_post_haystack_json_decode_error(
     mock_from_file: MagicMock,
     mock_get_session: MagicMock,
@@ -594,6 +673,33 @@ def test_make_valid_url(
 
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
+def test_make_valid_url_bulk(
+    mock_from_file: MagicMock,
+    mock_get_session: MagicMock,
+) -> None:
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+        root_url="https://example.com/api/v1/",
+        index_name="myindex",
+        catalog="mycatalog",
+        knowledge_base="mykb",
+        index="myindex",
+    )
+    url = "/_bulk"
+    exp_url = "https://example.com/api/v1/dataspaces/mycatalog/datasets/mykb/indexes/myindex/embeddings"
+
+    modified_url = conn._make_url_valid(url)
+    assert modified_url == exp_url
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
 def test_perform_request_success(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
     """Test a normal 200 success response."""
     mock_credentials = MagicMock(spec=FusionCredentials)
@@ -662,6 +768,27 @@ def test_perform_request_compression(mock_from_file: MagicMock, mock_get_session
     result = conn.perform_request("POST", url="http://example.com/test", body=body_data)
 
     assert result[1].get("content-encoding") == "gzip"
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_multi_kb_pass(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
+    """Test that request body is gzipped and Content-Encoding header is set."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_response = MagicMock()
+    mock_session.send.return_value = mock_response
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json", knowledge_base=["kb1", "kb2"])
+
+    body_data = b'{"test": "data"}'
+
+    result = conn.perform_request("POST", url="http://example.com/test", body=body_data)
+
+    status_code = 200
+    assert result[0] == status_code
 
 
 @patch("fusion.embeddings.get_session")
@@ -827,8 +954,6 @@ def test_fusion_async_http_connection(mock_from_file: MagicMock) -> None:
         port=9200,
         http_auth=("user", "pass"),
         use_ssl=True,
-        verify_certs=True,
-        ssl_show_warn=False,
         headers={"custom-header": "value"},
         http_compress=True,
         opaque_id="opaque-id",
@@ -848,68 +973,480 @@ def test_fusion_async_http_connection(mock_from_file: MagicMock) -> None:
     assert connection.session is None
 
 
-@patch("fusion.embeddings.get_session")
-@patch("fusion.embeddings.FusionCredentials.from_file")
-def test_retrieve_index_name_from_bulk_body(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
-    """Test for _retrieve_index_name_from_bulk_body function."""
-    mock_credentials = MagicMock(spec=FusionCredentials)
-    mock_from_file.return_value = mock_credentials
-    mock_session = MagicMock()
-    mock_get_session.return_value = mock_session
+def test_async_fusion_embeddings_connection_wrong_creds() -> None:
+    """Test for FusionEmbeddingsConnection class."""
 
-    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
-
-    # Test case: valid bulk body
-    bulk_body = b'{"index":{"_id":"23134werw", "_index":"test-index"}}\n{"vector":[],"content":"content","metadata":{}}'
-    index_name = conn._retrieve_index_name_from_bulk_body(bulk_body)
-    assert index_name == "test-index"
-
-@patch("fusion.embeddings.get_session")
-@patch("fusion.embeddings.FusionCredentials.from_file")
-def test_retrieve_index_name_from_bulk_body_no_index(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
-    """Test for _retrieve_index_name_from_bulk_body function."""
-    mock_credentials = MagicMock(spec=FusionCredentials)
-    mock_from_file.return_value = mock_credentials
-    mock_session = MagicMock()
-    mock_get_session.return_value = mock_session
-
-    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
-    # Test case: bulk body with no index name
-    bulk_body_no_index = b'{"index":{"_id":"23134werw"}}\n{"vector":[],"content":"content","metadata":{}}'
-    with pytest.raises(ValueError, match="Index name not found in bulk body"):
-        conn._retrieve_index_name_from_bulk_body(bulk_body_no_index)
-
-
-@patch("fusion.embeddings.get_session")
-@patch("fusion.embeddings.FusionCredentials.from_file")
-def test_retrieve_index_name_from_bulk_body_empty(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
-    """Test for _retrieve_index_name_from_bulk_body function."""
-    mock_credentials = MagicMock(spec=FusionCredentials)
-    mock_from_file.return_value = mock_credentials
-    mock_session = MagicMock()
-    mock_get_session.return_value = mock_session
-
-    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
-    # Test case: empty bulk body
-    empty_bulk_body = b""
-    with pytest.raises(ValueError, match="Index name not found in bulk body"):
-        conn._retrieve_index_name_from_bulk_body(empty_bulk_body)
-
-
-@patch("fusion.embeddings.get_session")
-@patch("fusion.embeddings.FusionCredentials.from_file")
-def test_retrieve_index_name_from_bulk_body_json_decode(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:
-    """Test for _retrieve_index_name_from_bulk_body function."""
-    mock_credentials = MagicMock(spec=FusionCredentials)
-    mock_from_file.return_value = mock_credentials
-    mock_session = MagicMock()
-    mock_get_session.return_value = mock_session
-
-    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
-    # Test case: bulk body with invalid JSON
-    invalid_json_bulk_body = (
-        b'{"index":{"_id":"23134werw", "_index":"test-index"}}\n'
-        b'{"vector":[],"content":"content","metadata":{}'
+    with pytest.raises(
+        ValueError, match="credentials must be a path to a credentials file or FusionCredentials object"
+    ):
+        FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        headers={"custom-header": "value"},
+        http_compress=True,
+        opaque_id="opaque-id",
+        pool_maxsize=20,
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials={"username": "user", "password": "pass"},
+        catalog="common",
+        knowledge_base="knowledge_base",
     )
-    with pytest.raises(json.JSONDecodeError):
-        conn._retrieve_index_name_from_bulk_body(invalid_json_bulk_body)
+
+
+def test_async_fusion_embeddings_connection_creds_obj(credentials: FusionCredentials) -> None:
+    """Test for FusionEmbeddingsConnection class."""
+    connection = FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        headers={"custom-header": "value"},
+        http_compress=True,
+        opaque_id="opaque-id",
+        pool_maxsize=20,
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials=credentials,
+        catalog="common",
+        knowledge_base="knowledge_base",
+    )
+
+
+    assert connection.host == "https://localhost:9200"
+    assert connection.use_ssl is True
+    assert connection.http_compress is True
+    assert connection.url_prefix == "/dataspaces/common/datasets/knowledge_base/indexes"
+    assert connection.base_url == "https://fusion.jpmorgan.com/api/v1/"
+    assert connection.credentials == credentials
+
+
+def test_async_fusion_embeddings_connection_url_prefix_kwarg(credentials: FusionCredentials) -> None:
+    """Test for FusionEmbeddingsConnection class."""
+    connection = FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        verify_certs=True,
+        ssl_show_warn=False,
+        headers={"custom-header": "value"},
+        http_compress=True,
+        opaque_id="opaque-id",
+        pool_maxsize=20,
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials=credentials,
+        catalog="common",
+        knowledge_base="knowledge_base",
+        url_prefix = "custom/url/prefix"
+    )
+    assert connection.host == "https://localhost:9200"
+    assert connection.use_ssl is True
+    assert connection.http_compress is True
+    assert connection.url_prefix == "/dataspaces/common/datasets/knowledge_base/indexes"
+    assert connection.base_url == "https://fusion.jpmorgan.com/api/v1/"
+    assert connection.credentials == credentials
+
+
+def test_async_fusion_embeddings_connection_multi_kb(credentials: FusionCredentials) -> None:
+    """Test for FusionEmbeddingsConnection class."""
+    connection = FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        verify_certs=True,
+        ssl_show_warn=False,
+        headers={"custom-header": "value"},
+        http_compress=True,
+        opaque_id="opaque-id",
+        pool_maxsize=20,
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials=credentials,
+        catalog="common",
+        knowledge_base=["knowledge_base", "knowledge_base2"],
+        url_prefix = "custom/url/prefix"
+    )
+
+    assert connection.host == "https://localhost:9200"
+    assert connection.use_ssl is True
+    assert connection.http_compress is True
+    assert connection.url_prefix == "/dataspaces/common/indexes"
+    assert connection.base_url == "https://fusion.jpmorgan.com/api/v1/"
+    assert connection.credentials == credentials
+
+
+@pytest.mark.parametrize(
+    ("base_url", "raw_url", "expected_url"),
+    [
+        (
+            "https://example.com/api/v1/",
+            "%2F%7Bmyindex%7D%2F_test%2Fmock%2F",
+            "/myindex/_test/mock/",
+        )
+    ],
+)
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_async_fusion_embeddings_connection_tidy_url(
+    mock_from_file: MagicMock,
+    base_url: Literal["https://example.com/api/v1/"],
+    raw_url: Literal["/%2F%7Bmyindex%7D%2F_test%2Fmock%2F"],
+    expected_url: Literal["/myindex/_test/mock/"],
+) -> None:
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    conn = FusionAsyncHttpConnection(
+        host="localhost",
+        root_url=base_url,
+        credentials="dummy_credentials.json",
+    )
+
+    tidied = conn._tidy_url(raw_url)
+    assert tidied == expected_url
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_async_fusion_embeddings_connection_remap_url(
+    mock_from_file: MagicMock,
+) -> None:
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    conn = FusionAsyncHttpConnection(
+        host="localhost",
+        credentials="dummy_credentials.json",
+    )
+    url = "https://example.com/api/v1/myindex/_test/mock/_bulk/_search"
+
+    remapped = conn._remap_endpoints(url)
+    expected = "https://example.com/api/v1/myindex/_test/mock/embeddings/search"
+
+    assert remapped == expected
+
+
+@pytest.mark.parametrize(
+    ("input_auth", "expected"),
+    [
+        (("user", "pass"), aiohttp.BasicAuth(login="user", password="pass")),
+        (["user", "pass"], aiohttp.BasicAuth(login="user", password="pass")),
+        ("user:pass", aiohttp.BasicAuth(login="user", password="pass")),
+    ],
+)
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_async_http_connection_http_auth(
+    mock_from_file: MagicMock,  # noqa: ARG001
+    input_auth: tuple[str, str] | list[str] | Literal[b"user:pass", "user:pass"],
+    expected: tuple[str, str],
+) -> None:
+    conn = FusionAsyncHttpConnection(
+        host="localhost",
+        http_auth=input_auth,
+    )
+    # Verify that the `session.auth` was set to a tuple
+    assert conn._http_auth == expected
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_async_http_connection_ssl_context_warning(mock_from_file: MagicMock) -> None:
+    """Test that a warning is raised when using ssl_context with other SSL-related kwargs."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    with pytest.warns(UserWarning, match="When using `ssl_context`, all other SSL related kwargs are ignored"):
+        FusionAsyncHttpConnection(
+            host="localhost",
+            port=9200,
+            http_auth=("user", "pass"),
+            use_ssl=True,
+            verify_certs=True,
+            ssl_show_warn=False,
+            ca_certs="path/to/ca_certs",
+            ssl_context=ssl.create_default_context(),
+            root_url="https://fusion.jpmorgan.com/api/v1/",
+            credentials="config/client_credentials.json",
+            catalog="common",
+            knowledge_base="knowledge_base",
+        )
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_async_http_connection_verify_certs_missing_ca_certs(mock_from_file: MagicMock) -> None:
+    """Test that an error is raised when verify_certs is True and ca_certs is missing."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    with pytest.raises(ImproperlyConfigured, match="Root certificates are missing for certificate validation"):
+        FusionAsyncHttpConnection(
+            host="localhost",
+            port=9200,
+            http_auth=("user", "pass"),
+            use_ssl=True,
+            verify_certs=True,
+            ca_certs=False,
+            ssl_show_warn=False,
+            root_url="https://fusion.jpmorgan.com/api/v1/",
+            credentials="config/client_credentials.json",
+            catalog="common",
+            knowledge_base="knowledge_base",
+        )
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_async_http_connection_verify_certs_invalid_ca_certs_path(mock_from_file: MagicMock) -> None:
+    """Test that an error is raised when ca_certs is not a valid path."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    with pytest.raises(ImproperlyConfigured, match="ca_certs parameter is not a path"):
+        FusionAsyncHttpConnection(
+            host="localhost",
+            port=9200,
+            http_auth=("user", "pass"),
+            use_ssl=True,
+            verify_certs=True,
+            ssl_show_warn=False,
+            ca_certs="invalid/path/to/ca_certs",
+            root_url="https://fusion.jpmorgan.com/api/v1/",
+            credentials="config/client_credentials.json",
+            catalog="common",
+            knowledge_base="knowledge_base",
+        )
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_async_http_connection_ssl_show_warn(mock_from_file: MagicMock) -> None:
+    """Test that a warning is raised when verify_certs is False and ssl_show_warn is True."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    with pytest.warns(
+        UserWarning, match="Connecting to https://localhost:9200 using SSL with verify_certs=False is insecure."
+        ):
+        FusionAsyncHttpConnection(
+            host="localhost",
+            port=9200,
+            http_auth=("user", "pass"),
+            use_ssl=True,
+            verify_certs=False,
+            ssl_show_warn=True,
+            root_url="https://fusion.jpmorgan.com/api/v1/",
+            credentials="config/client_credentials.json",
+            catalog="common",
+            knowledge_base="knowledge_base",
+        )
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_async_http_connection_ssl_context_creation(mock_from_file: MagicMock) -> None:
+    """Test that an SSL context is created when use_ssl is True and ssl_context is None."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    connection = FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        verify_certs=True,
+        ssl_show_warn=False,
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials="config/client_credentials.json",
+        catalog="common",
+        knowledge_base="knowledge_base",
+    )
+
+    assert isinstance(connection._ssl_context, ssl.SSLContext)
+    assert connection._ssl_context.verify_mode == ssl.CERT_REQUIRED
+    assert connection._ssl_context.check_hostname is True
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_async_http_connection_invalid_client_cert(mock_from_file: MagicMock) -> None:
+    """Test that an error is raised when client_cert is not a valid path."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    with pytest.raises(ImproperlyConfigured, match="client_cert is not a path to a file"):
+        FusionAsyncHttpConnection(
+            host="localhost",
+            port=9200,
+            http_auth=("user", "pass"),
+            use_ssl=True,
+            verify_certs=True,
+            ssl_show_warn=False,
+            client_cert="invalid/path/to/client_cert",
+            root_url="https://fusion.jpmorgan.com/api/v1/",
+            credentials="config/client_credentials.json",
+            catalog="common",
+            knowledge_base="knowledge_base",
+        )
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_fusion_async_http_connection_invalid_client_key(mock_from_file: MagicMock) -> None:
+    """Test that an error is raised when client_key is not a valid path."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    with pytest.raises(ImproperlyConfigured, match="client_key is not a path to a file"):
+        FusionAsyncHttpConnection(
+            host="localhost",
+            port=9200,
+            http_auth=("user", "pass"),
+            use_ssl=True,
+            verify_certs=True,
+            ssl_show_warn=False,
+            client_key="invalid/path/to/client_key",
+            root_url="https://fusion.jpmorgan.com/api/v1/",
+            credentials="config/client_credentials.json",
+            catalog="common",
+            knowledge_base="knowledge_base",
+        )
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+@patch("ssl.SSLContext.load_cert_chain")
+@patch("pathlib.Path.is_file", return_value=True)
+def test_fusion_async_http_connection_load_cert_chain(
+    mock_is_file: MagicMock,
+    mock_load_cert_chain: MagicMock,
+    mock_from_file: MagicMock
+) -> None:
+    """Test that client_cert and client_key are loaded correctly."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        verify_certs=True,
+        ssl_show_warn=False,
+        client_cert="path/to/client_cert",
+        client_key="path/to/client_key",
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials="config/client_credentials.json",
+        catalog="common",
+        knowledge_base="knowledge_base",
+    )
+
+    mock_load_cert_chain.assert_called_once_with("path/to/client_cert", "path/to/client_key")
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+@patch("ssl.SSLContext.load_cert_chain")
+@patch("pathlib.Path.is_file", return_value=True)
+def test_fusion_async_http_connection_load_cert_chain_no_key(
+    mock_is_file: MagicMock,
+    mock_load_cert_chain: MagicMock,
+    mock_from_file: MagicMock
+) -> None:
+    """Test that client_cert is loaded correctly when client_key is not provided."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        verify_certs=True,
+        ssl_show_warn=False,
+        client_cert="path/to/client_cert",
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials="config/client_credentials.json",
+        catalog="common",
+        knowledge_base="knowledge_base",
+    )
+
+    mock_load_cert_chain.assert_called_once_with("path/to/client_cert")
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+@patch("ssl.SSLContext.load_verify_locations")
+@patch("pathlib.Path.is_file", return_value=False)
+@patch("pathlib.Path.is_dir", return_value=True)
+def test_fusion_async_http_connection_ca_certs_is_dir(
+    mock_is_dir: MagicMock,
+    mock_is_file: MagicMock,
+    mock_load_verify_locations: MagicMock,
+    mock_from_file: MagicMock
+) -> None:
+    """Test that ca_certs is loaded correctly when it is a directory."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        verify_certs=True,
+        ssl_show_warn=False,
+        ca_certs="path/to/ca_certs_dir",
+        root_url="https://fusion.jpmorgan.com/api/v1/",
+        credentials="config/client_credentials.json",
+        catalog="common",
+        knowledge_base="knowledge_base",
+    )
+
+    mock_load_verify_locations.assert_called_with(capath="path/to/ca_certs_dir")
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_async_make_valid_url(
+    mock_from_file: MagicMock,
+) -> None:
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    conn = FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        headers={"custom-header": "value"},
+        http_compress=True,
+        opaque_id="opaque-id",
+        pool_maxsize=20,
+        root_url="https://example.com/api/v1/",
+        credentials="config/client_credentials.json",
+        catalog="mycatalog",
+        knowledge_base="mykb",
+        index="myindex",
+    )
+    url = "/myindex"
+    exp_url = "https://example.com/api/v1/dataspaces/mycatalog/datasets/mykb/indexes/myindex"
+
+    modified_url = conn._make_url_valid(url)
+    assert modified_url == exp_url
+
+
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_async_make_valid_url_bulk(
+    mock_from_file: MagicMock,
+) -> None:
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    conn = FusionAsyncHttpConnection(
+        host="localhost",
+        port=9200,
+        http_auth=("user", "pass"),
+        use_ssl=True,
+        headers={"custom-header": "value"},
+        http_compress=True,
+        opaque_id="opaque-id",
+        pool_maxsize=20,
+        root_url="https://example.com/api/v1/",
+        credentials="config/client_credentials.json",
+        catalog="mycatalog",
+        knowledge_base="mykb",
+        index="myindex",
+    )
+    url = "/_bulk"
+    exp_url = "https://example.com/api/v1/dataspaces/mycatalog/datasets/mykb/indexes/myindex/embeddings"
+
+    modified_url = conn._make_url_valid(url)
+    assert modified_url == exp_url

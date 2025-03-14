@@ -30,7 +30,7 @@ from opensearchpy.exceptions import (
 from opensearchpy.metrics import Metrics, MetricsNone
 
 from fusion._fusion import FusionCredentials
-from fusion.utils import get_client, get_session
+from fusion.utils import _retrieve_index_name_from_bulk_body, get_client, get_session
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
@@ -270,25 +270,10 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
                     logger.exception(f"An error occurred during modification of haystack POST body: {e}")
         return body
 
-    def _retrieve_index_name_from_bulk_body(self, body: bytes | None) -> str:
-        body_str = body.decode("utf-8") if body else ""
-
-        json_objects = body_str.split("\n")
-
-        for json_str in json_objects:
-            if json_str.strip():
-                json_obj = json.loads(json_str)
-
-                if "index" in json_obj and "_index" in json_obj["index"]:
-                    index_name = str(json_obj["index"]["_index"])
-                else:
-                    raise ValueError("Index name not found in bulk body")
-        return index_name
-
     def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
         if url == "/_bulk":
-            index_name = self.index_name if self.index_name else self._retrieve_index_name_from_bulk_body(body)
-            url = self.base_url + self.url_prefix + "/" + index_name + url
+            index_name = self.index_name if self.index_name else _retrieve_index_name_from_bulk_body(body)
+            url = self.base_url + self.url_prefix + index_name + url
         else:
             url = self.base_url + self.url_prefix + url.strip("/")
 
@@ -608,27 +593,12 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
     def _remap_endpoints(url: str) -> str:
         return url.replace("_bulk", "embeddings").replace("_search", "search")
 
-    def _retrieve_index_name_from_bulk_body(self, body: bytes | None) -> str:
-        body_str = body.decode("utf-8") if body else ""
-
-        json_objects = body_str.split("\n")
-
-        for json_str in json_objects:
-            if json_str.strip():
-                json_obj = json.loads(json_str)
-
-                if "index" in json_obj and "_index" in json_obj["index"]:
-                    index_name = str(json_obj["index"]["_index"])
-                else:
-                    raise ValueError("Index name not found in bulk body")
-        return index_name
-
     def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
         if url == "/_bulk":
-            index_name = self.index_name if self.index_name else self._retrieve_index_name_from_bulk_body(body)
-            url = self.base_url + self.url_prefix + "/" + index_name + url
+            index_name = self.index_name if self.index_name else _retrieve_index_name_from_bulk_body(body)
+            url = self.base_url.strip("/") + self.url_prefix + "/" + index_name + url
         else:
-            url = self.base_url + self.url_prefix + "/" + url
+            url = self.base_url.strip("/") + self.url_prefix + url
 
         url = self._remap_endpoints(url)
 
