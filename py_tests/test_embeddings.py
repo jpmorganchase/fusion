@@ -1087,7 +1087,7 @@ def test_fusion_async_http_connection_invalid_client_key(mock_from_file: MagicMo
 @patch("ssl.SSLContext.load_cert_chain")
 @patch("pathlib.Path.is_file", return_value=True)
 def test_fusion_async_http_connection_load_cert_chain(
-    mock_is_file: MagicMock,
+    mock_is_file: MagicMock,  # noqa: ARG001
     mock_load_cert_chain: MagicMock,
     mock_from_file: MagicMock
 ) -> None:
@@ -1117,7 +1117,7 @@ def test_fusion_async_http_connection_load_cert_chain(
 @patch("ssl.SSLContext.load_cert_chain")
 @patch("pathlib.Path.is_file", return_value=True)
 def test_fusion_async_http_connection_load_cert_chain_no_key(
-    mock_is_file: MagicMock,
+    mock_is_file: MagicMock,  # noqa: ARG001
     mock_load_cert_chain: MagicMock,
     mock_from_file: MagicMock
 ) -> None:
@@ -1147,8 +1147,8 @@ def test_fusion_async_http_connection_load_cert_chain_no_key(
 @patch("pathlib.Path.is_file", return_value=False)
 @patch("pathlib.Path.is_dir", return_value=True)
 def test_fusion_async_http_connection_ca_certs_is_dir(
-    mock_is_dir: MagicMock,
-    mock_is_file: MagicMock,
+    mock_is_dir: MagicMock,  # noqa: ARG001
+    mock_is_file: MagicMock,  # noqa: ARG001
     mock_load_verify_locations: MagicMock,
     mock_from_file: MagicMock
 ) -> None:
@@ -1315,7 +1315,9 @@ async def test_query_string_handling(mock_from_file: MagicMock, mock_request: As
     mock_request.return_value = MockAsyncResponse("", status=200)
 
     conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
-    status, headers, raw_data = await conn.perform_request("get", url="http://example.com/test", params={"key": "value"})
+    status, headers, raw_data = await conn.perform_request(
+        "get", url="http://example.com/test", params={"key": "value"}
+    )
     status_code = 200
     assert status == status_code
     assert raw_data == ""
@@ -1332,7 +1334,9 @@ async def test_req_headers_updated(mock_from_file: MagicMock, mock_request: Asyn
     mock_request.return_value = MockAsyncResponse("", status=200)
 
     conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
-    status, headers, raw_data = await conn.perform_request("get", url="http://example.com/test", headers={"Custom-Header": "value"})
+    status, headers, raw_data = await conn.perform_request(
+        "get", url="http://example.com/test", headers={"Custom-Header": "value"}
+    )
     status_code = 200
     assert status == status_code
     assert raw_data == ""
@@ -1372,7 +1376,8 @@ async def test_callable_http_auth(mock_from_file: MagicMock, mock_request: Async
 
     conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json", http_auth=mock_auth)
     status, headers, raw_data = await conn.perform_request("get", url="http://example.com/test")
-    assert status == 200
+    status_code = 200
+    assert status == status_code
     assert raw_data == ""
 
 

@@ -91,7 +91,9 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         credentials (FusionCredentials or str, optional): Credentials for the Fusion API. Can be a `FusionCredentials`
             object or a path to a credentials file. Defaults to "config/client_credentials.json".
         catalog (str, optional): Catalog name. Defaults to "common".
-        knowledge_base (str, optional): Knowledge base name. A dataset identifier.
+        knowledge_base (str | list[str], optional): Knowledge base name. A dataset identifier. If multiple identifiers 
+            are provided, the connection will perform searches across all provided knowledge bases. Any other operations
+            will not be supported, as a single knowledge base is required for those operations.
         index (str, optional): Index name. Defaults to `None`. Used to determine index when the _bulk operation
             is attempted. If not provided, it will be extracted from the request body.
     """
@@ -389,7 +391,8 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             http_compress (bool | None, optional): Use gzip compression. Defaults to None.
             opaque_id (str | None, optional): Send this value in the 'X-Opaque-Id' HTTP header for tracing
             all requests made by this transport.
-            loop (Any, optional): asyncio Event Loop to use with aiohttp. This is set by default to the currently running loop.
+            loop (Any, optional): asyncio Event Loop to use with aiohttp. This is set by default to the currently
+                running loop.
 
         Keyword Args:
         root_url (str, optional): Root URL for the Fusion API. Defaults to
@@ -397,7 +400,9 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         credentials (FusionCredentials or str, optional): Credentials for the Fusion API. Can be a `FusionCredentials`
             object or a path to a credentials file. Defaults to "config/client_credentials.json".
         catalog (str, optional): Catalog name. Defaults to "common".
-        knowledge_base (str, optional): Knowledge base name. A dataset identifier.
+        knowledge_base (str, optional): Knowledge base name. A dataset identifier. If multiple identifiers 
+            are provided, the connection will perform searches across all provided knowledge bases. Any other operations
+            will not be supported, as a single knowledge base is required for those operations.
         index (str, optional): Index name. Defaults to `None`. Used to determine index when the _bulk operation
             is attempted. If not provided, it will be extracted from the request body.
         """
