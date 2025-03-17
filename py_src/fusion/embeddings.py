@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import ssl
 import time
@@ -30,7 +29,12 @@ from opensearchpy.exceptions import (
 from opensearchpy.metrics import Metrics, MetricsNone
 
 from fusion._fusion import FusionCredentials
-from fusion.utils import _retrieve_index_name_from_bulk_body, get_client, get_session
+from fusion.embeddings_utils import (
+    _modify_post_haystack,
+    _modify_post_response_langchain,
+    _retrieve_index_name_from_bulk_body,
+)
+from fusion.utils import get_client, get_session
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
@@ -194,81 +198,6 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
     def _remap_endpoints(url: str) -> str:
         return url.replace("_bulk", "embeddings").replace("_search", "search")
 
-    @staticmethod
-    def _modify_post_response_langchain(raw_data: str | bytes | bytearray) -> str | bytes | bytearray:
-        """Modify the response from langchain POST request to match the expected format.
-
-        Args:
-            raw_data (str | bytes | bytearray): Raw post response data.
-
-        Returns:
-            str | bytes | bytearray: Modified post repsonse data.
-        """
-        if len(raw_data) > 0:
-            try:
-                data = json.loads(raw_data)
-                if "hits" in data:
-                    for hit in data["hits"]:
-                        # Change "source" to "_source" if it exists
-                        if "source" in hit:
-                            hit["_source"] = hit.pop("source")
-                            hit["_id"] = hit.pop("id")
-                            hit["_score"] = hit.pop("score")
-
-                    # Wrap the existing "hits" list in another dicitonary wit the key "hits"
-                    data["hits"] = {"hits": data["hits"]}
-
-                    # Serialize the modified dictionary back to a JSON string
-
-                    return json.dumps(data, separators=(",", ":"))
-
-            except (json.JSONDecodeError, KeyError, TypeError) as e:
-                logger.exception(f"An error occurred during modification of langchain POST response: {e}")
-
-                return raw_data.decode("utf-8", errors="ignore") if isinstance(raw_data, bytes) else raw_data
-
-        return raw_data
-
-    def _modify_post_haystack(self, body: bytes | None, method: str) -> bytes | None:
-        """Method to modify haystack POST body to match the embeddings API, which expects the embedding field to be
-            named "vector".
-
-        Args:
-            body (bytes): Request body.
-            method (str): Request method.
-
-        Returns:
-            bytes: Modified request body.
-        """
-        if method.lower() == "post":
-            body_str = body.decode("utf-8") if body else ""
-
-            if "query" in body_str:
-                try:
-                    query_dict = json.loads(body_str)
-                    knn_list = query_dict.get("query", {}).get("bool", {}).get("must", {})
-                    for knn in knn_list:
-                        if "knn" in knn and "embedding" in knn["knn"]:
-                            knn["knn"]["vector"] = knn["knn"].pop("embedding")
-                    if isinstance(self.knowledge_base, list) and knn_list != {}:
-                        query_dict["query"] = {"hybrid": {"queries": knn_list}}
-                        query_dict["datasets"] = self.knowledge_base
-                    body = json.dumps(query_dict, separators=(",", ":")).encode("utf-8")
-                except json.JSONDecodeError as e:
-                    logger.exception(f"An error occurred during modification of haystack POST body: {e}")
-            elif body_str != "":
-                try:
-                    json_strings = body_str.strip().split("\n")
-                    dict_list = [json.loads(json_string) for json_string in json_strings]
-                    for dct in dict_list:
-                        if "embedding" in dct:
-                            dct["vector"] = dct.pop("embedding")
-                    json_strings_mod = [json.dumps(d, separators=(",", ":")) for d in dict_list]
-                    joined_str = "\n".join(json_strings_mod)
-                    body = joined_str.encode("utf-8")
-                except json.JSONDecodeError as e:
-                    logger.exception(f"An error occurred during modification of haystack POST body: {e}")
-        return body
 
     def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
         if url == "/_bulk":
@@ -311,7 +240,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
 
         headers = headers or {}
 
-        body = self._modify_post_haystack(body, method)
+        body = _modify_post_haystack(self.knowledge_base, body, method)
 
         orig_body = body
         if self.http_compress and body:
@@ -355,7 +284,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         warnings_headers = (response.headers["warning"],) if "warning" in response.headers else ()
         self._raise_warnings(warnings_headers)
 
-        raw_data_modified = FusionEmbeddingsConnection._modify_post_response_langchain(raw_data)
+        raw_data_modified = _modify_post_response_langchain(raw_data)
 
         # raise errors based on http status codes, let the client handle those if needed
         if not (HTTP_OK <= response.status_code < HTTP_MULTIPLE_CHOICES) and response.status_code not in ignore:
@@ -604,82 +533,6 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
 
         return url
 
-    @staticmethod
-    def _modify_post_response_langchain(raw_data: str | bytes | bytearray) -> str | bytes | bytearray:
-        """Modify the response from langchain POST request to match the expected format.
-
-        Args:
-            raw_data (str | bytes | bytearray): Raw post response data.
-
-        Returns:
-            str | bytes | bytearray: Modified post repsonse data.
-        """
-        if len(raw_data) > 0:
-            try:
-                data = json.loads(raw_data)
-                if "hits" in data:
-                    for hit in data["hits"]:
-                        # Change "source" to "_source" if it exists
-                        if "source" in hit:
-                            hit["_source"] = hit.pop("source")
-                            hit["_id"] = hit.pop("id")
-                            hit["_score"] = hit.pop("score")
-
-                    # Wrap the existing "hits" list in another dicitonary wit the key "hits"
-                    data["hits"] = {"hits": data["hits"]}
-
-                    # Serialize the modified dictionary back to a JSON string
-
-                    return json.dumps(data, separators=(",", ":"))
-
-            except (json.JSONDecodeError, KeyError, TypeError) as e:
-                logger.exception(f"An error occurred during modification of langchain POST response: {e}")
-
-                return raw_data.decode("utf-8", errors="ignore") if isinstance(raw_data, bytes) else raw_data
-
-        return raw_data
-
-    def _modify_post_haystack(self, body: bytes | None, method: str) -> bytes | None:
-        """Method to modify haystack POST body to match the embeddings API, which expects the embedding field to be
-            named "vector".
-
-        Args:
-            body (bytes): Request body.
-            method (str): Request method.
-
-        Returns:
-            bytes: Modified request body.
-        """
-        if method.lower() == "post":
-            body_str = body.decode("utf-8") if body else ""
-
-            if "query" in body_str:
-                try:
-                    query_dict = json.loads(body_str)
-                    knn_list = query_dict.get("query", {}).get("bool", {}).get("must", {})
-                    for knn in knn_list:
-                        if "knn" in knn and "embedding" in knn["knn"]:
-                            knn["knn"]["vector"] = knn["knn"].pop("embedding")
-                    if isinstance(self.knowledge_base, list) and knn_list != {}:
-                        query_dict["query"] = {"hybrid": {"queries": knn_list}}
-                        query_dict["datasets"] = self.knowledge_base
-                    body = json.dumps(query_dict, separators=(",", ":")).encode("utf-8")
-                except json.JSONDecodeError as e:
-                    logger.exception(f"An error occurred during modification of haystack POST body: {e}")
-            elif body_str != "":
-                try:
-                    json_strings = body_str.strip().split("\n")
-                    dict_list = [json.loads(json_string) for json_string in json_strings]
-                    for dct in dict_list:
-                        if "embedding" in dct:
-                            dct["vector"] = dct.pop("embedding")
-                    json_strings_mod = [json.dumps(d, separators=(",", ":")) for d in dict_list]
-                    joined_str = "\n".join(json_strings_mod)
-                    body = joined_str.encode("utf-8")
-                except json.JSONDecodeError as e:
-                    logger.exception(f"An error occurred during modification of haystack POST body: {e}")
-        return body
-
     async def perform_request(  # noqa: PLR0912
         self,
         method: str,
@@ -712,7 +565,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         ):
             return 200, {}, ""
 
-        body = self._modify_post_haystack(body, method)
+        body = _modify_post_haystack(knowledge_base=self.knowledge_base, body=body, method=method)
         orig_body = body
         query_string = urlencode(params) if params else ""
 
@@ -782,7 +635,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         warning_headers = response.headers.getall("warning", ())
         self._raise_warnings(warning_headers)
 
-        raw_data_modified = str(FusionAsyncHttpConnection._modify_post_response_langchain(raw_data))
+        raw_data_modified = str(_modify_post_response_langchain(raw_data))
 
         # raise errors based on http status codes, let the client handle those if needed
         if not (HTTP_OK <= response.status < HTTP_MULTIPLE_CHOICES) and response.status not in ignore:

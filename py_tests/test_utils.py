@@ -19,7 +19,6 @@ from fusion.fusion import Fusion
 from fusion.utils import (
     PathLikeT,
     _filename_to_distribution,
-    _retrieve_index_name_from_bulk_body,
     convert_date_format,
     cpu_count,
     csv_to_table,
@@ -899,35 +898,3 @@ def test_snake_to_camel() -> None:
     output_ = snake_to_camel(input_)
     exp_output = "thisIsSnake"
     assert output_ == exp_output
-
-
-def test_retrieve_index_name_from_bulk_body() -> None:
-    """Test for _retrieve_index_name_from_bulk_body function."""
-
-    bulk_body = b'{"index":{"_id":"23134werw", "_index":"test-index"}}\n{"vector":[],"content":"content","metadata":{}}'
-    index_name = _retrieve_index_name_from_bulk_body(bulk_body)
-    assert index_name == "test-index"
-
-
-def test_retrieve_index_name_from_bulk_body_second_obj() -> None:
-    """Test for _retrieve_index_name_from_bulk_body function."""
-
-    bulk_body = b'{"vector":[],"content":"content","metadata":{}}\n{"index":{"_id":"23134werw", "_index":"test-index"}}'
-    index_name = _retrieve_index_name_from_bulk_body(bulk_body)
-    assert index_name == "test-index"
-
-
-def test_retrieve_index_name_from_bulk_body_no_index() -> None:
-    """Test for _retrieve_index_name_from_bulk_body function."""
-
-    bulk_body_no_index = b'{"index":{"_id":"23134werw"}}\n{"vector":[],"content":"content","metadata":{}}'
-    with pytest.raises(ValueError, match="Index name not found in bulk body"):
-        _retrieve_index_name_from_bulk_body(bulk_body_no_index)
-
-
-def test_retrieve_index_name_from_bulk_body_empty() -> None:
-    """Test for _retrieve_index_name_from_bulk_body function."""
-    empty_bulk_body = b""
-    with pytest.raises(ValueError, match="Index name not found in bulk body"):
-        _retrieve_index_name_from_bulk_body(empty_bulk_body)
-

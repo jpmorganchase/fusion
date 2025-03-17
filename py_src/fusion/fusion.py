@@ -25,12 +25,11 @@ from fusion.fusion_types import Types
 from fusion.product import Product
 from fusion.report import Report
 
+from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     RECOGNIZED_FORMATS,
-    _format_full_index_response,
-    _format_summary_index_response,
     cpu_count,
     csv_to_table,
     distribution_to_filename,
