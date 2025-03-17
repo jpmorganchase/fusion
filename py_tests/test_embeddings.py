@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
+import asyncio
 import ssl
-from typing import Literal
-from unittest.mock import MagicMock, patch
+from typing import Any, Literal
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
 import requests
+from multidict import CIMultiDict
 from opensearchpy import ImproperlyConfigured, RequestError
+from opensearchpy._async._extra_imports import aiohttp_exceptions
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 from opensearchpy.exceptions import (
     ConnectionTimeout,
     SSLError,
+    TransportError,
 )
 
 from fusion._fusion import FusionCredentials
@@ -1225,3 +1229,264 @@ def test_async_make_valid_url_bulk(
 
     modified_url = conn._make_url_valid(url)
     assert modified_url == exp_url
+
+class MockAsyncResponse:
+
+        def __init__(
+            self,
+            text: Any = None,
+            status: int = 200,
+            headers: Any = CIMultiDict(),  # noqa: B008
+        ) -> None:
+            self._text = text
+            self.status = status
+            self.headers = headers
+
+        async def text(self) -> Any:
+            return self._text
+
+        async def __aexit__(self, *args: Any) -> None:  # noqa: PYI036
+            pass
+
+        async def __aenter__(self) -> Any:
+            return self
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_async_perform_request_success(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test a normal 200 success response."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.return_value = MockAsyncResponse("OK-content", 200)
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    status, headers, raw_data = await conn.perform_request("GET", url="http://example.com/test")
+    http_ok = 200
+    assert status == http_ok
+    assert raw_data == "OK-content"
+    mock_request.assert_called_once()
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_async_perform_put_request_success_multi_kb(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test a normal 200 success response."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.return_value = MockAsyncResponse("", status=200)
+
+    body_data = b'{"test": "data"}'
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json", knowledge_base=["kb1", "kb2"])
+    status, headers, raw_data = await conn.perform_request("put", url="http://example.com/test", body=body_data)
+    http_ok = 200
+    assert status == http_ok
+    assert raw_data == ""
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_async_perform_request_refresh_endpoint(mock_from_file: MagicMock, mock_request: MagicMock) -> None:
+    """Test that the '_refresh' endpoint raises OpenSearchConnectionError."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.return_value = MockAsyncResponse("", status=200)
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json", knowledge_base=["kb1", "kb2"])
+    status, headers, raw_data = await conn.perform_request("PUT", url="http://example.com/_refresh")
+    status_code = 200
+    assert status == status_code
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_query_string_handling(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test query string handling."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.return_value = MockAsyncResponse("", status=200)
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    status, headers, raw_data = await conn.perform_request("get", url="http://example.com/test", params={"key": "value"})
+    status_code = 200
+    assert status == status_code
+    assert raw_data == ""
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_req_headers_updated(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test req_headers being updated when headers is populated."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.return_value = MockAsyncResponse("", status=200)
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    status, headers, raw_data = await conn.perform_request("get", url="http://example.com/test", headers={"Custom-Header": "value"})
+    status_code = 200
+    assert status == status_code
+    assert raw_data == ""
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_http_compress_and_body(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test if self.http_compress and body clause."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.return_value = MockAsyncResponse("", status=200)
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json", http_compress=True)
+    body_data = b'{"test": "data"}'
+    status, headers, raw_data = await conn.perform_request("post", url="http://example.com/test", body=body_data)
+    status_code = 200
+    assert status == status_code
+    assert raw_data == ""
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_callable_http_auth(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test if callable(self._http_auth) clause."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.return_value = MockAsyncResponse("", status=200)
+
+    def mock_auth(_: str, __: str, ___: str, ____: bytes) -> dict[str, str]:
+        """Mock auth function."""
+        return {"Authorization": "Bearer token"}
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json", http_auth=mock_auth)
+    status, headers, raw_data = await conn.perform_request("get", url="http://example.com/test")
+    assert status == 200
+    assert raw_data == ""
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_reraise_exceptions(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test except reraise_exceptions clause."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.side_effect = asyncio.CancelledError
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    with pytest.raises(asyncio.CancelledError):
+        await conn.perform_request("get", url="http://example.com/test")
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_log_request_fail(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test log_request_fail."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.side_effect = Exception("Test exception")
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    with pytest.raises(Exception):  # noqa: B017, PT011
+        await conn.perform_request("get", url="http://example.com/test")
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_raise_ssl_error(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test raising SSLError."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    # Define the arguments for ServerFingerprintMismatch
+    expected = b"expected_fingerprint"
+    got = b"got_fingerprint"
+    host = "example.com"
+    port = 443
+
+    mock_request.side_effect = aiohttp_exceptions.ServerFingerprintMismatch(expected, got, host, port)
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    with pytest.raises(SSLError):
+        await conn.perform_request("get", url="http://example.com/test")
+
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_raise_connection_timeout(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test raising ConnectionTimeout error."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.side_effect = asyncio.TimeoutError
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    with pytest.raises(ConnectionTimeout):
+        await conn.perform_request("get", url="http://example.com/test")
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_raise_connection_error(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test raising ConnectionError."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.side_effect = Exception("Test connection error")
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    with pytest.raises(ConnectionError):
+        await conn.perform_request("get", url="http://example.com/test")
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession.request")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_http_status_code_handling(mock_from_file: MagicMock, mock_request: AsyncMock) -> None:
+    """Test if not (HTTP_OK ...) clause."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    mock_request.return_value = MockAsyncResponse("Error", status=500)
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    with pytest.raises(TransportError):
+        await conn.perform_request("get", url="http://example.com/test")
+
+
+@pytest.mark.asyncio
+@patch("fusion.authentication.FusionAiohttpSession")
+async def test_close_method(mock_session_class: AsyncMock) -> None:
+    """Test the close method."""
+    mock_session = AsyncMock()
+    mock_session_class.return_value = mock_session
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    conn.session = mock_session  # Set the mocked session
+
+    await conn.close()
+
+    # Assert that the session's close method was called
+    mock_session.close.assert_called_once()
+
+    # Assert that the session is set to None
+    assert conn.session is None

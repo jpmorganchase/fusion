@@ -410,7 +410,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         else:
             raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
         self.catalog = kwargs.get("catalog", "common")
-        self.knowledge_base = kwargs.get("knowledge_base")
+        self.knowledge_base: str | list[str] | None = kwargs.get("knowledge_base")
 
         self.session = None
         self.base_url = fusion_root_url

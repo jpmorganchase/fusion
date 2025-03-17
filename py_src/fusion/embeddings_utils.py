@@ -115,7 +115,7 @@ def _modify_post_response_langchain(raw_data: str | bytes | bytearray) -> str | 
 
     return raw_data
 
-def _modify_post_haystack(knowledge_base: str | list[str], body: bytes | None, method: str) -> bytes | None:
+def _modify_post_haystack(knowledge_base: str | list[str] | None, body: bytes | None, method: str) -> bytes | None:
     """Method to modify haystack POST body to match the embeddings API, which expects the embedding field to be
         named "vector".
 
