@@ -2517,3 +2517,36 @@ class Fusion:
             root_url=self.root_url,
             credentials=self.credentials,
         )
+    
+    def list_datasetmembers_distributions(
+        self,
+        dataset: str,
+        catalog: str | None = None,
+    ) -> pd.DataFrame:
+        """List the distributions of dataset members.
+
+        Args:
+            dataset (str): Dataset identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+
+        Returns:
+            pd.DataFrame: A dataframe with a row for each dataset member distribution.
+
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+
+        resp = self.session.get(url)
+        dists = resp.json()["datasets"][0]["distributions"]
+
+        data = []
+        for dist in dists:
+            member_key = dist.get("key")
+            member_id = member_key.split("/")[1]
+            member_format = member_key.split("/")[2].split(".")[1]
+            data.append((member_id, member_format))
+
+        members_df = pd.DataFrame(data, columns=["identifier", "format"])
+        return members_df
