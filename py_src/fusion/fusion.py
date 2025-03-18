@@ -2543,9 +2543,9 @@ class Fusion:
 
         data = []
         for dist in dists:
-            member_key = dist.get("key")
-            member_id = member_key.split("/")[1]
-            member_format = member_key.split("/")[2].split(".")[1]
+            values = dist.get("values")
+            member_id = values[5]
+            member_format = values[6]
             data.append((member_id, member_format))
 
         members_df = pd.DataFrame(data, columns=["identifier", "format"])
