@@ -1614,7 +1614,7 @@ dependencies = [
 
 [[package]]
 name = "pyfusion"
-version = "2.0.10"
+version = "2.0.11-dev0"
 dependencies = [
  "bincode",
  "chrono",
@@ -1634,6 +1634,10 @@ dependencies = [
  "tempdir",
  "tokio 1.44.0",
  "url",
+ "windows-link",
+ "windows-registry",
+ "windows-strings",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]

@@ -91,7 +91,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         credentials (FusionCredentials or str, optional): Credentials for the Fusion API. Can be a `FusionCredentials`
             object or a path to a credentials file. Defaults to "config/client_credentials.json".
         catalog (str, optional): Catalog name. Defaults to "common".
-        knowledge_base (str | list[str], optional): Knowledge base name. A dataset identifier. If multiple identifiers 
+        knowledge_base (str | list[str], optional): Knowledge base name. A dataset identifier. If multiple identifiers
             are provided, the connection will perform searches across all provided knowledge bases. Any other operations
             will not be supported, as a single knowledge base is required for those operations.
         index (str, optional): Index name. Defaults to `None`. Used to determine index when the _bulk operation
@@ -199,7 +199,6 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
     @staticmethod
     def _remap_endpoints(url: str) -> str:
         return url.replace("_bulk", "embeddings").replace("_search", "search")
-
 
     def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
         if url == "/_bulk":
@@ -400,7 +399,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         credentials (FusionCredentials or str, optional): Credentials for the Fusion API. Can be a `FusionCredentials`
             object or a path to a credentials file. Defaults to "config/client_credentials.json".
         catalog (str, optional): Catalog name. Defaults to "common".
-        knowledge_base (str, optional): Knowledge base name. A dataset identifier. If multiple identifiers 
+        knowledge_base (str, optional): Knowledge base name. A dataset identifier. If multiple identifiers
             are provided, the connection will perform searches across all provided knowledge bases. Any other operations
             will not be supported, as a single knowledge base is required for those operations.
         index (str, optional): Index name. Defaults to `None`. Used to determine index when the _bulk operation

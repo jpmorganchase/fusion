@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 def _format_full_index_response(response: requests.Response) -> pd.DataFrame:
     """Format get index response.
 
@@ -77,7 +78,7 @@ def _retrieve_index_name_from_bulk_body(body: bytes | None) -> str:
             if "index" in json_obj and "_index" in json_obj["index"]:
                 index_name = str(json_obj["index"]["_index"])
                 return index_name
-    
+
     raise ValueError("Index name not found in bulk body")
 
 
@@ -114,6 +115,7 @@ def _modify_post_response_langchain(raw_data: str | bytes | bytearray) -> str | 
             return raw_data.decode("utf-8", errors="ignore") if isinstance(raw_data, bytes) else raw_data
 
     return raw_data
+
 
 def _modify_post_haystack(knowledge_base: str | list[str] | None, body: bytes | None, method: str) -> bytes | None:
     """Method to modify haystack POST body to match the embeddings API, which expects the embedding field to be
