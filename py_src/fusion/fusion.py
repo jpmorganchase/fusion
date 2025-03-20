@@ -25,12 +25,11 @@ from fusion.fusion_types import Types
 from fusion.product import Product
 from fusion.report import Report
 
+from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     RECOGNIZED_FORMATS,
-    _format_full_index_response,
-    _format_summary_index_response,
     cpu_count,
     csv_to_table,
     distribution_to_filename,
@@ -56,7 +55,7 @@ from .utils import (
 if TYPE_CHECKING:
     import fsspec
     import requests
-    from opensearchpy import OpenSearch
+    from opensearchpy import AsyncOpenSearch, OpenSearch
 
     from .types import PyArrowFilterT
 
@@ -2494,3 +2493,60 @@ class Fusion:
             root_url=self.root_url,
             credentials=self.credentials,
         )
+
+    def get_async_fusion_vector_store_client(self, knowledge_base: str, catalog: str | None = None) -> AsyncOpenSearch:
+        """Returns Fusion Embeddings Search client.
+
+        Args:
+            knowledge_base (str): Knowledge base (dataset) identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            OpenSearch: Fusion Embeddings Search client.
+
+        """
+        from opensearchpy import AsyncOpenSearch
+
+        from fusion.embeddings import FusionAsyncHttpConnection
+
+        catalog = self._use_catalog(catalog)
+        return AsyncOpenSearch(
+            connection_class=FusionAsyncHttpConnection,
+            catalog=catalog,
+            knowledge_base=knowledge_base,
+            root_url=self.root_url,
+            credentials=self.credentials,
+        )
+    
+    def list_datasetmembers_distributions(
+        self,
+        dataset: str,
+        catalog: str | None = None,
+    ) -> pd.DataFrame:
+        """List the distributions of dataset members.
+
+        Args:
+            dataset (str): Dataset identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+
+        Returns:
+            pd.DataFrame: A dataframe with a row for each dataset member distribution.
+
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+
+        resp = self.session.get(url)
+        dists = resp.json()["datasets"][0]["distributions"]
+
+        data = []
+        for dist in dists:
+            values = dist.get("values")
+            member_id = values[5]
+            member_format = values[6]
+            data.append((member_id, member_format))
+
+        members_df = pd.DataFrame(data, columns=["identifier", "format"])
+        return members_df

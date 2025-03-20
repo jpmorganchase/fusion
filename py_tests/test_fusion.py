@@ -1722,3 +1722,76 @@ def test_get_fusion_vector_store_client(fusion_obj: Fusion) -> None:
     result = fusion_obj.get_fusion_vector_store_client("knowledge_base")
 
     assert isinstance(result, OpenSearch)
+
+
+def test_list_datasetmembers_distributions(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list_datasetmembers_distributions method."""
+    catalog = "my_catalog"
+    dataset = "MY_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+    expected_resp = {
+        "lastModified": "2025-03-18T09:04:22Z",
+        "checksum": "SHA-256=vFdIF:HSLDBV:VBLHD/xe8Mom9yqooZA=-1",
+        "metadata": {
+            "fields": [
+                "lastModified",
+                "size",
+                "checksum",
+                "catalog",
+                "dataset",
+                "seriesMember",
+                "distribution",
+                "storageProvider",
+                "version",
+            ]
+        },
+        "datasets": [
+            {
+                "key": "MY_DATASET",
+                "lastModified": "2025-03-18T09:04:22Z",
+                "checksum": "SHA-256=vSLKFGNSDFGJBADFGsjfgl/xe8Mom9yqooZA=-1",
+                "distributions": [
+                    {
+                        "key": "MY_DATASET/20250317/distribution.csv",
+                        "values": [
+                            "2025-03-18T09:04:22Z",
+                            "3054",
+                            "SHA-256=vlfaDJFb:VbSdfOHLvnL/xe8Mom9yqooZA=-1",
+                            "my_catalog",
+                            "MY_DATASET",
+                            "20250317",
+                            "csv",
+                            "api-bucket",
+                            "SJLDHGF;eflSBVLS",
+                        ],
+                    },
+                    {
+                        "key": "MY_DATASET/20250317/distribution.parquet",
+                        "values": [
+                            "2025-03-18T09:04:19Z",
+                            "3076",
+                            "SHA-256=7yfQDQq/M1VE4S0SKJDHfblDHFVBldvLXlv5Q=-1",
+                            "my_catalog",
+                            "MY_DATASET",
+                            "20250317",
+                            "parquet",
+                            "api-bucket",
+                            "SJDFB;IUEBRF;dvbuLSDVc",
+                        ],
+                    },
+                ],
+            }
+        ],
+    }
+
+    requests_mock.get(url, json=expected_resp)
+
+    expected_data = [
+        ("20250317", "csv"),
+        ("20250317", "parquet")
+    ]
+    expected_df = pd.DataFrame(expected_data, columns=["identifier", "format"])
+
+    resp = fusion_obj.list_datasetmembers_distributions(catalog=catalog, dataset=dataset)
+
+    assert all(resp == expected_df)
