@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json as js
 import logging
 import re
@@ -53,6 +54,8 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
     import fsspec
     import requests
     from opensearchpy import AsyncOpenSearch, OpenSearch
@@ -769,6 +772,46 @@ class Fusion:
                 if not r[0]:
                     warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
         return res if return_paths else None
+
+    async def _async_stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
+        """Return async stream of a file fro mthe given url.
+
+        Args:
+            url (str): File url. Appends Fusion.root_url if http prefix not present.
+            chunk_size (int, optional): Size for each chunk in async stream. Defaults to 100.
+
+        Returns:
+            AsyncGenerator[bytes, None]: Async generator object.
+
+        Yields:
+            Iterator[AsyncGenerator[bytes, None]]: Next set of bytes read from the file at given url.
+        """
+        dup_credentials = copy.deepcopy(self.credentials)
+        async_fs = FusionHTTPFileSystem(
+            client_kwargs={"root_url": self.root_url, "credentials": dup_credentials}, asynchronous=True
+        )
+        session = await async_fs.set_session()
+        async with session:
+            async for chunk in async_fs._stream_file(url, chunk_size):
+                yield chunk
+
+    async def _async_get_file(self, url: str, chunk_size: int = 1000) -> bytes:
+        """Return a file from url as a bytes object, asynchronously.
+
+        Under the hood, opens up an async stream downloading file in chunk_size bytes per chunk.
+        Larger chunk sizes results in shorter execution time for this function.
+
+        Args:
+            url (str): File url. Appends Fusion.root_url if http prefix not present.
+            chunk_size (int, optional): Size of chunks to get from async stream. Defaults to 1000.
+
+        Returns:
+            bytes: File from url as a bytes object.
+        """
+        async_generator = self._async_stream_file(url, chunk_size)
+        bytes_list: list[bytes] = [chunk async for chunk in async_generator]
+        final_bytes: bytes = b"".join(bytes_list)
+        return final_bytes
 
     def to_df(  # noqa: PLR0913
         self,
@@ -2517,7 +2560,7 @@ class Fusion:
             root_url=self.root_url,
             credentials=self.credentials,
         )
-    
+
     def list_datasetmembers_distributions(
         self,
         dataset: str,

@@ -49,15 +49,13 @@ def test_modify_post_haystack() -> None:
         b'{"query":{"bool":{"must":[{"knn":{"vector":{"vector":[0.1,0.2,0.3,0.4,0.5],"k":5}}}]}},'
         b'"size":10,"_source":{"excludes":["embedding"]}}'
     )
-    modified_data = _modify_post_haystack(knowledge_base="mykb",body=raw_data, method="post")
+    modified_data = _modify_post_haystack(knowledge_base="mykb", body=raw_data, method="post")
 
     assert modified_data == exp_data
 
 
 def test_modify_post_haystack_multi_kb() -> None:
-
-
-    knowledge_base=["mykb", "mykb2"]
+    knowledge_base = ["mykb", "mykb2"]
     raw_data = (
         b'{"query":{"bool":{"must":[{"knn":{"embedding":{"vector":[0.1,0.2,0.3,0.4,0.5],"k":5}}}]}}, '
         b'"size":10, "_source":{"excludes":["embedding"]}}'
@@ -66,8 +64,8 @@ def test_modify_post_haystack_multi_kb() -> None:
         b'{"query":{"hybrid":{"queries":[{"knn":{"vector":{"vector":[0.1,0.2,0.3,0.4,0.5],"k":5}}}]}},'
         b'"size":10,"_source":{"excludes":["embedding"]},"datasets":["mykb","mykb2"]}'
     )
-    modified_data = _modify_post_haystack(knowledge_base=knowledge_base,body=raw_data, method="post")
-    modified_data = _modify_post_haystack(knowledge_base=knowledge_base,body=raw_data, method="post")
+    modified_data = _modify_post_haystack(knowledge_base=knowledge_base, body=raw_data, method="post")
+    modified_data = _modify_post_haystack(knowledge_base=knowledge_base, body=raw_data, method="post")
 
     assert modified_data == exp_data
 
@@ -117,6 +115,7 @@ def test_modify_post_haystack_json_decode_error_no_query(
 
     # Check the log for the exception message
     assert "An error occurred during modification of haystack POST body:" in caplog.text
+
 
 def test_modify_post_response_langchain() -> None:
     raw_data = b"""

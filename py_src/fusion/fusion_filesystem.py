@@ -207,6 +207,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         kwargs["keep_protocol"] = True
         res = super().ls(path, detail=True, **kwargs)
         if res[0]["type"] != "file":
+            kwargs.pop("keep_protocol", None)
             res = super().info(path, **kwargs)
             if path.split("/")[-2] == "datasets":
                 target = path.split("/")[-1]
@@ -220,15 +221,20 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     async def _info(self, path: str, **kwargs: Any) -> Any:
         await self._async_startup()
-        path = await self._decorate_url_a(path)
+        path = self._decorate_url(path)
         kwargs["keep_protocol"] = True
         res = await super()._ls(path, detail=True, **kwargs)
         if res[0]["type"] != "file":
+            kwargs.pop("keep_protocol", None)
             res = await super()._info(path, **kwargs)
             if path.split("/")[-2] == "datasets":
                 target = path.split("/")[-1]
                 args = ["/".join(path.split("/")[:-1]) + f"/changes?datasets={quote(target)}"]
                 res["changes"] = await self._changes(*args)
+            if res["size"] is None and (res["mimetype"] == "application/json") and (res["type"] == "file"):
+                res["size"] = 0
+                res.pop("mimetype", None)
+                res["type"] = "directory"
         split_path = path.split("/")
         if len(split_path) > 1 and split_path[-2] == "distributions":
             res = res[0]
@@ -324,6 +330,29 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         url = self._decorate_url(url)
         out = await super()._cat(url, start=start, end=end, **kwargs)
         return out
+
+    async def _stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
+        """Return an async stream to file at the given url.
+
+        Args:
+            url (str): File url. Appends Fusion.root_url if http prefix not present.
+            chunk_size (int, optional): Size for each chunk in async stream. Defaults to 100.
+
+        Returns:
+            AsyncGenerator[bytes, None]: Async generator object.
+
+        Yields:
+            Iterator[AsyncGenerator[bytes, None]]: Next set of bytes read from the file at given url.
+        """
+        await self._async_startup()
+        url = self._decorate_url(url)
+        f = await self.open_async(url, "rb")
+        async with f:
+            while True:
+                chunk = await f.read(chunk_size)
+                if not chunk:
+                    break
+                yield chunk
 
     async def _fetch_range(
         self,
