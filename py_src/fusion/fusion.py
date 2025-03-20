@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+import copy
 import json as js
 import logging
 import re
@@ -770,6 +772,31 @@ class Fusion:
                 if not r[0]:
                     warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
         return res if return_paths else None
+
+
+    async def async_stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
+        dup_credentials = copy.deepcopy(self.credentials)
+        async_fs = FusionHTTPFileSystem(
+            client_kwargs={
+                "root_url": self.root_url,
+                "credentials": dup_credentials
+            },
+            asynchronous = True
+            )
+        session = await async_fs.set_session()
+        async with session:
+            async for chunk in async_fs._stream_file(url, chunk_size):
+                yield chunk
+    
+    
+    async def async_get_file(self, url: str, chunk_size: int = 1000) -> bytes:
+        async_generator = self.async_stream_file(url, chunk_size)
+        bytes_list: list[bytes] = []
+        async for chunk in async_generator:
+            bytes_list.append(chunk)
+        final_bytes: bytes = b''.join(bytes_list)
+        return final_bytes
+
 
     def to_df(  # noqa: PLR0913
         self,
