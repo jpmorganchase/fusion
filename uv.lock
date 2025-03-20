@@ -3230,7 +3230,7 @@ wheels = [
 
 [[package]]
 name = "pyfusion"
-version = "2.0.9"
+version = "2.0.11.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -3245,6 +3245,26 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "adlfs" },
+    { name = "aiohttp-sse-client" },
+    { name = "docutils" },
+    { name = "gcsfs" },
+    { name = "jupyter-contrib-nbextensions" },
+    { name = "mike" },
+    { name = "mkdocs" },
+    { name = "mkdocs-autorefs" },
+    { name = "mkdocs-git-revision-date-plugin" },
+    { name = "mkdocs-include-markdown-plugin" },
+    { name = "mkdocs-jupyter" },
+    { name = "mkdocs-material" },
+    { name = "mkdocstrings" },
+    { name = "mkdocstrings-python" },
+    { name = "notebook" },
+    { name = "opensearch-py" },
+    { name = "polars" },
+    { name = "sseclient" },
+]
 aws = [
     { name = "s3fs" },
 ]
@@ -3350,6 +3370,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=1.1" },
     { name = "polars", marker = "extra == 'polars'" },
     { name = "pyarrow", specifier = ">=11" },
+    { name = "pyfusion", extras = ["doc", "awx", "gcs", "azr", "polars", "events", "embeddings"], marker = "extra == 'all'" },
     { name = "requests", specifier = ">=2" },
     { name = "rich", specifier = ">=11.0.0" },
     { name = "s3fs", marker = "extra == 'aws'" },

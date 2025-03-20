@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
 import copy
 import json as js
 import logging
@@ -27,12 +26,11 @@ from fusion.fusion_types import Types
 from fusion.product import Product
 from fusion.report import Report
 
+from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     RECOGNIZED_FORMATS,
-    _format_full_index_response,
-    _format_summary_index_response,
     cpu_count,
     csv_to_table,
     distribution_to_filename,
@@ -56,9 +54,11 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
     import fsspec
     import requests
-    from opensearchpy import OpenSearch
+    from opensearchpy import AsyncOpenSearch, OpenSearch
 
     from .types import PyArrowFilterT
 
@@ -773,30 +773,45 @@ class Fusion:
                     warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
         return res if return_paths else None
 
+    async def _async_stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
+        """Return async stream of a file fro mthe given url.
 
-    async def async_stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
+        Args:
+            url (str): File url. Appends Fusion.root_url if http prefix not present.
+            chunk_size (int, optional): Size for each chunk in async stream. Defaults to 100.
+
+        Returns:
+            AsyncGenerator[bytes, None]: Async generator object.
+
+        Yields:
+            Iterator[AsyncGenerator[bytes, None]]: Next set of bytes read from the file at given url.
+        """
         dup_credentials = copy.deepcopy(self.credentials)
         async_fs = FusionHTTPFileSystem(
-            client_kwargs={
-                "root_url": self.root_url,
-                "credentials": dup_credentials
-            },
-            asynchronous = True
-            )
+            client_kwargs={"root_url": self.root_url, "credentials": dup_credentials}, asynchronous=True
+        )
         session = await async_fs.set_session()
         async with session:
             async for chunk in async_fs._stream_file(url, chunk_size):
                 yield chunk
-    
-    
-    async def async_get_file(self, url: str, chunk_size: int = 1000) -> bytes:
-        async_generator = self.async_stream_file(url, chunk_size)
-        bytes_list: list[bytes] = []
-        async for chunk in async_generator:
-            bytes_list.append(chunk)
-        final_bytes: bytes = b''.join(bytes_list)
-        return final_bytes
 
+    async def _async_get_file(self, url: str, chunk_size: int = 1000) -> bytes:
+        """Return a file from url as a bytes object, asynchronously.
+
+        Under the hood, opens up an async stream downloading file in chunk_size bytes per chunk.
+        Larger chunk sizes results in shorter execution time for this function.
+
+        Args:
+            url (str): File url. Appends Fusion.root_url if http prefix not present.
+            chunk_size (int, optional): Size of chunks to get from async stream. Defaults to 1000.
+
+        Returns:
+            bytes: File from url as a bytes object.
+        """
+        async_generator = self._async_stream_file(url, chunk_size)
+        bytes_list: list[bytes] = [chunk async for chunk in async_generator]
+        final_bytes: bytes = b"".join(bytes_list)
+        return final_bytes
 
     def to_df(  # noqa: PLR0913
         self,
@@ -2521,3 +2536,60 @@ class Fusion:
             root_url=self.root_url,
             credentials=self.credentials,
         )
+
+    def get_async_fusion_vector_store_client(self, knowledge_base: str, catalog: str | None = None) -> AsyncOpenSearch:
+        """Returns Fusion Embeddings Search client.
+
+        Args:
+            knowledge_base (str): Knowledge base (dataset) identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            OpenSearch: Fusion Embeddings Search client.
+
+        """
+        from opensearchpy import AsyncOpenSearch
+
+        from fusion.embeddings import FusionAsyncHttpConnection
+
+        catalog = self._use_catalog(catalog)
+        return AsyncOpenSearch(
+            connection_class=FusionAsyncHttpConnection,
+            catalog=catalog,
+            knowledge_base=knowledge_base,
+            root_url=self.root_url,
+            credentials=self.credentials,
+        )
+
+    def list_datasetmembers_distributions(
+        self,
+        dataset: str,
+        catalog: str | None = None,
+    ) -> pd.DataFrame:
+        """List the distributions of dataset members.
+
+        Args:
+            dataset (str): Dataset identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+
+        Returns:
+            pd.DataFrame: A dataframe with a row for each dataset member distribution.
+
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+
+        resp = self.session.get(url)
+        dists = resp.json()["datasets"][0]["distributions"]
+
+        data = []
+        for dist in dists:
+            values = dist.get("values")
+            member_id = values[5]
+            member_format = values[6]
+            data.append((member_id, member_format))
+
+        members_df = pd.DataFrame(data, columns=["identifier", "format"])
+        return members_df

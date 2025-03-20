@@ -224,8 +224,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         path = self._decorate_url(path)
         kwargs["keep_protocol"] = True
         res = await super()._ls(path, detail=True, **kwargs)
-        # print(f"len res {len(res)}, first res {res[0]}")
-        # print(f"res {res}")
         if res[0]["type"] != "file":
             kwargs.pop("keep_protocol", None)
             res = await super()._info(path, **kwargs)
@@ -233,14 +231,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 target = path.split("/")[-1]
                 args = ["/".join(path.split("/")[:-1]) + f"/changes?datasets={quote(target)}"]
                 res["changes"] = await self._changes(*args)
-            if res["size"] is None and (res['mimetype'] == 'application/json') and (res['type'] == 'file'):
+            if res["size"] is None and (res["mimetype"] == "application/json") and (res["type"] == "file"):
                 res["size"] = 0
                 res.pop("mimetype", None)
                 res["type"] = "directory"
         split_path = path.split("/")
         if len(split_path) > 1 and split_path[-2] == "distributions":
             res = res[0]
-            print(f"broke up res {split_path}")
         return res
 
     def ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
@@ -333,8 +330,20 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         url = self._decorate_url(url)
         out = await super()._cat(url, start=start, end=end, **kwargs)
         return out
-    
+
     async def _stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
+        """Return an async stream to file at the given url.
+
+        Args:
+            url (str): File url. Appends Fusion.root_url if http prefix not present.
+            chunk_size (int, optional): Size for each chunk in async stream. Defaults to 100.
+
+        Returns:
+            AsyncGenerator[bytes, None]: Async generator object.
+
+        Yields:
+            Iterator[AsyncGenerator[bytes, None]]: Next set of bytes read from the file at given url.
+        """
         await self._async_startup()
         url = self._decorate_url(url)
         f = await self.open_async(url, "rb")
