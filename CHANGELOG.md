@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.11] - 2025-03-21
+* Bug fix for _info, no longer submitting keep_protocol param to aiohttp client session
+* Adding asynchronous streaming and asynchronous download as bytes to file system and Fusion
+
 ## [2.0.10] - 2025-03-20
 * Asynchronous embeddings API connection class
 * Support multi knowledge base search in sync and async embeddings connection classes
