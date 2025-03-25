@@ -1,6 +1,6 @@
 [package]
 name = "pyfusion"
-version = "2.0.10-dev0"
+version = "2.0.11"
 edition = "2021"
 
 
@@ -27,6 +27,17 @@ jsonwebtoken = {version = "9.3.0"}
 state = { version = "0.6"}
 
 
+# Set ceiling on Windows crates due to auth issue on some Windows environments
+[target.'cfg(target_arch = "windows")'.dependencies]
+windows-targets = { version = "<=0.48.5" }
+windows-registry = { version = "<=0.2.0" }
+windows-strings = { version = "<=0.1.0" }
+windows-link = { version = "<=0.1.0" }
+# wasi = { version = "<= 0.13.3+wasi-0.2.2" }
+# tokio-util = { version = "<= 0.7.13" }
+# End of WINDOWS limit
+
+
 # Struggling to get OPEN_SSL env vars to point to the installed libs on these archs
 # Remove these once we figure out the magic
 [target.'cfg(target_arch = "aarch64")'.dependencies]
@@ -39,6 +50,7 @@ openssl = { version = "0.10.64", features = ["vendored"] }
 openssl = { version = "0.10.64", features = ["vendored"] }
 [package.metadata.cargo-llvm-cov]
 # End OPEN_SSL 
+
 
 # Ignore directories and files that are not part of the Rust source code
 ignore-filename-regex = "(.cargo|py_integ|py_src|py_tests|dist|docs|downloads|runnable|site|target|\\.git|\\.github)/"
