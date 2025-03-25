@@ -1786,10 +1786,7 @@ def test_list_datasetmembers_distributions(requests_mock: requests_mock.Mocker, 
 
     requests_mock.get(url, json=expected_resp)
 
-    expected_data = [
-        ("20250317", "csv"),
-        ("20250317", "parquet")
-    ]
+    expected_data = [("20250317", "csv"), ("20250317", "parquet")]
     expected_df = pd.DataFrame(expected_data, columns=["identifier", "format"])
 
     resp = fusion_obj.list_datasetmembers_distributions(catalog=catalog, dataset=dataset)

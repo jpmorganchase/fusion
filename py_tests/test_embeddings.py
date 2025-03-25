@@ -922,19 +922,19 @@ def test_async_fusion_embeddings_connection_wrong_creds() -> None:
         ValueError, match="credentials must be a path to a credentials file or FusionCredentials object"
     ):
         FusionAsyncHttpConnection(
-        host="localhost",
-        port=9200,
-        http_auth=("user", "pass"),
-        use_ssl=True,
-        headers={"custom-header": "value"},
-        http_compress=True,
-        opaque_id="opaque-id",
-        pool_maxsize=20,
-        root_url="https://fusion.jpmorgan.com/api/v1/",
-        credentials={"username": "user", "password": "pass"},
-        catalog="common",
-        knowledge_base="knowledge_base",
-    )
+            host="localhost",
+            port=9200,
+            http_auth=("user", "pass"),
+            use_ssl=True,
+            headers={"custom-header": "value"},
+            http_compress=True,
+            opaque_id="opaque-id",
+            pool_maxsize=20,
+            root_url="https://fusion.jpmorgan.com/api/v1/",
+            credentials={"username": "user", "password": "pass"},
+            catalog="common",
+            knowledge_base="knowledge_base",
+        )
 
 
 def test_async_fusion_embeddings_connection_creds_obj(credentials: FusionCredentials) -> None:
@@ -953,7 +953,6 @@ def test_async_fusion_embeddings_connection_creds_obj(credentials: FusionCredent
         catalog="common",
         knowledge_base="knowledge_base",
     )
-
 
     assert connection.host == "https://localhost:9200"
     assert connection.use_ssl is True
@@ -980,7 +979,7 @@ def test_async_fusion_embeddings_connection_url_prefix_kwarg(credentials: Fusion
         credentials=credentials,
         catalog="common",
         knowledge_base="knowledge_base",
-        url_prefix = "custom/url/prefix"
+        url_prefix="custom/url/prefix",
     )
     assert connection.host == "https://localhost:9200"
     assert connection.use_ssl is True
@@ -1007,7 +1006,7 @@ def test_async_fusion_embeddings_connection_multi_kb(credentials: FusionCredenti
         credentials=credentials,
         catalog="common",
         knowledge_base=["knowledge_base", "knowledge_base2"],
-        url_prefix = "custom/url/prefix"
+        url_prefix="custom/url/prefix",
     )
 
     assert connection.host == "https://localhost:9200"
@@ -1164,7 +1163,7 @@ def test_fusion_async_http_connection_ssl_show_warn(mock_from_file: MagicMock) -
 
     with pytest.warns(
         UserWarning, match="Connecting to https://localhost:9200 using SSL with verify_certs=False is insecure."
-        ):
+    ):
         FusionAsyncHttpConnection(
             host="localhost",
             port=9200,
@@ -1246,13 +1245,14 @@ def test_fusion_async_http_connection_invalid_client_key(mock_from_file: MagicMo
             knowledge_base="knowledge_base",
         )
 
+
 @patch("fusion.embeddings.FusionCredentials.from_file")
 @patch("ssl.SSLContext.load_cert_chain")
 @patch("pathlib.Path.is_file", return_value=True)
 def test_fusion_async_http_connection_load_cert_chain(
     mock_is_file: MagicMock,  # noqa: ARG001
     mock_load_cert_chain: MagicMock,
-    mock_from_file: MagicMock
+    mock_from_file: MagicMock,
 ) -> None:
     """Test that client_cert and client_key are loaded correctly."""
     mock_credentials = MagicMock(spec=FusionCredentials)
@@ -1282,7 +1282,7 @@ def test_fusion_async_http_connection_load_cert_chain(
 def test_fusion_async_http_connection_load_cert_chain_no_key(
     mock_is_file: MagicMock,  # noqa: ARG001
     mock_load_cert_chain: MagicMock,
-    mock_from_file: MagicMock
+    mock_from_file: MagicMock,
 ) -> None:
     """Test that client_cert is loaded correctly when client_key is not provided."""
     mock_credentials = MagicMock(spec=FusionCredentials)
@@ -1313,7 +1313,7 @@ def test_fusion_async_http_connection_ca_certs_is_dir(
     mock_is_dir: MagicMock,  # noqa: ARG001
     mock_is_file: MagicMock,  # noqa: ARG001
     mock_load_verify_locations: MagicMock,
-    mock_from_file: MagicMock
+    mock_from_file: MagicMock,
 ) -> None:
     """Test that ca_certs is loaded correctly when it is a directory."""
     mock_credentials = MagicMock(spec=FusionCredentials)
@@ -1393,26 +1393,26 @@ def test_async_make_valid_url_bulk(
     modified_url = conn._make_url_valid(url)
     assert modified_url == exp_url
 
+
 class MockAsyncResponse:
+    def __init__(
+        self,
+        text: Any = None,
+        status: int = 200,
+        headers: Any = CIMultiDict(),  # noqa: B008
+    ) -> None:
+        self._text = text
+        self.status = status
+        self.headers = headers
 
-        def __init__(
-            self,
-            text: Any = None,
-            status: int = 200,
-            headers: Any = CIMultiDict(),  # noqa: B008
-        ) -> None:
-            self._text = text
-            self.status = status
-            self.headers = headers
+    async def text(self) -> Any:
+        return self._text
 
-        async def text(self) -> Any:
-            return self._text
+    async def __aexit__(self, *args: Any) -> None:  # noqa: PYI036
+        pass
 
-        async def __aexit__(self, *args: Any) -> None:  # noqa: PYI036
-            pass
-
-        async def __aenter__(self) -> Any:
-            return self
+    async def __aenter__(self) -> Any:
+        return self
 
 
 @pytest.mark.asyncio
@@ -1466,6 +1466,7 @@ async def test_async_perform_request_refresh_endpoint(mock_from_file: MagicMock,
     status, headers, raw_data = await conn.perform_request("PUT", url="http://example.com/_refresh")
     status_code = 200
     assert status == status_code
+
 
 @pytest.mark.asyncio
 @patch("fusion.authentication.FusionAiohttpSession.request")
@@ -1593,7 +1594,6 @@ async def test_raise_ssl_error(mock_from_file: MagicMock, mock_request: AsyncMoc
     conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
     with pytest.raises(SSLError):
         await conn.perform_request("get", url="http://example.com/test")
-
 
 
 @pytest.mark.asyncio
