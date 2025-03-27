@@ -1,5 +1,6 @@
 import datetime
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +13,7 @@ from pytest_mock import MockerFixture
 
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute
+from fusion.exceptions import CredentialError, FileFormatError
 from fusion.fusion import Fusion
 from fusion.fusion_types import Types
 from fusion.utils import _normalise_dt_param, distribution_to_url
@@ -687,6 +689,351 @@ def test_download_main(mocker: MockerFixture, fusion_obj: Fusion) -> None:
     assert len(res) == 1
     assert res[0][0]
     assert "sample" in res[0][1]
+
+
+def test_download_no_access(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    dt_str = "20200101"
+    file_format = "csv"
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets"
+
+    expected_data = {
+        "resources": [
+            {
+                "catalog": {
+                    "@id": "my_catalog/",
+                    "description": "my catalog",
+                    "title": "my catalog",
+                    "identifier": "my_catalog",
+                },
+                "title": "Test Dataset",
+                "identifier": "TEST_DATASET",
+                "category": ["category"],
+                "shortAbstract": "short abstract",
+                "description": "description",
+                "frequency": "Once",
+                "isInternalOnlyDataset": False,
+                "isThirdPartyData": True,
+                "isRestricted": False,
+                "isRawData": True,
+                "maintainer": "maintainer",
+                "source": "source",
+                "region": ["region"],
+                "publisher": "publisher",
+                "subCategory": ["subCategory"],
+                "tags": ["tag1", "tag2"],
+                "createdDate": "2020-05-05",
+                "modifiedDate": "2020-05-05",
+                "deliveryChannel": ["API"],
+                "language": "English",
+                "status": "Available",
+                "type": "Source",
+                "containerType": "Snapshot-Full",
+                "snowflake": "snowflake",
+                "complexity": "complexity",
+                "isImmutable": False,
+                "isMnpi": False,
+                "isPii": False,
+                "isPci": False,
+                "isClient": False,
+                "isPublic": False,
+                "isInternal": False,
+                "isConfidential": False,
+                "isHighlyConfidential": False,
+                "isActive": False,
+                "@id": "TEST_DATASET/",
+            },
+        ],
+    }
+    requests_mock.get(url, json=expected_data)
+    url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data2 = {
+        "resources": [
+            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
+            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
+        ]
+    }
+    requests_mock.get(url2, json=expected_data2)
+
+    with pytest.raises(
+        CredentialError,
+        match="You are not subscribed to TEST_DATASET in catalog my_catalog. Please request access."
+        ):
+        fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=file_format, catalog=catalog)
+
+
+def test_download_format_not_available(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    dt_str = "20200101"
+    file_format = "pdf"
+
+    url_dataset = f"{fusion_obj.root_url}catalogs/{catalog}/datasets"
+
+    expected_data_dataset = {
+        "resources": [
+            {
+                "catalog": {
+                    "@id": "my_catalog/",
+                    "description": "my catalog",
+                    "title": "my catalog",
+                    "identifier": "my_catalog",
+                },
+                "title": "Test Dataset",
+                "identifier": "TEST_DATASET",
+                "category": ["category"],
+                "shortAbstract": "short abstract",
+                "description": "description",
+                "frequency": "Once",
+                "isInternalOnlyDataset": False,
+                "isThirdPartyData": True,
+                "isRestricted": False,
+                "isRawData": True,
+                "maintainer": "maintainer",
+                "source": "source",
+                "region": ["region"],
+                "publisher": "publisher",
+                "subCategory": ["subCategory"],
+                "tags": ["tag1", "tag2"],
+                "createdDate": "2020-05-05",
+                "modifiedDate": "2020-05-05",
+                "deliveryChannel": ["API"],
+                "language": "English",
+                "status": "Subscribed",
+                "type": "Source",
+                "containerType": "Snapshot-Full",
+                "snowflake": "snowflake",
+                "complexity": "complexity",
+                "isImmutable": False,
+                "isMnpi": False,
+                "isPii": False,
+                "isPci": False,
+                "isClient": False,
+                "isPublic": False,
+                "isInternal": False,
+                "isConfidential": False,
+                "isHighlyConfidential": False,
+                "isActive": False,
+                "@id": "TEST_DATASET/",
+            },
+        ],
+    }
+    requests_mock.get(url_dataset, json=expected_data_dataset)
+
+    url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data2 = {
+        "resources": [
+            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
+            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
+        ]
+    }
+    requests_mock.get(url2, json=expected_data2)
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+    
+    expected_resp = {
+        "lastModified": "2025-03-18T09:04:22Z",
+        "checksum": "SHA-256=vFdIF:HSLDBV:VBLHD/xe8Mom9yqooZA=-1",
+        "metadata": {
+            "fields": [
+                "lastModified",
+                "size",
+                "checksum",
+                "catalog",
+                "dataset",
+                "seriesMember",
+                "distribution",
+                "storageProvider",
+                "version",
+            ]
+        },
+        "datasets": [
+            {
+                "key": "TEST_DATASET",
+                "lastModified": "2025-03-18T09:04:22Z",
+                "checksum": "SHA-256=vSLKFGNSDFGJBADFGsjfgl/xe8Mom9yqooZA=-1",
+                "distributions": [
+                    {
+                        "key": "TEST_DATASET/20250317/distribution.csv",
+                        "values": [
+                            "2025-03-18T09:04:22Z",
+                            "3054",
+                            "SHA-256=vlfaDJFb:VbSdfOHLvnL/xe8Mom9yqooZA=-1",
+                            "my_catalog",
+                            "TEST_DATASET",
+                            "20250317",
+                            "csv",
+                            "api-bucket",
+                            "SJLDHGF;eflSBVLS",
+                        ],
+                    },
+                    {
+                        "key": "TEST_DATASET/20250317/distribution.parquet",
+                        "values": [
+                            "2025-03-18T09:04:19Z",
+                            "3076",
+                            "SHA-256=7yfQDQq/M1VE4S0SKJDHfblDHFVBldvLXlv5Q=-1",
+                            "my_catalog",
+                            "TEST_DATASET",
+                            "20250317",
+                            "parquet",
+                            "api-bucket",
+                            "SJDFB;IUEBRF;dvbuLSDVc",
+                        ],
+                    },
+                ],
+            }
+        ],
+    }
+
+    requests_mock.get(url, json=expected_resp)
+    
+    with pytest.raises(
+        FileFormatError,
+        match=re.escape(
+        "Dataset format pdf is not available for TEST_DATASET in catalog my_catalog. "
+        "Available formats are ['csv', 'parquet']."
+    ),
+    ):
+        fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=file_format, catalog=catalog)
+
+
+def test_download_multiple_format_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    dt_str = "20200101"
+
+    url_dataset = f"{fusion_obj.root_url}catalogs/{catalog}/datasets"
+
+    expected_data_dataset = {
+        "resources": [
+            {
+                "catalog": {
+                    "@id": "my_catalog/",
+                    "description": "my catalog",
+                    "title": "my catalog",
+                    "identifier": "my_catalog",
+                },
+                "title": "Test Dataset",
+                "identifier": "TEST_DATASET",
+                "category": ["category"],
+                "shortAbstract": "short abstract",
+                "description": "description",
+                "frequency": "Once",
+                "isInternalOnlyDataset": False,
+                "isThirdPartyData": True,
+                "isRestricted": False,
+                "isRawData": True,
+                "maintainer": "maintainer",
+                "source": "source",
+                "region": ["region"],
+                "publisher": "publisher",
+                "subCategory": ["subCategory"],
+                "tags": ["tag1", "tag2"],
+                "createdDate": "2020-05-05",
+                "modifiedDate": "2020-05-05",
+                "deliveryChannel": ["API"],
+                "language": "English",
+                "status": "Subscribed",
+                "type": "Source",
+                "containerType": "Snapshot-Full",
+                "snowflake": "snowflake",
+                "complexity": "complexity",
+                "isImmutable": False,
+                "isMnpi": False,
+                "isPii": False,
+                "isPci": False,
+                "isClient": False,
+                "isPublic": False,
+                "isInternal": False,
+                "isConfidential": False,
+                "isHighlyConfidential": False,
+                "isActive": False,
+                "@id": "TEST_DATASET/",
+            },
+        ],
+    }
+    requests_mock.get(url_dataset, json=expected_data_dataset)
+
+    url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    expected_data2 = {
+        "resources": [
+            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
+            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
+        ]
+    }
+    requests_mock.get(url2, json=expected_data2)
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+    
+    expected_resp = {
+        "lastModified": "2025-03-18T09:04:22Z",
+        "checksum": "SHA-256=vFdIF:HSLDBV:VBLHD/xe8Mom9yqooZA=-1",
+        "metadata": {
+            "fields": [
+                "lastModified",
+                "size",
+                "checksum",
+                "catalog",
+                "dataset",
+                "seriesMember",
+                "distribution",
+                "storageProvider",
+                "version",
+            ]
+        },
+        "datasets": [
+            {
+                "key": "TEST_DATASET",
+                "lastModified": "2025-03-18T09:04:22Z",
+                "checksum": "SHA-256=vSLKFGNSDFGJBADFGsjfgl/xe8Mom9yqooZA=-1",
+                "distributions": [
+                    {
+                        "key": "TEST_DATASET/20250317/distribution.csv",
+                        "values": [
+                            "2025-03-18T09:04:22Z",
+                            "3054",
+                            "SHA-256=vlfaDJFb:VbSdfOHLvnL/xe8Mom9yqooZA=-1",
+                            "my_catalog",
+                            "TEST_DATASET",
+                            "20250317",
+                            "csv",
+                            "api-bucket",
+                            "SJLDHGF;eflSBVLS",
+                        ],
+                    },
+                    {
+                        "key": "TEST_DATASET/20250317/distribution.parquet",
+                        "values": [
+                            "2025-03-18T09:04:19Z",
+                            "3076",
+                            "SHA-256=7yfQDQq/M1VE4S0SKJDHfblDHFVBldvLXlv5Q=-1",
+                            "my_catalog",
+                            "TEST_DATASET",
+                            "20250317",
+                            "parquet",
+                            "api-bucket",
+                            "SJDFB;IUEBRF;dvbuLSDVc",
+                        ],
+                    },
+                ],
+            }
+        ],
+    }
+
+    requests_mock.get(url, json=expected_resp)
+    
+    with pytest.raises(
+        FileFormatError,
+        match=re.escape(
+        "Multiple formats found for TEST_DATASET in catalog my_catalog. Dataset format is required to"
+        "download. Available formats are ['csv', 'parquet']."
+    ),
+    ):
+        fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=None, catalog=catalog)
+
 
 
 def test_to_df(mocker: MockerFixture, tmp_path: Path, data_table_as_csv: str, fusion_obj: Fusion) -> None:
