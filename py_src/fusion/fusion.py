@@ -1361,6 +1361,9 @@ class Fusion:
                             self.events = pd.DataFrame()
                         else:
                             self.events = pd.concat([self.events, pd.DataFrame(lst)], ignore_index=True)
+                            self.events = self.events.drop_duplicates(subset=["id", "type", "timestamp"], ignore_index=True)
+                            # metadata_df = pd.json_normalize(self.events["metaData"]) # type: ignore
+                            # self.events = pd.concat([self.events, metadata_df], axis=1)
                 except TimeoutError as ex:
                     raise ex from None
                 except BaseException:
