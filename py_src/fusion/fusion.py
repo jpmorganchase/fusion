@@ -1356,14 +1356,21 @@ class Fusion:
                 try:
                     async for msg in messages:
                         event = json.loads(msg.data)
+                        # Preserve the original metaData column
+                        original_meta_data = event.get("metaData", {})
+
+                        # Flatten the metaData dictionary into the event dictionary
+                        if isinstance(original_meta_data, dict):
+                            event.update(original_meta_data)
                         lst.append(event)
                         if self.events is None:
                             self.events = pd.DataFrame()
                         else:
                             self.events = pd.concat([self.events, pd.DataFrame(lst)], ignore_index=True)
-                            self.events = self.events.drop_duplicates(subset=["id", "type", "timestamp"], ignore_index=True)
-                            # metadata_df = pd.json_normalize(self.events["metaData"]) # type: ignore
-                            # self.events = pd.concat([self.events, metadata_df], axis=1)
+                            self.events = self.events.drop_duplicates(
+                                subset=["id", "type", "timestamp"],
+                                ignore_index=True
+                            )
                 except TimeoutError as ex:
                     raise ex from None
                 except BaseException:
@@ -1420,6 +1427,13 @@ class Fusion:
             try:
                 for msg in messages:
                     event = js.loads(msg.data)
+                    # Preserve the original metaData column
+                    original_meta_data = event.get("metaData", {})
+
+                    # Flatten the metaData dictionary into the event dictionary
+                    if isinstance(original_meta_data, dict):
+                        event.update(original_meta_data)
+                        
                     if event["type"] != "HeartBeatNotification":
                         lst.append(event)
             except KeyboardInterrupt:
