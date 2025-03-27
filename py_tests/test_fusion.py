@@ -697,11 +697,9 @@ def test_download_no_access(requests_mock: requests_mock.Mocker, fusion_obj: Fus
     dt_str = "20200101"
     file_format = "csv"
 
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
 
     expected_data = {
-        "resources": [
-            {
                 "catalog": {
                     "@id": "my_catalog/",
                     "description": "my catalog",
@@ -744,18 +742,9 @@ def test_download_no_access(requests_mock: requests_mock.Mocker, fusion_obj: Fus
                 "isHighlyConfidential": False,
                 "isActive": False,
                 "@id": "TEST_DATASET/",
-            },
-        ],
-    }
+            }
+    
     requests_mock.get(url, json=expected_data)
-    url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
-    expected_data2 = {
-        "resources": [
-            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
-            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
-        ]
-    }
-    requests_mock.get(url2, json=expected_data2)
 
     with pytest.raises(
         CredentialError,
@@ -770,11 +759,9 @@ def test_download_format_not_available(requests_mock: requests_mock.Mocker, fusi
     dt_str = "20200101"
     file_format = "pdf"
 
-    url_dataset = f"{fusion_obj.root_url}catalogs/{catalog}/datasets"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
 
-    expected_data_dataset = {
-        "resources": [
-            {
+    expected_data = {
                 "catalog": {
                     "@id": "my_catalog/",
                     "description": "my catalog",
@@ -817,19 +804,9 @@ def test_download_format_not_available(requests_mock: requests_mock.Mocker, fusi
                 "isHighlyConfidential": False,
                 "isActive": False,
                 "@id": "TEST_DATASET/",
-            },
-        ],
-    }
-    requests_mock.get(url_dataset, json=expected_data_dataset)
-
-    url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
-    expected_data2 = {
-        "resources": [
-            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
-            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
-        ]
-    }
-    requests_mock.get(url2, json=expected_data2)
+            }
+    
+    requests_mock.get(url, json=expected_data)
 
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
     
@@ -905,11 +882,9 @@ def test_download_multiple_format_error(requests_mock: requests_mock.Mocker, fus
     dataset = "TEST_DATASET"
     dt_str = "20200101"
 
-    url_dataset = f"{fusion_obj.root_url}catalogs/{catalog}/datasets"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
 
-    expected_data_dataset = {
-        "resources": [
-            {
+    expected_data = {
                 "catalog": {
                     "@id": "my_catalog/",
                     "description": "my catalog",
@@ -952,19 +927,9 @@ def test_download_multiple_format_error(requests_mock: requests_mock.Mocker, fus
                 "isHighlyConfidential": False,
                 "isActive": False,
                 "@id": "TEST_DATASET/",
-            },
-        ],
-    }
-    requests_mock.get(url_dataset, json=expected_data_dataset)
-
-    url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
-    expected_data2 = {
-        "resources": [
-            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
-            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
-        ]
-    }
-    requests_mock.get(url2, json=expected_data2)
+            }
+    
+    requests_mock.get(url, json=expected_data)
 
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
     

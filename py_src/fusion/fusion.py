@@ -700,7 +700,10 @@ class Fusion:
         catalog = self._use_catalog(catalog)
 
         # check access to the dataset
-        access_status = self.dataset(dataset).from_catalog(catalog).status
+        dataset_resp = self.session.get(f"{self.root_url}catalogs/{catalog}/datasets/{dataset}")
+        requests_raise_for_status(dataset_resp)
+        
+        access_status = dataset_resp.json().get("status")
         if access_status != "Subscribed":
             raise CredentialError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access.")
 
@@ -1325,7 +1328,7 @@ class Fusion:
         """
 
         catalog = self._use_catalog(catalog)
-        url = self.root_url
+        url = self.root_url if url is None else url
 
         import asyncio
         import json
@@ -1395,7 +1398,7 @@ class Fusion:
         last_event_id: str | None = None,
         catalog: str | None = None,
         in_background: bool = True,
-        url: str = "https://fusion.jpmorgan.com/api/v1/",
+        url: str | None = None,
     ) -> None | pd.DataFrame:
         """Run server sent event listener and print out the new events. Keyboard terminate to stop.
 
@@ -1403,13 +1406,15 @@ class Fusion:
             last_event_id (str): id of the last event.
             catalog (str): catalog.
             in_background (bool): execute event monitoring in the background (default = True).
-            url (str): subscription url.
+            url (str): subscription url. Defaults to client's root url.
         Returns:
             Union[None, class:`pandas.DataFrame`]: If in_background is True then the function returns no output.
                 If in_background is set to False then pandas DataFrame is output upon keyboard termination.
         """
 
         catalog = self._use_catalog(catalog)
+        url = self.root_url if url is None else url
+
         if not in_background:
             from sseclient import SSEClient
 
@@ -1433,7 +1438,7 @@ class Fusion:
                     # Flatten the metaData dictionary into the event dictionary
                     if isinstance(original_meta_data, dict):
                         event.update(original_meta_data)
-                        
+
                     if event["type"] != "HeartBeatNotification":
                         lst.append(event)
             except KeyboardInterrupt:
