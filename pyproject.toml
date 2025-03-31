@@ -136,7 +136,6 @@ dev-dependencies = [
 [tool.uv.pip]
 link-mode = "copy"
 generate-hashes = true
-universal = true
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -232,7 +231,7 @@ html.skip_covered = false
 parallel = true
 
 [tool.coverage.report]
-fail_under = 50
+fail_under = 77
 omit = [
     "py_src/fusion/_legacy/authentication.py",
     "py_src/fusion/_legacy/__init__.py"
