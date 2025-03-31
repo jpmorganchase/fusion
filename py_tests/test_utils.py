@@ -614,7 +614,8 @@ def test_progress_update() -> None:
 def mock_fs_fusion() -> MagicMock:
     fs = MagicMock()
     fs.ls.side_effect = lambda path: {
-        "": ["catalog1", "catalog2"],
+        "catalog1": ["catalog1", "catalog2"],
+        "catalog2": ["catalog1", "catalog2"],
         "catalog1/datasets": ["dataset1", "dataset2"],
         "catalog2/datasets": ["dataset3"],
     }.get(path, [])

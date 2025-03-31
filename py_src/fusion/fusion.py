@@ -702,7 +702,7 @@ class Fusion:
         # check access to the dataset
         dataset_resp = self.session.get(f"{self.root_url}catalogs/{catalog}/datasets/{dataset}")
         requests_raise_for_status(dataset_resp)
-        
+
         access_status = dataset_resp.json().get("status")
         if access_status != "Subscribed":
             raise CredentialError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access.")
@@ -716,7 +716,7 @@ class Fusion:
                 f"Dataset format {dataset_format} is not available for {dataset} in catalog {catalog}. "
                 f"Available formats are {available_formats}."
             )
-        if dataset_format is None: 
+        if dataset_format is None:
             if len(available_formats) == 1:
                 dataset_format = available_formats[0]
             else:
@@ -735,7 +735,6 @@ class Fusion:
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
-
 
         if not download_folder:
             download_folder = self.download_folder
@@ -1192,7 +1191,7 @@ class Fusion:
                     dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
                     dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
 
-                if catalog not in fs_fusion.ls("") or dataset not in [
+                if catalog not in fs_fusion.ls(catalog) or dataset not in [
                     i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
                 ]:
                     msg = (
@@ -1371,15 +1370,14 @@ class Fusion:
                         else:
                             self.events = pd.concat([self.events, pd.DataFrame(lst)], ignore_index=True)
                             self.events = self.events.drop_duplicates(
-                                subset=["id", "type", "timestamp"],
-                                ignore_index=True
+                                subset=["id", "type", "timestamp"], ignore_index=True
                             )
                 except TimeoutError as ex:
                     raise ex from None
                 except BaseException:
                     raise
 
-        _ = self.list_catalogs()  # refresh token
+        _ = self.catalog_resources()  # refresh token
         if "headers" in kwargs:
             kwargs["headers"].update({"authorization": f"bearer {self.credentials.bearer_token}"})
         else:
@@ -1418,7 +1416,7 @@ class Fusion:
         if not in_background:
             from sseclient import SSEClient
 
-            _ = self.list_catalogs()  # refresh token
+            _ = self.catalog_resources()  # refresh token
             interrupted = False
             messages = SSEClient(
                 session=self.session,
