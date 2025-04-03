@@ -1120,7 +1120,7 @@ class Fusion:
 
         return tbl
 
-    def upload(  # noqa: PLR0913
+    def upload(  # noqa: PLR0913, PLR0915
         self,
         path: str,
         dataset: str | None = None,

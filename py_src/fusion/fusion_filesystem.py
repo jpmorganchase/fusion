@@ -538,8 +538,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             Any: Return value.
         """
         if not overwrite and lfs.exists(lpath) and not preserve_original_name:
-            return True, lpath, None 
-        
+            return True, lpath, None
+
         async def get_headers() -> Any:
             session = await self.set_session()
             async with session.head(rpath, **self.kwargs) as r:
@@ -556,8 +556,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         except Exception as ex:  # noqa: BLE001
             headers = {}
             logger.info(f"Failed to get headers for {rpath}", ex)
-        
-        
+
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
 
         if not lfs.exists(lpath):
@@ -566,9 +565,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             except Exception as ex:  # noqa: BLE001
                 logger.info(f"Path {lpath} exists already", ex)
 
-
         is_local_fs = type(lfs).__name__ == "LocalFileSystem"
-
 
         return self.get(
             str(rpath),
