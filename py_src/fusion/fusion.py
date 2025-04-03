@@ -1191,7 +1191,12 @@ class Fusion:
                     dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
                     dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
 
-                if catalog not in fs_fusion.ls(catalog) or dataset not in [
+                try:
+                    catalog_list = fs_fusion.ls(catalog)
+                except FileNotFoundError:
+                    raise RuntimeError(f"The catalog '{catalog}' does not exist.") from None
+
+                if catalog not in catalog_list or dataset not in [
                     i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
                 ]:
                     msg = (
