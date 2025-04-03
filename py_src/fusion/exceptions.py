@@ -40,8 +40,9 @@ class CredentialError(Exception):
         Exception : Exception to wrap.
     """
 
+
 class FileFormatError(Exception):
-    """FileFormatRequiredError exception wrapper to handle errors in download when file format is not accepted or 
+    """FileFormatRequiredError exception wrapper to handle errors in download when file format is not accepted or
         cannot be determined.
 
     Args:

@@ -700,56 +700,55 @@ def test_download_no_access(requests_mock: requests_mock.Mocker, fusion_obj: Fus
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
 
     expected_data = {
-                "catalog": {
-                    "@id": "my_catalog/",
-                    "description": "my catalog",
-                    "title": "my catalog",
-                    "identifier": "my_catalog",
-                },
-                "title": "Test Dataset",
-                "identifier": "TEST_DATASET",
-                "category": ["category"],
-                "shortAbstract": "short abstract",
-                "description": "description",
-                "frequency": "Once",
-                "isInternalOnlyDataset": False,
-                "isThirdPartyData": True,
-                "isRestricted": False,
-                "isRawData": True,
-                "maintainer": "maintainer",
-                "source": "source",
-                "region": ["region"],
-                "publisher": "publisher",
-                "subCategory": ["subCategory"],
-                "tags": ["tag1", "tag2"],
-                "createdDate": "2020-05-05",
-                "modifiedDate": "2020-05-05",
-                "deliveryChannel": ["API"],
-                "language": "English",
-                "status": "Available",
-                "type": "Source",
-                "containerType": "Snapshot-Full",
-                "snowflake": "snowflake",
-                "complexity": "complexity",
-                "isImmutable": False,
-                "isMnpi": False,
-                "isPii": False,
-                "isPci": False,
-                "isClient": False,
-                "isPublic": False,
-                "isInternal": False,
-                "isConfidential": False,
-                "isHighlyConfidential": False,
-                "isActive": False,
-                "@id": "TEST_DATASET/",
-            }
-    
+        "catalog": {
+            "@id": "my_catalog/",
+            "description": "my catalog",
+            "title": "my catalog",
+            "identifier": "my_catalog",
+        },
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": True,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Available",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+        "@id": "TEST_DATASET/",
+    }
+
     requests_mock.get(url, json=expected_data)
 
     with pytest.raises(
-        CredentialError,
-        match="You are not subscribed to TEST_DATASET in catalog my_catalog. Please request access."
-        ):
+        CredentialError, match="You are not subscribed to TEST_DATASET in catalog my_catalog. Please request access."
+    ):
         fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=file_format, catalog=catalog)
 
 
@@ -762,54 +761,54 @@ def test_download_format_not_available(requests_mock: requests_mock.Mocker, fusi
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
 
     expected_data = {
-                "catalog": {
-                    "@id": "my_catalog/",
-                    "description": "my catalog",
-                    "title": "my catalog",
-                    "identifier": "my_catalog",
-                },
-                "title": "Test Dataset",
-                "identifier": "TEST_DATASET",
-                "category": ["category"],
-                "shortAbstract": "short abstract",
-                "description": "description",
-                "frequency": "Once",
-                "isInternalOnlyDataset": False,
-                "isThirdPartyData": True,
-                "isRestricted": False,
-                "isRawData": True,
-                "maintainer": "maintainer",
-                "source": "source",
-                "region": ["region"],
-                "publisher": "publisher",
-                "subCategory": ["subCategory"],
-                "tags": ["tag1", "tag2"],
-                "createdDate": "2020-05-05",
-                "modifiedDate": "2020-05-05",
-                "deliveryChannel": ["API"],
-                "language": "English",
-                "status": "Subscribed",
-                "type": "Source",
-                "containerType": "Snapshot-Full",
-                "snowflake": "snowflake",
-                "complexity": "complexity",
-                "isImmutable": False,
-                "isMnpi": False,
-                "isPii": False,
-                "isPci": False,
-                "isClient": False,
-                "isPublic": False,
-                "isInternal": False,
-                "isConfidential": False,
-                "isHighlyConfidential": False,
-                "isActive": False,
-                "@id": "TEST_DATASET/",
-            }
-    
+        "catalog": {
+            "@id": "my_catalog/",
+            "description": "my catalog",
+            "title": "my catalog",
+            "identifier": "my_catalog",
+        },
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": True,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Subscribed",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+        "@id": "TEST_DATASET/",
+    }
+
     requests_mock.get(url, json=expected_data)
 
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
-    
+
     expected_resp = {
         "lastModified": "2025-03-18T09:04:22Z",
         "checksum": "SHA-256=vFdIF:HSLDBV:VBLHD/xe8Mom9yqooZA=-1",
@@ -866,13 +865,13 @@ def test_download_format_not_available(requests_mock: requests_mock.Mocker, fusi
     }
 
     requests_mock.get(url, json=expected_resp)
-    
+
     with pytest.raises(
         FileFormatError,
         match=re.escape(
-        "Dataset format pdf is not available for TEST_DATASET in catalog my_catalog. "
-        "Available formats are ['csv', 'parquet']."
-    ),
+            "Dataset format pdf is not available for TEST_DATASET in catalog my_catalog. "
+            "Available formats are ['csv', 'parquet']."
+        ),
     ):
         fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=file_format, catalog=catalog)
 
@@ -885,54 +884,54 @@ def test_download_multiple_format_error(requests_mock: requests_mock.Mocker, fus
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
 
     expected_data = {
-                "catalog": {
-                    "@id": "my_catalog/",
-                    "description": "my catalog",
-                    "title": "my catalog",
-                    "identifier": "my_catalog",
-                },
-                "title": "Test Dataset",
-                "identifier": "TEST_DATASET",
-                "category": ["category"],
-                "shortAbstract": "short abstract",
-                "description": "description",
-                "frequency": "Once",
-                "isInternalOnlyDataset": False,
-                "isThirdPartyData": True,
-                "isRestricted": False,
-                "isRawData": True,
-                "maintainer": "maintainer",
-                "source": "source",
-                "region": ["region"],
-                "publisher": "publisher",
-                "subCategory": ["subCategory"],
-                "tags": ["tag1", "tag2"],
-                "createdDate": "2020-05-05",
-                "modifiedDate": "2020-05-05",
-                "deliveryChannel": ["API"],
-                "language": "English",
-                "status": "Subscribed",
-                "type": "Source",
-                "containerType": "Snapshot-Full",
-                "snowflake": "snowflake",
-                "complexity": "complexity",
-                "isImmutable": False,
-                "isMnpi": False,
-                "isPii": False,
-                "isPci": False,
-                "isClient": False,
-                "isPublic": False,
-                "isInternal": False,
-                "isConfidential": False,
-                "isHighlyConfidential": False,
-                "isActive": False,
-                "@id": "TEST_DATASET/",
-            }
-    
+        "catalog": {
+            "@id": "my_catalog/",
+            "description": "my catalog",
+            "title": "my catalog",
+            "identifier": "my_catalog",
+        },
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": True,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Subscribed",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+        "@id": "TEST_DATASET/",
+    }
+
     requests_mock.get(url, json=expected_data)
 
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
-    
+
     expected_resp = {
         "lastModified": "2025-03-18T09:04:22Z",
         "checksum": "SHA-256=vFdIF:HSLDBV:VBLHD/xe8Mom9yqooZA=-1",
@@ -989,16 +988,15 @@ def test_download_multiple_format_error(requests_mock: requests_mock.Mocker, fus
     }
 
     requests_mock.get(url, json=expected_resp)
-    
+
     with pytest.raises(
         FileFormatError,
         match=re.escape(
-        "Multiple formats found for TEST_DATASET in catalog my_catalog. Dataset format is required to"
-        "download. Available formats are ['csv', 'parquet']."
-    ),
+            "Multiple formats found for TEST_DATASET in catalog my_catalog. Dataset format is required to"
+            "download. Available formats are ['csv', 'parquet']."
+        ),
     ):
         fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=None, catalog=catalog)
-
 
 
 def test_to_df(mocker: MockerFixture, tmp_path: Path, data_table_as_csv: str, fusion_obj: Fusion) -> None:
