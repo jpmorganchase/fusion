@@ -688,13 +688,15 @@ def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) 
     """
     file_names = [i.split("/")[-1].split(".")[0] for i in paths]
     validation = []
-    all_catalogs = fs_fusion.ls("")
     all_datasets = {}
     file_seg_cnt = 3
     for i, f_n in enumerate(file_names):
         tmp = f_n.split("__")
         if len(tmp) == file_seg_cnt:
-            val = tmp[1] in all_catalogs
+            try:
+                val = tmp[1] in fs_fusion.ls(tmp[1])
+            except FileNotFoundError:
+                val = False
             if not val:
                 validation.append(False)
             else:
