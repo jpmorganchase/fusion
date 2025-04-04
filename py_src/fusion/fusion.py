@@ -27,7 +27,7 @@ from fusion.product import Product
 from fusion.report import Report
 
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
-from .exceptions import APIResponseError
+from .exceptions import APIResponseError, CredentialError, FileFormatError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
     RECOGNIZED_FORMATS,
@@ -662,7 +662,7 @@ class Fusion:
         self,
         dataset: str,
         dt_str: str = "latest",
-        dataset_format: str = "parquet",
+        dataset_format: str | None = "parquet",
         catalog: str | None = None,
         n_par: int | None = None,
         show_progress: bool = True,
@@ -681,6 +681,7 @@ class Fusion:
                 instance of the dataset. If more than one series member exists on the latest date, the
                 series member identifiers will be sorted alphabetically and the last one will be downloaded.
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
+                If set to None, the function will download if only one format is available, else it will raise an error.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             n_par (int, optional): Specify how many distributions to download in parallel.
                 Defaults to all cpus available.
@@ -698,7 +699,31 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
+        # check access to the dataset
+        dataset_resp = self.session.get(f"{self.root_url}catalogs/{catalog}/datasets/{dataset}")
+        requests_raise_for_status(dataset_resp)
+
+        access_status = dataset_resp.json().get("status")
+        if access_status != "Subscribed":
+            raise CredentialError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access.")
+
         valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
+
+        # check that format is valid and if none, check if there is only one format available
+        available_formats = list(self.list_datasetmembers_distributions(dataset, catalog)["format"].unique())
+        if dataset_format and dataset_format not in available_formats:
+            raise FileFormatError(
+                f"Dataset format {dataset_format} is not available for {dataset} in catalog {catalog}. "
+                f"Available formats are {available_formats}."
+            )
+        if dataset_format is None:
+            if len(available_formats) == 1:
+                dataset_format = available_formats[0]
+            else:
+                raise FileFormatError(
+                    f"Multiple formats found for {dataset} in catalog {catalog}. Dataset format is required to"
+                    f"download. Available formats are {available_formats}."
+                )
 
         if valid_date_range.match(dt_str) or dt_str == "latest":
             required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
@@ -706,10 +731,10 @@ class Fusion:
             # sample data is limited to csv
             if dt_str == "sample":
                 dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
-            required_series = [(catalog, dataset, dt_str, dataset_format)]
+            required_series = [(catalog, dataset, dt_str, dataset_format)]  # type: ignore
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
-            raise ValueError(f"Dataset format {dataset_format} is not supported")
+            raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
 
         if not download_folder:
             download_folder = self.download_folder
@@ -766,7 +791,6 @@ class Fusion:
             res = Parallel(n_jobs=n_par)(
                 delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
             )
-
         if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
                 if not r[0]:
@@ -866,6 +890,7 @@ class Fusion:
 
         if not download_folder:
             download_folder = self.download_folder
+
         download_res = self.download(
             dataset,
             dt_str,
@@ -1095,7 +1120,7 @@ class Fusion:
 
         return tbl
 
-    def upload(  # noqa: PLR0913
+    def upload(  # noqa: PLR0913, PLR0915
         self,
         path: str,
         dataset: str | None = None,
@@ -1166,7 +1191,12 @@ class Fusion:
                     dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
                     dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
 
-                if catalog not in fs_fusion.ls("") or dataset not in [
+                try:
+                    catalog_list = fs_fusion.ls(catalog)
+                except FileNotFoundError:
+                    raise RuntimeError(f"The catalog '{catalog}' does not exist.") from None
+
+                if catalog not in catalog_list or dataset not in [
                     i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
                 ]:
                     msg = (
@@ -1289,20 +1319,21 @@ class Fusion:
         self,
         last_event_id: str | None = None,
         catalog: str | None = None,
-        url: str = "https://fusion.jpmorgan.com/api/v1/",
-    ) -> None | pd.DataFrame:
+        url: str | None = None,
+    ) -> None:
         """Run server sent event listener in the background. Retrieve results by running get_events.
 
         Args:
             last_event_id (str): Last event ID (exclusive).
             catalog (str): catalog.
-            url (str): subscription url.
+            url (str): subscription url. Defaults to client's root url.
         Returns:
-            Union[None, class:`pandas.DataFrame`]: If in_background is True then the function returns no output.
-                If in_background is set to False then pandas DataFrame is output upon keyboard termination.
+            None
         """
 
         catalog = self._use_catalog(catalog)
+        url = self.root_url if url is None else url
+
         import asyncio
         import json
         import threading
@@ -1332,17 +1363,26 @@ class Fusion:
                 try:
                     async for msg in messages:
                         event = json.loads(msg.data)
+                        # Preserve the original metaData column
+                        original_meta_data = event.get("metaData", {})
+
+                        # Flatten the metaData dictionary into the event dictionary
+                        if isinstance(original_meta_data, dict):
+                            event.update(original_meta_data)
                         lst.append(event)
                         if self.events is None:
                             self.events = pd.DataFrame()
                         else:
                             self.events = pd.concat([self.events, pd.DataFrame(lst)], ignore_index=True)
+                            self.events = self.events.drop_duplicates(
+                                subset=["id", "type", "timestamp"], ignore_index=True
+                            )
                 except TimeoutError as ex:
                     raise ex from None
                 except BaseException:
                     raise
 
-        _ = self.list_catalogs()  # refresh token
+        _ = self.catalog_resources()  # refresh token
         if "headers" in kwargs:
             kwargs["headers"].update({"authorization": f"bearer {self.credentials.bearer_token}"})
         else:
@@ -1355,14 +1395,13 @@ class Fusion:
             kwargs["proxy"] = self.credentials.proxies["https"]
         th = threading.Thread(target=asyncio.run, args=(async_events(),), daemon=True)
         th.start()
-        return None
 
     def get_events(
         self,
         last_event_id: str | None = None,
         catalog: str | None = None,
         in_background: bool = True,
-        url: str = "https://fusion.jpmorgan.com/api/v1/",
+        url: str | None = None,
     ) -> None | pd.DataFrame:
         """Run server sent event listener and print out the new events. Keyboard terminate to stop.
 
@@ -1370,17 +1409,19 @@ class Fusion:
             last_event_id (str): id of the last event.
             catalog (str): catalog.
             in_background (bool): execute event monitoring in the background (default = True).
-            url (str): subscription url.
+            url (str): subscription url. Defaults to client's root url.
         Returns:
             Union[None, class:`pandas.DataFrame`]: If in_background is True then the function returns no output.
                 If in_background is set to False then pandas DataFrame is output upon keyboard termination.
         """
 
         catalog = self._use_catalog(catalog)
+        url = self.root_url if url is None else url
+
         if not in_background:
             from sseclient import SSEClient
 
-            _ = self.list_catalogs()  # refresh token
+            _ = self.catalog_resources()  # refresh token
             interrupted = False
             messages = SSEClient(
                 session=self.session,
@@ -1394,6 +1435,13 @@ class Fusion:
             try:
                 for msg in messages:
                     event = js.loads(msg.data)
+                    # Preserve the original metaData column
+                    original_meta_data = event.get("metaData", {})
+
+                    # Flatten the metaData dictionary into the event dictionary
+                    if isinstance(original_meta_data, dict):
+                        event.update(original_meta_data)
+
                     if event["type"] != "HeartBeatNotification":
                         lst.append(event)
             except KeyboardInterrupt:

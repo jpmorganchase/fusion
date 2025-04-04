@@ -1,6 +1,6 @@
 [project]
 name = "pyfusion"
-version = "2.0.11"
+version = "2.0.12-dev0"
 
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
@@ -136,7 +136,6 @@ dev-dependencies = [
 [tool.uv.pip]
 link-mode = "copy"
 generate-hashes = true
-universal = true
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -232,7 +231,7 @@ html.skip_covered = false
 parallel = true
 
 [tool.coverage.report]
-fail_under = 50
+fail_under = 77
 omit = [
     "py_src/fusion/_legacy/authentication.py",
     "py_src/fusion/_legacy/__init__.py"
@@ -244,7 +243,7 @@ exclude_lines = [
 
 
 [tool.bumpversion]
-current_version = "2.0.11"
+current_version = "2.0.12-dev0"
 parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[a-z]+)(?P<candidate>\d+))?'
 serialize = [
     '{major}.{minor}.{patch}-{release}{candidate}',
