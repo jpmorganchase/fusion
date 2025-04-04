@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.12] - 2025-04-04
+* Raise error immediately when attempting to download dataset you are not subscribed to
+* Download available format when only one is available and format is set to None
+* Reduce overhead of to_df when files are already downloaded
+* Persist root url in events methods
+* Provide metadata in columns for events notifications for usability
+* Remove event duplication in events notification output
+
 ## [2.0.11] - 2025-03-21
 * Bug fix for _info, no longer submitting keep_protocol param to aiohttp client session
 * Adding asynchronous streaming and asynchronous download as bytes to file system and Fusion
