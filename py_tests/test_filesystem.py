@@ -6,11 +6,11 @@ from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import fsspec
-from fusion.exceptions import APIResponseError
 import pytest
 from aiohttp import ClientResponse
 
 from fusion._fusion import FusionCredentials
+from fusion.exceptions import APIResponseError
 from fusion.fusion_filesystem import FusionHTTPFileSystem
 
 

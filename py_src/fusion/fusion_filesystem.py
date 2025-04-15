@@ -15,7 +15,6 @@ from urllib.parse import quote, urljoin
 import aiohttp
 import fsspec
 import fsspec.asyn
-from fusion.exceptions import APIResponseError
 import pandas as pd
 import requests
 from fsspec.callbacks import _DEFAULT_CALLBACK
@@ -23,6 +22,7 @@ from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wra
 from fsspec.utils import nullcontext
 
 from fusion._fusion import FusionCredentials
+from fusion.exceptions import APIResponseError
 
 from .utils import cpu_count, get_client, get_default_fs, get_session
 
@@ -75,7 +75,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         self.sync_session = get_session(self.credentials, kwargs["client_kwargs"].get("root_url"))
         super().__init__(*args, **kwargs)
 
-    def _raise_not_found_for_status(self, response, url):
+    def _raise_not_found_for_status(self, response: Any, url: str) -> None:
 
         try:
             super()._raise_not_found_for_status(response, url)
