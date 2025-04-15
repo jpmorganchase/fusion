@@ -6,6 +6,7 @@ from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import fsspec
+from fusion.exceptions import APIResponseError
 import pytest
 from aiohttp import ClientResponse
 
@@ -52,7 +53,7 @@ async def test_not_found_status(http_fs_instance: FusionHTTPFileSystem) -> None:
     response.text = mock.AsyncMock(return_value="404 NotFound")
 
     # Use a context manager to catch the FileNotFoundError
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(APIResponseError, match="Status 404, Error:"):
         await http_fs_instance._async_raise_not_found_for_status(response, "http://example.com")
 
 
@@ -86,7 +87,7 @@ async def test_successful_status(http_fs_instance: FusionHTTPFileSystem) -> None
     # Since this is the successful path, we are primarily checking that nothing adverse happens
     try:
         await http_fs_instance._async_raise_not_found_for_status(response, "http://example.com")
-    except FileNotFoundError as e:
+    except APIResponseError as e:
         pytest.fail(f"No exception should be raised for a successful response, but got: {e}")
 
 
