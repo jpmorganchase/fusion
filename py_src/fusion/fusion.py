@@ -148,7 +148,10 @@ class Fusion:
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
         elif isinstance(credentials, str):
-            self.credentials = FusionCredentials.from_file(Path(credentials))
+            try:
+                self.credentials = FusionCredentials.from_file(Path(credentials))
+            except CredentialError as e:
+                raise APIResponseError("Failed to load credentials. Please check the credentials file.") from e
         else:
             raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
 

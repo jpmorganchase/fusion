@@ -15,6 +15,7 @@ from urllib.parse import quote, urljoin
 import aiohttp
 import fsspec
 import fsspec.asyn
+from fusion.exceptions import APIResponseError
 import pandas as pd
 import requests
 from fsspec.callbacks import _DEFAULT_CALLBACK
@@ -74,17 +75,34 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         self.sync_session = get_session(self.credentials, kwargs["client_kwargs"].get("root_url"))
         super().__init__(*args, **kwargs)
 
+    def _raise_not_found_for_status(self, response, url):
+
+        try:
+            super()._raise_not_found_for_status(response, url)
+        except Exception as ex:
+            status_code = getattr(response, "status", None)
+            message = f"Status {status_code}, Error: {str(ex)}"
+            raise APIResponseError(message) from ex
+    
     async def _async_raise_not_found_for_status(self, response: Any, url: str) -> None:
         """Raises FileNotFoundError for 404s, otherwise uses raise_for_status."""
-        if response.status == requests.codes.not_found:  # noqa: PLR2004
-            self._raise_not_found_for_status(response, url)
-        else:
-            real_reason = ""
-            try:
-                real_reason = await response.text()
-                response.reason = real_reason
-            finally:
+
+        try:
+            if response.status == requests.codes.not_found:  # noqa: PLR2004
                 self._raise_not_found_for_status(response, url)
+            else:
+                real_reason = ""
+                try:
+                    real_reason = await response.text()
+                    response.reason = real_reason
+                finally:
+                    self._raise_not_found_for_status(response, url)
+        except Exception as ex:
+            status_code = getattr(response, "status_code", None)
+            message = f"Status {status_code}, Error: {str(ex)}"
+            raise APIResponseError(message) from ex
+            
+        
 
     def _check_session_open(self) -> bool:
         # Check that _session is active. Expects that if _session is populated with .set_session, result
