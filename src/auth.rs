@@ -139,8 +139,10 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
 
 fn fusion_url_to_auth_url(url: String) -> PyResult<Option<(String, String, String)>> {
     debug!("Trying to form fusion auth url from: {}", url);
-    let url_parsed = Url::parse(&url)
-        .map_err(|e| CredentialError::new_err(format!("Could not parse URL: {:?}", e)))?;
+    let url_parsed = Url::parse(&url).map_err(|e| {
+        let status_code = e.status().map_or(400, |s| s.as_u16() as i32);
+        CredentialError::new_err((format!("Could not parse URL: {:?}", e), status_code))
+    })?;
 
     let path = url_parsed.path();
     let segments: Vec<&str> = path.split('/').collect();
