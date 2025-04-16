@@ -151,7 +151,8 @@ class Fusion:
             try:
                 self.credentials = FusionCredentials.from_file(Path(credentials))
             except CredentialError as e:
-                raise APIResponseError("Failed to load credentials. Please check the credentials file.") from e
+                message = "Failed to load credentials. Please check the credentials file."
+                raise APIResponseError(e, message=message) from e
         else:
             raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
 
@@ -620,8 +621,10 @@ class Fusion:
 
         if datasetseries_list.empty:
             raise APIResponseError(  # pragma: no cover
-                f"No data available for dataset {dataset}. "
-                f"Check that a valid dataset identifier and date/date range has been set."
+                ValueError(
+                    f"No data available for dataset {dataset}. "
+                    f"Check that a valid dataset identifier and date/date range has been set."
+                )
             )
 
         if dt_str == "latest":
@@ -652,8 +655,10 @@ class Fusion:
 
         if len(datasetseries_list) == 0:
             raise APIResponseError(  # pragma: no cover
-                f"No data available for dataset {dataset} in catalog {catalog}.\n"
-                f"Check that a valid dataset identifier and date/date range has been set."
+                ValueError(
+                    f"No data available for dataset {dataset} in catalog {catalog}.\n"
+                    f"Check that a valid dataset identifier and date/date range has been set."
+                )
             )
 
         required_series = list(datasetseries_list["@id"])
@@ -708,7 +713,12 @@ class Fusion:
 
         access_status = dataset_resp.json().get("status")
         if access_status != "Subscribed":
-            raise CredentialError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access.")
+            raise APIResponseError(
+                ValueError(
+                    f"You are not subscribed to {dataset} in catalog {catalog}. "
+                    "Please request access."
+                )
+            )
 
         valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
 
@@ -964,7 +974,10 @@ class Fusion:
 
         if len(files) == 0:
             raise APIResponseError(
-                f"No series members for dataset: {dataset} in date or date range: {dt_str} and format: {dataset_format}"
+                Exception(
+                    f"No series members for dataset: {dataset} in date or date range: {dt_str} "
+                    f"and format: {dataset_format}"
+                )
             )
         if dataset_format in ["parquet", "parq"]:
             data_df = pd_reader(files, **pd_read_kwargs)  # type: ignore
@@ -1113,7 +1126,10 @@ class Fusion:
 
         if len(files) == 0:
             raise APIResponseError(
-                f"No series members for dataset: {dataset} in date or date range: {dt_str} and format: {dataset_format}"
+                Exception(
+                    f"No series members for dataset: {dataset} in date or date range: {dt_str} "
+                    f"and format: {dataset_format}"
+                )
             )
         if dataset_format in ["parquet", "parq"]:
             tbl = reader(files, **read_kwargs)  # type: ignore

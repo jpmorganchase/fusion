@@ -1,13 +1,16 @@
 """Bespoke exceptions and errors."""
 
 
+from typing import Optional
+
+
 class APIResponseError(Exception):
     """APIResponseError exception wrapper to handle API response errors.
 
     Args:
         Exception : Exception to wrap.
     """
-    def __init__(self, original_exception: Exception, message: str = "", status_code: int = None) -> None:
+    def __init__(self, original_exception: Exception, message: str = "", status_code: Optional[int] = None) -> None:
         self.original_exception = original_exception
         self.status_code = status_code
         full_message = f"APIResponseError: Status {status_code}, Error: {str(original_exception)}"
@@ -49,7 +52,7 @@ class CredentialError(Exception):
     Args:
         Exception : Exception to wrap.
     """
-    def __init__(self, original_exception: Exception, message: str = "", status_code: int = None) -> None:
+    def __init__(self, original_exception: Exception, message: str = "", status_code: Optional[int] = None) -> None:
         self.original_exception = original_exception
         self.status_code = status_code
         full_message = f"APIResponseError: Status {status_code}, Error: {str(original_exception)}"
