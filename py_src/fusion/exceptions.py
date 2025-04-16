@@ -7,6 +7,16 @@ class APIResponseError(Exception):
     Args:
         Exception : Exception to wrap.
     """
+    def __init__(self, original_exception: Exception, message: str = "", status_code: int = None) -> None:
+        self.original_exception = original_exception
+        self.status_code = status_code
+        full_message = f"APIResponseError: Status {status_code}, Error: {str(original_exception)}"
+        if message:
+            full_message = f"{message} | {full_message}"
+        super().__init__(full_message)
+
+        # Optionally, copy original exception attributes
+        self.__dict__.update(getattr(original_exception, "__dict__", {}))
 
 
 class APIRequestError(Exception):
@@ -39,6 +49,17 @@ class CredentialError(Exception):
     Args:
         Exception : Exception to wrap.
     """
+    def __init__(self, original_exception: Exception, message: str = "", status_code: int = None) -> None:
+        self.original_exception = original_exception
+        self.status_code = status_code
+        full_message = f"APIResponseError: Status {status_code}, Error: {str(original_exception)}"
+        if message:
+            full_message = f"{message} | {full_message}"
+        super().__init__(full_message)
+
+        # Optionally, copy original exception attributes
+        self.__dict__.update(getattr(original_exception, "__dict__", {}))
+
 
 
 class FileFormatError(Exception):
