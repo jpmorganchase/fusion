@@ -10,6 +10,7 @@ class APIResponseError(Exception):
     Args:
         Exception : Exception to wrap.
     """
+
     def __init__(self, original_exception: Exception, message: str = "", status_code: Optional[int] = None) -> None:
         self.original_exception = original_exception
         self.status_code = status_code
@@ -52,6 +53,7 @@ class CredentialError(Exception):
     Args:
         Exception : Exception to wrap.
     """
+
     def __init__(self, original_exception: Exception, message: str = "", status_code: Optional[int] = None) -> None:
         self.original_exception = original_exception
         self.status_code = status_code
@@ -62,7 +64,6 @@ class CredentialError(Exception):
 
         # Optionally, copy original exception attributes
         self.__dict__.update(getattr(original_exception, "__dict__", {}))
-
 
 
 class FileFormatError(Exception):

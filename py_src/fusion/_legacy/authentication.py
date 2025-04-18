@@ -159,7 +159,7 @@ class FusionCredentials:
     @staticmethod
     def _internal_load(credentials: dict[str, Any]) -> "FusionCredentials":
         if not credentials or not isinstance(credentials, dict):
-            raise CredentialError("A valid credentials dictionary is required")
+            raise CredentialError(ValueError("A valid credentials dictionary is required"), status_code=400)
 
         grant_type = credentials.get("grant_type", "client_credentials")
         try:
@@ -202,9 +202,12 @@ class FusionCredentials:
                 resource = credentials["resource"]
                 auth_url = credentials["auth_url"]
             else:
-                raise CredentialError(f"Unrecognised grant type {grant_type}")
+                raise CredentialError(ValueError(f"Unrecognised grant type {grant_type}"), status_code=400)
         except KeyError as e:
-            raise CredentialError(f"Missing required key in credentials dictionary: {e}") from e
+            raise CredentialError(
+                ValueError(f"Missing required key in credentials dictionary: {e}"),
+                status_code=400,
+            ) from e
         fusion_e2e = credentials.get("fusion_e2e")
         proxies = credentials.get("proxies")
         creds = FusionCredentials(
