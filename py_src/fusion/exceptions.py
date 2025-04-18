@@ -1,6 +1,5 @@
 """Bespoke exceptions and errors."""
 
-
 from typing import Optional
 
 
