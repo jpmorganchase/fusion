@@ -90,6 +90,7 @@ RECOGNIZED_FORMATS = [
     "mov",
     "mkv",
     "gz",
+    "xml",
 ]
 
 re_str_1 = re.compile("(.)([A-Z][a-z]+)")
@@ -688,7 +689,6 @@ def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) 
     """
     file_names = [i.split("/")[-1].split(".")[0] for i in paths]
     validation = []
-    all_datasets = {}
     file_seg_cnt = 3
     for i, f_n in enumerate(file_names):
         tmp = f_n.split("__")
@@ -700,10 +700,11 @@ def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) 
             if not val:
                 validation.append(False)
             else:
-                if tmp[1] not in all_datasets:
-                    all_datasets[tmp[1]] = [i.split("/")[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
-
-                val = tmp[0] in all_datasets[tmp[1]]
+                # check if dataset exists
+                try:
+                    val = tmp[0] in js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))["identifier"]
+                except Exception:  # noqa: BLE001
+                    val = False
                 validation.append(val)
         else:
             validation.append(False)

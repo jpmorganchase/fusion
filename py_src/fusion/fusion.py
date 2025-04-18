@@ -341,7 +341,7 @@ class Fusion:
 
         return filtered_df
 
-    def list_datasets(  # noqa: PLR0913
+    def list_datasets(  # noqa: PLR0912, PLR0913
         self,
         contains: str | list[str] | None = None,
         id_contains: bool = False,
@@ -358,7 +358,8 @@ class Fusion:
         Args:
             contains (Union[str, list], optional): A string or a list of strings that are dataset
                 identifiers to filter the datasets list. If a list is provided then it will return
-                datasets whose identifier matches any of the strings. Defaults to None.
+                datasets whose identifier matches any of the strings. If a single dataset identifier is provided and
+                there is an exact match, only that dataset will be returned. Defaults to None.
             id_contains (bool): Filter datasets only where the string(s) are contained in the identifier,
                 ignoring description.
             product (Union[str, list], optional): A string or a list of strings that are product
@@ -376,6 +377,31 @@ class Fusion:
             class:`pandas.DataFrame`: a dataframe with a row for each dataset.
         """
         catalog = self._use_catalog(catalog)
+
+        # try for exact match
+        if contains and isinstance(contains, str):
+            url = f"{self.root_url}catalogs/{catalog}/datasets/{contains}"
+            resp = self.session.get(url)
+            status_success = 200
+            if resp.status_code == status_success:
+                resp_json = resp.json()
+                if not display_all_columns:
+                    cols = [
+                        "identifier",
+                        "title",
+                        "containerType",
+                        "region",
+                        "category",
+                        "coverageStartDate",
+                        "coverageEndDate",
+                        "description",
+                        "status",
+                        "type",
+                    ]
+                    data = [resp_json.get(col) for col in cols]
+                    return pd.DataFrame(data, index=cols).T
+                else:
+                    return pd.json_normalize(resp_json)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets"
         ds_df = Fusion._call_for_dataframe(url, self.session)
@@ -714,10 +740,8 @@ class Fusion:
         access_status = dataset_resp.json().get("status")
         if access_status != "Subscribed":
             raise APIResponseError(
-                ValueError(
-                    f"You are not subscribed to {dataset} in catalog {catalog}. "
-                    "Please request access."
-                )
+                ValueError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access."),
+                status_code=401,
             )
 
         valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
@@ -1139,7 +1163,7 @@ class Fusion:
 
         return tbl
 
-    def upload(  # noqa: PLR0913, PLR0915
+    def upload(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         path: str,
         dataset: str | None = None,
@@ -1215,13 +1239,19 @@ class Fusion:
                 except FileNotFoundError:
                     raise RuntimeError(f"The catalog '{catalog}' does not exist.") from None
 
-                if catalog not in catalog_list or dataset not in [
-                    i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
-                ]:
-                    msg = (
-                        f"File file has not been uploaded, one of the catalog: {catalog} "
-                        f"or dataset: {dataset} does not exit."
-                    )
+                try:
+                    if (
+                        catalog not in catalog_list
+                        or dataset not in js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["identifier"]
+                    ):
+                        msg = (
+                            f"File file has not been uploaded, one of the catalog: {catalog} "
+                            f"or dataset: {dataset} does not exist."
+                        )
+                        warnings.warn(msg, stacklevel=2)
+                        return [(False, path, msg)]
+                except Exception as e:  # noqa: BLE001
+                    msg = f"An error occurred while checking the dataset: {str(e)}"
                     warnings.warn(msg, stacklevel=2)
                     return [(False, path, msg)]
                 file_format = path.split(".")[-1]

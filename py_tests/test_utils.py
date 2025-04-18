@@ -1,4 +1,5 @@
 import io
+import json as js
 import multiprocessing as mp
 import tempfile
 from collections.abc import Generator
@@ -619,6 +620,7 @@ def mock_fs_fusion() -> MagicMock:
         "catalog1/datasets": ["dataset1", "dataset2"],
         "catalog2/datasets": ["dataset3"],
     }.get(path, [])
+    fs.cat.side_effect = lambda _: js.dumps({"identifier": "dataset1"})
     return fs
 
 

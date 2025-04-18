@@ -140,8 +140,7 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
 fn fusion_url_to_auth_url(url: String) -> PyResult<Option<(String, String, String)>> {
     debug!("Trying to form fusion auth url from: {}", url);
     let url_parsed = Url::parse(&url).map_err(|e| {
-        let status_code = e.status().map_or(400, |s| s.as_u16() as i32);
-        CredentialError::new_err((format!("Could not parse URL: {:?}", e), status_code))
+        CredentialError::new_err(format!("Could not parse URL: {:?} (Error Code: 400)", e))
     })?;
 
     let path = url_parsed.path();
@@ -160,7 +159,7 @@ fn fusion_url_to_auth_url(url: String) -> PyResult<Option<(String, String, Strin
         .map(|&s| s.to_string())
         .ok_or_else(|| {
             CredentialError::new_err(
-                "'catalogs' segment not found or catalog name missing in the path",
+                "'catalogs' segment not found or catalog name missing in the path (Error Code: 400)"
             )
         })?;
 
@@ -171,7 +170,7 @@ fn fusion_url_to_auth_url(url: String) -> PyResult<Option<(String, String, Strin
         .map(|&s| s.to_string())
         .ok_or_else(|| {
             CredentialError::new_err(
-                "'datasets' segment not found or dataset name missing in the path",
+                "'datasets' segment not found or dataset name missing in the path (Error Code: 400)"
             )
         })?;
 
@@ -294,7 +293,12 @@ fn build_client(proxies: &Option<HashMap<String, String>>) -> PyResult<reqwest::
         .use_rustls_tls()
         .tls_built_in_native_certs(true)
         .build()
-        .map_err(|err| CredentialError::new_err(format!("Error creating HTTP client: {}", err)))
+        .map_err(|err| {
+            CredentialError::new_err(format!(
+                "Error creating HTTP client: {} (Error Code: 500)",
+                err
+            ))
+        })
 }
 
 #[pyclass(module = "fusion._fusion")]
@@ -595,7 +599,7 @@ impl FusionCredentials {
         self._ensure_http_client()?;
         let client = self.http_client.as_ref().ok_or_else(|| {
             CredentialError::new_err(
-                "HTTP client not initialized. Use from_* methods to create credentials",
+                "HTTP client not initialized. Use from_* methods to create credentials (Error Code: 500)"
             )
         })?;
 
@@ -691,14 +695,18 @@ impl FusionCredentials {
                 .send()
                 .await
                 .map_err(|e| {
-                    CredentialError::new_err(format!("Could not post request: {:?}", e))
+                    CredentialError::new_err((format!("Could not post request: {:?}", e), 500))
                 })?;
 
             let res_text = res.text().await.map_err(|e| {
-                CredentialError::new_err(format!("Could not get response text: {:?}", e))
+                CredentialError::new_err((format!("Could not get response text: {:?}", e), 500))
             })?;
+
             let res_json = json::parse(&res_text).map_err(|e| {
-                CredentialError::new_err(format!("Could not parse test to json: {:?}", e))
+                CredentialError::new_err((
+                    format!("Could not parse text to json: {:?}", e),
+                    500, // parsing failure, so internal error
+                ))
             })?;
             debug!("Called for Bearer token. Response: {:?}", res_json);
             Ok(res_json)
@@ -733,16 +741,16 @@ impl FusionCredentials {
         let rt = &get_tokio_runtime(py).0;
         self._ensure_http_client()?;
         let client = self.http_client.as_ref().ok_or_else(|| {
-            CredentialError::new_err(
+            CredentialError::new_err((
                 "HTTP client not initialized. Use from_* methods to create credentials",
-            )
+                500,
+            ))
         })?;
 
         let response_res: PyResult<json::JsonValue> = rt.block_on(async {
-            let token = self
-                .bearer_token
-                .as_ref()
-                .ok_or_else(|| CredentialError::new_err("Bearer token is missing".to_string()))?;
+            let token = self.bearer_token.as_ref().ok_or_else(|| {
+                CredentialError::new_err("Bearer token is missing (Error Code: 401)".to_string())
+            })?;
 
             let req = client
                 .get(&url)
@@ -755,27 +763,34 @@ impl FusionCredentials {
             debug!("Calling for Fusion token: {:?}", req);
 
             let res_maybe = req.send().await.map_err(|e| {
-                CredentialError::new_err(format!("Could not post request: {:?}", e))
+                CredentialError::new_err(format!(
+                    "Could not post request: {:?} (Error Code: 500)",
+                    e
+                ))
             })?;
 
-            let res = res_maybe
-                .error_for_status()
-                .map_err(|e| CredentialError::new_err(format!("Error from endpoint: {:?}", e)))?;
+            let res = res_maybe.error_for_status().map_err(|e| {
+                let status_code = e.status().map_or(500, |s| s.as_u16() as i32);
+                CredentialError::new_err((format!("Error from endpoint: {:?}", e), status_code))
+            })?;
 
             match res.text().await {
                 Ok(text) => {
                     let res_json = json::parse(&text).map_err(|e| {
                         CredentialError::new_err(format!(
-                            "Could not parse response to json: {:?}",
+                            "Could not parse response to json: {:?} (Error Code: 500)",
                             e
                         ))
                     })?;
                     Ok(res_json)
                 }
-                Err(e) => Err(CredentialError::new_err(format!(
-                    "Could not get response text: {:?}",
-                    e
-                ))),
+                Err(e) => {
+                    let status_code = e.status().map_or(500, |s| s.as_u16() as i32);
+                    Err(CredentialError::new_err((
+                        format!("Could not get response text: {:?}", e),
+                        status_code,
+                    )))
+                }
             }
         });
         let response = response_res?;
@@ -813,7 +828,7 @@ impl FusionCredentials {
         let bearer_token_tup = self
             .bearer_token
             .as_ref()
-            .ok_or_else(|| CredentialError::new_err("No bearer token set"))?
+            .ok_or_else(|| CredentialError::new_err("No bearer token set (Error Code: 400)"))?
             .as_bearer_header()?;
 
         // Check if the URL is a distribution request, and if so, get the Fusion token auth url, dataset name, and catalog name
@@ -886,7 +901,7 @@ impl FusionCredentials {
                 file.read_to_string(&mut contents)
                     .map_err(|_| PyFileNotFoundError::new_err("Could not read file contents"))?;
                 return Err(CredentialError::new_err(format!(
-                    "Invalid JSON: {}\nContents:\n{}",
+                    "Invalid JSON: {}\nContents:\n{}\nError Code: 400",
                     err, contents
                 )));
             }
@@ -894,7 +909,7 @@ impl FusionCredentials {
         let client_id = credentials
             .client_id
             .or_else(|| std::env::var("FUSION_CLIENT_ID").ok())
-            .ok_or_else(|| CredentialError::new_err("Missing client ID"))?;
+            .ok_or_else(|| CredentialError::new_err("Missing client ID (Error Code: 400)"))?;
 
         let full_creds = match credentials.grant_type.as_str() {
             "client_credentials" => FusionCredentials::from_client_id(
@@ -904,7 +919,9 @@ impl FusionCredentials {
                     credentials
                         .client_secret
                         .or_else(|| std::env::var("FUSION_CLIENT_SECRET").ok())
-                        .ok_or_else(|| CredentialError::new_err("Missing client secret"))?,
+                        .ok_or_else(|| {
+                            CredentialError::new_err("Missing client secret (Error Code: 400)")
+                        })?,
                 ),
                 credentials.resource,
                 credentials.auth_url,

@@ -13,7 +13,7 @@ from pytest_mock import MockerFixture
 
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute
-from fusion.exceptions import CredentialError, FileFormatError
+from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion
 from fusion.fusion_types import Types
 from fusion.utils import _normalise_dt_param, distribution_to_url
@@ -377,6 +377,36 @@ def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fus
     }
     requests_mock.get(prod_url, json=server_prod_mock_data)
 
+    dataset_url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/ONE"
+    requests_mock.get(dataset_url, json=expected_data["resources"][0])
+    cols = [
+        "identifier",
+        "title",
+        "containerType",
+        "region",
+        "category",
+        "coverageStartDate",
+        "coverageEndDate",
+        "description",
+        "status",
+        "type",
+    ]
+
+    data = {
+        "identifier": "ONE",
+        "title": None,
+        "containerType": None,
+        "region": "US",
+        "category": "FX",
+        "coverageStartDate": None,
+        "coverageEndDate": None,
+        "description": "some desc",
+        "status": "active",
+        "type": None,
+    }
+
+    expected_df_exact_match = pd.DataFrame([data], columns=cols)
+
     # Call the catalog_resources method
     test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["ONE"])
     # Check if the dataframe is created correctly
@@ -384,11 +414,11 @@ def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fus
 
     test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains="ONE")
     # Check if the dataframe is created correctly
-    pd.testing.assert_frame_equal(test_df, expected_df)
+    pd.testing.assert_frame_equal(test_df, expected_df_exact_match)
 
     test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains="ONE", id_contains=True)
     # Check if the dataframe is created correctly
-    pd.testing.assert_frame_equal(test_df, expected_df)
+    pd.testing.assert_frame_equal(test_df, expected_df_exact_match)
 
     test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, product=select_prod)
     # Check if the dataframe is created correctly
@@ -747,7 +777,7 @@ def test_download_no_access(requests_mock: requests_mock.Mocker, fusion_obj: Fus
     requests_mock.get(url, json=expected_data)
 
     with pytest.raises(
-        CredentialError, match="You are not subscribed to TEST_DATASET in catalog my_catalog. Please request access."
+        APIResponseError, match="You are not subscribed to TEST_DATASET in catalog my_catalog. Please request access."
     ):
         fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=file_format, catalog=catalog)
 
