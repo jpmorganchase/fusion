@@ -152,7 +152,7 @@ class Fusion:
                 self.credentials = FusionCredentials.from_file(Path(credentials))
             except CredentialError as e:
                 message = "Failed to load credentials. Please check the credentials file."
-                raise APIResponseError(e, message=message, status_code=e.response.status_code) from e
+                raise APIResponseError(e, message=message) from e
         else:
             raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
 
