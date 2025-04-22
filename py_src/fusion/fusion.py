@@ -650,7 +650,8 @@ class Fusion:
                 ValueError(
                     f"No data available for dataset {dataset}. "
                     f"Check that a valid dataset identifier and date/date range has been set."
-                )
+                ),
+                status_code=404
             )
 
         if dt_str == "latest":
@@ -684,7 +685,8 @@ class Fusion:
                 ValueError(
                     f"No data available for dataset {dataset} in catalog {catalog}.\n"
                     f"Check that a valid dataset identifier and date/date range has been set."
-                )
+                ),
+                status_code=404
             )
 
         required_series = list(datasetseries_list["@id"])
