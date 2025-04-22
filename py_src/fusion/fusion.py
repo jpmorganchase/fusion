@@ -152,7 +152,7 @@ class Fusion:
                 self.credentials = FusionCredentials.from_file(Path(credentials))
             except CredentialError as e:
                 message = "Failed to load credentials. Please check the credentials file."
-                raise APIResponseError(e, message=message) from e
+                raise APIResponseError(e, message=message, status_code=e.response.status_code) from e
         else:
             raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
 
@@ -740,8 +740,11 @@ class Fusion:
         access_status = dataset_resp.json().get("status")
         if access_status != "Subscribed":
             raise APIResponseError(
-                ValueError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access."),
-                status_code=401,
+                ValueError(
+                    f"You are not subscribed to {dataset} in catalog {catalog}. "
+                    "Please request access."
+                ),
+                status_code=401
             )
 
         valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
@@ -1001,7 +1004,8 @@ class Fusion:
                 Exception(
                     f"No series members for dataset: {dataset} in date or date range: {dt_str} "
                     f"and format: {dataset_format}"
-                )
+                ),
+                status_code=404
             )
         if dataset_format in ["parquet", "parq"]:
             data_df = pd_reader(files, **pd_read_kwargs)  # type: ignore
@@ -1153,7 +1157,8 @@ class Fusion:
                 Exception(
                     f"No series members for dataset: {dataset} in date or date range: {dt_str} "
                     f"and format: {dataset_format}"
-                )
+                ),
+                status_code=404
             )
         if dataset_format in ["parquet", "parq"]:
             tbl = reader(files, **read_kwargs)  # type: ignore
@@ -1241,8 +1246,9 @@ class Fusion:
 
                 try:
                     if (
-                        catalog not in catalog_list
-                        or dataset not in js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["identifier"]
+                        catalog not in [i.split("/")[0] for i in catalog_list]
+                        or
+                        not js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["identifier"]
                     ):
                         msg = (
                             f"File file has not been uploaded, one of the catalog: {catalog} "
