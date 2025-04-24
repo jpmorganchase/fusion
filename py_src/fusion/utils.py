@@ -26,7 +26,6 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
 from dateutil import parser
-from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
 from rich.progress import (
@@ -766,8 +765,6 @@ def upload_files(  # noqa: PLR0913
     fs_fusion: fsspec.AbstractFileSystem,
     fs_local: fsspec.AbstractFileSystem,
     loop: pd.DataFrame,
-    parallel: bool = True,
-    n_par: int = -1,
     multipart: bool = True,
     chunk_size: int = 5 * 2**20,
     show_progress: bool = True,
@@ -781,8 +778,6 @@ def upload_files(  # noqa: PLR0913
         fs_fusion: Fusion filesystem.
         fs_local: Local filesystem.
         loop (pd.DataFrame): DataFrame of files to iterate through.
-        parallel (bool): Is parallel mode enabled.
-        n_par (int): Number of subprocesses.
         multipart (bool): Is multipart upload.
         chunk_size (int): Maximum chunk size.
         show_progress (bool): Show progress bar
@@ -835,28 +830,17 @@ def upload_files(  # noqa: PLR0913
             )
             return (False, path, str(ex))
 
-    if parallel:
-        if show_progress:
-            with joblib_progress("Uploading", total=len(loop)):
-                res = Parallel(n_jobs=n_par, backend="threading")(
-                    delayed(_upload)(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()
-                )
-        else:
-            res = Parallel(n_jobs=n_par, backend="threading")(
-                delayed(_upload)(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()
-            )
+    res = [None] * len(loop)
+    if show_progress:
+        with Progress() as p:
+            task = p.add_task("Uploading", total=len(loop))
+            for i, (_, row) in enumerate(loop.iterrows()):
+                r = _upload(row["url"], row["path"], row.get("file_name", None))
+                res[i] = r
+                if r[0] is True:
+                    p.update(task, advance=1)
     else:
-        res = [None] * len(loop)
-        if show_progress:
-            with Progress() as p:
-                task = p.add_task("Uploading", total=len(loop))
-                for i, (_, row) in enumerate(loop.iterrows()):
-                    r = _upload(row["url"], row["path"], row.get("file_name", None))
-                    res[i] = r
-                    if r[0] is True:
-                        p.update(task, advance=1)
-        else:
-            res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
+        res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
     return res  # type: ignore
 

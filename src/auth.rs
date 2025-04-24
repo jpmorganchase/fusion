@@ -695,7 +695,11 @@ impl FusionCredentials {
                 .send()
                 .await
                 .map_err(|e| {
-                    CredentialError::new_err((format!("Could not post request: {:?}", e), 500))
+                    let status_code = e.status().map_or(500, |s| s.as_u16() as i32);
+                    CredentialError::new_err((
+                        format!("Could not post request: {:?}", e),
+                        status_code,
+                    ))
                 })?;
 
             let res_text = res.text().await.map_err(|e| {
@@ -763,9 +767,10 @@ impl FusionCredentials {
             debug!("Calling for Fusion token: {:?}", req);
 
             let res_maybe = req.send().await.map_err(|e| {
+                let status_code = e.status().map_or(500, |s| s.as_u16() as i32);
                 CredentialError::new_err(format!(
-                    "Could not post request: {:?} (Error Code: 500)",
-                    e
+                    "Could not post request: {:?} (Error Code: {})",
+                    e, status_code
                 ))
             })?;
 

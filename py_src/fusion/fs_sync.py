@@ -13,13 +13,12 @@ from typing import Optional
 
 import fsspec
 import pandas as pd
-from joblib import Parallel, delayed
+from rich.progress import Progress
 
 from .utils import (
     cpu_count,
     distribution_to_filename,
     is_dataset_raw,
-    joblib_progress,
     path_to_url,
     upload_files,
     validate_file_names,
@@ -39,22 +38,24 @@ def _download(
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
     df: pd.DataFrame,
-    n_par: int,
     show_progress: bool = True,
     local_path: str = "",
 ) -> list[tuple[bool, str, Optional[str]]]:
     if len(df) > 0:
+        res = [None] * len(df)
         if show_progress:
-            with joblib_progress("Downloading", total=len(df)):
-                res = Parallel(n_jobs=n_par)(
-                    delayed(fs_fusion.download)(fs_local, row["url"], local_path + row["path_fusion"])
-                    for i, row in df.iterrows()
-                )
+            with Progress() as p:
+                task = p.add_task("Downloading", total=len(df))
+                for i, (_, row) in enumerate(df.iterrows()):
+                    r = fs_fusion.download(fs_local, row["url"], local_path + row["path_fusion"])
+                    res[i] = r
+                    if r[0] is True:
+                        p.update(task, advance=1)
         else:
-            res = Parallel(n_jobs=n_par)(
-                delayed(fs_fusion.download)(fs_local, row["url"], local_path + row["path_fusion"])
-                for i, row in df.iterrows()
-            )
+            res = [
+            fs_fusion.download(fs_local, row["url"], local_path + row["path_fusion"])
+            for _, row in df.iterrows()
+            ]
     else:
         return []
 
