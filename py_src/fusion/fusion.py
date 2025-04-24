@@ -15,7 +15,7 @@ from zipfile import ZipFile
 
 import pandas as pd
 import pyarrow as pa
-from joblib import Parallel, delayed
+from rich.progress import Progress
 from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
@@ -35,11 +35,9 @@ from .utils import (
     csv_to_table,
     distribution_to_filename,
     distribution_to_url,
-    # download_single_file_threading,
     get_default_fs,
     get_session,
     is_dataset_raw,
-    joblib_progress,
     json_to_table,
     normalise_dt_param_str,
     parquet_to_table,
@@ -48,7 +46,6 @@ from .utils import (
     read_json,
     read_parquet,
     requests_raise_for_status,
-    # stream_single_file_new_session,
     upload_files,
     validate_file_names,
 )
@@ -151,8 +148,11 @@ class Fusion:
             try:
                 self.credentials = FusionCredentials.from_file(Path(credentials))
             except CredentialError as e:
-                message = "Failed to load credentials. Please check the credentials file."
-                raise APIResponseError(e, message=message) from e
+                if hasattr(e, "status_code"):
+                    message = "Failed to load credentials. Please check the credentials file."
+                    raise APIResponseError(e, message=message) from e
+                else:
+                    raise e
         else:
             raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
 
@@ -651,7 +651,7 @@ class Fusion:
                     f"No data available for dataset {dataset}. "
                     f"Check that a valid dataset identifier and date/date range has been set."
                 ),
-                status_code=404
+                status_code=404,
             )
 
         if dt_str == "latest":
@@ -686,7 +686,7 @@ class Fusion:
                     f"No data available for dataset {dataset} in catalog {catalog}.\n"
                     f"Check that a valid dataset identifier and date/date range has been set."
                 ),
-                status_code=404
+                status_code=404,
             )
 
         required_series = list(datasetseries_list["@id"])
@@ -742,11 +742,8 @@ class Fusion:
         access_status = dataset_resp.json().get("status")
         if access_status != "Subscribed":
             raise APIResponseError(
-                ValueError(
-                    f"You are not subscribed to {dataset} in catalog {catalog}. "
-                    "Please request access."
-                ),
-                status_code=401
+                ValueError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access."),
+                status_code=401,
             )
 
         valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
@@ -825,14 +822,16 @@ class Fusion:
             f"Beginning {len(download_spec)} downloads in batches of {n_par}",
         )
         if show_progress:
-            with joblib_progress("Downloading", total=len(download_spec)):
-                res = Parallel(n_jobs=n_par)(
-                    delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
-                )
+            with Progress() as p:
+                task = p.add_task("Downloading", total=len(download_spec))
+                res = []
+                for spec in download_spec:
+                    r = self.get_fusion_filesystem().download(**spec)
+                    res.append(r)
+                    p.update(task, advance=1)
         else:
-            res = Parallel(n_jobs=n_par)(
-                delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
-            )
+            res = [self.get_fusion_filesystem().download(**spec) for spec in download_spec]
+
         if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
                 if not r[0]:
@@ -1007,7 +1006,7 @@ class Fusion:
                     f"No series members for dataset: {dataset} in date or date range: {dt_str} "
                     f"and format: {dataset_format}"
                 ),
-                status_code=404
+                status_code=404,
             )
         if dataset_format in ["parquet", "parq"]:
             data_df = pd_reader(files, **pd_read_kwargs)  # type: ignore
@@ -1160,7 +1159,7 @@ class Fusion:
                     f"No series members for dataset: {dataset} in date or date range: {dt_str} "
                     f"and format: {dataset_format}"
                 ),
-                status_code=404
+                status_code=404,
             )
         if dataset_format in ["parquet", "parq"]:
             tbl = reader(files, **read_kwargs)  # type: ignore
@@ -1249,8 +1248,7 @@ class Fusion:
                 try:
                     if (
                         catalog not in [i.split("/")[0] for i in catalog_list]
-                        or
-                        not js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["identifier"]
+                        or not js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["identifier"]
                     ):
                         msg = (
                             f"File file has not been uploaded, one of the catalog: {catalog} "
