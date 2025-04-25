@@ -1276,13 +1276,10 @@ class Fusion:
             data_map_df.columns = pd.Index(["path", "url", "file_name"])
 
         n_par = cpu_count(n_par)
-        parallel = len(data_map_df) > 1
         res = upload_files(
             fs_fusion,
             self.fs,
             data_map_df,
-            parallel=parallel,
-            n_par=n_par,
             multipart=multipart,
             chunk_size=chunk_size,
             show_progress=show_progress,
@@ -1353,8 +1350,6 @@ class Fusion:
             fs_fusion,
             data,
             data_map_df,
-            parallel=False,
-            n_par=1,
             multipart=multipart,
             chunk_size=chunk_size,
             show_progress=show_progress,

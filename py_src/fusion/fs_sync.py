@@ -53,8 +53,7 @@ def _download(
                         p.update(task, advance=1)
         else:
             res = [
-            fs_fusion.download(fs_local, row["url"], local_path + row["path_fusion"])
-            for _, row in df.iterrows()
+                fs_fusion.download(fs_local, row["url"], local_path + row["path_fusion"]) for _, row in df.iterrows()
             ]
     else:
         return []
@@ -66,19 +65,15 @@ def _upload(
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
     df: pd.DataFrame,
-    n_par: int,
     show_progress: bool = True,
     local_path: str = "",
 ) -> list[tuple[bool, str, Optional[str]]]:
     upload_df = df.rename(columns={"path_local": "path"})
     upload_df["path"] = [Path(local_path) / p for p in upload_df["path"]]
-    parallel = len(df) > 1
     res = upload_files(
         fs_fusion,
         fs_local,
         upload_df,
-        parallel=parallel,
-        n_par=n_par,
         multipart=True,
         show_progress=show_progress,
     )
@@ -216,7 +211,6 @@ def _synchronize(  # noqa: PLR0913
                 fs_fusion,
                 fs_local,
                 join_df,
-                n_par,
                 show_progress=show_progress,
                 local_path=local_path,
             )
@@ -233,7 +227,6 @@ def _synchronize(  # noqa: PLR0913
                 fs_fusion,
                 fs_local,
                 join_df,
-                n_par,
                 show_progress=show_progress,
                 local_path=local_path,
             )
