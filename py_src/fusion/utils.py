@@ -830,7 +830,7 @@ def upload_files(  # noqa: PLR0913
             )
             return (False, path, str(ex))
 
-    res = [None] * len(loop)
+    res: list[tuple[bool, str, str | None] | None] = [None] * len(loop)
     if show_progress:
         with Progress() as p:
             task = p.add_task("Uploading", total=len(loop))
