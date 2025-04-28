@@ -37,3 +37,16 @@ Once you have a copy of the source, you can install it with:
 $ pip install .
 ```
 
+# Storing Credentials
+
+# Usage 
+
+## Import Fusion
+
+```
+from fusion import Fusion
+```
+## Fusion Object 
+```
+fusion = Fusion()
+```
