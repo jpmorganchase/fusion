@@ -1,6 +1,6 @@
 # Wecome to PyFusion #
 
-The PyFusion SDK simplifies your experience with the Fusion API in Python, taking care of credential and session management, efficient parallel data downloads and uploads, and metadata browsing and creation.
+The PyFusion SDK eases the consumption of the Fusion API in Python, taking care of credential and session management, efficient parallel data downloads and uploads, and metadata browsing and creation.
 
 ## What is Fusion?
 
@@ -13,7 +13,7 @@ For more information, please visit [fusion.jpmorgan.com](https://fusion.jpmorgan
 
 ## Overview
 
-The PyFusion SDK is designed to provide users with a seamless way to programmatically interact with the Fusion Data Management Platform. With PyFusion, you can browse and query available data and metadata, enabling efficient data discovery and integration workflows. Additionally, the SDK allows you to create products, define datasets and schemas, and upload your data directly to the platform.
+The PyFusion SDK is designed to provide users with a seamless way to programmatically interact with the Fusion Data Management Platform. With PyFusion, you can browse and query available data and metadata, enabling efficient data discovery and integration with workflows. Additionally, the SDK allows you to create products, define datasets and schemas, and upload your data directly to the platform.
 
 ## Key Features
 
