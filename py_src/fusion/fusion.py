@@ -398,8 +398,8 @@ class Fusion:
                         "status",
                         "type",
                     ]
-                    data = [resp_json.get(col) for col in cols]
-                    return pd.DataFrame(data, index=cols).T
+                    data = {col: resp_json.get(col, None) for col in cols}
+                    return pd.DataFrame([data])
                 else:
                     return pd.json_normalize(resp_json)
 
