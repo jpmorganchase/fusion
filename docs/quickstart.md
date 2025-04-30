@@ -75,6 +75,8 @@ Your credentials file should be formatted as follows.
 
 ## Import Fusion
 
+To begin using pyfusion, simply execute the import below.
+
 ```python
 from fusion import Fusion
 ```

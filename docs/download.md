@@ -1,6 +1,5 @@
 # Downloading Data with the `Fusion` Class
 
-## Overview
 The `Fusion` class provides powerful methods to retrieve your data from the Fusion Data Management Platform. It allows you to download datasets, convert them into Pandas DataFrames, or retrieve them as in-memory bytes objects for flexible data handling. The primary methods for downloading and processing data are `download()`, `to_df()`, and `to_bytes()`.
 
 ---
@@ -40,8 +39,8 @@ To download a dataset, you will need the following information:
 
 - **catalog**: The catalog identifier for the catalog the dataset exists in.
 - **dataset**: The dataset identifier for the dataset you would like to download.
-- **dt_str**: The series member identifier for the series member you would like to download. For details, see dt_str section below.
-- **dataset_format**: The distribution format of the series member you would like to download. For details on determining correct format, see dataset_format section below.
+- **dt_str**: The series member identifier for the series member you would like to download. For details, see [dt_str](#populating-the-dt_str-argument) section below.
+- **dataset_format**: The distribution format of the series member you would like to download. For details on determining correct format, see [dataset_format](#populating-the-dataset_format-argument) section below.
 
 ```python
 fusion.download(
@@ -133,7 +132,7 @@ Correctly populating the ``dataset_format`` argument is also crucial for avoidin
 
 
 ```python
-fusion.list_datasetmembers(
+fusion.list_distributions(
     dataset="MY_DATASET",
     series="20250430",
     catalog="my_catalog"
@@ -154,9 +153,14 @@ This method will return a DataFrame containing a row for each available distribu
         return_paths=True
     )
     ```
+    **What it does:**
+    
+    - Returns the paths where the files were downloaded (when the download is successful)
+    - Provides a more detailed error message to help with debugging (when the download fails)
+
     **Useful when:**
     
-    Error message is unclear
+    - Error message is unclear
 
 !!! tip "Force Download"
     Set the ``force_download`` argument to ``True``:
@@ -168,8 +172,81 @@ This method will return a DataFrame containing a row for each available distribu
         force_download=True
     )
     ```
+    **What it Does**
+
+    - Overwrites the existing file if seriesmember was previously downloaded
+
     **Useful when:**
 
-    You are re-downloading a file you have previously downloaded
-    
-    The file you are downloading is empty
+    - You want to ensure you have the latest version of the file
+    - The existing file is corrupted or incomplete
+
+#### Common Errors & Workarounds
+
+- **403**: Permission Denied. Please check that you have access to the dataset you are requesting. Keep in mind, you must be ``'Subscribed'`` to a dataset to download, as well as have the appropriate access to the catalog.
+- **404**: File not found. Please check that the identifiers and arguments are correct. The ``dataset_format`` argument must be an available distribution of the series member (details [here](#populating-the-dataset_format-argument)), the ``dt_str`` must be an existing series member within the dataset (details [here](#populating-the-dt_str-argument)), and the dataset must exist within the catalog.
+- **CredentialError**: There was an issue with your credentials (may also output as a ``PanicException``). Please check that your credentials file exists and is correct. See the [Getting Started](quickstart.md) page for credentials details.
+
+
+## Using the `to_df()` Method
+
+### Overview
+The ``to_df()`` method converts a dataset into a Pandas DataFrame for structured data analysis. It is particularly useful for working with tabular data formats.
+
+!!! info "Supported Distributions"
+    The ``to_df`` method supports the following file types: [``'csv'``, ``'parquet'``, ``'json'``, and ``'raw'``] where raw is assumed to be zipped csv files.
+
+### Syntax
+
+In order to retrieve a dataset as a Pandas DataFrame, the following information is required:
+
+- **dataset**: The dataset identifier.
+- **series_member**: The specific series member of the dataset to retrieve.
+- **dataset_format**: The file format (e.g., parquet, csv). Defaults to "parquet".
+- **catalog**: The catalog identifier. Defaults to "common".
+- **filters**: A dictionary of filters to apply when loading the dataset. Defaults to None.
+
+```python
+df = fusion_obj.to_df(
+    dataset="FXO_SP",
+    series_member="2023-10-01",
+    dataset_format="csv",
+    catalog="common"
+)
+```
+
+!!! warning
+    The ``to_df()`` method retrieves the dataset as a Pandas DataFrame, which is stored entirely in memory (RAM). This means that the size of the DataFrame is limited by the available memory on your machine.
+
+!!! Danger "Important Notes"
+    - If your dataset is very large, you may encounter memory errors if you load the entire dataset in with ``to_df()``.
+    - Consider filtering your data using the `filters` argument to reduce the size of the dataset being loaded.
+    - For extremely large datasets, consider using alternative methods like `to_bytes()` or downloading the data directly using the `download()` method.
+
+
+## Using the ``to_bytes()`` Method
+
+### Overview
+The ``to_bytes()`` method retrieves a dataset instance as a bytes object. This is useful for in-memory processing or when working with APIs that require binary data.
+
+### Syntax
+
+For retrieving data as a bytes object, the following details are required:
+
+- **dataset**: The dataset identifier.
+- **series_member**: The specific series member of the dataset to retrieve.
+- **dataset_format**: The file format (e.g., parquet, csv). Defaults to "parquet".
+- **catalog**: The catalog identifier. Defaults to "common".
+
+```python
+data_bytes = fusion_obj.to_bytes(
+    dataset="FXO_SP",
+    series_member="2023-10-01",
+    dataset_format="csv",
+    catalog="common"
+)
+```
+
+!!! note
+    The ``to_bytes()`` method is ideal for scenarios where you need to process data without saving it to disk.
+    The returned ``BytesIO`` object can be used directly with libraries that support in-memory file-like objects.
