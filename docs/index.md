@@ -8,7 +8,7 @@ Fusion by J.P. Morgan is a cloud-native data platform for institutional investor
 
 For more information, please visit [fusion.jpmorgan.com](https://fusion.jpmorgan.com)
 
-!!! tip "How to Gain Access to the Fusion Data Management Platform"
+!!! info "How to Gain Access to the Fusion Data Management Platform"
     You must have the appropriate access to use the SDK. Generate credentials on Fusion’s application registration page and authenticate your connection to the API. Please refer to the [Fusion page](https://fusion.jpmorgan.com) and reach out to the concerned department for additonal information.
 
 ## Overview

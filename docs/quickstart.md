@@ -62,11 +62,13 @@ Your credentials file should be formatted as follows.
 - **client_secret**: Generated using Fusion's application registration page.
 - **resource**: Can be found on Fusion's calling the API page.
 - **auth_url**: Can be found on Fusion's calling the API page.
-- **proxies**: HTTP and HTTPS proxy values. Optional. See tip below.
+- **proxies**: HTTP and HTTPS proxy values. Optional.
 
-!!! tip "Populating Proxies"
+!!! warning "Populating Proxies"
     If your application is running behind a proxy, for example a corporate firewall, then the ``proxies`` value will also need to be defined. For example:
         ``"proxies" : {"http": "http://proxy.myfirm.com:8080", "https": "https://proxy.myfirm.com:8080"}``
+    
+    If you do not require proxies, either remove this argument or leave it as an empty dictionary ``{}``.
 
 
 # Usage 
