@@ -255,7 +255,6 @@ def parquet_to_table(
         schemas = [
             pq.ParquetDataset(
                 p,
-                use_legacy_dataset=False,
                 filters=filters,
                 filesystem=fs,
                 memory_map=True,
@@ -266,7 +265,6 @@ def parquet_to_table(
         schemas = [
             pq.ParquetDataset(
                 path,
-                use_legacy_dataset=False,
                 filters=filters,
                 filesystem=fs,
                 memory_map=True,
@@ -276,7 +274,6 @@ def parquet_to_table(
     schema = unify_schemas(schemas)
     return pq.ParquetDataset(
         path,
-        use_legacy_dataset=False,
         filters=filters,
         filesystem=fs,
         memory_map=True,
