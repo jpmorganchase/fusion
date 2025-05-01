@@ -93,7 +93,7 @@ Given that this dataset, series member, format, and catalog combination exists, 
 
 With the original name of the file preserved.
 
-!!! note
+!!! warning
     In order to preserve the original file name during download, the ``preserve_original_name`` needs to have been set during upload. Please see the [Upload](upload.md) page for more details.
 
 
@@ -141,7 +141,19 @@ fusion.list_distributions(
 
 This method will return a DataFrame containing a row for each available distribution of the specified series member within a dataset. Utilizing one of these available formats as your ``dataset_format`` argument will ensure you are requesting the download of an existing distribution of a series member.
 
+!!! note "Default values and setting ``dataset_format`` to ``None``"
+    The default value for the ``dataset_format`` argument in the ``download()`` method is ``'parquet'``. However, if the user sets the argument to ``None``, the following logic occurs:
+        1. If only one format is available for the requested series member, that format will be downloaded.
+        2. If multiple formats are detected, a ``FileFormatError`` will be raised, requesting user to specify a format.
+    
+    **Useful when**:
+    
+    - The user knows there is only one format available, but doesn't want to specify it.
+
+
 ### Debugging Download
+
+There are a few methods available within the ``download()`` method that may be useful to users when unexpected errors occur. There are also several common mistakes that users can make when attempting to download a file.
 
 !!! tip "Return More Details in Output"
     Set the ``return_paths`` argument to ``True``:
