@@ -53,7 +53,10 @@ async def test_not_found_status(http_fs_instance: FusionHTTPFileSystem) -> None:
     response.text = mock.AsyncMock(return_value="404 NotFound")
 
     # Use a context manager to catch the FileNotFoundError
-    with pytest.raises(APIResponseError, match="Status 404, Error:"):
+    with pytest.raises(
+        APIResponseError,
+        match="APIResponseError: Status 404, Error when accessing http://example.com, Error: .*http://example.com",
+    ):
         await http_fs_instance._async_raise_not_found_for_status(response, "http://example.com")
 
 
