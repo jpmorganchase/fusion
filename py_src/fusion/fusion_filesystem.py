@@ -80,7 +80,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             super()._raise_not_found_for_status(response, url)
         except Exception as ex:
             status_code = getattr(response, "status", None)
-            message = f"Status {status_code}, Error when accessing {url}"
+            message = f"Error when accessing {url}"
             raise APIResponseError(ex, message=message, status_code=status_code) from ex
 
     async def _async_raise_not_found_for_status(self, response: Any, url: str) -> None:
@@ -98,7 +98,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     self._raise_not_found_for_status(response, url)
         except Exception as ex:
             status_code = getattr(response, "status", None)
-            message = f"Status {status_code}, Error when accessing {url}"
+            message = f"Error when accessing {url}"
             raise APIResponseError(ex, message=message, status_code=status_code) from ex
 
     def _check_session_open(self) -> bool:

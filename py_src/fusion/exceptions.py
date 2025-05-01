@@ -13,9 +13,10 @@ class APIResponseError(Exception):
     def __init__(self, original_exception: Exception, message: str = "", status_code: Optional[int] = None) -> None:
         self.original_exception = original_exception
         self.status_code = status_code
-        full_message = f"APIResponseError: Status {status_code}, Error: {str(original_exception)}"
         if message:
-            full_message = f"{message} | {full_message}"
+            full_message = f"APIResponseError: Status {status_code}, {message}, Error: {str(original_exception)}"
+        else:
+            full_message = f"APIResponseError: Status {status_code}, Error: {str(original_exception)}"
         super().__init__(full_message)
 
         # Optionally, copy original exception attributes
