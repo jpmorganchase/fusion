@@ -141,10 +141,12 @@ fusion.list_distributions(
 
 This method will return a DataFrame containing a row for each available distribution of the specified series member within a dataset. Utilizing one of these available formats as your ``dataset_format`` argument will ensure you are requesting the download of an existing distribution of a series member.
 
-!!! note "Default values and setting ``dataset_format`` to ``None``"
+!!! note "Default value and setting ``dataset_format`` to ``None`` during ``download()``"
     The default value for the ``dataset_format`` argument in the ``download()`` method is ``'parquet'``. However, if the user sets the argument to ``None``, the following logic occurs:
-        1. If only one format is available for the requested series member, that format will be downloaded.
-        2. If multiple formats are detected, a ``FileFormatError`` will be raised, requesting user to specify a format.
+
+    1. If only one format is available for the requested series member, that format will be downloaded.
+
+    2. If multiple formats are detected, a ``FileFormatError`` will be raised, requesting the user to specify a format.
     
     **Useful when**:
     
@@ -153,7 +155,7 @@ This method will return a DataFrame containing a row for each available distribu
 
 ### Debugging Download
 
-There are a few methods available within the ``download()`` method that may be useful to users when unexpected errors occur. There are also several common mistakes that users can make when attempting to download a file.
+There are a few arguments available within the ``download()`` method that may be useful to users when unexpected errors occur: 
 
 !!! tip "Return More Details in Output"
     Set the ``return_paths`` argument to ``True``:
@@ -193,6 +195,8 @@ There are a few methods available within the ``download()`` method that may be u
     - You want to ensure you have the latest version of the file
     - The existing file is corrupted or incomplete
 
+Additionally, below you will find several common mistakes that users can make when attempting to download a file, as well as suggested work-arounds.
+
 #### Common Errors & Workarounds
 
 - **403**: Permission Denied. Please check that you have access to the dataset you are requesting. Keep in mind, you must be ``'Subscribed'`` to a dataset to download, as well as have the appropriate access to the catalog.
@@ -205,18 +209,19 @@ There are a few methods available within the ``download()`` method that may be u
 ### Overview
 The ``to_df()`` method converts a dataset into a Pandas DataFrame for structured data analysis. It is particularly useful for working with tabular data formats.
 
+#### Supported Distributions
 !!! info "Supported Distributions"
-    The ``to_df`` method supports the following file types: [``'csv'``, ``'parquet'``, ``'json'``, and ``'raw'``] where raw is assumed to be zipped csv files.
+    The ``to_df`` method supports the following file types: [``'csv'``, ``'parquet'``, ``'json'``, and ``'raw'``], where raw is assumed to be zipped csv files.
 
 ### Syntax
 
 In order to retrieve a dataset as a Pandas DataFrame, the following information is required:
 
+
 - **dataset**: The dataset identifier.
-- **series_member**: The specific series member of the dataset to retrieve.
-- **dataset_format**: The file format (e.g., parquet, csv). Defaults to "parquet".
-- **catalog**: The catalog identifier. Defaults to "common".
-- **filters**: A dictionary of filters to apply when loading the dataset. Defaults to None.
+- **series_member**: The specific series member of the dataset to retrieve. Refer to the populating the ``dt_str`` argument [guide](#populating-the-dt_str-argument) for more details.
+- **dataset_format**: The file format (e.g., parquet, csv). Defaults to ``"parquet"``. Refer to the populating the ``dataset_format`` [guide](#populating-the-dataset_format-argument) for more details.
+- **catalog**: The catalog identifier. Defaults to ``"common"``.
 
 ```python
 df = fusion_obj.to_df(
@@ -227,14 +232,24 @@ df = fusion_obj.to_df(
 )
 ```
 
+!!! info "Argument Definitions"
+    Under the hood, the ``to_df()`` method performs similar operations to the ``download()`` method, making the logic for populating arguments very similar. See the relevant sections for more information on shared arguments:
+
+    - Populating the ``download_folder`` argument [guide](#download-folder).
+    - Populating the ``dt_str`` argument [guide](#populating-the-dt_str-argument) (Can be used for the ``series_member`` argument).
+    - Populating the ``dataset_format`` argument [guide](#populating-the-dataset_format-argument). Keep in mind the [supported formats](#supported-distributions).
+
 !!! warning
     The ``to_df()`` method retrieves the dataset as a Pandas DataFrame, which is stored entirely in memory (RAM). This means that the size of the DataFrame is limited by the available memory on your machine.
+
+### Filters
+
+### Columns
 
 !!! Danger "Important Notes"
     - If your dataset is very large, you may encounter memory errors if you load the entire dataset in with ``to_df()``.
     - Consider filtering your data using the `filters` argument to reduce the size of the dataset being loaded.
     - For extremely large datasets, consider using alternative methods like `to_bytes()` or downloading the data directly using the `download()` method.
-
 
 ## Using the ``to_bytes()`` Method
 
