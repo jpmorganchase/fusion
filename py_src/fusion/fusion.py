@@ -108,6 +108,7 @@ class Fusion:
         log_level: int = logging.ERROR,
         fs: fsspec.filesystem = None,
         log_path: str = ".",
+        enable_logging: bool = True,
     ) -> None:
         """Constructor to instantiate a new Fusion object.
 
@@ -128,19 +129,27 @@ class Fusion:
         self.download_folder = download_folder
         Path(download_folder).mkdir(parents=True, exist_ok=True)
 
+        # Always log to stdout, conditionally to file
         if logger.hasHandlers():
             logger.handlers.clear()
-        file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
+
         logging.addLevelName(VERBOSE_LVL, "VERBOSE")
-        stdout_handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
             "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
+
+        # Always add stdout handler
+        stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setFormatter(formatter)
         logger.addHandler(stdout_handler)
-        logger.addHandler(file_handler)
         logger.setLevel(log_level)
+
+        # Optionally add file handler
+        if enable_logging:
+            file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
 
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
