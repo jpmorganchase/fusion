@@ -2135,43 +2135,39 @@ def test_list_datasetmembers_distributions(requests_mock: requests_mock.Mocker, 
     assert all(resp == expected_df)
 
 
-def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials, tmp_path: str) -> None:
-    log_path = tmp_path / "custom_log_folder"
-    log_path.mkdir(parents=True, exist_ok=True)
-
+def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -> None:
     # Clear handlers to avoid test contamination
     logger.handlers.clear()
 
-    Fusion(credentials=credentials, enable_logging=True, log_path=log_path)
+    Fusion(credentials=credentials, enable_logging=True)
 
     # Check that StreamHandler and FileHandler were added
     assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
     assert any(isinstance(h, logging.FileHandler) for h in logger.handlers)
 
     # Confirm log file exists
-    log_file = log_path / "fusion_sdk.log"
+    log_file = Path("fusion_sdk.log")
     assert log_file.exists()
 
     # Clean up for other tests
     logger.handlers.clear()
 
 
-def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCredentials, tmp_path: str) -> None:
-    log_path = tmp_path / "logs"
-    log_path.mkdir(parents=True, exist_ok=True)
+def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCredentials) -> None:
+    
 
     # Clear logger handlers to avoid contamination
     logger.handlers.clear()
 
     # Create the Fusion object with logging enabled
-    Fusion(credentials=credentials, enable_logging=True, log_path=log_path)
+    Fusion(credentials=credentials, enable_logging=True)
 
     # Ensure the logger is configured with both handlers
     assert any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
     assert any(isinstance(handler, logging.FileHandler) for handler in logger.handlers)
 
     # Verify the log file exists
-    log_file = log_path / "fusion_sdk.log"
+    log_file = Path("fusion_sdk.log")
     assert log_file.exists()
 
     # Clean up
