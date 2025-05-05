@@ -110,23 +110,26 @@ class FusionOAuthAdapter(HTTPAdapter):
             if request.url:
                 request.headers.update(self.credentials.get_fusion_token_headers(request.url))
         except Exception as e:
+            status_code = getattr(getattr(e, "response", None), "status_code", 500)
             raise APIResponseError(
-                original_exception=e, message="Failed to generate Fusion token headers", status_code=500
+                original_exception=e, message="Failed to generate Fusion token headers", status_code=status_code
             ) from e
 
         try:
             response = super().send(request, **kwargs)
         except ConnectionError as ce:
+            status_code = getattr(getattr(ce, "response", None), "status_code", 503)
             raise APIResponseError(
                 original_exception=ce,
                 message=f"Connection error while sending request to {request.url}",
-                status_code=503,
+                status_code=status_code,
             ) from ce
         except Exception as e:
+            status_code = getattr(getattr(e, "response", None), "status_code", 500)
             raise APIResponseError(
                 original_exception=e,
                 message=f"Unexpected error while sending request to {request.url}",
-                status_code=500,
+                status_code=status_code,
             ) from e
         return response
 
