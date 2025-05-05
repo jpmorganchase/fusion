@@ -122,6 +122,8 @@ class Fusion:
             log_level (int, optional): Set the logging level. Defaults to logging.ERROR.
             fs (fsspec.filesystem): filesystem.
             log_path (str, optional): The folder path where the log is stored.
+            enable_logging (bool, optional): If True, enables logging to a file in addition to stdout.
+                If False, logging is only directed to stdout. Defaults to True.
         """
         self._default_catalog = "common"
 
