@@ -703,13 +703,6 @@ impl FusionCredentials {
                     ))
                 })?;
 
-            if res.status() != StatusCode::OK {
-                return Err(CredentialError::new_err((
-                    format!("APIResponseError: Status code {}", res.status()),
-                    res.status().as_u16() as i32,
-                )));
-            }
-
             let res_text = res.text().await.map_err(|e| {
                 CredentialError::new_err((format!("Could not get response text: {:?}", e), 500))
             })?;
@@ -724,7 +717,15 @@ impl FusionCredentials {
             Ok(res_json)
         });
         let response = response_res?;
-        let token = response["access_token"].as_str().unwrap().to_string();
+        let token = response["access_token"]
+            .as_str()
+            .ok_or_else(|| {
+                CredentialError::new_err((
+                    "Missing access_token in generate token response",
+                    500,
+                ))
+    })?
+    .to_string();
         let expires_in_secs = response["expires_in"].as_i64();
         match expires_in_secs {
             Some(expires_in_secs) => {
