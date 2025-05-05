@@ -219,14 +219,15 @@ In order to retrieve a dataset as a Pandas DataFrame, the following information 
 
 
 - **dataset**: The dataset identifier.
-- **series_member**: The specific series member of the dataset to retrieve. Refer to the populating the ``dt_str`` argument [guide](#populating-the-dt_str-argument) for more details.
-- **dataset_format**: The file format (e.g., parquet, csv). Defaults to ``"parquet"``. Refer to the populating the ``dataset_format`` [guide](#populating-the-dataset_format-argument) for more details.
+- **dt_str**: The specific series member of the dataset to retrieve. Refer to the populating the ``dt_str`` argument [guide](#populating-the-dt_str-argument) for more details. Defaults to ``"latest"``.
+- **dataset_format**: The file format (e.g., ``"parquet"``, ``"csv"``). Defaults to ``"parquet"``. Refer to the populating the ``dataset_format`` [guide](#populating-the-dataset_format-argument) for more details.
 - **catalog**: The catalog identifier. Defaults to ``"common"``.
+
 
 ```python
 df = fusion_obj.to_df(
     dataset="FXO_SP",
-    series_member="2023-10-01",
+    dt_str="2023-10-01",
     dataset_format="csv",
     catalog="common"
 )
@@ -236,15 +237,72 @@ df = fusion_obj.to_df(
     Under the hood, the ``to_df()`` method performs similar operations to the ``download()`` method, making the logic for populating arguments very similar. See the relevant sections for more information on shared arguments:
 
     - Populating the ``download_folder`` argument [guide](#download-folder).
-    - Populating the ``dt_str`` argument [guide](#populating-the-dt_str-argument) (Can be used for the ``series_member`` argument).
+    - Populating the ``dt_str`` argument [guide](#populating-the-dt_str-argument).
     - Populating the ``dataset_format`` argument [guide](#populating-the-dataset_format-argument). Keep in mind the [supported formats](#supported-distributions).
 
 !!! warning
     The ``to_df()`` method retrieves the dataset as a Pandas DataFrame, which is stored entirely in memory (RAM). This means that the size of the DataFrame is limited by the available memory on your machine.
 
-### Filters
+### Filtering the Returned DataFrame with ``filters()``
 
-### Columns
+The ``filters`` argument allows users to filter the data to be returned in the outputted DataFrame.
+
+
+This argument should be formatted as a ``List[Tuple]`` or ``List[List[Tuple]]`` where the ``Tuple`` is structured as follows: ``("<column>", "<operation>", "<value>")``.
+
+For example:
+
+```python
+my_filters = [("instrument_name", "==", "AUDUSD | Spot")]
+```
+By sending this filter condition into the ``filters`` argument, the user is filtering for rows in which the ``"instrument_name"`` column is equal to ``"AUDUSD | Spot"``:
+
+```python
+df = fusion_obj.to_df(
+    dataset="FXO_SP",
+    dt_str="2023-10-01",
+    dataset_format="csv",
+    catalog="common",
+    filters=my_filters,
+)
+```
+
+The returned DataFrame will contain only rows where the filter condition is met.
+
+!!! info "Supported Operations for ``filters``"
+    equals: `"="`, `"=="`
+
+    does not equal: `"!="`
+
+    less than: `"<"`
+
+    greater than: `">"`
+
+    less than or equal to: `"<="`
+
+    greater than or equal to: `">="`
+
+    Is in: `"in"`
+
+    Not in: `"not in"`
+
+### Selecting Columns for the Returned DataFrame
+
+The ``columns`` argument allows users to select the columns to be included in the outputted DataFrame. 
+
+For example:
+```python
+df = fusion_obj.to_df(
+    dataset="FXO_SP",
+    dt_str="2023-10-01",
+    dataset_format="csv",
+    catalog="common",
+    columns=["instrument_name", "fx_rate"],
+)
+```
+
+The returned DataFrame will contain two columns: ``'instrument_name'`` and ``'fx_rate'``.
+
 
 !!! Danger "Important Notes"
     - If your dataset is very large, you may encounter memory errors if you load the entire dataset in with ``to_df()``.
@@ -254,16 +312,16 @@ df = fusion_obj.to_df(
 ## Using the ``to_bytes()`` Method
 
 ### Overview
-The ``to_bytes()`` method retrieves a dataset instance as a bytes object. This is useful for in-memory processing or when working with APIs that require binary data.
+The ``to_bytes()`` method retrieves a dataset instance as a ``BytesIO`` object. This is useful for in-memory processing or when working with APIs that require binary data.
 
 ### Syntax
 
-For retrieving data as a bytes object, the following details are required:
+For retrieving data as a ``BytesIO`` object, the following details are required:
 
 - **dataset**: The dataset identifier.
-- **series_member**: The specific series member of the dataset to retrieve.
-- **dataset_format**: The file format (e.g., parquet, csv). Defaults to "parquet".
-- **catalog**: The catalog identifier. Defaults to "common".
+- **series_member**: The specific series member of the dataset to retrieve. Refer to the populating the ``dt_str`` argument [guide](#populating-the-dt_str-argument) for more details.
+- **dataset_format**: The file format (e.g., ``"parquet"``, ``"csv"``). Defaults to ``"parquet"``. Refer to the populating the ``dataset_format`` [guide](#populating-the-dataset_format-argument) for more details.
+- **catalog**: The catalog identifier. Defaults to ``"common"``.
 
 ```python
 data_bytes = fusion_obj.to_bytes(
