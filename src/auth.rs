@@ -16,6 +16,7 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use url::Url;
+use reqwest::StatusCode;
 
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
@@ -701,6 +702,13 @@ impl FusionCredentials {
                         status_code,
                     ))
                 })?;
+
+            if res.status() != StatusCode::OK {
+                return Err(CredentialError::new_err((
+                    format!("APIResponseError: Status code {}", res.status()),
+                    res.status().as_u16() as i32,
+                )));
+            }
 
             let res_text = res.text().await.map_err(|e| {
                 CredentialError::new_err((format!("Could not get response text: {:?}", e), 500))
