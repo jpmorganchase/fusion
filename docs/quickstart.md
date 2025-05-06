@@ -120,7 +120,7 @@ Once you have instantiated the client ``fusion``, running the following cell wil
 ```python
 fusion
 ```
-The output will be:
+The output will be a table containing the available methods along with a short description:
 ```
 Fusion object 
 Available methods:
