@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.13] - 2025-05-06
+* Exception handling improvement
+* Limit Licensing service calls
+* Limit list datasets calls internally
+* Support xml format for distribution type
+* Option to disable disc logging 
+* Remove the job-lib dependency to fix the credentials generating for each download and upload
+* Enable exact search for list datasets
+
 ## [2.0.12] - 2025-04-04
 * Raise error immediately when attempting to download dataset you are not subscribed to
 * Download available format when only one is available and format is set to None
