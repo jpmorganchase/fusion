@@ -26,7 +26,6 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
 from dateutil import parser
-from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
 from rich.progress import (
@@ -90,6 +89,7 @@ RECOGNIZED_FORMATS = [
     "mov",
     "mkv",
     "gz",
+    "xml",
 ]
 
 re_str_1 = re.compile("(.)([A-Z][a-z]+)")
@@ -255,7 +255,6 @@ def parquet_to_table(
         schemas = [
             pq.ParquetDataset(
                 p,
-                use_legacy_dataset=False,
                 filters=filters,
                 filesystem=fs,
                 memory_map=True,
@@ -266,7 +265,6 @@ def parquet_to_table(
         schemas = [
             pq.ParquetDataset(
                 path,
-                use_legacy_dataset=False,
                 filters=filters,
                 filesystem=fs,
                 memory_map=True,
@@ -276,7 +274,6 @@ def parquet_to_table(
     schema = unify_schemas(schemas)
     return pq.ParquetDataset(
         path,
-        use_legacy_dataset=False,
         filters=filters,
         filesystem=fs,
         memory_map=True,
@@ -688,22 +685,22 @@ def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) 
     """
     file_names = [i.split("/")[-1].split(".")[0] for i in paths]
     validation = []
-    all_datasets = {}
     file_seg_cnt = 3
     for i, f_n in enumerate(file_names):
         tmp = f_n.split("__")
         if len(tmp) == file_seg_cnt:
             try:
-                val = tmp[1] in fs_fusion.ls(tmp[1])
+                val = tmp[1] in [i.split("/")[0] for i in fs_fusion.ls(tmp[1])]
             except FileNotFoundError:
                 val = False
             if not val:
                 validation.append(False)
             else:
-                if tmp[1] not in all_datasets:
-                    all_datasets[tmp[1]] = [i.split("/")[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
-
-                val = tmp[0] in all_datasets[tmp[1]]
+                # check if dataset exists
+                try:
+                    val = tmp[0] in js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))["identifier"]
+                except Exception:  # noqa: BLE001
+                    val = False
                 validation.append(val)
         else:
             validation.append(False)
@@ -765,8 +762,6 @@ def upload_files(  # noqa: PLR0913
     fs_fusion: fsspec.AbstractFileSystem,
     fs_local: fsspec.AbstractFileSystem,
     loop: pd.DataFrame,
-    parallel: bool = True,
-    n_par: int = -1,
     multipart: bool = True,
     chunk_size: int = 5 * 2**20,
     show_progress: bool = True,
@@ -780,8 +775,6 @@ def upload_files(  # noqa: PLR0913
         fs_fusion: Fusion filesystem.
         fs_local: Local filesystem.
         loop (pd.DataFrame): DataFrame of files to iterate through.
-        parallel (bool): Is parallel mode enabled.
-        n_par (int): Number of subprocesses.
         multipart (bool): Is multipart upload.
         chunk_size (int): Maximum chunk size.
         show_progress (bool): Show progress bar
@@ -834,28 +827,17 @@ def upload_files(  # noqa: PLR0913
             )
             return (False, path, str(ex))
 
-    if parallel:
-        if show_progress:
-            with joblib_progress("Uploading", total=len(loop)):
-                res = Parallel(n_jobs=n_par, backend="threading")(
-                    delayed(_upload)(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()
-                )
-        else:
-            res = Parallel(n_jobs=n_par, backend="threading")(
-                delayed(_upload)(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()
-            )
+    res: list[tuple[bool, str, str | None] | None] = [None] * len(loop)
+    if show_progress:
+        with Progress() as p:
+            task = p.add_task("Uploading", total=len(loop))
+            for i, (_, row) in enumerate(loop.iterrows()):
+                r = _upload(row["url"], row["path"], row.get("file_name", None))
+                res[i] = r
+                if r[0] is True:
+                    p.update(task, advance=1)
     else:
-        res = [None] * len(loop)
-        if show_progress:
-            with Progress() as p:
-                task = p.add_task("Uploading", total=len(loop))
-                for i, (_, row) in enumerate(loop.iterrows()):
-                    r = _upload(row["url"], row["path"], row.get("file_name", None))
-                    res[i] = r
-                    if r[0] is True:
-                        p.update(task, advance=1)
-        else:
-            res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
+        res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
     return res  # type: ignore
 
@@ -959,12 +941,9 @@ def _is_json(data: str) -> bool:
 
 def requests_raise_for_status(response: requests.Response) -> None:
     """Send response text into raise for status."""
-    if response.status_code == requests.codes.not_found:  # noqa: PLR2004
+    real_reason = ""
+    try:
+        real_reason = response.text
+        response.reason = real_reason
+    finally:
         response.raise_for_status()
-    else:
-        real_reason = ""
-        try:
-            real_reason = response.text
-            response.reason = real_reason
-        finally:
-            response.raise_for_status()

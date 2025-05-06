@@ -15,7 +15,7 @@ from zipfile import ZipFile
 
 import pandas as pd
 import pyarrow as pa
-from joblib import Parallel, delayed
+from rich.progress import Progress
 from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
@@ -35,11 +35,9 @@ from .utils import (
     csv_to_table,
     distribution_to_filename,
     distribution_to_url,
-    # download_single_file_threading,
     get_default_fs,
     get_session,
     is_dataset_raw,
-    joblib_progress,
     json_to_table,
     normalise_dt_param_str,
     parquet_to_table,
@@ -48,7 +46,6 @@ from .utils import (
     read_json,
     read_parquet,
     requests_raise_for_status,
-    # stream_single_file_new_session,
     upload_files,
     validate_file_names,
 )
@@ -111,6 +108,7 @@ class Fusion:
         log_level: int = logging.ERROR,
         fs: fsspec.filesystem = None,
         log_path: str = ".",
+        enable_logging: bool = True,
     ) -> None:
         """Constructor to instantiate a new Fusion object.
 
@@ -124,6 +122,8 @@ class Fusion:
             log_level (int, optional): Set the logging level. Defaults to logging.ERROR.
             fs (fsspec.filesystem): filesystem.
             log_path (str, optional): The folder path where the log is stored.
+            enable_logging (bool, optional): If True, enables logging to a file in addition to stdout.
+                If False, logging is only directed to stdout. Defaults to True.
         """
         self._default_catalog = "common"
 
@@ -131,24 +131,39 @@ class Fusion:
         self.download_folder = download_folder
         Path(download_folder).mkdir(parents=True, exist_ok=True)
 
+        # Always log to stdout, conditionally to file
         if logger.hasHandlers():
             logger.handlers.clear()
-        file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
+
         logging.addLevelName(VERBOSE_LVL, "VERBOSE")
-        stdout_handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
             "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
+
+        # Always add stdout handler
+        stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setFormatter(formatter)
         logger.addHandler(stdout_handler)
-        logger.addHandler(file_handler)
         logger.setLevel(log_level)
+
+        # Optionally add file handler
+        if enable_logging:
+            file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
 
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
         elif isinstance(credentials, str):
-            self.credentials = FusionCredentials.from_file(Path(credentials))
+            try:
+                self.credentials = FusionCredentials.from_file(Path(credentials))
+            except CredentialError as e:
+                if hasattr(e, "status_code"):
+                    message = "Failed to load credentials. Please check the credentials file."
+                    raise APIResponseError(e, message=message) from e
+                else:
+                    raise e
         else:
             raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
 
@@ -337,7 +352,7 @@ class Fusion:
 
         return filtered_df
 
-    def list_datasets(  # noqa: PLR0913
+    def list_datasets(  # noqa: PLR0912, PLR0913
         self,
         contains: str | list[str] | None = None,
         id_contains: bool = False,
@@ -354,7 +369,8 @@ class Fusion:
         Args:
             contains (Union[str, list], optional): A string or a list of strings that are dataset
                 identifiers to filter the datasets list. If a list is provided then it will return
-                datasets whose identifier matches any of the strings. Defaults to None.
+                datasets whose identifier matches any of the strings. If a single dataset identifier is provided and
+                there is an exact match, only that dataset will be returned. Defaults to None.
             id_contains (bool): Filter datasets only where the string(s) are contained in the identifier,
                 ignoring description.
             product (Union[str, list], optional): A string or a list of strings that are product
@@ -372,6 +388,31 @@ class Fusion:
             class:`pandas.DataFrame`: a dataframe with a row for each dataset.
         """
         catalog = self._use_catalog(catalog)
+
+        # try for exact match
+        if contains and isinstance(contains, str):
+            url = f"{self.root_url}catalogs/{catalog}/datasets/{contains}"
+            resp = self.session.get(url)
+            status_success = 200
+            if resp.status_code == status_success:
+                resp_json = resp.json()
+                if not display_all_columns:
+                    cols = [
+                        "identifier",
+                        "title",
+                        "containerType",
+                        "region",
+                        "category",
+                        "coverageStartDate",
+                        "coverageEndDate",
+                        "description",
+                        "status",
+                        "type",
+                    ]
+                    data = {col: resp_json.get(col, None) for col in cols}
+                    return pd.DataFrame([data])
+                else:
+                    return pd.json_normalize(resp_json)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets"
         ds_df = Fusion._call_for_dataframe(url, self.session)
@@ -617,8 +658,11 @@ class Fusion:
 
         if datasetseries_list.empty:
             raise APIResponseError(  # pragma: no cover
-                f"No data available for dataset {dataset}. "
-                f"Check that a valid dataset identifier and date/date range has been set."
+                ValueError(
+                    f"No data available for dataset {dataset}. "
+                    f"Check that a valid dataset identifier and date/date range has been set."
+                ),
+                status_code=404,
             )
 
         if dt_str == "latest":
@@ -649,8 +693,11 @@ class Fusion:
 
         if len(datasetseries_list) == 0:
             raise APIResponseError(  # pragma: no cover
-                f"No data available for dataset {dataset} in catalog {catalog}.\n"
-                f"Check that a valid dataset identifier and date/date range has been set."
+                ValueError(
+                    f"No data available for dataset {dataset} in catalog {catalog}.\n"
+                    f"Check that a valid dataset identifier and date/date range has been set."
+                ),
+                status_code=404,
             )
 
         required_series = list(datasetseries_list["@id"])
@@ -705,7 +752,10 @@ class Fusion:
 
         access_status = dataset_resp.json().get("status")
         if access_status != "Subscribed":
-            raise CredentialError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access.")
+            raise APIResponseError(
+                ValueError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access."),
+                status_code=401,
+            )
 
         valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
 
@@ -783,14 +833,16 @@ class Fusion:
             f"Beginning {len(download_spec)} downloads in batches of {n_par}",
         )
         if show_progress:
-            with joblib_progress("Downloading", total=len(download_spec)):
-                res = Parallel(n_jobs=n_par)(
-                    delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
-                )
+            with Progress() as p:
+                task = p.add_task("Downloading", total=len(download_spec))
+                res = []
+                for spec in download_spec:
+                    r = self.get_fusion_filesystem().download(**spec)
+                    res.append(r)
+                    p.update(task, advance=1)
         else:
-            res = Parallel(n_jobs=n_par)(
-                delayed(self.get_fusion_filesystem().download)(**spec) for spec in download_spec
-            )
+            res = [self.get_fusion_filesystem().download(**spec) for spec in download_spec]
+
         if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
                 if not r[0]:
@@ -961,7 +1013,11 @@ class Fusion:
 
         if len(files) == 0:
             raise APIResponseError(
-                f"No series members for dataset: {dataset} in date or date range: {dt_str} and format: {dataset_format}"
+                Exception(
+                    f"No series members for dataset: {dataset} in date or date range: {dt_str} "
+                    f"and format: {dataset_format}"
+                ),
+                status_code=404,
             )
         if dataset_format in ["parquet", "parq"]:
             data_df = pd_reader(files, **pd_read_kwargs)  # type: ignore
@@ -1110,7 +1166,11 @@ class Fusion:
 
         if len(files) == 0:
             raise APIResponseError(
-                f"No series members for dataset: {dataset} in date or date range: {dt_str} and format: {dataset_format}"
+                Exception(
+                    f"No series members for dataset: {dataset} in date or date range: {dt_str} "
+                    f"and format: {dataset_format}"
+                ),
+                status_code=404,
             )
         if dataset_format in ["parquet", "parq"]:
             tbl = reader(files, **read_kwargs)  # type: ignore
@@ -1120,7 +1180,7 @@ class Fusion:
 
         return tbl
 
-    def upload(  # noqa: PLR0913, PLR0915
+    def upload(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         path: str,
         dataset: str | None = None,
@@ -1196,13 +1256,19 @@ class Fusion:
                 except FileNotFoundError:
                     raise RuntimeError(f"The catalog '{catalog}' does not exist.") from None
 
-                if catalog not in catalog_list or dataset not in [
-                    i.split("/")[-1] for i in fs_fusion.ls(f"{catalog}/datasets")
-                ]:
-                    msg = (
-                        f"File file has not been uploaded, one of the catalog: {catalog} "
-                        f"or dataset: {dataset} does not exit."
-                    )
+                try:
+                    if (
+                        catalog not in [i.split("/")[0] for i in catalog_list]
+                        or not js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["identifier"]
+                    ):
+                        msg = (
+                            f"File file has not been uploaded, one of the catalog: {catalog} "
+                            f"or dataset: {dataset} does not exist."
+                        )
+                        warnings.warn(msg, stacklevel=2)
+                        return [(False, path, msg)]
+                except Exception as e:  # noqa: BLE001
+                    msg = f"An error occurred while checking the dataset: {str(e)}"
                     warnings.warn(msg, stacklevel=2)
                     return [(False, path, msg)]
                 file_format = path.split(".")[-1]
@@ -1221,13 +1287,10 @@ class Fusion:
             data_map_df.columns = pd.Index(["path", "url", "file_name"])
 
         n_par = cpu_count(n_par)
-        parallel = len(data_map_df) > 1
         res = upload_files(
             fs_fusion,
             self.fs,
             data_map_df,
-            parallel=parallel,
-            n_par=n_par,
             multipart=multipart,
             chunk_size=chunk_size,
             show_progress=show_progress,
@@ -1298,8 +1361,6 @@ class Fusion:
             fs_fusion,
             data,
             data_map_df,
-            parallel=False,
-            n_par=1,
             multipart=multipart,
             chunk_size=chunk_size,
             show_progress=show_progress,
