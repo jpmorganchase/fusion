@@ -40,11 +40,9 @@ def test__url_to_path() -> None:
 
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
 @patch("fsspec.AbstractFileSystem", autospec=True)
-@patch("fusion.fs_sync.Parallel")
-@patch("fusion.fs_sync.delayed")
+@patch("fusion.fs_sync.Progress")
 def test_download(
-    mock_delayed: mock.Mock,
-    mock_parallel: mock.Mock,
+    mock_progress: MagicMock,
     mock_fs_class: mock.AsyncMock,
     mock_set_session: mock.AsyncMock,  # noqa: ARG001
     example_creds_dict: dict[str, Any],
@@ -71,26 +69,20 @@ def test_download(
         }
     )
 
-    # Mock the delayed function to return the function itself
-    mock_delayed.side_effect = lambda func, *args, **kwargs: func  # noqa: ARG005
+    expected_result = (True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)
+    # Mock the fs.download method
+    with patch.object(fs, "download", return_value=expected_result):
+        res = _download(fs, lfs, input_df)
+    # Set up mock progress bar behavior
+    mock_progress_instance = mock_progress.return_value.__enter__.return_value
+    mock_progress_instance.add_task.return_value = "fake_task"
 
-    # Mock the Parallel object to return a callable that returns the expected result
-    mock_parallel.return_value = lambda *args, **kwargs: [  # noqa: ARG005
-        (True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)
-    ]
-
-    res = _download(fs, lfs, input_df, n_par=16)
-
-    assert res == [(True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)]
+    assert res == [expected_result]
 
 
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
 @patch("fsspec.AbstractFileSystem", autospec=True)
-@patch("fusion.fs_sync.Parallel")
-@patch("fusion.fs_sync.delayed")
 def test_download_no_progress(
-    mock_delayed: mock.Mock,
-    mock_parallel: mock.Mock,
     mock_fs_class: mock.AsyncMock,
     mock_set_session: mock.AsyncMock,  # noqa: ARG001
     example_creds_dict: dict[str, Any],
@@ -117,17 +109,11 @@ def test_download_no_progress(
         }
     )
 
-    # Mock the delayed function to return the function itself
-    mock_delayed.side_effect = lambda func, *args, **kwargs: func  # noqa: ARG005
+    expected_result = (True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)
+    with patch.object(fs, "download", return_value=expected_result):
+        res = _download(fs, lfs, input_df, show_progress=False)
 
-    # Mock the Parallel object to return a callable that returns the expected result
-    mock_parallel.return_value = lambda *args, **kwargs: [  # noqa: ARG005
-        (True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)
-    ]
-
-    res = _download(fs, lfs, input_df, n_par=16, show_progress=False)
-
-    assert res == [(True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)]
+    assert res == [expected_result]
 
 
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
@@ -159,7 +145,7 @@ def test_download_empty_df(
         }
     )
 
-    res = _download(fs, lfs, input_df, n_par=16)
+    res = _download(fs, lfs, input_df)
 
     assert res == []
 
@@ -193,7 +179,7 @@ def test_upload(
         }
     )
 
-    res = _upload(fs, lfs, input_df, n_par=16, show_progress=False)
+    res = _upload(fs, lfs, input_df, show_progress=False)
 
     assert res
 

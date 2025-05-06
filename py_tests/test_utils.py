@@ -1,4 +1,5 @@
 import io
+import json as js
 import multiprocessing as mp
 import tempfile
 from collections.abc import Generator
@@ -619,6 +620,7 @@ def mock_fs_fusion() -> MagicMock:
         "catalog1/datasets": ["dataset1", "dataset2"],
         "catalog2/datasets": ["dataset3"],
     }.get(path, [])
+    fs.cat.side_effect = lambda _: js.dumps({"identifier": "dataset1"})
     return fs
 
 
@@ -752,14 +754,14 @@ def test_upload_public(
 ) -> None:
     fs_fusion, fs_local = setup_fs
 
-    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=True, parallel=False)
+    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=True)
     assert res
-    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=False)
+    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False)
     assert res
 
     fs_local.size.return_value = 5 * 2**20
     fs_local = io.BytesIO(b"some data to simulate file content" * 100)
-    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=False)
+    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False)
     assert res
 
 
@@ -768,12 +770,12 @@ def test_upload_public_parallel(
 ) -> None:
     fs_fusion, fs_local = setup_fs
 
-    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=True)
+    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False)
     assert res
 
     fs_local.size.return_value = 5 * 2**20
     fs_local = io.BytesIO(b"some data to simulate file content" * 100)
-    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False, parallel=True)
+    res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=False)
     assert res
 
 

@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import fsspec
 import pytest
+from requests.adapters import HTTPAdapter
 
 from fusion._fusion import FusionCredentials
 from fusion._legacy.authentication import (
@@ -18,7 +19,7 @@ from fusion._legacy.authentication import (
 from fusion.authentication import (
     FusionOAuthAdapter,
 )
-from fusion.exceptions import CredentialError
+from fusion.exceptions import APIResponseError, CredentialError
 from fusion.utils import (
     get_default_fs,
 )
@@ -221,3 +222,45 @@ def test_client_from_env_vars(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
 
     assert creds.client_id == client_id
     assert creds.client_secret == client_secret
+
+
+def test_send_raises_api_response_error_on_generic_exception() -> None:
+    request = Mock()
+    request.url = "https://example.com/data"
+    request.headers = {}
+
+    mock_credentials = Mock(spec=FusionCredentials)
+    mock_credentials.get_fusion_token_headers.return_value = {}
+
+    adapter = FusionOAuthAdapter(credentials=mock_credentials)
+
+    with (
+        patch.object(HTTPAdapter, "send", side_effect=RuntimeError("Unexpected failure")),
+        pytest.raises(APIResponseError) as exc_info,
+    ):
+        adapter.send(request)
+
+    assert "Unexpected error while sending request" in str(exc_info.value)
+    HTTP_STATUS_INTERNAL_SERVER_ERROR = 500
+    assert exc_info.value.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
+
+
+def test_send_raises_api_response_error_on_connection_error() -> None:
+    request = Mock()
+    request.url = "https://example.com/data"
+    request.headers = {}
+
+    mock_credentials = Mock(spec=FusionCredentials)
+    mock_credentials.get_fusion_token_headers.return_value = {}
+
+    adapter = FusionOAuthAdapter(credentials=mock_credentials)
+
+    with (
+        patch.object(HTTPAdapter, "send", side_effect=ConnectionError("Connection failed")),
+        pytest.raises(APIResponseError) as exc_info,
+    ):
+        adapter.send(request)
+
+    assert "Connection error while sending request" in str(exc_info.value)
+    HTTP_STATUS_SERVICE_UNAVAILABLE = 503
+    assert exc_info.value.status_code == HTTP_STATUS_SERVICE_UNAVAILABLE
