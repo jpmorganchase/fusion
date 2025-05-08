@@ -20,6 +20,8 @@ from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute, Attributes
+from fusion.report_attributes import ReportAttribute, ReportAttributes
+
 from fusion.dataflow import InputDataFlow, OutputDataFlow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
@@ -2037,7 +2039,69 @@ class Fusion:
         """
         attributes_obj = Attributes(attributes=attributes or [])
         attributes_obj.client = self
+        return attributes_obj 
+    
+    def report_attribute(
+        self,
+        name: str,
+        title: str,
+        description: Optional[str] = None,
+        technicalDataType: Optional[str] = None,
+        path: Optional[str] = None,
+        dataPublisher: Optional[str] = None,
+        ) -> ReportAttribute:
+        """Instantiate a ReportAttribute object with this client for metadata creation.
+
+        Args:
+            name (str): The unique name of the attribute. Mandatory.
+            title (str): The display title of the attribute. Mandatory.
+            description (str, optional): Description of the attribute. Defaults to None.
+            technicalDataType (str, optional): The technical data type. Defaults to None.
+            path (str, optional): The hierarchical path for the attribute. Defaults to None.
+            dataPublisher (str, optional): The publisher of the data. Defaults to None.
+
+        Returns:
+            ReportAttribute: A new ReportAttribute instance connected to this client.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.report_attribute(name="region_code", title="Region Code")
+        """
+        attribute_obj = ReportAttribute(
+            name=name,
+            title=title,
+            description=description,
+            technicalDataType=technicalDataType,
+            path=path,
+            dataPublisher=dataPublisher,
+        )
+        attribute_obj.client = self
+        return attribute_obj
+    
+    def report_attributes(
+        self,
+        attributes: Optional[list[ReportAttribute]] = None,
+    ) -> ReportAttributes:
+        """Instantiate a ReportAttributes collection with this client for managing multiple attributes.
+
+        Args:
+            attributes (list[ReportAttribute] | None, optional): List of ReportAttribute instances. Defaults to None.
+
+        Returns:
+            ReportAttributes: A ReportAttributes collection object with client attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr1 = fusion.report_attribute(name="code", title="Code")
+            >>> attr2 = fusion.report_attribute(name="label", title="Label")
+            >>> attrs = fusion.report_attributes([attr1, attr2])
+        """
+        attributes_obj = ReportAttributes(attributes=attributes or [])
+        attributes_obj.client = self
         return attributes_obj
+        
+
+   
 
     def delete_datasetmembers(
         self,
