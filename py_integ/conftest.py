@@ -6,7 +6,7 @@ from fusion._fusion import FusionCredentials
 from fusion.fusion import Fusion
 
 
-@pytest.fixture()
+@pytest.fixture
 def creds() -> FusionCredentials:
     return FusionCredentials.from_client_id(
         client_id=os.getenv("FUSION_CLIENT_ID"),
@@ -18,7 +18,7 @@ def creds() -> FusionCredentials:
     )
 
 
-@pytest.fixture()
+@pytest.fixture
 def client(creds: FusionCredentials) -> Fusion:
     client = Fusion(credentials=creds)
     return client

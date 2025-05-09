@@ -1,13 +1,11 @@
 from __future__ import annotations
+
 import hashlib
 import shutil
-from pathlib import Path
-from typing import Optional
-from functools import partial
-from fusion import Fusion
-import pandas as pd
-
 from dataclasses import dataclass
+from pathlib import Path
+
+from fusion import Fusion
 
 
 @dataclass

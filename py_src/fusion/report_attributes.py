@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Any, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
+import pandas as pd
 
 from fusion.utils import (
     CamelCaseMeta,
     camel_to_snake,
-    snake_to_camel,
     requests_raise_for_status,
 )
 
 if TYPE_CHECKING:
     import requests
+
     from fusion import Fusion
 
 
@@ -28,12 +32,12 @@ class ReportAttribute(metaclass=CamelCaseMeta):
 
     name: str
     title: str
-    description: Optional[str] = None
-    technicalDataType: Optional[str] = None
-    path: Optional[str] = None
-    dataPublisher: Optional[str] = None
+    description: str | None = None
+    technicalDataType: str | None = None
+    path: str | None = None
+    dataPublisher: str | None = None
 
-    _client: Optional["Fusion"] = field(init=False, repr=False, compare=False, default=None)
+    _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __str__(self) -> str:
         """String representation of ReportAttribute."""
@@ -60,21 +64,17 @@ class ReportAttribute(metaclass=CamelCaseMeta):
             self.__dict__[snake_name] = value
 
     @property
-    def client(self) -> Optional["Fusion"]:
+    def client(self) -> Fusion | None:
         """Return the Fusion client."""
         return self._client
 
     @client.setter
-    def client(self, client: Optional["Fusion"]) -> None:
+    def client(self, client: Fusion | None) -> None:
         """Set the Fusion client."""
         self._client = client
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert the object to a dictionary for API calls.
-
-        Returns:
-            dict[str, Any]: Attribute metadata as a dictionary.
-        """
+        """Convert the object to a dictionary for API calls."""
         return {
             "name": self.name,
             "title": self.title,
@@ -87,21 +87,11 @@ class ReportAttribute(metaclass=CamelCaseMeta):
     def create(
         self,
         dataset: str,
-        catalog: Optional[str] = None,
-        client: Optional["Fusion"] = None,
+        catalog: str | None = None,
+        client: Fusion | None = None,
         return_resp_obj: bool = False,
-    ) -> Optional["requests.Response"]:
-        """Upload a new ReportAttribute to a Fusion catalog.
-
-        Args:
-            dataset (str): Dataset identifier.
-            catalog (str, optional): Catalog identifier. Defaults to None.
-            client (Fusion, optional): A Fusion client object. Defaults to instance's client.
-            return_resp_obj (bool, optional): If True, returns the response object.
-
-        Returns:
-            Optional[requests.Response]: The response object if return_resp_obj is True, otherwise None.
-        """
+    ) -> requests.Response | None:
+        """Upload a new ReportAttribute to a Fusion catalog."""
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         data = self.to_dict()
@@ -113,21 +103,11 @@ class ReportAttribute(metaclass=CamelCaseMeta):
     def delete(
         self,
         dataset: str,
-        catalog: Optional[str] = None,
-        client: Optional["Fusion"] = None,
+        catalog: str | None = None,
+        client: Fusion | None = None,
         return_resp_obj: bool = False,
-    ) -> Optional["requests.Response"]:
-        """Delete a ReportAttribute from a Fusion catalog.
-
-        Args:
-            dataset (str): Dataset identifier.
-            catalog (str, optional): Catalog identifier. Defaults to None.
-            client (Fusion, optional): A Fusion client object. Defaults to instance's client.
-            return_resp_obj (bool, optional): If True, returns the response object.
-
-        Returns:
-            Optional[requests.Response]: The response object if return_resp_obj is True, otherwise None.
-        """
+    ) -> requests.Response | None:
+        """Delete a ReportAttribute from a Fusion catalog."""
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{self.name}"
@@ -135,33 +115,20 @@ class ReportAttribute(metaclass=CamelCaseMeta):
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
-    def _use_client(self, client: Optional["Fusion"]) -> "Fusion":
-        """Get the Fusion client (internal helper).
-
-        Raises:
-            ValueError: If no client is available.
-
-        Returns:
-            Fusion: Fusion client object.
-        """
+    def _use_client(self, client: Fusion | None) -> Fusion:
+        """Get the Fusion client (internal helper)."""
         res = self._client if client is None else client
         if res is None:
             raise ValueError("A Fusion client object is required.")
         return res
-    
 
 
 @dataclass
 class ReportAttributes:
-    """Class representing a collection of ReportAttribute instances for managing attribute metadata in a Fusion catalog.
-
-    Attributes:
-        attributes (list[ReportAttribute]): List of ReportAttribute instances.
-        _client (Fusion | None): Fusion client object.
-    """
+    """Class representing a collection of ReportAttribute instances for managing attribute metadata."""
 
     attributes: list[ReportAttribute] = field(default_factory=list)
-    _client: Optional[Fusion] = None
+    _client: Fusion | None = None
 
     def __str__(self) -> str:
         """String representation of the ReportAttributes collection."""
@@ -175,16 +142,16 @@ class ReportAttributes:
         return self.__str__()
 
     @property
-    def client(self) -> Optional[Fusion]:
+    def client(self) -> Fusion | None:
         """Return the Fusion client."""
         return self._client
 
     @client.setter
-    def client(self, client: Optional[Fusion]) -> None:
+    def client(self, client: Fusion | None) -> None:
         """Set the Fusion client."""
         self._client = client
 
-    def _use_client(self, client: Optional[Fusion]) -> Fusion:
+    def _use_client(self, client: Fusion | None) -> Fusion:
         """Determine client."""
         res = self._client if client is None else client
         if res is None:
@@ -203,7 +170,7 @@ class ReportAttributes:
                 return True
         return False
 
-    def get_attribute(self, name: str) -> Optional[ReportAttribute]:
+    def get_attribute(self, name: str) -> ReportAttribute | None:
         """Get a ReportAttribute instance from the collection by name."""
         for attr in self.attributes:
             if attr.name == name:
@@ -215,15 +182,15 @@ class ReportAttributes:
         return {"attributes": [attr.to_dict() for attr in self.attributes]}
 
     @classmethod
-    def _from_dict_list(cls, data: list[dict[str, Any]]) -> "ReportAttributes":
+    def _from_dict_list(cls, data: list[dict[str, Any]]) -> ReportAttributes:
         """Create a ReportAttributes instance from a list of dictionaries."""
         attributes = [ReportAttribute(**attr_data) for attr_data in data]
         return ReportAttributes(attributes=attributes)
 
     @classmethod
-    def _from_dataframe(cls, data: pd.DataFrame) -> "ReportAttributes":
+    def _from_dataframe(cls, data: pd.DataFrame) -> ReportAttributes:
         """Create a ReportAttributes instance from a pandas DataFrame."""
-        data = data.where(data.notnull(), None)
+        data = data.where(data.notna(), None)
         attributes = [
             ReportAttribute(**series.dropna().to_dict())
             for _, series in data.iterrows()
@@ -232,9 +199,11 @@ class ReportAttributes:
 
     def from_object(
         self,
-        attributes_source: list[ReportAttribute] | list[dict[str, Any]] | pd.DataFrame,
-    ) -> "ReportAttributes":
-        """Instantiate a ReportAttributes object from a list of ReportAttribute objects, dictionaries, or pandas DataFrame."""
+        attributes_source: list[ReportAttribute]
+        | list[dict[str, Any]]
+        | pd.DataFrame,
+    ) -> ReportAttributes:
+        """Instantiate a ReportAttributes object from a list of objects, dicts, or a DataFrame."""
         if isinstance(attributes_source, list):
             if all(isinstance(attr, ReportAttribute) for attr in attributes_source):
                 attributes = ReportAttributes(attributes=attributes_source)
@@ -257,9 +226,9 @@ class ReportAttributes:
     def from_catalog(
         self,
         dataset: str,
-        catalog: Optional[str] = None,
-        client: Optional[Fusion] = None
-    ) -> "ReportAttributes":
+        catalog: str | None = None,
+        client: Fusion | None = None,
+    ) -> ReportAttributes:
         """Instantiate a ReportAttributes object from a dataset's attributes in a Fusion catalog."""
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
@@ -273,10 +242,10 @@ class ReportAttributes:
     def create(
         self,
         dataset: str,
-        catalog: Optional[str] = None,
-        client: Optional[Fusion] = None,
+        catalog: str | None = None,
+        client: Fusion | None = None,
         return_resp_obj: bool = False,
-    ) -> Optional[requests.Response]:
+    ) -> requests.Response | None:
         """Upload the ReportAttributes to a dataset in a Fusion catalog."""
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
@@ -289,8 +258,8 @@ class ReportAttributes:
     def delete(
         self,
         dataset: str,
-        catalog: Optional[str] = None,
-        client: Optional[Fusion] = None,
+        catalog: str | None = None,
+        client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> list[requests.Response] | None:
         """Delete the ReportAttributes from a Fusion catalog."""
