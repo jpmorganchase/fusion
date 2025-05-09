@@ -10,7 +10,7 @@ import sys
 import warnings
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
 
 import pandas as pd
@@ -20,13 +20,12 @@ from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute, Attributes
-from fusion.report_attributes import ReportAttribute, ReportAttributes
-
 from fusion.dataflow import InputDataFlow, OutputDataFlow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
 from fusion.report import Report
+from fusion.report_attributes import ReportAttribute, ReportAttributes
 
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError, CredentialError, FileFormatError
@@ -2042,45 +2041,46 @@ class Fusion:
         return attributes_obj 
     
     def report_attribute(
-        self,
-        name: str,
-        title: str,
-        description: Optional[str] = None,
-        technicalDataType: Optional[str] = None,
-        path: Optional[str] = None,
-        dataPublisher: Optional[str] = None,
-        ) -> ReportAttribute:
-        """Instantiate a ReportAttribute object with this client for metadata creation.
+    self,
+    name: str,
+    title: str,
+    description: str | None = None,
+    technicalDataType: str | None = None,
+    path: str | None = None,
+    dataPublisher: str | None = None,
+    ) -> ReportAttribute:
+            """Instantiate a ReportAttribute object with this client for metadata creation.
 
-        Args:
-            name (str): The unique name of the attribute. Mandatory.
-            title (str): The display title of the attribute. Mandatory.
-            description (str, optional): Description of the attribute. Defaults to None.
-            technicalDataType (str, optional): The technical data type. Defaults to None.
-            path (str, optional): The hierarchical path for the attribute. Defaults to None.
-            dataPublisher (str, optional): The publisher of the data. Defaults to None.
+            Args:
+                name (str): The unique name of the attribute. Mandatory.
+                title (str): The display title of the attribute. Mandatory.
+                description (str | None, optional): Description of the attribute. Defaults to None.
+                technicalDataType (str | None, optional): The technical data type. Defaults to None.
+                path (str | None, optional): The hierarchical path for the attribute. Defaults to None.
+                dataPublisher (str | None, optional): The publisher of the data. Defaults to None.
 
-        Returns:
-            ReportAttribute: A new ReportAttribute instance connected to this client.
+            Returns:
+                ReportAttribute: A new ReportAttribute instance connected to this client.
 
-        Example:
-            >>> fusion = Fusion()
-            >>> attr = fusion.report_attribute(name="region_code", title="Region Code")
-        """
-        attribute_obj = ReportAttribute(
-            name=name,
-            title=title,
-            description=description,
-            technicalDataType=technicalDataType,
-            path=path,
-            dataPublisher=dataPublisher,
-        )
-        attribute_obj.client = self
-        return attribute_obj
-    
+            Example:
+                >>> fusion = Fusion()
+                >>> attr = fusion.report_attribute(name="region_code", title="Region Code")
+            """
+            attribute_obj = ReportAttribute(
+                name=name,
+                title=title,
+                description=description,
+                technicalDataType=technicalDataType,
+                path=path,
+                dataPublisher=dataPublisher,
+            )
+            attribute_obj.client = self
+            return attribute_obj
+
+
     def report_attributes(
         self,
-        attributes: Optional[list[ReportAttribute]] = None,
+        attributes: list[ReportAttribute] | None = None,
     ) -> ReportAttributes:
         """Instantiate a ReportAttributes collection with this client for managing multiple attributes.
 
@@ -2099,7 +2099,7 @@ class Fusion:
         attributes_obj = ReportAttributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
-        
+
 
    
 
