@@ -196,6 +196,20 @@ class ReportAttributes:
             for _, series in data.iterrows()
         ]
         return ReportAttributes(attributes=attributes)
+    
+    @classmethod
+    def _from_csv(cls: type[ReportAttributes], file_path: str) -> ReportAttributes:
+        """Instantiate a ReportAttributes object from a CSV file.
+
+        Args:
+            file_path (str): Path to the CSV file.
+
+        Returns:
+            ReportAttributes: A collection of ReportAttribute objects.
+        """
+        data = pd.read_csv(file_path)
+        return cls._from_dataframe(data)
+
 
     def from_object(
         self,
