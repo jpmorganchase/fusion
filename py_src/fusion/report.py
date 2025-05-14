@@ -7,7 +7,6 @@ from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-import requests
 
 from .utils import (
     CamelCaseMeta,
@@ -19,6 +18,8 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    import requests
+
     from fusion import Fusion
 
 
@@ -103,7 +104,7 @@ class Report(metaclass=CamelCaseMeta):
     def __post_init__(self) -> None:
         self.name = tidy_string(self.name).upper().replace(" ", "_")
         self.title = tidy_string(self.title)
-        self.description = tidy_string(self.title)
+        self.description = tidy_string(self.description if self.description else self.title)
         self.is_bcbs239_program = make_bool(self.is_bcbs239_program)
 
     def __getattr__(self, name: str) -> Any:
@@ -229,15 +230,15 @@ class Report(metaclass=CamelCaseMeta):
 
         report.client = self._client
         return report
-    
+
     def create(
-    self,    
-    client: Fusion | None = None,
-    return_resp_obj: bool = False,
-) -> requests.Response | None:
+        self,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Upload a new report to a Fusion catalog.
 
-        Args:            
+        Args:
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
                 If instantiated from a Fusion object, then the client is set automatically.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
@@ -259,16 +260,11 @@ class Report(metaclass=CamelCaseMeta):
 
         """
         client = self._use_client(client)
-        
-        # Set default dates if not provided
-        # self.created_date = self.created_date or pd.Timestamp("today").strftime("%Y-%m-%d")
-        # self.modified_date = self.modified_date or pd.Timestamp("today").strftime("%Y-%m-%d")
 
         data = self.to_dict()
 
-        url = f"{client.root_url}/corelineage-service/api/v1/reports"
+        url = f"{client.root_url}/api/corelineage-service/v1/reports"
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
-

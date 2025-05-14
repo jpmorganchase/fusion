@@ -2154,8 +2154,6 @@ def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -
 
 
 def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCredentials) -> None:
-    
-
     # Clear logger handlers to avoid contamination
     logger.handlers.clear()
 
