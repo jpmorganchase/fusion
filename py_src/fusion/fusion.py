@@ -2702,3 +2702,123 @@ class Fusion:
 
         members_df = pd.DataFrame(data, columns=["identifier", "format"])
         return members_df
+    
+    def report(
+        self,
+        name: str,
+        tier_type: str,
+        alternate_id: str,
+        data_node_id: dict[str, str],
+        alternative_id: dict[str, str],
+        data_model_id: dict[str, str],
+        title: str = "",
+        frequency: str = "",
+        category: str = "",
+        sub_category: str = "",
+        report_inventory_name: str = "",
+        report_owner: str = "",
+        lob: str = "",
+        sub_lob: str = "",
+        is_bcbs239_program: bool = False,
+        risk_area: str = "",
+        riskstripe: str = "",
+        sap_code: str = "",
+        domain: str = "",
+        sourced_object: str = "",
+        id: str = "",
+        description: str = "",
+        report_inventory_id: str = "",
+        created_service: str = "",
+        originator_firm_id: str = "",
+        is_instance: bool = False,
+        version: str = "",
+        status: str = "",
+        created_by: str = "",
+        created_datetime: str = "",
+        modified_by: str = "",
+        modified_datetime: str = "",
+        approved_by: str = "",
+        approved_datetime: str = "",        
+        **kwargs: Any,
+    ) -> Report:
+        """Instantiate a Report object with this client for metadata creation.
+
+        Args:
+            name (str): Name of the report.
+            tier_type (str): Tier type classification.
+            alternate_id (str): Alternate ID used to identify the report.
+            data_node_id (dict[str, str]): Associated data node identifier (as a dictionary).
+            title (str, optional): Report title.
+            frequency (str, optional): Frequency of the report.
+            category (str, optional): High-level category of the report.
+            sub_category (str, optional): Sub-category of the report.
+            report_inventory_name (str, optional): Inventory name for internal tracking.
+            report_owner (str, optional): Name of the report owner.
+            lob (str, optional): Line of business.
+            sub_lob (str, optional): Sub line of business.
+            is_bcbs239_program (bool, optional): Flag for BCBS 239 compliance. Defaults to False.
+            risk_area (str, optional): Risk area associated with the report.
+            riskstripe (str, optional): Riskstripe code.
+            sap_code (str, optional): SAP code.
+            domain (str, optional): Domain classification.
+            sourced_object (str, optional): Source object reference.
+            alternative_id (dict[str, str], optional): Alternate identifiers map.
+            data_model_id (dict[str, str], optional): Associated data model.
+            d (str, optional): Unique identifier for the report.
+            description (str, optional): Description of the report.
+            report_inventory_id (str, optional): Internal report inventory ID.
+            created_service (str, optional): Originating service name.
+            originator_firm_id (str, optional): ID of the originating firm.
+            is_instance (bool, optional): Whether this is a report instance.
+            version (str, optional): Version of the report.
+            status (str, optional): Status of the report.
+            created_by (str, optional): Creator's identifier.
+            created_datetime (str, optional): Timestamp of creation.
+            modified_by (str, optional): Last modifier's identifier.
+            modified_datetime (str, optional): Timestamp of last modification.
+            approved_by (str, optional): Approver's identifier.
+            approved_datetime (str, optional): Timestamp of approval.
+            kwargs (Any): Additional fields.
+
+        Returns:
+            Report: Fusion Report class instance.
+        """
+        report_obj = Report(
+            name=name,
+            title=title,
+            alternate_id=alternate_id,
+            tier_type=tier_type,
+            frequency=frequency,
+            category=category,
+            sub_category=sub_category,
+            report_inventory_name=report_inventory_name,
+            report_owner=report_owner,
+            lob=lob,
+            sub_lob=sub_lob,
+            is_bcbs239_program=is_bcbs239_program,
+            risk_area=risk_area,
+            riskstripe=riskstripe,
+            sap_code=sap_code,
+            domain=domain,
+            sourced_object=sourced_object,
+            alternative_id=alternative_id,
+            data_model_id=data_model_id,
+            data_node_id=data_node_id,
+            id=id,
+            description=description,
+            report_inventory_id=report_inventory_id,
+            created_service=created_service,
+            originator_firm_id=originator_firm_id,
+            is_instance=is_instance,
+            version=version,
+            status=status,
+            created_by=created_by,
+            created_datetime=created_datetime,
+            modified_by=modified_by,
+            modified_datetime=modified_datetime,
+            approved_by=approved_by,
+            approved_datetime=approved_datetime,
+            **kwargs,
+        )
+        report_obj.client = self
+        return report_obj
