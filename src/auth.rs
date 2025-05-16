@@ -16,7 +16,6 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use url::Url;
-use reqwest::StatusCode;
 
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
@@ -720,12 +719,9 @@ impl FusionCredentials {
         let token = response["access_token"]
             .as_str()
             .ok_or_else(|| {
-                CredentialError::new_err((
-                    "Missing access_token in generate token response",
-                    500,
-                ))
-    })?
-    .to_string();
+                CredentialError::new_err(("Missing access_token in generate token response", 500))
+            })?
+            .to_string();
         let expires_in_secs = response["expires_in"].as_i64();
         match expires_in_secs {
             Some(expires_in_secs) => {

@@ -220,7 +220,7 @@ def test_catalog_resources_success(requests_mock: requests_mock.Mocker, fusion_o
     # Mock the response from the API endpoint
 
     new_catalog = "catalog_id"
-    url = f"{fusion_obj.root_url}catalogs/{new_catalog}"
+    url = f"{fusion_obj.root_url}/api/v1/catalogs/{new_catalog}"
     expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
     requests_mock.get(url, json=expected_data)
 
@@ -2154,8 +2154,6 @@ def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -
 
 
 def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCredentials) -> None:
-    
-
     # Clear logger handlers to avoid contamination
     logger.handlers.clear()
 
