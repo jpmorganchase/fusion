@@ -103,7 +103,7 @@ class Fusion:
     def __init__(
         self,
         credentials: str | FusionCredentials = "config/client_credentials.json",
-        root_url: str = "https://fusion.jpmorgan.com/api/v1/",
+        root_url: str = "https://fusion.jpmorgan.com",
         download_folder: str = "downloads",
         log_level: int = logging.ERROR,
         fs: fsspec.filesystem = None,
@@ -116,7 +116,7 @@ class Fusion:
             credentials (Union[str, FusionCredentials]): A path to a credentials file or a fully populated
             FusionCredentials object. Defaults to 'config/client_credentials.json'.
             root_url (_type_, optional): The API root URL.
-                Defaults to "https://fusion.jpmorgan.com/api/v1/".
+                Defaults to "https://fusion.jpmorgan.com".
             download_folder (str, optional): The folder path where downloaded data files
                 are saved. Defaults to "downloads".
             log_level (int, optional): Set the logging level. Defaults to logging.ERROR.
