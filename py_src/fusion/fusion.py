@@ -275,7 +275,7 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url = f"{self.root_url}catalogs/{catalog}"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}"
         cat_df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
@@ -312,7 +312,7 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url = f"{self.root_url}catalogs/{catalog}/products"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/products"
         full_prod_df: pd.DataFrame = Fusion._call_for_dataframe(url, self.session)
 
         if contains:
@@ -391,7 +391,7 @@ class Fusion:
 
         # try for exact match
         if contains and isinstance(contains, str):
-            url = f"{self.root_url}catalogs/{catalog}/datasets/{contains}"
+            url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{contains}"
             resp = self.session.get(url)
             status_success = 200
             if resp.status_code == status_success:
@@ -414,7 +414,7 @@ class Fusion:
                 else:
                     return pd.json_normalize(resp_json)
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets"
         ds_df = Fusion._call_for_dataframe(url, self.session)
 
         if contains:
@@ -429,7 +429,7 @@ class Fusion:
                 ]
 
         if product:
-            url = f"{self.root_url}catalogs/{catalog}/productDatasets"
+            url = f"{self.root_url}/api/v1/catalogs/{catalog}/productDatasets"
             prd_df = Fusion._call_for_dataframe(url, self.session)
             prd_df = (
                 prd_df[prd_df["product"] == product]
@@ -483,7 +483,7 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{dataset}"
         ds_res_df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
@@ -512,7 +512,7 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{dataset}/attributes"
         ds_attr_df = Fusion._call_for_dataframe(url, self.session)
 
         if "index" in ds_attr_df.columns:
@@ -558,7 +558,7 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{dataset}/datasetseries"
         ds_members_df = Fusion._call_for_dataframe(url, self.session)
 
         if max_results > -1:
@@ -590,7 +590,7 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}"
         ds_mem_res_df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
@@ -618,7 +618,7 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}/distributions"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{dataset}/datasetseries/{series}/distributions"
         distros_df = Fusion._call_for_dataframe(url, self.session)
 
         if output:
@@ -747,7 +747,7 @@ class Fusion:
         catalog = self._use_catalog(catalog)
 
         # check access to the dataset
-        dataset_resp = self.session.get(f"{self.root_url}catalogs/{catalog}/datasets/{dataset}")
+        dataset_resp = self.session.get(f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{dataset}")
         requests_raise_for_status(dataset_resp)
 
         access_status = dataset_resp.json().get("status")
@@ -1540,11 +1540,11 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url_dataset = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}"
+        url_dataset = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{dataset_id}"
         resp_dataset = self.session.get(url_dataset)
         resp_dataset.raise_for_status()
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}/lineage"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{dataset_id}/lineage"
         resp = self.session.get(url)
         data = resp.json()
         relations_data = data["relations"]
@@ -1656,7 +1656,7 @@ class Fusion:
             raise ValueError("source_dataset_catalog_mapping must be a pandas DataFrame or a list of dictionaries.")
         data = {"source": dataset_mapping_list}
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{base_dataset}/lineage"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{base_dataset}/lineage"
 
         resp = self.session.post(url, json=data)
 
@@ -1685,7 +1685,7 @@ class Fusion:
             pd.DataFrame: a dataframe with a row  for each dataset to product mapping.
         """
         catalog = self._use_catalog(catalog)
-        url = f"{self.root_url}catalogs/{catalog}/productDatasets"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/productDatasets"
         mapping_df = pd.DataFrame(self._call_for_dataframe(url, self.session))
 
         if dataset:
@@ -2039,6 +2039,65 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
 
+    def report_attribute(
+        self,
+        name: str,
+        title: str,
+        description: str | None = None,
+        technicalDataType: str | None = None,
+        path: str | None = None,
+        dataPublisher: str | None = None,
+    ) -> ReportAttribute:
+        """Instantiate a ReportAttribute object with this client for metadata creation.
+
+        Args:
+            name (str): The unique name of the attribute. Mandatory.
+            title (str): The display title of the attribute. Mandatory.
+            description (str | None, optional): Description of the attribute. Defaults to None.
+            technicalDataType (str | None, optional): The technical data type. Defaults to None.
+            path (str | None, optional): The hierarchical path for the attribute. Defaults to None.
+            dataPublisher (str | None, optional): The publisher of the data. Defaults to None.
+
+        Returns:
+            ReportAttribute: A new ReportAttribute instance connected to this client.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.report_attribute(name="region_code", title="Region Code")
+        """
+        attribute_obj = ReportAttribute(
+            name=name,
+            title=title,
+            description=description,
+            technicalDataType=technicalDataType,
+            path=path,
+            dataPublisher=dataPublisher,
+        )
+        attribute_obj.client = self
+        return attribute_obj
+
+    def report_attributes(
+        self,
+        attributes: list[ReportAttribute] | None = None,
+    ) -> ReportAttributes:
+        """Instantiate a ReportAttributes collection with this client for managing multiple attributes.
+
+        Args:
+            attributes (list[ReportAttribute] | None, optional): List of ReportAttribute instances. Defaults to None.
+
+        Returns:
+            ReportAttributes: A ReportAttributes collection object with client attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr1 = fusion.report_attribute(name="code", title="Code")
+            >>> attr2 = fusion.report_attribute(name="label", title="Label")
+            >>> attrs = fusion.report_attributes([attr1, attr2])
+        """
+        attributes_obj = ReportAttributes(attributes=attributes or [])
+        attributes_obj.client = self
+        return attributes_obj
+
     def delete_datasetmembers(
         self,
         dataset: str,
@@ -2077,7 +2136,7 @@ class Fusion:
             series_members = [series_members]
         responses = []
         for series_member in series_members:
-            url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{series_member}"
+            url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{dataset}/datasetseries/{series_member}"
             resp = self.session.delete(url)
             requests_raise_for_status(resp)
             responses.append(resp)
@@ -2106,7 +2165,7 @@ class Fusion:
 
         """
         catalog = self._use_catalog(catalog)
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/{dataset}/datasetseries"
         resp = self.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
@@ -2130,7 +2189,7 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url = f"{self.root_url}catalogs/{catalog}/attributes"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/attributes"
         ds_attr_df = Fusion._call_for_dataframe(url, self.session).reset_index(drop=True)
 
         if not display_all_columns:
@@ -2614,7 +2673,7 @@ class Fusion:
 
         """
         catalog = self._use_catalog(catalog)
-        url = f"{self.root_url}dataspaces/{catalog}/datasets/{knowledge_base}/indexes/"
+        url = f"{self.root_url}/api/v1/dataspaces/{catalog}/datasets/{knowledge_base}/indexes/"
         response = self.session.get(url)
         requests_raise_for_status(response)
         if show_details:
@@ -2688,7 +2747,7 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+        url = f"{self.root_url}/api/v1/catalogs/{catalog}/datasets/changes?datasets={dataset}"
 
         resp = self.session.get(url)
         dists = resp.json()["datasets"][0]["distributions"]
