@@ -156,7 +156,7 @@ def test_generic_dl(client: Fusion) -> None:
 
 def test_custom_headers(client: Fusion) -> None:
     client.credentials.headers = {"my_special_header": "my_special_value", "my_special_header2": "my_special_value2"}
-    r = client.session.get(client.root_url + "catalogs/common")
+    r = client.session.get(client.root_url + "/api/catalogs/v1catalogs/common")
     assert r.request.headers["my_special_header"] == "my_special_value"
     assert r.request.headers["my_special_header2"] == "my_special_value2"
     print("Passed custom headers test")  # noqa: T201
