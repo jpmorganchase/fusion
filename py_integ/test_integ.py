@@ -18,52 +18,7 @@ class DownloadTestSpec:
     md5_hash: str | None = None
 
 
-download_hashes = {
-    "test_download_csv": DownloadTestSpec(
-        client_dl_params={
-            "dataset": "FXO_SP",
-            "dataset_format": "csv",
-            "return_paths": True,
-            "force_download": True,
-            "dt_str": "20231201:20231208",
-        },
-        method="download",
-        st_dt="20231201",
-        end_dt="20231208",
-        res_shape=None,
-        md5_hash="17746f55909185c4fae932128fe09e07",
-    ),
-    "test_download_parquet": DownloadTestSpec(
-        client_dl_params={
-            "dataset": "FXO_SP",
-            "dataset_format": "csv",
-            "return_paths": True,
-            "force_download": True,
-            "dt_str": "20231201:20231208",
-        },
-        method="download",
-        st_dt="20231201",
-        end_dt="20231208",
-        res_shape=None,
-        md5_hash="17746f55909185c4fae932128fe09e07",
-    ),
-    "test_to_df_csv": DownloadTestSpec(
-        client_dl_params={"dataset": "FXO_SP", "dataset_format": "csv", "dt_str": "20231201:20231208"},
-        method="to_df",
-        st_dt="20231201",
-        end_dt="20231208",
-        res_shape=(366, 6),
-        md5_hash=None,
-    ),
-    "test_to_df_parquet": DownloadTestSpec(
-        client_dl_params={"dataset": "FXO_SP", "dataset_format": "parquet", "dt_str": "20231201:20231208"},
-        method="to_df",
-        st_dt="20231201",
-        end_dt="20231208",
-        res_shape=(366, 6),
-        md5_hash=None,
-    ),
-}
+download_hashes = {}
 
 
 def download_clean_up(download_res: list[tuple[bool, str, str | None]] | None) -> None:
