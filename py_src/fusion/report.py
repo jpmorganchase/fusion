@@ -68,6 +68,10 @@ class Report(metaclass=CamelCaseMeta):
     tier_type: str
     alternate_id: str
     data_node_id: dict[str, str]
+    alternative_id: dict[str, str]
+    data_model_id: dict[str, str]
+
+    # Now start the optional fields (with defaults)
     title: str = ""
     frequency: str = ""
     category: str = ""
@@ -82,8 +86,6 @@ class Report(metaclass=CamelCaseMeta):
     sap_code: str = ""
     domain: str = ""
     sourced_object: str = ""
-    alternative_id: dict[str, str]
-    data_model_id: dict[str, str]
     id: str = ""
     description: str = ""
     report_inventory_id: str = ""
@@ -98,6 +100,7 @@ class Report(metaclass=CamelCaseMeta):
     modified_datetime: str = ""
     approved_by: str = ""
     approved_datetime: str = ""
+
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
