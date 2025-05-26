@@ -2094,7 +2094,52 @@ class Fusion:
         attributes_obj = ReportAttributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
+    
+    def link_attributes_to_terms(
+        self,
+        report_id: str,
+        attributes: list[str],
+        terms: list[str],
+        is_kde: bool = False,
+        output: bool = False,
+    ) -> dict:
+        """Links attributes in a report to business terms.
 
+        Args:
+            report_id (str): Unique identifier of the report.
+            attributes (list[str]): List of attribute identifiers to link.
+            terms (list[str]): List of business term identifiers to associate.
+            is_kde (bool, optional): Whether the link is considered a KDE (Key Data Element). Defaults to False.
+            output (bool, optional): If True, prints a summary of the operation. Defaults to False.
+
+        Returns:
+            dict: A dictionary with success status and message or error details.
+        """
+        url = f"{self.root_url}v1/reports/{report_id}/reportElements/businessTerms"
+
+        headers = {
+            "fusion-user-token": self.session.headers.get("fusion-user-token", ""),
+            "Content-Type": "application/json",
+        }
+
+        payload = {
+            "reportElementIds": attributes,
+            "termIds": terms,
+            "isKDE": is_kde,
+        }
+
+        response = self.session.post(url, json=payload, headers=headers)
+
+        result = {
+            "success": response.ok,
+            "status": response.status_code,
+            "message": "Linked successfully." if response.ok else response.text,
+        }
+
+        if output:
+            print(result)
+
+        return result
 
 
     def delete_datasetmembers(
