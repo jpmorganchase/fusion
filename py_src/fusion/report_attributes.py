@@ -13,8 +13,8 @@ from fusion.utils import (
 
 if TYPE_CHECKING:
     import requests
+
     from fusion import Fusion
-    
 
 
 @dataclass
@@ -109,8 +109,7 @@ class ReportAttributes:
 
     def __str__(self) -> str:
         return (
-            f"[\n" + ",\n ".join(f"{attr.__repr__()}" for attr in self.attributes) + "\n]"
-            if self.attributes else "[]"
+            f"[\n" + ",\n ".join(f"{attr.__repr__()}" for attr in self.attributes) + "\n]" if self.attributes else "[]"
         )
 
     def __repr__(self) -> str:
@@ -157,10 +156,7 @@ class ReportAttributes:
     @classmethod
     def _from_dataframe(cls, data: pd.DataFrame) -> ReportAttributes:
         data = data.where(data.notna(), None)
-        attributes = [
-            ReportAttribute(**series.dropna().to_dict())
-            for _, series in data.iterrows()
-        ]
+        attributes = [ReportAttribute(**series.dropna().to_dict()) for _, series in data.iterrows()]
         return cls(attributes=attributes)
 
     @classmethod
@@ -204,13 +200,13 @@ class ReportAttributes:
         list_attributes = response.json().get("resources", [])
         self.attributes = [ReportAttribute(**attr_data) for attr_data in list_attributes]
         return self
-    
+
     def register(
-    self,
-    report_id: str,
-    client: Fusion | None = None,
-    return_resp_obj: bool = False,
-) -> requests.Response | None:
+        self,
+        report_id: str,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """
         Register the ReportAttributes to the metadata-lineage/report API.
 
@@ -223,14 +219,13 @@ class ReportAttributes:
             requests.Response | None: API response object if return_resp_obj is True.
         """
         client = self._use_client(client)
-        url = f"{client.root_url}metadata-lineage/report/{report_id}/attributes" #again replace with f"https...reportEleemts whole url
+        url = f"{client.root_url}metadata-lineage/report/{report_id}/attributes"  # again replace with f"https...reportEleemts whole url
         payload = [attr.to_dict() for attr in self.attributes]
 
-        resp = client.session.post(url, json=payload) 
+        resp = client.session.post(url, json=payload)
         requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
-
 
     def create(
         self,

@@ -105,7 +105,7 @@ class Fusion:
         self,
         credentials: str | FusionCredentials = "config/client_credentials.json",
         root_url: str = "https://fusion.jpmorgan.com/api/v1/",
-        download_folder: str = "downloads", 
+        download_folder: str = "downloads",
         log_level: int = logging.ERROR,
         fs: fsspec.filesystem = None,
         log_path: str = ".",
@@ -2064,42 +2064,40 @@ class Fusion:
         attributes_obj = Attributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
-    
-    
-    def report_attribute(
-    self,
-    name: str,
-    title: str,
-    description: str | None = None,
-    technicalDataType: str | None = None,
-    path: str | None = None,
-    dataPublisher: str | None = None,
-    ) -> ReportAttribute:
-            """Instantiate a ReportAttribute object with this client for metadata creation.
-            Args:
-                name (str): The unique name of the attribute. Mandatory.
-                title (str): The display title of the attribute. Mandatory.
-                description (str | None, optional): Description of the attribute. Defaults to None.
-                technicalDataType (str | None, optional): The technical data type. Defaults to None.
-                path (str | None, optional): The hierarchical path for the attribute. Defaults to None.
-                dataPublisher (str | None, optional): The publisher of the data. Defaults to None.
-            Returns:
-                ReportAttribute: A new ReportAttribute instance connected to this client.
-            Example:
-                >>> fusion = Fusion()
-                >>> attr = fusion.report_attribute(name="region_code", title="Region Code")
-            """
-            attribute_obj = ReportAttribute(
-                name=name,
-                title=title,
-                description=description,
-                technicalDataType=technicalDataType,
-                path=path,
-                dataPublisher=dataPublisher,
-            )
-            attribute_obj.client = self
-            return attribute_obj
 
+    def report_attribute(
+        self,
+        name: str,
+        title: str,
+        description: str | None = None,
+        technicalDataType: str | None = None,
+        path: str | None = None,
+        dataPublisher: str | None = None,
+    ) -> ReportAttribute:
+        """Instantiate a ReportAttribute object with this client for metadata creation.
+        Args:
+            name (str): The unique name of the attribute. Mandatory.
+            title (str): The display title of the attribute. Mandatory.
+            description (str | None, optional): Description of the attribute. Defaults to None.
+            technicalDataType (str | None, optional): The technical data type. Defaults to None.
+            path (str | None, optional): The hierarchical path for the attribute. Defaults to None.
+            dataPublisher (str | None, optional): The publisher of the data. Defaults to None.
+        Returns:
+            ReportAttribute: A new ReportAttribute instance connected to this client.
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.report_attribute(name="region_code", title="Region Code")
+        """
+        attribute_obj = ReportAttribute(
+            name=name,
+            title=title,
+            description=description,
+            technicalDataType=technicalDataType,
+            path=path,
+            dataPublisher=dataPublisher,
+        )
+        attribute_obj.client = self
+        return attribute_obj
 
     def report_attributes(
         self,
@@ -2119,7 +2117,7 @@ class Fusion:
         attributes_obj = ReportAttributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
-        
+
     def link_attributes_to_terms(
         self,
         report_id: str,
@@ -2165,10 +2163,9 @@ class Fusion:
         }
 
         if output:
-            print(result)
+            pass
 
         return result
-
 
     def delete_datasetmembers(
         self,
@@ -2666,13 +2663,13 @@ class Fusion:
     ) -> pd.DataFrame:
         """List the distributions of dataset members.
 
-        Args:
-            dataset (str): Dataset identifier.
-            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-            output (bool, optional): If True then print the dataframe. Defaults to False.
-F
-        Returns:
-            pd.DataFrame: A dataframe with a row for each dataset member distribution.
+                Args:
+                    dataset (str): Dataset identifier.
+                    catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+                    output (bool, optional): If True then print the dataframe. Defaults to False.
+        F
+                Returns:
+                    pd.DataFrame: A dataframe with a row for each dataset member distribution.
 
         """
         catalog = self._use_catalog(catalog)
@@ -2691,8 +2688,6 @@ F
 
         members_df = pd.DataFrame(data, columns=["identifier", "format"])
         return members_df
-    
-
 
     def report(  # noqa: PLR0913
         self,

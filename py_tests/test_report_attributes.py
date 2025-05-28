@@ -1,4 +1,3 @@
-from typing import cast
 import pandas as pd
 import pytest
 import requests
@@ -27,7 +26,7 @@ def test_report_attribute_to_dict() -> None:
         description="Total revenue",
         technicalDataType="decimal",
         path="finance/metrics",
-        dataPublisher="JPM"
+        dataPublisher="JPM",
     )
     result = attr.to_dict()
     expected = {
@@ -36,7 +35,7 @@ def test_report_attribute_to_dict() -> None:
         "description": "Total revenue",
         "technicalDataType": "decimal",
         "path": "finance/metrics",
-        "dataPublisher": "JPM"
+        "dataPublisher": "JPM",
     }
     assert result == expected
 
@@ -58,7 +57,7 @@ def test_report_attributes_from_and_to_dict() -> None:
             "description": "Total revenue",
             "technicalDataType": "decimal",
             "path": "finance/metrics",
-            "dataPublisher": "JPM"
+            "dataPublisher": "JPM",
         }
     ]
     attrs = ReportAttributes._from_dict_list(data)
@@ -67,16 +66,18 @@ def test_report_attributes_from_and_to_dict() -> None:
 
 
 def test_report_attributes_from_dataframe() -> None:
-    df = pd.DataFrame([
-        {
-            "name": "revenue",
-            "title": "Revenue",
-            "description": "Total revenue",
-            "technicalDataType": "decimal",
-            "path": "finance/metrics",
-            "dataPublisher": "JPM"
-        }
-    ])
+    df = pd.DataFrame(
+        [
+            {
+                "name": "revenue",
+                "title": "Revenue",
+                "description": "Total revenue",
+                "technicalDataType": "decimal",
+                "path": "finance/metrics",
+                "dataPublisher": "JPM",
+            }
+        ]
+    )
     attrs = ReportAttributes._from_dataframe(df)
     assert isinstance(attrs, ReportAttributes)
     assert attrs.attributes[0].name == "revenue"
@@ -107,7 +108,6 @@ def test_report_attributes_use_client_value_error() -> None:
 
 
 def test_report_attributes_register(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    catalog = "demo_catalog"
     report_id = "report_123"
     url = f"{fusion_obj.root_url}metadata-lineage/report/{report_id}/attributes"
     expected_payload = [
@@ -117,7 +117,7 @@ def test_report_attributes_register(requests_mock: requests_mock.Mocker, fusion_
             "description": None,
             "technicalDataType": None,
             "path": None,
-            "dataPublisher": None
+            "dataPublisher": None,
         }
     ]
     requests_mock.post(url, json=expected_payload)

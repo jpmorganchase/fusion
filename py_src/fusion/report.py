@@ -14,7 +14,8 @@ from .utils import (
     camel_to_snake,
     make_bool,
     requests_raise_for_status,
-    tidy_string, snake_to_camel,
+    snake_to_camel,
+    tidy_string,
 )
 
 if TYPE_CHECKING:
@@ -128,7 +129,6 @@ class Report(metaclass=CamelCaseMeta):
             lob=series.get("lob", ""),
             data_node_id=series.get("datanodeid", {"id": "", "name": "", "dataNodeType": ""}),
             alternative_id=series.get("alternativeid", {"domain": "", "value": ""}),
-
             title=series.get("title", None),
             alternate_id=series.get("alternateid", None),
             description=series.get("description", None),
@@ -145,7 +145,7 @@ class Report(metaclass=CamelCaseMeta):
             sap_code=series.get("sapcode", None),
             sourced_object=series.get("sourcedobject", None),
             domain=series.get("domain", None),
-            data_model_id=series.get("datamodelid", None)
+            data_model_id=series.get("datamodelid", None),
         )
 
     @classmethod
@@ -159,9 +159,7 @@ class Report(metaclass=CamelCaseMeta):
             Report: Report object.
         """
         # Override camelCase keys to snake_case that are not automatically converted
-        field_name_overrides = {
-            "isBCBSProgram": "is_bcbs239_program"
-        }
+        field_name_overrides = {"isBCBSProgram": "is_bcbs239_program"}
 
         def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
             """Recursively convert camelCase keys in nested dicts to snake_case."""
