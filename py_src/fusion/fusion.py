@@ -105,7 +105,7 @@ class Fusion:
         self,
         credentials: str | FusionCredentials = "config/client_credentials.json",
         root_url: str = "https://fusion.jpmorgan.com/api/v1/",
-        download_folder: str = "downloads",
+        download_folder: str = "downloads", 
         log_level: int = logging.ERROR,
         fs: fsspec.filesystem = None,
         log_path: str = ".",
@@ -246,7 +246,30 @@ class Fusion:
         return FusionHTTPFileSystem(
             asynchronous=as_async, client_kwargs={"root_url": self.root_url, "credentials": self.credentials}
         )
+    def get_new_root_url():
+        """
+        Returns a modified version of the root URL to support the new API format.
 
+        This method temporarily strips trailing segments such as "/api/v1/" or "/v1/"
+        from the original `get_root_url()` to align with an updated API base path format.
+
+        Returns:
+            str: The adjusted root URL without trailing version segments.
+
+        Deprecated:
+            This method is temporary and will be removed once all components have migrated
+            to the new API structure. Use `get_root_url()` and apply formatting externally
+            as needed.
+        """
+        new_root_url = get_root_url()
+
+        if new_root_url:
+            if new_root_url.endswith("/api/v1/"):
+                new_root_url = new_root_url[:-8]  # remove "/api/v1/"
+            elif new_root_url.endswith("/v1/"):
+                new_root_url = new_root_url[:-4]  # remove "/v1/"
+
+        return new_root_url
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
 
@@ -2096,24 +2119,24 @@ class Fusion:
         return attributes_obj
     
     def link_attributes_to_terms(
-        self,
-        report_id: str,
-        attributes: list[str],
-        terms: list[str],
-        is_kde: bool = False,
-        output: bool = False,
-    ) -> dict:
-        """Links attributes in a report to business terms.
+    self,
+    report_id: str,
+    mappings: list[dict],
+    output: bool = False,
+) -> dict:
+        """
+        Links one or more attributes to business terms for a given report.
 
         Args:
-            report_id (str): Unique identifier of the report.
-            attributes (list[str]): List of attribute identifiers to link.
-            terms (list[str]): List of business term identifiers to associate.
-            is_kde (bool, optional): Whether the link is considered a KDE (Key Data Element). Defaults to False.
-            output (bool, optional): If True, prints a summary of the operation. Defaults to False.
+            report_id (str): Report identifier.
+            mappings (list[dict]): List of mappings. Each must have:
+                - attribute_id (str)
+                - term_id (str)
+                - isKDE (bool)
+            output (bool): If True, prints the result.
 
         Returns:
-            dict: A dictionary with success status and message or error details.
+            dict: API response summary.
         """
         url = f"{self.root_url}v1/reports/{report_id}/reportElements/businessTerms"
 
@@ -2122,11 +2145,23 @@ class Fusion:
             "Content-Type": "application/json",
         }
 
-        payload = {
-            "reportElementIds": attributes,
-            "termIds": terms,
-            "isKDE": is_kde,
-        }
+        payload = []
+
+        for m in mappings:
+            attribute_id = m.get("attribute_id")
+            term_id = m.get("term_id")
+            is_kde = m.get("isKDE", False)
+
+            if not isinstance(attribute_id, str) or not isinstance(term_id, str):
+                raise ValueError("Each mapping must include 'attribute_id' and 'term_id' as strings.")
+            if not isinstance(is_kde, bool):
+                raise ValueError("'isKDE' must be a boolean.")
+
+            payload.append({
+                "attribute": {"id": attribute_id},
+                "term": {"id": term_id},
+                "isKDE": is_kde,
+            })
 
         response = self.session.post(url, json=payload, headers=headers)
 
@@ -2140,6 +2175,7 @@ class Fusion:
             print(result)
 
         return result
+
 
 
     def delete_datasetmembers(

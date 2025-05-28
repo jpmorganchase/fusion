@@ -223,10 +223,10 @@ class ReportAttributes:
             requests.Response | None: API response object if return_resp_obj is True.
         """
         client = self._use_client(client)
-        url = f"{client.root_url}metadata-lineage/report/{report_id}/attributes"
+        url = f"{client.root_url}metadata-lineage/report/{report_id}/attributes" #again replace with f"https...reportEleemts whole url
         payload = [attr.to_dict() for attr in self.attributes]
 
-        resp = client.session.post(url, json=payload)
+        resp = client.session.post(url, json=payload) 
         requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
