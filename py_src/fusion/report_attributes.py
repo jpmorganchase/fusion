@@ -66,34 +66,6 @@ class ReportAttribute(metaclass=CamelCaseMeta):
             "dataPublisher": self.dataPublisher,
         }
 
-    def create(
-        self,
-        dataset: str,
-        catalog: str | None = None,
-        client: Fusion | None = None,
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        client = self._use_client(client)
-        catalog = client._use_catalog(catalog)
-        data = self.to_dict()
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{self.name}"
-        resp = client.session.put(url, json=data)
-        requests_raise_for_status(resp)
-        return resp if return_resp_obj else None
-
-    def delete(
-        self,
-        dataset: str,
-        catalog: str | None = None,
-        client: Fusion | None = None,
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        client = self._use_client(client)
-        catalog = client._use_catalog(catalog)
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{self.name}"
-        resp = client.session.delete(url)
-        requests_raise_for_status(resp)
-        return resp if return_resp_obj else None
 
     def _use_client(self, client: Fusion | None) -> Fusion:
         res = self._client if client is None else client
@@ -186,29 +158,15 @@ class ReportAttributes:
         data = [attr.to_dict() for attr in self.attributes]
         return pd.DataFrame(data)
 
-    def from_catalog(
-        self,
-        dataset: str,
-        catalog: str | None = None,
-        client: Fusion | None = None,
-    ) -> ReportAttributes:
-        client = self._use_client(client)
-        catalog = client._use_catalog(catalog)
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
-        response = client.session.get(url)
-        requests_raise_for_status(response)
-        list_attributes = response.json().get("resources", [])
-        self.attributes = [ReportAttribute(**attr_data) for attr_data in list_attributes]
-        return self
 
-    def register(
+    def create(
         self,
         report_id: str,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
         """
-        Register the ReportAttributes to the metadata-lineage/report API.
+        Create the ReportAttributes to the core-lineage API.
 
         Args:
             report_id (str): The identifier of the report.
@@ -220,8 +178,8 @@ class ReportAttributes:
         """
         client = self._use_client(client)
 
-        url = f"{client.root_url}metadata-lineage/report/{report_id}/attributes"
-        # again replace with f"https...reportEleemts whole url
+        url = f"{client.get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
+    
 
         payload = [attr.to_dict() for attr in self.attributes]
 
@@ -229,36 +187,3 @@ class ReportAttributes:
         requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
-
-    def create(
-        self,
-        dataset: str,
-        catalog: str | None = None,
-        client: Fusion | None = None,
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        client = self._use_client(client)
-        catalog = client._use_catalog(catalog)
-        data = self.to_dict()
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
-        resp = client.session.put(url, json=data)
-        requests_raise_for_status(resp)
-        return resp if return_resp_obj else None
-
-    def delete(
-        self,
-        dataset: str,
-        catalog: str | None = None,
-        client: Fusion | None = None,
-        return_resp_obj: bool = False,
-    ) -> list[requests.Response] | None:
-        responses = []
-        client = self._use_client(client)
-        catalog = client._use_catalog(catalog)
-        for attr in self.attributes:
-            resp = client.session.delete(
-                f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{attr.name}"
-            )
-            requests_raise_for_status(resp)
-            responses.append(resp)
-        return responses if return_resp_obj else None

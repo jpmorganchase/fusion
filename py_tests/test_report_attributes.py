@@ -7,16 +7,10 @@ from fusion import Fusion
 from fusion.report_attributes import ReportAttribute, ReportAttributes
 
 
-def test_report_attribute_repr_str() -> None:
+def test_report_attribute_str_repr() -> None:
     attr = ReportAttribute(name="revenue", title="Revenue")
-    assert str(attr)
-    assert repr(attr)
-
-
-def test_report_attribute_get_set_client(fusion_obj: Fusion) -> None:
-    attr = ReportAttribute(name="revenue", title="Revenue")
-    attr.client = fusion_obj
-    assert attr.client == fusion_obj
+    assert isinstance(str(attr), str)
+    assert isinstance(repr(attr), str)
 
 
 def test_report_attribute_to_dict() -> None:
@@ -28,7 +22,6 @@ def test_report_attribute_to_dict() -> None:
         path="finance/metrics",
         dataPublisher="JPM",
     )
-    result = attr.to_dict()
     expected = {
         "name": "revenue",
         "title": "Revenue",
@@ -37,7 +30,13 @@ def test_report_attribute_to_dict() -> None:
         "path": "finance/metrics",
         "dataPublisher": "JPM",
     }
-    assert result == expected
+    assert attr.to_dict() == expected
+
+
+def test_report_attribute_client_get_set(fusion_obj: Fusion) -> None:
+    attr = ReportAttribute(name="revenue", title="Revenue")
+    attr.client = fusion_obj
+    assert attr.client == fusion_obj
 
 
 def test_report_attributes_add_get_remove() -> None:
@@ -49,50 +48,51 @@ def test_report_attributes_add_get_remove() -> None:
     assert attrs.get_attribute("revenue") is None
 
 
-def test_report_attributes_from_and_to_dict() -> None:
-    data = [
-        {
-            "name": "revenue",
-            "title": "Revenue",
-            "description": "Total revenue",
-            "technicalDataType": "decimal",
-            "path": "finance/metrics",
-            "dataPublisher": "JPM",
-        }
-    ]
+def test_report_attributes_to_and_from_dict_list() -> None:
+    data = [{
+        "name": "revenue",
+        "title": "Revenue",
+        "description": "Total revenue",
+        "technicalDataType": "decimal",
+        "path": "finance/metrics",
+        "dataPublisher": "JPM",
+    }]
     attrs = ReportAttributes._from_dict_list(data)
     assert isinstance(attrs, ReportAttributes)
     assert attrs.to_dict() == {"attributes": data}
 
 
 def test_report_attributes_from_dataframe() -> None:
-    test_df = pd.DataFrame(
-        [
-            {
-                "name": "revenue",
-                "title": "Revenue",
-                "description": "Total revenue",
-                "technicalDataType": "decimal",
-                "path": "finance/metrics",
-                "dataPublisher": "JPM",
-            }
-        ]
-    )
+    test_df = pd.DataFrame([{
+        "name": "revenue",
+        "title": "Revenue",
+        "description": "Total revenue",
+        "technicalDataType": "decimal",
+        "path": "finance/metrics",
+        "dataPublisher": "JPM",
+    }])
     attrs = ReportAttributes._from_dataframe(test_df)
     assert isinstance(attrs, ReportAttributes)
     assert attrs.attributes[0].name == "revenue"
 
 
-def test_report_attributes_from_object() -> None:
-    dict_list = [
-        {
-            "name": "revenue",
-            "title": "Revenue",
-        }
-    ]
+def test_report_attributes_from_object_dict() -> None:
+    dict_list = [{"name": "revenue", "title": "Revenue"}]
     attrs = ReportAttributes().from_object(dict_list)
     assert isinstance(attrs, ReportAttributes)
-    assert attrs.attributes[0].title == "Revenue"
+    assert attrs.attributes[0].name == "revenue"
+
+
+def test_report_attributes_from_object_dataframe() -> None:
+    test_df = pd.DataFrame([{"name": "revenue", "title": "Revenue"}])
+    attrs = ReportAttributes().from_object(test_df)
+    assert isinstance(attrs, ReportAttributes)
+    assert attrs.attributes[0].name == "revenue"
+
+
+def test_report_attributes_from_object_invalid_type() -> None:
+    with pytest.raises(TypeError):
+        ReportAttributes().from_object("invalid_input")
 
 
 def test_report_attributes_to_dataframe() -> None:
@@ -107,27 +107,25 @@ def test_report_attributes_use_client_value_error() -> None:
         ReportAttributes()._use_client(None)
 
 
-def test_report_attributes_register(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_report_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     HTTP_OK = 200
-
     report_id = "report_123"
-    url = f"{fusion_obj.root_url}metadata-lineage/report/{report_id}/attributes"
-    expected_payload = [
-        {
-            "name": "revenue",
-            "title": "Revenue",
-            "description": None,
-            "technicalDataType": None,
-            "path": None,
-            "dataPublisher": None,
-        }
-    ]
-    requests_mock.post(url, json=expected_payload)
+    url = f"{fusion_obj.get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
 
-    test_attr = ReportAttribute(name="revenue", title="Revenue")
-    test_attrs = ReportAttributes(attributes=[test_attr])
-    test_attrs.client = fusion_obj
+    expected_payload = [{
+        "name": "revenue",
+        "title": "Revenue",
+        "description": None,
+        "technicalDataType": None,
+        "path": None,
+        "dataPublisher": None,
+    }]
+    requests_mock.post(url, json=expected_payload, status_code=HTTP_OK)
 
-    resp = test_attrs.register(report_id=report_id, return_resp_obj=True)
-    assert isinstance(resp, requests.Response)
-    assert resp.status_code == HTTP_OK
+    attr = ReportAttribute(name="revenue", title="Revenue")
+    attrs = ReportAttributes(attributes=[attr])
+    attrs.client = fusion_obj
+
+    response = attrs.create(report_id=report_id, return_resp_obj=True)
+    assert isinstance(response, requests.Response)
+    assert response.status_code == HTTP_OK

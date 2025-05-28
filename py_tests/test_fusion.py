@@ -120,6 +120,37 @@ def test_is_url() -> None:
     assert not _is_url(3.141)  # type: ignore
 
 
+def test_link_attributes_to_terms(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    report_id = "report_abc123"
+    url = f"{fusion_obj.get_new_root_url()}v1/reports/{report_id}/reportElements/businessTerms"
+
+    mock_response = {"status": "success"}
+    requests_mock.post(url, json=mock_response, status_code=200)
+
+    mappings = [
+        {
+            "attribute": {"id": "attr1"},
+            "term": {"id": "term1"},
+            "isKDE": True,
+        },
+        {
+            "attribute": {"id": "attr2"},
+            "term": {"id": "term2"},
+            "isKDE": False,
+        },
+    ]
+
+    response = fusion_obj.link_attributes_to_terms(
+        report_id=report_id,
+        mappings=mappings,
+        return_resp_obj=True,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == mock_response
+
+
+
 def test_fusion_class(fusion_obj: Fusion) -> None:
     assert fusion_obj
     assert repr(fusion_obj)

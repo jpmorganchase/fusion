@@ -2122,8 +2122,8 @@ class Fusion:
         self,
         report_id: str,
         mappings: list[dict],
-        output: bool = False,
-    ) -> dict:
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """
         Links attributes to business terms for a report using pre-formatted mappings.
 
@@ -2135,10 +2135,10 @@ class Fusion:
                     "term": {"id": str},
                     "isKDE": bool
                 }
-            output (bool): If True, prints the result.
+            return_resp_obj (bool, optional): If True, returns the response object. Defaults to False.
 
         Returns:
-            dict: Summary of the API response.
+            requests.Response | None: Response object from the API if return_resp_obj is True, otherwise None.
         """
         # Basic validation
         for i, m in enumerate(mappings):
@@ -2149,23 +2149,11 @@ class Fusion:
 
         url = f"{self.get_new_root_url()}v1/reports/{report_id}/reportElements/businessTerms"
 
-        headers = {
-            "fusion-user-token": self.session.headers.get("fusion-user-token", ""),
-            "Content-Type": "application/json",
-        }
-
         response = self.session.post(url, json=mappings, headers=headers)
+        requests_raise_for_status(response)
 
-        result = {
-            "success": response.ok,
-            "status": response.status_code,
-            "message": "Linked all successfully." if response.ok else response.text,
-        }
+        return response if return_resp_obj else None
 
-        if output:
-            print(result)  # noqa
-
-        return result
 
     def delete_datasetmembers(
         self,
