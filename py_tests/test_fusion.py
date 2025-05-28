@@ -145,8 +145,8 @@ def test_link_attributes_to_terms(requests_mock: requests_mock.Mocker, fusion_ob
         mappings=mappings,
         return_resp_obj=True,
     )
-
-    assert response.status_code == 200
+    http_reponse = 200
+    assert response.status_code == http_reponse
     assert response.json() == mock_response
 
 
