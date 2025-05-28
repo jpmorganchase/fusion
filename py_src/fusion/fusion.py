@@ -2149,7 +2149,7 @@ class Fusion:
 
         url = f"{self.get_new_root_url()}v1/reports/{report_id}/reportElements/businessTerms"
 
-        response = self.session.post(url, json=mappings, headers=headers)
+        response = self.session.post(url, json=mappings)
         requests_raise_for_status(response)
 
         return response if return_resp_obj else None
