@@ -246,7 +246,8 @@ class Fusion:
         return FusionHTTPFileSystem(
             asynchronous=as_async, client_kwargs={"root_url": self.root_url, "credentials": self.credentials}
         )
-    def get_new_root_url():
+
+    def get_new_root_url(self) -> str:
         """
         Returns a modified version of the root URL to support the new API format.
 
@@ -258,10 +259,10 @@ class Fusion:
 
         Deprecated:
             This method is temporary and will be removed once all components have migrated
-            to the new API structure. Use `get_root_url()` and apply formatting externally
+            to the new API structure. Use `root_url` and apply formatting externally
             as needed.
         """
-        new_root_url = get_root_url()
+        new_root_url = self.root_url
 
         if new_root_url:
             if new_root_url.endswith("/api/v1/"):
@@ -270,6 +271,7 @@ class Fusion:
                 new_root_url = new_root_url[:-4]  # remove "/v1/"
 
         return new_root_url
+
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
 

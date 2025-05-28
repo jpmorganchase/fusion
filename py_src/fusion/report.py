@@ -66,49 +66,35 @@ class Report(metaclass=CamelCaseMeta):
 
     name: str
     tier_type: str
-    alternate_id: str
+    lob: str
     data_node_id: dict[str, str]
     alternative_id: dict[str, str]
-    data_model_id: dict[str, str]
 
-    # Now start the optional fields (with defaults)
-    title: str = ""
-    frequency: str = ""
-    category: str = ""
-    sub_category: str = ""
-    report_inventory_name: str = ""
-    report_owner: str = ""
-    lob: str = ""
-    sub_lob: str = ""
-    is_bcbs239_program: bool = False
-    risk_area: str = ""
-    riskstripe: str = ""
-    sap_code: str = ""
-    domain: str = ""
-    sourced_object: str = ""
-    id: str = ""
-    description: str = ""
-    report_inventory_id: str = ""
-    created_service: str = ""
-    originator_firm_id: str = ""
-    is_instance: bool = False
-    version: str = ""
-    status: str = ""
-    created_by: str = ""
-    created_datetime: str = ""
-    modified_by: str = ""
-    modified_datetime: str = ""
-    approved_by: str = ""
-    approved_datetime: str = ""
-
+    # Optional fields
+    title: str | None = None
+    alternate_id: str | None = None
+    description: str | None = None
+    frequency: str | None = None
+    category: str | None = None
+    sub_category: str | None = None
+    report_inventory_name: str | None = None
+    report_inventory_id: str | None = None
+    report_owner: str | None = None
+    sub_lob: str | None = None
+    is_bcbs239_program: bool | None = None
+    risk_area: str | None = None
+    risk_stripe: str | None = None
+    sap_code: str | None = None
+    sourced_object: str | None = None
+    domain: dict[str, str | bool] | None = None
+    data_model_id: dict[str, str] | None = None
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
-        self.name = tidy_string(self.name).upper().replace(" ", "_")
+        self.name = tidy_string(self.name)
         self.title = tidy_string(self.title)
-        self.description = tidy_string(self.description if self.description else self.title)
-        self.is_bcbs239_program = make_bool(self.is_bcbs239_program)
+        self.description = tidy_string(self.description if self.description else None)
 
     def __getattr__(self, name: str) -> Any:
         snake_name = camel_to_snake(name)
