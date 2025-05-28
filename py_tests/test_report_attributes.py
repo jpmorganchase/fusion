@@ -66,19 +66,17 @@ def test_report_attributes_from_and_to_dict() -> None:
 
 
 def test_report_attributes_from_dataframe() -> None:
-    df = pd.DataFrame(
-        [
-            {
-                "name": "revenue",
-                "title": "Revenue",
-                "description": "Total revenue",
-                "technicalDataType": "decimal",
-                "path": "finance/metrics",
-                "dataPublisher": "JPM",
-            }
-        ]
-    )
-    attrs = ReportAttributes._from_dataframe(df)
+    test_df = pd.DataFrame([
+        {
+            "name": "revenue",
+            "title": "Revenue",
+            "description": "Total revenue",
+            "technicalDataType": "decimal",
+            "path": "finance/metrics",
+            "dataPublisher": "JPM"
+        }
+    ])
+    attrs = ReportAttributes._from_dataframe(test_df)
     assert isinstance(attrs, ReportAttributes)
     assert attrs.attributes[0].name == "revenue"
 
@@ -97,9 +95,9 @@ def test_report_attributes_from_object() -> None:
 
 def test_report_attributes_to_dataframe() -> None:
     attr = ReportAttribute(name="revenue", title="Revenue")
-    df = ReportAttributes([attr]).to_dataframe()
-    assert df.shape[0] == 1
-    assert df["name"].iloc[0] == "revenue"
+    test_df = ReportAttributes([attr]).to_dataframe()
+    assert test_df.shape[0] == 1
+    assert test_df["name"].iloc[0] == "revenue"
 
 
 def test_report_attributes_use_client_value_error() -> None:
@@ -108,6 +106,8 @@ def test_report_attributes_use_client_value_error() -> None:
 
 
 def test_report_attributes_register(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    HTTP_OK = 200
+
     report_id = "report_123"
     url = f"{fusion_obj.root_url}metadata-lineage/report/{report_id}/attributes"
     expected_payload = [
@@ -128,4 +128,4 @@ def test_report_attributes_register(requests_mock: requests_mock.Mocker, fusion_
 
     resp = test_attrs.register(report_id=report_id, return_resp_obj=True)
     assert isinstance(resp, requests.Response)
-    assert resp.status_code == 200
+    assert resp.status_code == HTTP_OK

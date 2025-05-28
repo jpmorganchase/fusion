@@ -2163,7 +2163,7 @@ class Fusion:
         }
 
         if output:
-            pass
+            print(result) #noqa
 
         return result
 

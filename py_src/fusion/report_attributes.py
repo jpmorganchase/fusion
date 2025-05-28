@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Union
 
 import pandas as pd
 
@@ -13,6 +13,7 @@ from fusion.utils import (
 
 if TYPE_CHECKING:
     import requests
+
 
     from fusion import Fusion
 
@@ -110,6 +111,7 @@ class ReportAttributes:
     def __str__(self) -> str:
         return (
             f"[\n" + ",\n ".join(f"{attr.__repr__()}" for attr in self.attributes) + "\n]" if self.attributes else "[]"
+            f"[\n" + ",\n ".join(f"{attr.__repr__()}" for attr in self.attributes) + "\n]" if self.attributes else "[]"
         )
 
     def __repr__(self) -> str:
@@ -157,6 +159,7 @@ class ReportAttributes:
     def _from_dataframe(cls, data: pd.DataFrame) -> ReportAttributes:
         data = data.where(data.notna(), None)
         attributes = [ReportAttribute(**series.dropna().to_dict()) for _, series in data.iterrows()]
+        attributes = [ReportAttribute(**series.dropna().to_dict()) for _, series in data.iterrows()]
         return cls(attributes=attributes)
 
     @classmethod
@@ -166,7 +169,7 @@ class ReportAttributes:
 
     def from_object(
         self,
-        attributes_source: Union[list[ReportAttribute], list[dict[str, Any]], pd.DataFrame],
+        attributes_source: Union[list[ReportAttribute], list[dict[str, Any]], pd.DataFrame],  # noqa
     ) -> ReportAttributes:
         if isinstance(attributes_source, list):
             if all(isinstance(attr, ReportAttribute) for attr in attributes_source):
@@ -201,7 +204,13 @@ class ReportAttributes:
         self.attributes = [ReportAttribute(**attr_data) for attr_data in list_attributes]
         return self
 
+
     def register(
+        self,
+        report_id: str,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         self,
         report_id: str,
         client: Fusion | None = None,
@@ -219,9 +228,11 @@ class ReportAttributes:
             requests.Response | None: API response object if return_resp_obj is True.
         """
         client = self._use_client(client)
-        url = f"{client.root_url}metadata-lineage/report/{report_id}/attributes"  # again replace with f"https...reportEleemts whole url
+        url = f"{client.root_url}metadata-lineage/report/{report_id}/attributes"  
+        # again replace with f"https...reportEleemts whole url
         payload = [attr.to_dict() for attr in self.attributes]
 
+        resp = client.session.post(url, json=payload)
         resp = client.session.post(url, json=payload)
         requests_raise_for_status(resp)
 
@@ -259,3 +270,4 @@ class ReportAttributes:
             requests_raise_for_status(resp)
             responses.append(resp)
         return responses if return_resp_obj else None
+
