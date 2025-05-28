@@ -66,16 +66,18 @@ def test_report_attributes_from_and_to_dict() -> None:
 
 
 def test_report_attributes_from_dataframe() -> None:
-    test_df = pd.DataFrame([
-        {
-            "name": "revenue",
-            "title": "Revenue",
-            "description": "Total revenue",
-            "technicalDataType": "decimal",
-            "path": "finance/metrics",
-            "dataPublisher": "JPM"
-        }
-    ])
+    test_df = pd.DataFrame(
+        [
+            {
+                "name": "revenue",
+                "title": "Revenue",
+                "description": "Total revenue",
+                "technicalDataType": "decimal",
+                "path": "finance/metrics",
+                "dataPublisher": "JPM",
+            }
+        ]
+    )
     attrs = ReportAttributes._from_dataframe(test_df)
     assert isinstance(attrs, ReportAttributes)
     assert attrs.attributes[0].name == "revenue"

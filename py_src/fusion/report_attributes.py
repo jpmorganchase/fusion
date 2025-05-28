@@ -14,7 +14,6 @@ from fusion.utils import (
 if TYPE_CHECKING:
     import requests
 
-
     from fusion import Fusion
 
 
@@ -202,7 +201,6 @@ class ReportAttributes:
         self.attributes = [ReportAttribute(**attr_data) for attr_data in list_attributes]
         return self
 
-
     def register(
         self,
         report_id: str,
@@ -222,7 +220,7 @@ class ReportAttributes:
         """
         client = self._use_client(client)
 
-        url = f"{client.root_url}metadata-lineage/report/{report_id}/attributes"  
+        url = f"{client.root_url}metadata-lineage/report/{report_id}/attributes"
         # again replace with f"https...reportEleemts whole url
 
         payload = [attr.to_dict() for attr in self.attributes]
