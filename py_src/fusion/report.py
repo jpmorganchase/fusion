@@ -30,38 +30,28 @@ class Report(metaclass=CamelCaseMeta):
     Attributes:
         name (str): A unique name for the report.
         tier_type (str): The tier classification of the report.
-        alternate_id (str): An alternate identifier for the report.
+        lob (str): The line of business associated with the report.
         data_node_id (dict[str, str]): Identifier of the associated data node.
-        title (str, optional): A title for the report. Defaults to "".
-        frequency (str, optional): The frequency of the report. Defaults to "".
-        category (str, optional): Business category. Defaults to "".
-        sub_category (str, optional): Sub-category for classification. Defaults to "".
-        report_inventory_name (str, optional): Internal inventory name. Defaults to "".
-        report_owner (str, optional): Owner responsible for the report. Defaults to "".
-        lob (str, optional): Line of business. Defaults to "".
-        sub_lob (str, optional): Sub-line of business. Defaults to "".
-        is_bcbs239_program (bool, optional): Part of BCBS239 program. Defaults to False.
-        risk_area (str, optional): Risk area the report covers. Defaults to "".
-        riskstripe (str, optional): Risk classification. Defaults to "".
-        sap_code (str, optional): SAP code. Defaults to "".
-        domain (str, optional): Business or data domain. Defaults to "".
-        sourced_object (str, optional): Source object. Defaults to "".
-        alternative_id (dict[str, str], optional): Additional alternate IDs. Defaults to empty dict.
-        data_model_id (dict[str, str], optional): Associated data model. Defaults to empty dict.
-        id (str, optional): Unique identifier. Defaults to "".
-        description (str, optional): Description of the report. Defaults to "".
-        report_inventory_id (str, optional): Inventory ID. Defaults to "".
-        created_service (str, optional): Service that created the report. Defaults to "".
-        originator_firm_id (str, optional): Originator firm ID. Defaults to "".
-        is_instance (bool, optional): Indicates if this is an instance. Defaults to False.
-        version (str, optional): Report version. Defaults to "".
-        status (str, optional): Current status. Defaults to "".
-        created_by (str, optional): Creator. Defaults to "".
-        created_datetime (str, optional): Creation timestamp. Defaults to "".
-        modified_by (str, optional): Last modifier. Defaults to "".
-        modified_datetime (str, optional): Last modified timestamp. Defaults to "".
-        approved_by (str, optional): Approver. Defaults to "".
-        approved_datetime (str, optional): Approval timestamp. Defaults to "".
+        alternative_id (dict[str, str]): Alternate identifiers for the report.
+
+        title (str, optional): A title for the report. Defaults to None.
+        alternate_id (str, optional): A alternate identifier for the report. Defaults to None.
+        description (str, optional): A description of the report. Defaults to None.
+        frequency (str, optional): The frequency with which the report is generated. Defaults to None.
+        category (str, optional): The primary category of the report. Defaults to None.
+        sub_category (str, optional): A more specific classification under the main category. Defaults to None.
+        report_inventory_name (str, optional): Name of the report in the report inventory. Defaults to None.
+        report_inventory_id (str, optional): Identifier of the report in the inventory. Defaults to None.
+        report_owner (str, optional): Owner responsible for the report. Defaults to None.
+        sub_lob (str, optional): Subdivision of the line of business. Defaults to None.
+        is_bcbs239_program (bool, optional): Indicates if the report is part of the BCBS 239 program. Defaults to None.
+        risk_area (str, optional): The area of risk the report addresses. Defaults to None.
+        risk_stripe (str, optional): A specific risk category or stripe. Defaults to None.
+        sap_code (str, optional): Associated SAP code for financial tracking. Defaults to None.
+        sourced_object (str, optional): The original source object for the report. Defaults to None.
+        domain (dict[str, str | bool], optional): Domain information related to the report. Defaults to None.
+        data_model_id (dict[str, str], optional): Identifier of the data model used. Defaults to None.
+        _client (Any, optional): A Fusion client object. Defaults to None.
     """
 
     name: str
@@ -252,7 +242,7 @@ class Report(metaclass=CamelCaseMeta):
 
         data = self.to_dict()
 
-        url = f"{client.root_url}/api/corelineage-service/v1/reports"
+        url = f"{client.get_new_root_url()}/api/corelineage-service/v1/reports"
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
 
