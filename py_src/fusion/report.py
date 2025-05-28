@@ -84,8 +84,8 @@ class Report(metaclass=CamelCaseMeta):
 
     def __post_init__(self) -> None:
         self.name = tidy_string(self.name)
-        self.title = tidy_string(self.title)
-        self.description = tidy_string(self.description if self.description else None)
+        self.title = tidy_string(self.title) if self.title else None
+        self.description = tidy_string(self.description) if self.description else None
 
     def __getattr__(self, name: str) -> Any:
         snake_name = camel_to_snake(name)
@@ -115,7 +115,7 @@ class Report(metaclass=CamelCaseMeta):
         return res
 
     @classmethod
-    def _from_series(cls: type[Report], series: pd.Series) -> Report:
+    def _from_series(cls: type[Report], series:  pd.Series[Any]) -> Report:
         """Instantiate a Report object from a pandas Series."""
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
 
