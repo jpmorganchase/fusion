@@ -14,7 +14,7 @@ from .utils import (
     camel_to_snake,
     make_bool,
     requests_raise_for_status,
-    tidy_string,
+    tidy_string, snake_to_camel,
 )
 
 if TYPE_CHECKING:
@@ -124,25 +124,28 @@ class Report(metaclass=CamelCaseMeta):
 
         return cls(
             name=series.get("name", ""),
-            title=series.get("title", ""),
-            alternate_id=series.get("alternateid", ""),
             tier_type=series.get("tiertype", ""),
-            frequency=series.get("frequency", ""),
-            category=series.get("category", ""),
-            sub_category=series.get("subcategory", ""),
-            report_inventory_name=series.get("reportinventoryname", ""),
-            report_owner=series.get("reportowner", ""),
             lob=series.get("lob", ""),
-            sub_lob=series.get("sublob", ""),
+            data_node_id=series.get("datanodeid", {"id": "", "name": "", "dataNodeType": ""}),
+            alternative_id=series.get("alternativeid", {"domain": "", "value": ""}),
+
+            title=series.get("title", None),
+            alternate_id=series.get("alternateid", None),
+            description=series.get("description", None),
+            frequency=series.get("frequency", None),
+            category=series.get("category", None),
+            sub_category=series.get("subcategory", None),
+            report_inventory_name=series.get("reportinventoryname", None),
+            report_inventory_id=series.get("reportinventoryid", None),
+            report_owner=series.get("reportowner", None),
+            sub_lob=series.get("sublob", None),
             is_bcbs239_program=is_bcbs239_program,
-            risk_area=series.get("riskarea", ""),
-            riskstripe=series.get("riskstripe", ""),
-            sap_code=series.get("sapcode", ""),
-            domain=series.get("domain", ""),
-            sourced_object=series.get("sourcedobject", ""),
-            alternative_id=series.get("alternativeid", {"domain": "", "Value": ""}),
-            data_model_id=series.get("datamodelid", {"domain": "", "Value": ""}),
-            data_node_id=series.get("datanodeid", {"Id": "", "dataNodeType": ""}),
+            risk_area=series.get("riskarea", None),
+            risk_stripe=series.get("riskstripe", None),
+            sap_code=series.get("sapcode", None),
+            sourced_object=series.get("sourcedobject", None),
+            domain=series.get("domain", None),
+            data_model_id=series.get("datamodelid", None)
         )
 
     @classmethod
@@ -155,10 +158,40 @@ class Report(metaclass=CamelCaseMeta):
         Returns:
             Report: Report object.
         """
+        # Override camelCase keys to snake_case that are not automatically converted
+        field_name_overrides = {
+            "isBCBSProgram": "is_bcbs239_program"
+        }
+
+        def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
+            """Recursively convert camelCase keys in nested dicts to snake_case."""
+            result = {}
+            for key, value in d.items():
+                new_key = camel_to_snake(key)
+                if isinstance(value, dict):
+                    result[new_key] = convert_keys(value)
+                else:
+                    result[new_key] = value
+            return result
+
+        # Convert all keys and nested dicts
+        converted_data = {}
+        for k, v in data.items():
+            snake_key = field_name_overrides.get(k, camel_to_snake(k))
+            if isinstance(v, dict) and not isinstance(v, str):
+                converted_data[snake_key] = convert_keys(v)
+            else:
+                converted_data[snake_key] = v
+
+        # Convert specific fields
+        if "is_bcbs239_program" in converted_data:
+            converted_data["is_bcbs239_program"] = make_bool(converted_data["is_bcbs239_program"])
+
+        # Only use fields defined in the class
         keys = [f.name for f in fields(cls)]
-        data = {camel_to_snake(k): v for k, v in data.items()}
-        data = {k: v for k, v in data.items() if k in keys}
-        return cls(**data)
+        filtered_data = {k: v for k, v in converted_data.items() if k in keys}
+
+        return cls(**filtered_data)
 
     @classmethod
     def _from_csv(cls: type[Report], file_path: str, name: str | None = None) -> Report:
@@ -209,6 +242,30 @@ class Report(metaclass=CamelCaseMeta):
 
         report.client = self._client
         return report
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the Report instance to a dictionary.
+
+        Returns:
+            dict[str, Any]: Report metadata as a dictionary.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> report = fusion.report("report")
+            >>> report_dict = report.to_dict()
+
+        """
+
+        report_dict = {}
+        for k, v in self.__dict__.items():
+            if k.startswith("_"):
+                continue
+            if k == "is_bcbs239_program":
+                report_dict["isBCBSProgram"] = v
+            else:
+                report_dict[snake_to_camel(k)] = v
+        return report_dict
 
     def create(
         self,
