@@ -252,7 +252,7 @@ class Fusion:
         Returns a modified version of the root URL to support the new API format.
 
         This method temporarily strips trailing segments such as "/api/v1/" or "/v1/"
-        from the original `get_root_url()` to align with an updated API base path format.
+        from the original `root_url` to align with an updated API base path format.
 
         Returns:
             str: The adjusted root URL without trailing version segments.
