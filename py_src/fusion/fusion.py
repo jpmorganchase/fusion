@@ -2119,65 +2119,55 @@ class Fusion:
         attributes_obj = ReportAttributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
-    
+        
     def link_attributes_to_terms(
-    self,
-    report_id: str,
-    mappings: list[dict],
-    output: bool = False,
-) -> dict:
+        self,
+        report_id: str,
+        mappings: list[dict],
+        output: bool = False,
+    ) -> dict:
         """
-        Links one or more attributes to business terms for a given report.
+        Links attributes to business terms for a report using pre-formatted mappings.
 
         Args:
             report_id (str): Report identifier.
-            mappings (list[dict]): List of mappings. Each must have:
-                - attribute_id (str)
-                - term_id (str)
-                - isKDE (bool)
+            mappings (list[dict]): List of mappings in the format:
+                {
+                    "attribute": {"id": str},
+                    "term": {"id": str},
+                    "isKDE": bool
+                }
             output (bool): If True, prints the result.
 
         Returns:
-            dict: API response summary.
+            dict: Summary of the API response.
         """
-        url = f"{self.root_url}v1/reports/{report_id}/reportElements/businessTerms"
+        # Basic validation
+        for i, m in enumerate(mappings):
+            if not isinstance(m, dict):
+                raise ValueError(f"Mapping at index {i} is not a dictionary.")
+            if not ("attribute" in m and "term" in m and "isKDE" in m):
+                raise ValueError(f"Mapping at index {i} must include 'attribute', 'term', and 'isKDE'.")
+
+        url = f"{self.get_new_root_url()}v1/reports/{report_id}/reportElements/businessTerms"
 
         headers = {
             "fusion-user-token": self.session.headers.get("fusion-user-token", ""),
             "Content-Type": "application/json",
         }
 
-        payload = []
-
-        for m in mappings:
-            attribute_id = m.get("attribute_id")
-            term_id = m.get("term_id")
-            is_kde = m.get("isKDE", False)
-
-            if not isinstance(attribute_id, str) or not isinstance(term_id, str):
-                raise ValueError("Each mapping must include 'attribute_id' and 'term_id' as strings.")
-            if not isinstance(is_kde, bool):
-                raise ValueError("'isKDE' must be a boolean.")
-
-            payload.append({
-                "attribute": {"id": attribute_id},
-                "term": {"id": term_id},
-                "isKDE": is_kde,
-            })
-
-        response = self.session.post(url, json=payload, headers=headers)
+        response = self.session.post(url, json=mappings, headers=headers)
 
         result = {
             "success": response.ok,
             "status": response.status_code,
-            "message": "Linked successfully." if response.ok else response.text,
+            "message": "Linked all successfully." if response.ok else response.text,
         }
 
         if output:
             print(result)
 
         return result
-
 
 
     def delete_datasetmembers(
