@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, cast
 
 import pandas as pd
 
@@ -135,6 +135,7 @@ class ReportAttributes:
     def _from_csv(cls: type[ReportAttributes], file_path: str) -> ReportAttributes:
         data = pd.read_csv(file_path)
         return cls._from_dataframe(data)
+    
 
     def from_object(
         self,
@@ -142,17 +143,19 @@ class ReportAttributes:
     ) -> ReportAttributes:
         if isinstance(attributes_source, list):
             if all(isinstance(attr, ReportAttribute) for attr in attributes_source):
-                attributes_obj = ReportAttributes(attributes=attributes_source)  # ✅ safe
+                attributes_obj = ReportAttributes(attributes=cast(list[ReportAttribute], attributes_source))
             elif all(isinstance(attr, dict) for attr in attributes_source):
-                attributes_obj = ReportAttributes._from_dict_list(attributes_source)  # ✅ safe
+                attributes_obj = ReportAttributes._from_dict_list(cast(list[dict[str, Any]], attributes_source))
             else:
                 raise TypeError("List must contain either ReportAttribute instances or dicts.")
         elif isinstance(attributes_source, pd.DataFrame):
             attributes_obj = ReportAttributes._from_dataframe(attributes_source)
         else:
             raise TypeError("Unsupported type for attributes_source.")
+
         attributes_obj.client = self._client
         return attributes_obj
+
 
     def to_dataframe(self) -> pd.DataFrame:
         data = [attr.to_dict() for attr in self.attributes]
