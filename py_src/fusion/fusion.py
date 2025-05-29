@@ -26,6 +26,7 @@ from fusion.fusion_types import Types
 from fusion.product import Product
 from fusion.report import Report
 from fusion.report_attributes import ReportAttribute, ReportAttributes
+from typing import TypedDict, List, Union, Optional
 
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError, CredentialError, FileFormatError
@@ -2117,11 +2118,16 @@ class Fusion:
         attributes_obj = ReportAttributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
+    
+    class AttributeTermMapping(TypedDict):
+        attribute: dict[str, str]
+        term: dict[str, str]
+        isKDE: bool
 
     def link_attributes_to_terms(
         self,
         report_id: str,
-        mappings: list[dict],
+        mappings: list[AttributeTermMapping],
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
         """
