@@ -114,132 +114,132 @@ class Report(metaclass=CamelCaseMeta):
             raise ValueError("A Fusion client object is required.")
         return res
 
-    @classmethod
-    def _from_series(cls: type[Report], series:  pd.Series[Any]) -> Report:
-        """Instantiate a Report object from a pandas Series."""
-        series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
+    # @classmethod
+    # def _from_series(cls: type[Report], series:  pd.Series[Any]) -> Report:
+    #     """Instantiate a Report object from a pandas Series."""
+    #     series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower())
+    #
+    #     # Normalize booleans
+    #     is_bcbs239_program = series.get("isbcbs239program", None)
+    #     is_bcbs239_program = make_bool(is_bcbs239_program) if is_bcbs239_program is not None else False
+    #
+    #     return cls(
+    #         name=series.get("name", ""),
+    #         tier_type=series.get("tiertype", ""),
+    #         lob=series.get("lob", ""),
+    #         data_node_id=series.get("datanodeid", {"id": "", "name": "", "dataNodeType": ""}),
+    #         alternative_id=series.get("alternativeid", {"domain": "", "value": ""}),
+    #         title=series.get("title", None),
+    #         alternate_id=series.get("alternateid", None),
+    #         description=series.get("description", None),
+    #         frequency=series.get("frequency", None),
+    #         category=series.get("category", None),
+    #         sub_category=series.get("subcategory", None),
+    #         report_inventory_name=series.get("reportinventoryname", None),
+    #         report_inventory_id=series.get("reportinventoryid", None),
+    #         report_owner=series.get("reportowner", None),
+    #         sub_lob=series.get("sublob", None),
+    #         is_bcbs239_program=is_bcbs239_program,
+    #         risk_area=series.get("riskarea", None),
+    #         risk_stripe=series.get("riskstripe", None),
+    #         sap_code=series.get("sapcode", None),
+    #         sourced_object=series.get("sourcedobject", None),
+    #         domain=series.get("domain", None),
+    #         data_model_id=series.get("datamodelid", None),
+    #     )
 
-        # Normalize booleans
-        is_bcbs239_program = series.get("isbcbs239program", None)
-        is_bcbs239_program = make_bool(is_bcbs239_program) if is_bcbs239_program is not None else False
+    # @classmethod
+    # def _from_dict(cls: type[Report], data: dict[str, Any]) -> Report:
+    #     """Instantiate a Report object from a dictionary.
+    #
+    #     Args:
+    #         data (dict[str, Any]): Report metadata as a dictionary.
+    #
+    #     Returns:
+    #         Report: Report object.
+    #     """
+    #     # Override camelCase keys to snake_case that are not automatically converted
+    #     field_name_overrides = {"isBCBSProgram": "is_bcbs239_program"}
+    #
+    #     def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
+    #         """Recursively convert camelCase keys in nested dicts to snake_case."""
+    #         result = {}
+    #         for key, value in d.items():
+    #             new_key = camel_to_snake(key)
+    #             if isinstance(value, dict):
+    #                 result[new_key] = convert_keys(value)
+    #             else:
+    #                 result[new_key] = value
+    #         return result
+    #
+    #     # Convert all keys and nested dicts
+    #     converted_data = {}
+    #     for k, v in data.items():
+    #         snake_key = field_name_overrides.get(k, camel_to_snake(k))
+    #         if isinstance(v, dict) and not isinstance(v, str):
+    #             converted_data[snake_key] = convert_keys(v)
+    #         else:
+    #             converted_data[snake_key] = v
+    #
+    #     # Convert specific fields
+    #     if "is_bcbs239_program" in converted_data:
+    #         converted_data["is_bcbs239_program"] = make_bool(converted_data["is_bcbs239_program"])
+    #
+    #     # Only use fields defined in the class
+    #     keys = [f.name for f in fields(cls)]
+    #     filtered_data = {k: v for k, v in converted_data.items() if k in keys}
+    #
+    #     return cls(**filtered_data)
 
-        return cls(
-            name=series.get("name", ""),
-            tier_type=series.get("tiertype", ""),
-            lob=series.get("lob", ""),
-            data_node_id=series.get("datanodeid", {"id": "", "name": "", "dataNodeType": ""}),
-            alternative_id=series.get("alternativeid", {"domain": "", "value": ""}),
-            title=series.get("title", None),
-            alternate_id=series.get("alternateid", None),
-            description=series.get("description", None),
-            frequency=series.get("frequency", None),
-            category=series.get("category", None),
-            sub_category=series.get("subcategory", None),
-            report_inventory_name=series.get("reportinventoryname", None),
-            report_inventory_id=series.get("reportinventoryid", None),
-            report_owner=series.get("reportowner", None),
-            sub_lob=series.get("sublob", None),
-            is_bcbs239_program=is_bcbs239_program,
-            risk_area=series.get("riskarea", None),
-            risk_stripe=series.get("riskstripe", None),
-            sap_code=series.get("sapcode", None),
-            sourced_object=series.get("sourcedobject", None),
-            domain=series.get("domain", None),
-            data_model_id=series.get("datamodelid", None),
-        )
+    # @classmethod
+    # def _from_csv(cls: type[Report], file_path: str, name: str | None = None) -> Report:
+    #     """Instantiate a Report object from a CSV file.
+    #
+    #     Args:
+    #         file_path (str): Path to the CSV file.
+    #         name (str | None, optional): Report name for filtering if multiple reports are defined in the CSV.
+    #
+    #     Returns:
+    #         Report: Report object.
+    #     """
+    #     data = pd.read_csv(file_path)
+    #     return (
+    #         cls._from_series(data[data["name"] == name].reset_index(drop=True).iloc[0])
+    #         if name
+    #         else cls._from_series(data.reset_index(drop=True).iloc[0])
+    #     )
 
-    @classmethod
-    def _from_dict(cls: type[Report], data: dict[str, Any]) -> Report:
-        """Instantiate a Report object from a dictionary.
-
-        Args:
-            data (dict[str, Any]): Report metadata as a dictionary.
-
-        Returns:
-            Report: Report object.
-        """
-        # Override camelCase keys to snake_case that are not automatically converted
-        field_name_overrides = {"isBCBSProgram": "is_bcbs239_program"}
-
-        def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
-            """Recursively convert camelCase keys in nested dicts to snake_case."""
-            result = {}
-            for key, value in d.items():
-                new_key = camel_to_snake(key)
-                if isinstance(value, dict):
-                    result[new_key] = convert_keys(value)
-                else:
-                    result[new_key] = value
-            return result
-
-        # Convert all keys and nested dicts
-        converted_data = {}
-        for k, v in data.items():
-            snake_key = field_name_overrides.get(k, camel_to_snake(k))
-            if isinstance(v, dict) and not isinstance(v, str):
-                converted_data[snake_key] = convert_keys(v)
-            else:
-                converted_data[snake_key] = v
-
-        # Convert specific fields
-        if "is_bcbs239_program" in converted_data:
-            converted_data["is_bcbs239_program"] = make_bool(converted_data["is_bcbs239_program"])
-
-        # Only use fields defined in the class
-        keys = [f.name for f in fields(cls)]
-        filtered_data = {k: v for k, v in converted_data.items() if k in keys}
-
-        return cls(**filtered_data)
-
-    @classmethod
-    def _from_csv(cls: type[Report], file_path: str, name: str | None = None) -> Report:
-        """Instantiate a Report object from a CSV file.
-
-        Args:
-            file_path (str): Path to the CSV file.
-            name (str | None, optional): Report name for filtering if multiple reports are defined in the CSV.
-
-        Returns:
-            Report: Report object.
-        """
-        data = pd.read_csv(file_path)
-        return (
-            cls._from_series(data[data["name"] == name].reset_index(drop=True).iloc[0])
-            if name
-            else cls._from_series(data.reset_index(drop=True).iloc[0])
-        )
-
-    def from_object(
-        self,
-        report_source: Report | dict[str, Any] | str | pd.Series[Any],
-    ) -> Report:
-        """Instantiate a Report object from various sources.
-
-        Args:
-            report_source (Report | dict[str, Any] | str | pd.Series[Any]): Report metadata source.
-
-        Raises:
-            TypeError: If the source is unsupported.
-
-        Returns:
-            Report: Report object.
-        """
-        if isinstance(report_source, Report):
-            report = report_source
-        elif isinstance(report_source, dict):
-            report = self._from_dict(report_source)
-        elif isinstance(report_source, str):
-            if _is_json(report_source):
-                report = self._from_dict(js.loads(report_source))
-            else:
-                report = self._from_csv(report_source)
-        elif isinstance(report_source, pd.Series):
-            report = self._from_series(report_source)
-        else:
-            raise TypeError(f"Could not resolve the object provided: {report_source}")
-
-        report.client = self._client
-        return report
+    # def from_object(
+    #     self,
+    #     report_source: Report | dict[str, Any] | str | pd.Series[Any],
+    # ) -> Report:
+    #     """Instantiate a Report object from various sources.
+    #
+    #     Args:
+    #         report_source (Report | dict[str, Any] | str | pd.Series[Any]): Report metadata source.
+    #
+    #     Raises:
+    #         TypeError: If the source is unsupported.
+    #
+    #     Returns:
+    #         Report: Report object.
+    #     """
+    #     if isinstance(report_source, Report):
+    #         report = report_source
+    #     elif isinstance(report_source, dict):
+    #         report = self._from_dict(report_source)
+    #     elif isinstance(report_source, str):
+    #         if _is_json(report_source):
+    #             report = self._from_dict(js.loads(report_source))
+    #         else:
+    #             report = self._from_csv(report_source)
+    #     elif isinstance(report_source, pd.Series):
+    #         report = self._from_series(report_source)
+    #     else:
+    #         raise TypeError(f"Could not resolve the object provided: {report_source}")
+    #
+    #     report.client = self._client
+    #     return report
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Report instance to a dictionary.
