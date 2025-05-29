@@ -114,48 +114,42 @@ class Report(metaclass=CamelCaseMeta):
             raise ValueError("A Fusion client object is required.")
         return res
 
-    # @classmethod
-    # def _from_dict(cls: type[Report], data: dict[str, Any]) -> Report:
-    #     """Instantiate a Report object from a dictionary.
-    #
-    #     Args:
-    #         data (dict[str, Any]): Report metadata as a dictionary.
-    #
-    #     Returns:
-    #         Report: Report object.
-    #     """
-    #     # Override camelCase keys to snake_case that are not automatically converted
-    #     field_name_overrides = {"isBCBSProgram": "is_bcbs239_program"}
-    #
-    #     def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
-    #         """Recursively convert camelCase keys in nested dicts to snake_case."""
-    #         result = {}
-    #         for key, value in d.items():
-    #             new_key = camel_to_snake(key)
-    #             if isinstance(value, dict):
-    #                 result[new_key] = convert_keys(value)
-    #             else:
-    #                 result[new_key] = value
-    #         return result
-    #
-    #     # Convert all keys and nested dicts
-    #     converted_data = {}
-    #     for k, v in data.items():
-    #         snake_key = field_name_overrides.get(k, camel_to_snake(k))
-    #         if isinstance(v, dict) and not isinstance(v, str):
-    #             converted_data[snake_key] = convert_keys(v)
-    #         else:
-    #             converted_data[snake_key] = v
-    #
-    #     # Convert specific fields
-    #     if "is_bcbs239_program" in converted_data:
-    #         converted_data["is_bcbs239_program"] = make_bool(converted_data["is_bcbs239_program"])
-    #
-    #     # Only use fields defined in the class
-    #     keys = [f.name for f in fields(cls)]
-    #     filtered_data = {k: v for k, v in converted_data.items() if k in keys}
-    #
-    #     return cls(**filtered_data)
+    @classmethod
+    def from_dict(cls: type[Report], data: dict[str, Any]) -> Report:
+        """Instantiate a Report object from a dictionary.
+
+        Args:
+            data (dict[str, Any]): Report metadata as a dictionary, typically from an API.
+
+        Returns:
+            Report: An instance of the Report class constructed from the input dictionary.
+
+        """
+
+        field_name_overrides = {
+            "isBCBSProgram": "is_bcbs239_program"
+        }
+
+        def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
+            converted = {}
+            for k, v in d.items():
+                key = field_name_overrides.get(k, camel_to_snake(k))
+                if isinstance(v, dict) and not isinstance(v, str):
+                    converted[key] = convert_keys(v)
+                else:
+                    converted[key] = v
+            return converted
+
+        converted_data = convert_keys(data)
+
+        if "is_bcbs239_program" in converted_data:
+            converted_data["is_bcbs239_program"] = make_bool(converted_data["is_bcbs239_program"])
+
+        valid_fields = {f.name for f in fields(cls)}
+        filtered_data = {k: v for k, v in converted_data.items() if k in valid_fields}
+
+        return cls(**filtered_data)
+
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Report instance to a dictionary.
