@@ -2153,7 +2153,7 @@ class Fusion:
             if not ("attribute" in m and "term" in m and "isKDE" in m):
                 raise ValueError(f"Mapping at index {i} must include 'attribute', 'term', and 'isKDE'.")
 
-        url = f"{self.get_new_root_url()}v1/reports/{report_id}/reportElements/businessTerms"
+        url = f"{self.get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
 
         response = self.session.post(url, json=mappings)
         requests_raise_for_status(response)
