@@ -116,39 +116,50 @@ class Report(metaclass=CamelCaseMeta):
 
     @classmethod
     def from_dict(cls: type[Report], data: dict[str, Any]) -> Report:
-        """Instantiate a Report object from a dictionary.
-
-        Args:
-            data (dict[str, Any]): Report metadata as a dictionary, typically from an API.
-
-        Returns:
-            Report: An instance of the Report class constructed from the input dictionary.
-
+        """Instantiate a Report object from a partial API-style dictionary.
+        
+        Only sets fields that are present in the input.
+        Missing fields are completely omitted from the instance.
+        Accessing them later will raise AttributeError.
         """
 
-        field_name_overrides = {
-            "isBCBSProgram": "is_bcbs239_program"
-        }
+        def normalize_value(val: Any) -> Any:
+            if isinstance(val, str) and val.strip() == "":
+                return None
+            return val
 
         def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
             converted = {}
             for k, v in d.items():
-                key = field_name_overrides.get(k, camel_to_snake(k))
+                key = k if k == "isBCBS239Program" else camel_to_snake(k)
                 if isinstance(v, dict) and not isinstance(v, str):
                     converted[key] = convert_keys(v)
                 else:
-                    converted[key] = v
+                    converted[key] = normalize_value(v)
             return converted
 
         converted_data = convert_keys(data)
 
-        if "is_bcbs239_program" in converted_data:
-            converted_data["is_bcbs239_program"] = make_bool(converted_data["is_bcbs239_program"])
+        if "isBCBS239Program" in converted_data:
+            converted_data["isBCBS239Program"] = make_bool(converted_data["isBCBS239Program"])
 
+        # Filter keys that are valid fields in the class
         valid_fields = {f.name for f in fields(cls)}
         filtered_data = {k: v for k, v in converted_data.items() if k in valid_fields}
 
-        return cls(**filtered_data)
+        # Create instance without calling __init__
+        report = cls.__new__(cls)
+
+        # Only set attributes that were in the input
+        for key, value in filtered_data.items():
+            setattr(report, key, value) 
+
+        # Optionally call __post_init__ only if you know its fields were set
+        if hasattr(report, "name") and hasattr(report, "title") and hasattr(report, "description"):
+            report.__post_init__()
+
+        return report
+
 
 
     def to_dict(self) -> dict[str, Any]:
