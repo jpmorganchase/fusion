@@ -1,0 +1,3556 @@
+[33mcommit 8dc338e38629f1824d643d4c4b81b69e1a70a262[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/bcbs[m[33m, [m[1;31morigin/feature/bcbs[m[33m)[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Mon Jun 2 15:54:10 2025 +0100
+
+    change from dict to rteurn on when field missing
+
+[33mcommit 27c9d9afb7a47d42b6b96370214657de97c0053c[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Mon Jun 2 11:38:57 2025 +0100
+
+    fix bcbs239 conevrison in from diuct
+
+[33mcommit 1f3cc875980658aea6f65017153d442026e67428[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Mon Jun 2 10:39:47 2025 +0100
+
+    added tests for reports
+
+[33mcommit 129ccdc0f304fb1aa4bcfc84a2206f993d5b5197[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Mon Jun 2 10:29:49 2025 +0100
+
+    correct from dict func in report class
+
+[33mcommit 34ec9cfe0a93b7d1b0785b44835664145aaa57b2[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Thu May 29 17:39:14 2025 +0100
+
+    remove some error
+
+[33mcommit 165f079ef15fc8e43aa6bc2182df7864578107a9[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Thu May 29 17:29:32 2025 +0100
+
+    ignore this push
+
+[33mcommit 6b5c9ec6de1067a2d77e7ec14c8b8935ac4eb7f6[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Thu May 29 14:54:28 2025 +0100
+
+    slight fix
+
+[33mcommit 9f02fbdfa37a0b9fd7db9d5515964320a35fe1d6[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Thu May 29 13:57:08 2025 +0100
+
+    Update Reports
+
+[33mcommit bee904e4e192cabd1e021b5e3ad75f5726d95a04[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Thu May 29 11:08:08 2025 +0100
+
+    getting rid of mypy errors
+
+[33mcommit 01817baab5445bc9ab6f5b857f06392fad669e8a[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Thu May 29 10:48:30 2025 +0100
+
+    fix error lint mypy
+
+[33mcommit b6d081a41ef3619309f9ee0818681f888350291f[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Thu May 29 10:19:38 2025 +0100
+
+    Update Reports
+
+[33mcommit 4aba424f7d851912c7956f344db0ead6ab3bf3d0[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Wed May 28 16:49:24 2025 +0100
+
+    fix magic value so build can pass
+
+[33mcommit 259a7d34166a1c1ee10cedc4e69aa1566a6b053a[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Wed May 28 16:25:33 2025 +0100
+
+    Update Reports
+
+[33mcommit de1e3380e42a8a28e9edb67bace2191b4a4bec96[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Wed May 28 16:12:39 2025 +0100
+
+    Update Reports
+
+[33mcommit 7442457555f7a9cbe1dbef6817a21c64ca1201c0[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Wed May 28 16:08:06 2025 +0100
+
+    clean up + new tests + fixes for attribute lint(rmoved catalog related stuff)
+
+[33mcommit 1cd456d72c151a3b756a5e88bdb98f5437cb85b1[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Wed May 28 15:47:21 2025 +0100
+
+    Update Reports
+
+[33mcommit cc98ddd8d1945095e323291cee5f304140c0ce89[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Wed May 28 15:13:49 2025 +0100
+
+    sligth fix
+
+[33mcommit dddbedbff4ded79742104893123e74cd80e53f2a[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Wed May 28 15:01:18 2025 +0100
+
+    fixed all lint error some stempeorory
+
+[33mcommit 6059808fccae486d44fa208ade9e0ad3c192b794[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Wed May 28 13:42:59 2025 +0100
+
+    Update Reports
+
+[33mcommit 5cfb72e890fedcb209b84bda32a6e47e88978d05[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Wed May 28 12:14:10 2025 +0100
+
+    Update Reports
+
+[33mcommit 44fb48d675659440b91f49aad45f638290684558[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Wed May 28 12:10:32 2025 +0100
+
+    update notbeook eexmaple
+
+[33mcommit c864af255dd99b13f51c1446960a942e33997d00[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Wed May 28 12:10:08 2025 +0100
+
+    correct link attritbues
+
+[33mcommit 8ff6173ce32c64e1c3596eb843899c2f568dc017[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Wed May 28 11:25:24 2025 +0100
+
+    Update Reports
+
+[33mcommit 3a875a739b355bb4f7ea33297381383493073cc7[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Wed May 28 11:14:18 2025 +0100
+
+    Update Reports
+
+[33mcommit d8362751ae464cc7833b9fdd8cd4ded8446980f7[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Wed May 28 11:07:26 2025 +0100
+
+    Update Reports
+
+[33mcommit 4349492c08e35bc32f24547c1f4efea4a1dbaa8a[m
+Merge: 033edc7 c844d9a
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Wed May 28 11:05:22 2025 +0100
+
+    Merge branch 'feature/bcbs' of https://github.com/jpmorganchase/fusion into feature/bcbs
+
+[33mcommit 033edc724cd78f4173e56a79c85f30ff4079c599[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Wed May 28 11:01:32 2025 +0100
+
+    added example for link in notebbok
+
+[33mcommit 255f057c74cb7ece1e0fc60d77e7d31bd1b2ff59[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Wed May 28 10:58:57 2025 +0100
+
+    added nnew url (only func) add func for link attributes to terms(need to test) and nsome notebook lines for help
+
+[33mcommit c844d9ad8f4e9902f2c7a5e8994bc28a673054f8[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Tue May 27 12:20:40 2025 +0100
+
+    Update Reports
+
+[33mcommit d6180ee2504f7553a05f9c14ca4d341eef3d20ca[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Tue May 27 12:08:18 2025 +0100
+
+    tailoring notebook for testing
+
+[33mcommit 427027a86269643af5c98c523c1762ba5ef3296e[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Mon May 26 18:58:46 2025 +0100
+
+    Added linkage of attributes to business terms
+
+[33mcommit f706088185d8a2e54f681d37c48e3d946e4b934a[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Mon May 26 18:14:33 2025 +0100
+
+    Mixed My report attributes and ramas report branch so that it is all in one place
+
+[33mcommit 9d8fd6d5c97c62e086d8fb906b20823ac09215de[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Thu May 22 14:49:46 2025 +0100
+
+    fix order inreport class
+
+[33mcommit faca77a2522242c934cc1290a25179e22b4f5c74[m
+Author: Pushpak Manwani <pushpak.manwani@jpmchase.com>
+Date:   Thu May 22 14:25:55 2025 +0100
+
+    Removal of Integration Test - temp
+
+[33mcommit 523874ab2710da1126e4c55e49fe625d1a0e5391[m
+Author: Kyle Stevenson <kyle.stevenson@jpmchase.com>
+Date:   Wed May 14 14:39:21 2025 +0100
+
+    Update reports
+
+[33mcommit 301a621355b06ba6b1bba6dbded0d9b825e6b6d4[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Wed May 14 11:04:31 2025 +0100
+
+    create report initial commit
+
+[33mcommit f0ca99e04619611a9391084726fbfa5d103b771f[m[33m ([m[1;33mtag: [m[1;33mv2.0.13[m[33m, [m[1;31morigin/urlupdate[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmaster[m[33m)[m
+Merge: da9be2d 1c0f6d6
+Author: Rama Devi Evuri <66629310+Ramadevie@users.noreply.github.com>
+Date:   Tue May 6 15:53:43 2025 +0100
+
+    Merge pull request #120 from jpmorganchase/release/20250506
+    
+    Release 2.0.13
+
+[33mcommit 1c0f6d678d92275a81b20aa524ba27e72eb808c4[m[33m ([m[1;31morigin/release/20250506[m[33m)[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Tue May 6 15:30:47 2025 +0100
+
+    Release 2.0.13
+
+[33mcommit da9be2dbf17cc9200ffafc3393484a43abb1de43[m
+Merge: caf39d1 46dbe1f
+Author: Rama Devi Evuri <66629310+Ramadevie@users.noreply.github.com>
+Date:   Tue May 6 14:17:18 2025 +0100
+
+    Merge pull request #119 from jpmorganchase/feature/exception_handle
+    
+    * Exception handling improvement
+    * Limit Licensing service calls
+    * Limit list datasets calls internally
+    * Support xml format for distribution type
+    * Option to disable disc logging
+    * Remove the job-lib dependency to fix the credentials generating for each download and upload
+    * Enable exact search for list datasets
+
+[33mcommit 46dbe1ff0334321f5301b45937fd1ed902c27d5c[m[33m ([m[1;31morigin/feature/exception_handle[m[33m)[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Mon May 5 21:53:18 2025 +0100
+
+    Convert ruff panic exception to credential error
+
+[33mcommit 136ab2efefacabc42f4c2ff40ef33a805c809330[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Mon May 5 15:28:30 2025 +0100
+
+    doc string update
+
+[33mcommit c26bc1cce6756efa7411183a44f7c1678ed62914[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Mon May 5 13:27:16 2025 +0100
+
+    error code from exception
+
+[33mcommit bc7161ab6a1f7e69ce87e86ac73f0d008f7401eb[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Mon May 5 12:50:59 2025 +0100
+
+    Fix Panic exception
+
+[33mcommit 3c71e8225352e7ac79bc5098fbfd2f31a2936b0d[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Mon May 5 09:42:39 2025 +0100
+
+    Fix mypy errors
+
+[33mcommit 35d58460bcf7250221dea53244313d49187cc183[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Sun May 4 23:31:24 2025 +0100
+
+    exception handling, log disable fixes
+
+[33mcommit b751b86aa9d3f0a23c7c5fde419223c6087f77b8[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Thu May 1 15:01:40 2025 +0100
+
+    Fix the duplicating status code in the error message
+
+[33mcommit 3f0439c501daa015d829438b582b607e65c94476[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Thu May 1 00:27:32 2025 +0100
+
+    Pass through the error message even when its not found error
+
+[33mcommit 0de735f202a98bc6e5b5790d8e6603ed6bf3b012[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Wed Apr 30 13:16:31 2025 +0100
+
+    remove use_legacy_dataset as the latest version of pyarrow removed it
+
+[33mcommit cec8de6c3aa1974a6d45c6b77987680e3b5df4ab[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Wed Apr 30 09:40:49 2025 +0100
+
+    Fix return dataframe for list catalogs
+
+[33mcommit 7031b00d60c686b08b68c1163976267232146379[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Fri Apr 25 11:17:12 2025 +0100
+
+    Fix tests and ruff issues
+
+[33mcommit 6f7f96a42b9dec2830eae3090743eaea32c0aa6c[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Thu Apr 24 15:27:29 2025 +0100
+
+    Replace Joblib as its causing credentials reset every call
+
+[33mcommit 45d2285358f7bc9e309c177dd06c7a3892d7647a[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Wed Apr 23 00:15:17 2025 +0100
+
+    update status code
+
+[33mcommit 996dd9382765a21c94daaa3007d9b73d4943678a[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Tue Apr 22 17:18:30 2025 +0100
+
+    fix filesystem list catalogs issue
+
+[33mcommit 4d091d37c2259e6eaa2fd381382634aefac7d81a[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Tue Apr 22 15:34:19 2025 +0100
+
+    fix the ruff lint error
+
+[33mcommit 2648ff7b5c2d4d2333f3028d3277ed407487efcc[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Tue Apr 22 15:10:03 2025 +0100
+
+    Fix upload issue
+
+[33mcommit dcf91f49dc5752fc78cce4631ca11fb906ce9014[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Fri Apr 18 15:19:59 2025 +0100
+
+    build issues
+
+[33mcommit df144958dded0662241e20b63189b31fa19cb37b[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Fri Apr 18 13:59:35 2025 +0100
+
+    add status code for CredentialError
+
+[33mcommit 1329b85990678e817186dc7f6caa8e7bb0a43a1b[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Wed Apr 16 17:25:42 2025 +0100
+
+    Update credential error
+
+[33mcommit 97ba2eb099728a02ed902aeaa2ec7c568e97f341[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Wed Apr 16 16:41:22 2025 +0100
+
+    fix ruff error
+
+[33mcommit b915e2af35eb3d166dd7b8e5e9bf3d3a8775954d[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Wed Apr 16 15:27:37 2025 +0100
+
+    Exception handling
+
+[33mcommit 74551aaa3b9d238406e53a99e1f47fb4ae384f02[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Tue Apr 15 22:30:23 2025 +0100
+
+    Fix Ruff error
+
+[33mcommit 1172e7d3a4e3db61027bee41953b1d98d747194e[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Tue Apr 15 19:04:02 2025 +0100
+
+    Fix the error handling
+
+[33mcommit caf39d1b710be1d6ea0a518c09112dcd2b37664e[m[33m ([m[1;33mtag: [m[1;33mv2.0.12[m[33m, [m[1;32mmain[m[33m)[m
+Merge: 696c88c 5ef2d32
+Author: Rama Devi Evuri <66629310+Ramadevie@users.noreply.github.com>
+Date:   Fri Apr 4 19:34:29 2025 +0100
+
+    Merge pull request #116 from jpmorganchase/release/20250404
+    
+    Release for 2.0.12
+
+[33mcommit 5ef2d3278ea6b4eebd2a5ba9a02ad519c19f4f9d[m[33m ([m[1;31morigin/release/20250404[m[33m)[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Fri Apr 4 17:26:36 2025 +0100
+
+    Release for 2.0.12
+
+[33mcommit 696c88c9e8c3e6ed2b2589f960fe0a47735394d7[m
+Merge: 5a4b5a1 3013a43
+Author: Rama Devi Evuri <66629310+Ramadevie@users.noreply.github.com>
+Date:   Fri Apr 4 16:55:44 2025 +0100
+
+    Merge pull request #115 from jpmorganchase/feature/dq-requirements
+    
+    Feature/dq requirements
+
+[33mcommit 3013a43bd39ac9142ea29955bbceb268523f762a[m[33m ([m[1;31morigin/feature/dq-requirements[m[33m)[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Thu Apr 3 13:24:45 2025 +0100
+
+    Ruff error
+
+[33mcommit 9377cb1d53daa70e511d058db791ca08dc4d797a[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Thu Apr 3 12:43:41 2025 +0100
+
+    Error handling if catalong not exist
+
+[33mcommit c985f16fa5ef33b1119ec08ee045574e6752726e[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Mon Mar 31 14:30:54 2025 +0100
+
+    Update the test coverage
+
+[33mcommit 49aba2328ad68f892ee4318ff43e8ee42e80fafe[m
+Author: Ramadevie <66629310+Ramadevie@users.noreply.github.com>
+Date:   Mon Mar 31 13:40:49 2025 +0100
+
+    Pass the catalog when doing fs_fusion.ls
+
+[33mcommit bc61abba2081a1840230a30952ed79bafe419caa[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Thu Mar 27 17:06:34 2025 -0400
+
+    change how to check access and set url in get_events
+
+[33mcommit b6720392b80c8e13119a0042c5826bce5bd2820e[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Thu Mar 27 15:44:07 2025 -0400
+
+    add pytest for download updates
+
+[33mcommit 400af2fc57901a6e72f62a63776664cdf601e7f9[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Thu Mar 27 14:52:32 2025 -0400
+
+    flatten out metadata fields for usability
+
+[33mcommit 0c3630352966b6a97423ef5b16f76e3fb2542b87[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Thu Mar 27 12:27:54 2025 -0400
+
+    removing duplicate keys, working on flattening out metadata
+
+[33mcommit 78146c00cee36756871b3dea0e1adc531f4cc89c[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Thu Mar 27 10:45:17 2025 -0400
+
+    skip download overhead if not overwrite and not preserve original file name
+
+[33mcommit 3e873d6e057f38bc43a7f73a16534f5008fa9b2b[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Wed Mar 26 10:53:55 2025 -0400
+
+    bump version
+
+[33mcommit 10922d1b5ca0361345c6ad0a9c65d332c7e211b9[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Tue Mar 25 16:44:52 2025 -0400
+
+    fix after merge
+
+[33mcommit 8dfd3e832ec33f100dd69d897eed30ce12562f66[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Tue Mar 25 10:08:51 2025 -0400
+
+    add additional download access and file format handling
+
+[33mcommit 525234d2500357a45612f3191774623e838c0f13[m
+Merge: f0ae655 5a4b5a1
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Tue Mar 25 09:24:13 2025 -0400
+
+    Merge branch 'master' into feature/dq-requirements
+
+[33mcommit f0ae65546f6e1e8891ba58f2912b98588605d4f2[m
+Merge: c0202c6 9cce6bd
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Tue Mar 25 09:23:49 2025 -0400
+
+    Merge branch 'master' into feature/dq-requirements
+
+[33mcommit 5a4b5a17a421dc951f1a989b32e7b38d230bbb67[m[33m ([m[1;33mtag: [m[1;33mv2.0.11[m[33m)[m
+Author: dialectician4 <142185883+dialectician4@users.noreply.github.com>
+Date:   Fri Mar 21 11:39:09 2025 -0400
+
+    Release for 2.0.11 (#114)
+
+[33mcommit 72b23cb3e7718fb7ea0eec032f7e95c5b8331503[m
+Author: dialectician4 <142185883+dialectician4@users.noreply.github.com>
+Date:   Thu Mar 20 17:25:32 2025 -0400
+
+    Fixed _info bug, added async streaming functionality (#113)
+
+[33mcommit 364eece1e58ba6e5345539abbacf76bc6edf0d37[m[33m ([m[1;33mtag: [m[1;33mv2.0.10[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Mar 20 10:40:46 2025 -0400
+
+    Release/20250320 (#112)
+    
+    * Asynchronous embeddings API connection class
+    * Support multi knowledge base search in sync and async embeddings connection classes
+    * Consolidate embeddings connector class utilities
+
+[33mcommit 9cce6bd8b66f632d113c3b669f6ef77780ac98e7[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Mar 20 09:51:13 2025 -0400
+
+    Feature/embeddings2 (#111)
+    
+    * add async embeddings connection class
+    * support multi knowledge base search
+    * consolidate embeddings connector class utilities
+
+[33mcommit 1a926cfd8fc933530e15155a46ebe7a19c378645[m[33m ([m[1;33mtag: [m[1;33mv2.0.9[m[33m)[m
+Author: dialectician4 <142185883+dialectician4@users.noreply.github.com>
+Date:   Tue Mar 11 17:02:32 2025 -0400
+
+    Async functionality release (#110)
+
+[33mcommit ae74ee2e3f8861f2e5569a0e0785bb5bd13f2842[m
+Author: dialectician4 <142185883+dialectician4@users.noreply.github.com>
+Date:   Tue Mar 11 15:58:58 2025 -0400
+
+    Adding async variants to various FusionFS methods. (#109)
+    
+    Completing async variants of FFS methods with some tests and documentation
+
+[33mcommit 3cbd48cf906449ff3f2bd0a6e0483060cbba3615[m[33m ([m[1;33mtag: [m[1;33mv2.0.8[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Wed Mar 5 09:09:49 2025 -0500
+
+    Release/03042025 (#106)
+    
+    * release branch
+
+[33mcommit 19959b8175f9265722704c85cb5de2088ebb13f3[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Mon Mar 3 09:11:23 2025 -0500
+
+    Feature/from bytes fix (#105)
+    
+    bug fix for from-bytes multipart upload
+
+[33mcommit 88163ea5de9aaa739264394965a243a2b92ec7de[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Fri Feb 28 13:32:21 2025 -0500
+
+    Feature/gz dist format (#104)
+    
+    * GZ as recognized format
+
+[33mcommit c0202c6f700154d0cfe489815d7de96a409540f0[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Thu Feb 27 10:10:03 2025 -0500
+
+    testing download fixes
+
+[33mcommit 37fff4961a9b966bdac132bcf5825f54cfb06ea9[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Thu Feb 20 16:03:35 2025 -0500
+
+    duplicate line
+
+[33mcommit 63d79e3218e0cd986ff99928631e2294b6ea0a60[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Wed Feb 19 13:38:06 2025 -0500
+
+    version bump
+
+[33mcommit 99624c94d9ee82f9c3b6578f67a3a817830a2085[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Wed Feb 12 17:38:16 2025 -0500
+
+    listen to events url defualt to obj root url
+
+[33mcommit ee933f77191b046c9940311c8e03598833fbce80[m
+Author: Georgianna James <georgianna.james@jpmchase.com>
+Date:   Wed Feb 12 12:24:25 2025 -0500
+
+    error raising for access denied and incorrect format on download
+
+[33mcommit b546938a7f321ff59576fc82d915c66feadd51f0[m[33m ([m[1;33mtag: [m[1;33mv2.0.7[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Mon Feb 3 14:42:27 2025 -0500
+
+    fix version issue (#102)
+
+[33mcommit af8f107a4860be157db2d7b17350dfe4545fe417[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Mon Feb 3 13:50:25 2025 -0500
+
+    release branch for embeddings api functionality (#100)
+    
+    embeddings release
+
+[33mcommit 356dd9ecb35557ce164d6640012e3b9a7e908f10[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Mon Feb 3 12:58:56 2025 -0500
+
+    Feature/embeddings (#99)
+    
+    embeddings api support
+
+[33mcommit 2cc3c5f1ed3cc8fe34b49710d5554911096d0791[m[33m ([m[1;33mtag: [m[1;33mv2.0.6[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Jan 16 11:12:22 2025 -0500
+
+    release.yaml fix (#98)
+
+[33mcommit b18454a807080e25ecc146feb3b5a309aa9647eb[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Jan 16 09:49:06 2025 -0500
+
+    release branch for bcbs (#97)
+
+[33mcommit 9412557965fb5655495acce031c2cb58efc2d430[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Jan 16 09:14:21 2025 -0500
+
+    Feature/bcbs (#96)
+    
+    * bcbs updates
+
+[33mcommit 82ca473795760476b42b636a7cdf7a01a442c6ab[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Dec 20 09:12:27 2024 -0500
+
+    Feature/uv mig (#95)
+    
+    * uv migration
+
+[33mcommit 29390c5df493673a8d3ca67f698d7db09632d7ae[m[33m ([m[1;33mtag: [m[1;33mv2.0.5[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Dec 12 17:15:15 2024 -0500
+
+    Release/20241213 (#94)
+
+[33mcommit eb5c0ed63b27da289cc2a3e31f75ceef5fbc3f7a[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Dec 12 12:49:00 2024 -0500
+
+    release branch 2024-12-12 (#93)
+
+[33mcommit ad3f62966263478101a571094c44fb9a0d8241ac[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Dec 12 09:21:17 2024 -0500
+
+    Feature/metadata enhancements (#92)
+    
+    * update defaults in product for fields required by api
+    
+    * update defaults for product
+    
+    * increasing test cov
+    
+    * increase test cov
+    
+    * sketching new methods for dataset
+    
+    * app id handling
+    
+    * attr code cov to 100
+    
+    * product module test cov to 100
+    
+    * example in docstrings for new methods
+    
+    * add request raise for status in delete member funcs
+    
+    * test get local state
+    
+    * increasing test cov
+    
+    * property setting for client
+    
+    * property setting for dataset client
+    
+    * mypy
+    
+    * type filter for list datasets
+    
+    * datasets test cov back to 100
+    
+    * product client to property
+    
+    * product test cov back to 100
+    
+    * attributes client property
+    
+    * remove product to dataset mapping function
+    
+    * tox
+    
+    * get_events fix
+    
+    * tox fix
+    
+    * update return in get events
+    
+    * bump patch dev
+    
+    * fix get events
+    
+    * update outputs to match for both in backgroud true and false
+    
+    * endpoint typo fix
+
+[33mcommit f4564c17f304b5bdb3d600e79ed33789a68a7b61[m[33m ([m[1;33mtag: [m[1;33mv2.0.4[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Tue Nov 26 07:57:43 2024 -0500
+
+    release branch for download fix (#90)
+
+[33mcommit 9c3a849e218f20160d77bc95d3a8d34841459bc4[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Mon Nov 25 16:48:33 2024 -0500
+
+    Feature/download bug fix (#89)
+    
+    * remove proxy from kwargs for small download fix
+
+[33mcommit ab08ec64466cc1f0a6bfac72e65e05ffbaadfe2e[m[33m ([m[1;33mtag: [m[1;33mv2.0.3[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Fri Nov 22 09:41:12 2024 -0500
+
+    Feature/20241122 (#88)
+    
+    * x509 certificate auth support for FID
+
+[33mcommit 2b80f67bbad8f333c11db4f8be493d7ef686689a[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Nov 22 13:54:02 2024 +0000
+
+    Feature/auth addon (#87)
+    
+    * x509 cert auth
+
+[33mcommit d27e6c0980badcc4a23d47a17bfeee30a36b9b2c[m[33m ([m[1;33mtag: [m[1;33mv2.0.2[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Nov 14 14:34:43 2024 -0500
+
+    release branch for metadata interface (#86)
+    
+    * release branch for metadata interface
+
+[33mcommit a1c310d85faf40a8deffcb0093412783ed1375ed[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Nov 14 13:08:22 2024 -0500
+
+    Feature/metadata interface (#85)
+    
+    Metadata interface for metadata creation
+
+[33mcommit 0f8214fea6ab87b85e7a989c17f3c047a99838a4[m[33m ([m[1;33mtag: [m[1;33mv2.0.1[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Mon Nov 4 11:18:22 2024 -0500
+
+    patch release branch for to dict fix (#84)
+    
+    * patch release branch for to dict fix
+
+[33mcommit 02d089717107414af7d00304c104c332c7698d26[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Fri Nov 1 15:01:23 2024 -0400
+
+    Feature/metadata creation enhancement (#83)
+    
+    * change to_dict methods to ignore client
+
+[33mcommit 93196a9df9187f604faa304dd886b6978fa10cf2[m[33m ([m[1;33mtag: [m[1;33mv2.0.0[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Mon Oct 28 16:38:07 2024 -0400
+
+    release branch for 10/28 release (#82)
+
+[33mcommit 2da8d4b7a1dedb067a2cbd656d7cd0d79d5dd054[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Mon Oct 28 15:51:41 2024 -0400
+
+    Feature/metadata creation (#81)
+    
+    Metadata creation
+
+[33mcommit 4c66e0233460d0f00e0c6a889ea88b47d6fb0329[m[33m ([m[1;33mtag: [m[1;33mv1.4.1[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Oct 24 11:34:24 2024 -0400
+
+    Release/20241024 (#80)
+    
+    * release 10/24/2024 branch
+
+[33mcommit 4a1be5c41d5b5bfedbabfed5979c2f59583f3dc0[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Oct 24 11:11:10 2024 -0400
+
+    Feature/s3 download fix (#78)
+    
+    * s3 download fix
+
+[33mcommit 26a74c65002b2133a1b8dbbc5eab4edcdb2c4ad1[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Thu Oct 24 10:52:40 2024 -0400
+
+    Feature/latest series selection (#79)
+    
+    * enhanced login to select latest series member
+
+[33mcommit 294a27275c485733c1646e172b03c4faec07ff35[m[33m ([m[1;33mtag: [m[1;33mv1.4.0[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Fri Oct 11 16:07:31 2024 -0400
+
+    Release/20241011 (#76)
+    
+    * release branch for dataset lineage
+
+[33mcommit 02e7733083660d92e40fc283e1b1cb79307abf46[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Fri Oct 11 15:33:50 2024 -0400
+
+    Feature/dataset lineage (#75)
+    
+    Dataset lineage creation and exploration
+
+[33mcommit fc7cccf4222f68920a7086f9bd5deffbe999518c[m[33m ([m[1;33mtag: [m[1;33mv1.3.4[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Sep 19 15:59:58 2024 -0400
+
+    Feature/release 20240919 (#73)
+    
+    * rustls support native certificates
+
+[33mcommit 1f0117fd21ef59f6ade03e2eb611852b8491caaa[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Sep 18 07:02:10 2024 -0400
+
+    Feature/native certs (#72)
+    
+    Add cert support in the Rust layer
+
+[33mcommit 2274bdf7e22644b44683a32599037ab1827f6f00[m[33m ([m[1;33mtag: [m[1;33mv1.3.3[m[33m)[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Fri Sep 13 10:55:55 2024 -0400
+
+    release branch (#71)
+    
+    * release branch
+
+[33mcommit cc9ced0271181bf7d098a08861d84e5bd7ff3d70[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Sep 13 09:46:22 2024 -0400
+
+    Feature/upload provider (#69)
+    
+    * support additional headers in upload
+    
+    * support additional headers in upload
+    
+    * support additional headers in upload
+    
+    * support additional headers in upload
+    
+    * support additional headers in upload
+    
+    * support additional headers in upload
+    
+    * support additional headers in upload
+    
+    * support additional headers in upload
+
+[33mcommit afc5e4ddb4e24dbf89f1bc94deea2af8a1fc4013[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Sep 13 09:45:00 2024 -0400
+
+    Feature/cred custom headers (#68)
+    
+    * wip
+    
+    * support additional headers in upload
+
+[33mcommit 43b20f9910823be83ffbd90acf00dee8d5f958b3[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Sep 13 09:43:37 2024 -0400
+
+    Feature/rustls (#70)
+    
+    * rustls-tsl backend for reqwest
+    
+    * dev workflow manylinux adjustment
+    
+    * dev workflow manylinux adjustment
+
+[33mcommit 6256b45b0ba951c5e717435d5dec500b6c7b47ec[m
+Author: Georgianna James <97406156+georgiannajames@users.noreply.github.com>
+Date:   Tue Sep 10 10:33:35 2024 -0400
+
+    Feature/list datasets fix (#67)
+    
+    * list datasets case sensitivity fix
+    
+    * update pytest to test case insensitivity
+
+[33mcommit 9efe5ed87c30a216c478e5d124bae05ceea4d0ae[m[33m ([m[1;33mtag: [m[1;33mv1.3.2[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Aug 23 17:04:19 2024 -0400
+
+    Feature/aiohttp ssl (#65)
+    
+    add bespoke ssl certificated to aiohttp session
+    rebustify sample download
+    do not strictly require headers for file download
+
+[33mcommit fe0201c9bb88ff878cbb730e4928d6c17ed7f96a[m[33m ([m[1;33mtag: [m[1;33mv1.3.1[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Aug 21 17:03:20 2024 -0400
+
+    Feature/fix preserve name (#64)
+    
+    * fix preserve name feature
+
+[33mcommit a068f605d517d521a24f9ac6cc51172758753969[m[33m ([m[1;33mtag: [m[1;33mv1.3.0[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Aug 16 17:49:07 2024 -0400
+
+    Feature/enhancements 202408 (#63)
+    
+    update changelog
+
+[33mcommit d117e7cf373f82f108451f39902307fb7ac44deb[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Aug 16 17:19:06 2024 -0400
+
+    Feature/enhancements 202408 (#62)
+    
+    * migrate from raw threading to async functions
+    * add support for more file formats
+    * add preservation of original file name
+
+[33mcommit 359c2291d6260fe26d4e0ce025eaff598c6031a7[m[33m ([m[1;33mtag: [m[1;33mv1.2.2[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Aug 1 17:17:26 2024 -0400
+
+    Feature/fix user creds (#61)
+    
+    * fix internal auth
+
+[33mcommit 4c35f09656be0e860942a4b599c495fd7cf3c390[m[33m ([m[1;33mtag: [m[1;33mv1.2.1[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Jul 31 08:57:05 2024 -0400
+
+    Feature/fix user creds (#60)
+    
+    * fix auth
+
+[33mcommit 7101d48408dbe3666e2b13c9b8bab510131f729b[m[33m ([m[1;33mtag: [m[1;33mv1.2.0[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sat Jul 27 19:42:34 2024 -0400
+
+    release 1.2.0 (#59)
+    
+    * bump version
+
+[33mcommit 0d543440548747ede33da939aea6d80de7290ed2[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Fri Jul 26 16:46:51 2024 -0400
+
+    Rust cfg (#58)
+    
+    * Move FusionCredentials to rust
+    
+    * init tidy
+    
+    * minor bump
+    
+    ---------
+    
+    Co-authored-by: Dawid Bernaciak <dawid.bernaciak@jpmorgan.com>
+
+[33mcommit 7884dca494745c14dfb25abf55864142fad9a5c5[m[33m ([m[1;33mtag: [m[1;33mv1.1.4[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Jun 28 13:56:34 2024 +0100
+
+    Feature/raw name relax (#56)
+    
+    * relax raw dataset name for upload
+
+[33mcommit 075fbd33dbdd0796f67c470c1e64475af63b16ce[m[33m ([m[1;33mtag: [m[1;33mv1.1.3[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Jun 21 18:19:11 2024 -0400
+
+    Feature/fix fsync upload (#55)
+    
+    * fix fsync upload
+
+[33mcommit 4f8499051b6e3feed18be6e2301fb61c8fd33ab2[m[33m ([m[1;33mtag: [m[1;33mv1.1.2[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sun Jun 16 20:57:43 2024 -0400
+
+    Feature/root url change (#54)
+    
+    * change root url
+    
+    * enable chunked download only for local filesystem
+
+[33mcommit 6cf6ac9d7ba105532e3abb303a87fcb1e3747fb7[m[33m ([m[1;33mtag: [m[1;33mv1.1.1[m[33m)[m
+Merge: d4399d4 0bfa636
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Jun 7 17:48:39 2024 -0400
+
+    Merge pull request #53 from jpmorganchase/feature/tz-fix
+    
+    Feature/tz fix
+
+[33mcommit 0bfa636ce63e71625e0dc9597a56cf5e040b08ee[m[33m ([m[1;31morigin/feature/tz-fix[m[33m)[m
+Author: Dawid Bernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Fri Jun 7 17:40:58 2024 -0400
+
+    fix timezone for token expiry and refactor project structure
+
+[33mcommit d91851da9d23de3c2a3e1822f838c2bbc774deb6[m
+Author: Dawid Bernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Fri Jun 7 16:51:19 2024 -0400
+
+    fix timezone for token expiry and refactor project structure
+
+[33mcommit 3edb6324840c2a920defd76b2adab33406d963c2[m
+Author: Dawid Bernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Fri Jun 7 16:50:03 2024 -0400
+
+    fix timezone for token expiry and refactor project structure
+
+[33mcommit bec69b7f64fa43a0b2ade6a456e49948912f2def[m
+Author: Dawid Bernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Fri Jun 7 12:16:35 2024 -0400
+
+    fix timezone for token expiry  and refactor project structure
+
+[33mcommit 710f0c35d13c00710393a3a34ab0568d05455ffc[m
+Author: Dawid Bernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Fri Jun 7 10:57:00 2024 -0400
+
+    fix timezone for token expiry  and refactor project structure
+
+[33mcommit 9e2cacc60e4817dcc9d667319af96f871e12bc94[m
+Author: Dawid Bernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Fri Jun 7 10:48:42 2024 -0400
+
+    fix timezone for token expiry  and refactor project structure
+
+[33mcommit d4399d456426ea5adef4432ac0e8fa8f96879166[m[33m ([m[1;33mtag: [m[1;33mv1.1.0[m[33m)[m
+Author: Dawid Bernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Thu Jun 6 16:14:50 2024 -0400
+
+    rye url change
+
+[33mcommit 7eac37126a2b3d6e71d070daf60e897f691ac3aa[m
+Merge: 94b88d9 0e7b7cd
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jun 6 15:59:22 2024 -0400
+
+    Merge pull request #52 from jpmorganchase/feature/release-110
+    
+    Feature/release 110
+
+[33mcommit 0e7b7cd907bac6456fdd404fdcf4d46e880fdd99[m
+Author: Dawid Bernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Thu Jun 6 14:25:18 2024 -0400
+
+    release preparation
+
+[33mcommit a2b2b7ef4d5af52512ff6cc15372f6fcdb61cc1d[m
+Author: Dawid Bernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Thu Jun 6 14:22:42 2024 -0400
+
+    pyproject correction
+
+[33mcommit 94b88d96eba3430eb2230c71ab39ed2c78e0de2e[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Jun 5 08:44:33 2024 -0400
+
+    Feature/fusion e2e (#51)
+    
+    * adding fusion e2e token
+
+[33mcommit 2b13dd6082a64e946dd27df3aa67537684fc8735[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sat Jun 1 11:21:36 2024 -0400
+
+    Feature/project structure (#50)
+    
+    * refactor project structure to allow mixed Rust/Python
+
+[33mcommit f2a0174424077b12794f67657fab9db212755c41[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed May 22 16:27:20 2024 -0400
+
+    Feature/refactor fix (#48)
+    
+    * minor corrections
+
+[33mcommit 6a028cf7793ce1d382b4e727bac7e29b4fe15086[m[33m ([m[1;33mtag: [m[1;33mv1.1.0-dev3[m[33m)[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed May 22 07:59:57 2024 -0400
+
+    bump dev release
+
+[33mcommit 8dab3a21a9c851e0f2bfb39a2da82bd4767ecb46[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed May 22 07:38:57 2024 -0400
+
+    Clean up bump-to-version
+    bump dev release
+
+[33mcommit 2f337d4b45fb83149b4c557d5d0e4442fb45b773[m[33m ([m[1;33mtag: [m[1;33mv1.1.0-dev1[m[33m)[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed May 22 07:14:21 2024 -0400
+
+    Only build single sdist
+
+[33mcommit e2fc0044c05190d2e1ae9b753f7507152debe040[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Wed May 22 06:34:45 2024 -0400
+
+    Custom builds with integ tests (#47)
+    
+    * Optimize build steps and expand to enable integ tests during build
+
+[33mcommit ee6efab376f057ccbf6cb1e0c345848e72a5dac0[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Thu May 16 08:36:25 2024 -0400
+
+    Env secrets and integration testing (#46)
+    
+    * Add id/secrets via env vars. Add integ test suite
+
+[33mcommit e0ac776c3b0052999bcf43ce6c8e44fa936c1a3f[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed May 15 07:33:44 2024 -0400
+
+    Update proj name
+
+[33mcommit 99f9ed8b9ec5ba250f34b0ddd08d1913200f6aea[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed May 15 07:08:18 2024 -0400
+
+    Update proj name
+
+[33mcommit 9be29a631b95bd576f0585a7fe6169af32ff3a51[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Tue May 14 10:41:13 2024 -0400
+
+    Update build and release yml
+
+[33mcommit 81a3c598ca255d877f0815c2a460fcf08966441b[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Tue May 14 10:08:25 2024 -0400
+
+    Ci release (#45)
+    
+    * Run tests across py 3.9->3.12
+    * Remove 32 bit archs
+
+[33mcommit 927057ffdafa4d26b1cb8a75c2e7e696adf180e6[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Mon May 13 14:06:38 2024 -0400
+
+    CI Release Stage 1 (#44)
+    
+    * Run tests across py 3.9->3.12
+    
+    * gh test on all pyversions
+
+[33mcommit 49d77728a9f88022ab1003dfdfdd05ae93ec9a9b[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Mon May 13 06:50:01 2024 -0400
+
+    Ci updates (#43)
+    
+    * move to bump-my-version
+    
+    * upload all wheels
+    
+    * audit many Linux wheels
+
+[33mcommit 1a1acd05e7ee7d8b6b2d6d8788507c58cbdc1461[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Sat May 11 22:43:38 2024 -0400
+
+    All ruff lint rules and mypy across both test and src (#42)
+
+[33mcommit 85de224663962fcaa4ba938c1990f5903a0d5887[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Sun Apr 28 09:40:48 2024 -0400
+
+    More upload tests; move upload to threading backend (#41)
+    
+    * More upload tests; move upload to threading backend
+
+[33mcommit 9c1e1b4e527191e89986a5a1a7190a118115a93e[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Sat Apr 27 19:32:00 2024 -0400
+
+    Improve tox setup; stricter mypy
+
+[33mcommit 038f5c7d993ae53237f2a18a1b0c0c3527c73946[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Sat Apr 27 13:46:58 2024 -0400
+
+    Improving test coverage (#39)
+
+[33mcommit 2c5587c394d7dcd363bd74e2563ba5088b894b52[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Sun Apr 21 16:45:34 2024 -0400
+
+    Add strict mypy checks (#38)
+    
+    * Full rust stack + tests. Stage 2
+    
+    * Full rust stack + tests. Stage 2
+    
+    * Full rust stack + tests. Stage 2
+    
+    * Stage 3: strict mypy
+    
+    * Full rust stack + tests. Stage 2 (#36)
+    
+    * Full rust stack + tests. Stage 2
+    
+    * Full rust stack. Stage 3
+
+[33mcommit ad3cff9c5a0b8a19c7a74a63e636dfb4d89e760a[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Sun Apr 21 11:44:58 2024 -0400
+
+    Full rust stack + tests. Stage 2 (#36)
+    
+    * Full rust stack + tests. Stage 2
+    
+    * Full rust stack + tests. Stage 2
+    
+    * Full rust stack + tests. Stage 2
+
+[33mcommit 0645131c17455a7ee4c86d52fbdf841cea685b6b[m
+Author: nazq <naz.quadri@gmail.com>
+Date:   Sat Apr 20 14:47:11 2024 -0400
+
+    Full rust stack. Stage 1 (#35)
+    
+    * Full rust stack. Stage 1
+    
+    * Full rust stack. Stage 1
+
+[33mcommit 2f8618bf53dcd95a815190769570e619c4ae1dde[m[33m ([m[1;33mtag: [m[1;33mv1.0.23[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 12 16:54:22 2024 -0400
+
+    prepare release
+
+[33mcommit 154d38f4fe492f787b2d9b1bfc093a503d81ac6d[m
+Merge: d818d4c 579c52c
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 12 16:41:52 2024 -0400
+
+    Merge pull request #34 from jpmorganchase/feature/upload-hot-fix
+    
+    fix upload function affected by the change in distribution_to_url
+
+[33mcommit 579c52cf62e66bec1e4c6df63f4835a61b8c553a[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 12 16:28:49 2024 -0400
+
+    fix upload function affected by the change in distribution_to_url function
+
+[33mcommit 957f895e89d02f4564f76161563f6ea3fb356415[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 12 16:10:08 2024 -0400
+
+    fix upload function affected by the change in distribution_to_url function
+
+[33mcommit fd34dc22cd903c31b86e72cefdaa7208d424b215[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 12 13:07:52 2024 -0400
+
+    fix upload function affected by the change in distribution_to_url function
+
+[33mcommit e3e3ae51780ae44ad83fffa51611b57e5cb5c574[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 12 12:17:09 2024 -0400
+
+    fix upload function affected by the change in distribution_to_url function
+
+[33mcommit 8013d4ed93bfe96e19a4347db01a04cf375ef301[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 12 12:08:18 2024 -0400
+
+    fix upload function affected by the change in distribution_to_url function
+
+[33mcommit 08019f123512f3d82e81509a8767a0debb088d58[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 12 11:23:38 2024 -0400
+
+    fix upload function affected by the change in distribution_to_url function
+
+[33mcommit 710212b34ba77db7915eb17716f6759c6c96a477[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 12 11:16:01 2024 -0400
+
+    fix upload function affected by the change in distribution_to_url function
+
+[33mcommit 5c1236c071a581c9a146b8f150e62dfe353effb6[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 12 11:02:26 2024 -0400
+
+    fix upload function affected by the change in distribution_to_url function
+
+[33mcommit d818d4cb1ef632cf4c11343a099435b4daa3d887[m[33m ([m[1;33mtag: [m[1;33mv1.0.22[m[33m)[m
+Author: dbernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Sat Apr 6 13:42:45 2024 -0400
+
+    prepare release
+
+[33mcommit 6b671eace51ef80a8970b6023d619f85fd4ec984[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sat Apr 6 13:26:53 2024 -0400
+
+    Feature/multipart download threads limit (#33)
+    
+    * limit number of threads to max 10
+
+[33mcommit 95bc825230333c384d7d3486e347185aa6961177[m[33m ([m[1;33mtag: [m[1;33mv1.0.21[m[33m)[m
+Author: dbernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Wed Mar 27 21:14:59 2024 -0400
+
+    prepare release
+
+[33mcommit c9489d9d56757ab54f59808d1966f787c00051e6[m
+Merge: 6ee7b71 379d7cc
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Mar 27 21:14:20 2024 -0400
+
+    Merge pull request #32 from jpmorganchase/feature/fix-todf
+    
+    hot fix to to_df function
+
+[33mcommit 379d7cc655fbe8aa8e9c398e30532451f1a141ff[m
+Author: dbernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Wed Mar 27 21:02:51 2024 -0400
+
+    hot fix to to_df function
+
+[33mcommit 6ee7b7139920bb4bd85632f6352bf879418cb862[m[33m ([m[1;33mtag: [m[1;33mv1.0.20[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Mar 27 13:16:20 2024 -0400
+
+    prepare release
+
+[33mcommit 6923f1a34ba9218b576af298d9fcc22c9365f8c7[m
+Merge: a1baa10 0964578
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Wed Mar 27 17:06:33 2024 +0000
+
+    Merge pull request #31 from jpmorganchase/feature/multipart-download
+    
+    multipart/range-request download if only 1 file is downloaded
+
+[33mcommit 0964578f64bb58a1a1811e1271d596c29a757cd5[m
+Author: dbernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Wed Mar 27 12:36:22 2024 -0400
+
+    multipart/range-request download if only 1 file is downloaded
+
+[33mcommit b5ff3d6667cdde8deb9c98027970821faef99fdb[m
+Author: dbernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Wed Mar 27 11:31:57 2024 -0400
+
+    multipart/range-request download if only 1 file is downloaded
+
+[33mcommit 758ca23948c1487b97aae53cf16b73f70ac36bc4[m
+Author: dbernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Wed Mar 27 10:40:54 2024 -0400
+
+    multipart/range-request download if only 1 file is downloaded
+
+[33mcommit 87986eaf494f5c4397953a3226b5fed3aef5b6ee[m
+Author: dbernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Tue Mar 26 22:26:31 2024 -0400
+
+    multipart/range-request download if only 1 file is downloaded
+
+[33mcommit 6bf110daa59b7b36debc27faeaa2466adbdfb7d8[m
+Author: dbernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Tue Mar 26 22:14:02 2024 -0400
+
+    multipart/range-request download if only 1 file is downloaded
+
+[33mcommit 4096747b062ff8b21dca547f7e64be3f28617951[m
+Author: dbernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Tue Mar 26 21:47:05 2024 -0400
+
+    multipart/range-request download if only 1 file is downloaded
+
+[33mcommit 9af7b3bcc426722e3614c5732f5ebd2d0c314169[m
+Author: dbernaciak <dawid.bernaciak@jpmorgan.com>
+Date:   Tue Mar 26 21:36:38 2024 -0400
+
+    multipart/range-request download if only 1 file is downloaded
+
+[33mcommit a1baa10e938a5f2841788d06a0a1d0f5537308c3[m[33m ([m[1;33mtag: [m[1;33mv1.0.19[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Mar 12 19:02:25 2024 -0400
+
+    prepare release
+
+[33mcommit fd3a829895f8aa19557d808b1d02def9ca613dda[m
+Merge: fdec7f7 807b5cd
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Mar 12 19:00:39 2024 -0400
+
+    Merge pull request #30 from jpmorganchase/feature/fix-async-retry
+    
+    eliminate dependency on async-retrying
+
+[33mcommit 807b5cd18c24a94b039ed012f5ec9dd26478f243[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Mar 12 10:09:09 2024 -0400
+
+    eliminate dependency on async-retrying
+
+[33mcommit fdec7f7c3ee9d436259897396452b5c1f3826e3b[m[33m ([m[1;33mtag: [m[1;33mv1.0.18[m[33m)[m
+Merge: 7c06fff 30714bf
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Mar 11 17:04:59 2024 -0400
+
+    Merge remote-tracking branch 'origin/master'
+    
+    # Conflicts:
+    #       pyproject.toml
+
+[33mcommit 7c06fffba32b41ce85bd06b4d7f8b38a1531d484[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Mar 11 17:03:46 2024 -0400
+
+    prepare release
+
+[33mcommit 30714bf2a643fc817acd4b51887bc2dc8f84e526[m
+Merge: 559b433 6066b50
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Mar 11 16:21:20 2024 -0400
+
+    Merge pull request #29 from jpmorganchase/feature/upload-from-s3
+    
+    Fix upload from s3
+
+[33mcommit 559b433976f9f571f83d72488803b15e38ea2df2[m
+Merge: 5383c7d 760b117
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Mar 8 08:49:10 2024 -0500
+
+    Merge pull request #28 from gautamsagar99/enhance-usage-documentation
+    
+    Enhance usage section in documentation
+
+[33mcommit 6066b509a3e98a26cdb41ce5bb38f367a2a220d7[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Mar 6 09:41:47 2024 -0500
+
+    async retry
+
+[33mcommit b090a8fe9bdadb1ac20d9a90f16b72283c9864ce[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Mar 6 08:28:26 2024 -0500
+
+    change aiohttp timeout to 60min
+
+[33mcommit 3124c848ea3ba4dca431a47681ce4f29827b875b[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Mar 5 16:30:56 2024 -0500
+
+    upload from s3 functionality
+
+[33mcommit a85fa870a81e1ba2f44bbac01a7ad22011c0859b[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Mar 5 15:24:56 2024 -0500
+
+    upload from s3 functionality
+
+[33mcommit 3dd7996176ccdc9641314bf6d059949c26e4e263[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Mar 5 14:53:33 2024 -0500
+
+    upload from s3 functionality
+
+[33mcommit 41a4c8efc37883f19a529ce998ba7e1d575ffe41[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Mar 5 13:13:42 2024 -0500
+
+    upload from s3 functionality
+
+[33mcommit 760b117c35acd3e4650f076256e11d3f8e042f60[m
+Author: gautam <gautamsagar.mallela99@gmail.com>
+Date:   Thu Feb 29 19:18:29 2024 -0600
+
+    Updated usage section with detailed instructions
+
+[33mcommit 5383c7d0ec1fa6a954afb5bf4e1694ca8dc95725[m[33m ([m[1;33mtag: [m[1;33mv1.0.17[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 26 09:26:38 2024 -0500
+
+    prepare release
+
+[33mcommit aeb6c688750f3352e8edc6a97c11336a8e8b9a61[m
+Merge: a5157c2 063e98f
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 26 09:22:14 2024 -0500
+
+    Merge pull request #27 from jpmorganchase/seriesmember_labels
+    
+    Seriesmember labels
+
+[33mcommit 063e98f9ef8bb48610b13458a54f601f568b629b[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Feb 25 17:30:07 2024 -0500
+
+    encode dataset name in query string url
+
+[33mcommit 1285c70590ca9a9f48bb373806ad9003a457416a[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Feb 23 22:01:05 2024 -0500
+
+    lint tidy
+
+[33mcommit 32943cef175bc32fb79dad4faf2e6be5f389281a[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Feb 23 21:08:11 2024 -0500
+
+    lint tidy
+
+[33mcommit e64f6e44948603d13e2abf3ded32e087c8ecd538[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Feb 23 20:56:24 2024 -0500
+
+    lint tidy
+
+[33mcommit 59c2755d8123590b917c827798f59e49524257d4[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Feb 23 20:22:36 2024 -0500
+
+    tox issues resolution
+
+[33mcommit a5157c2708c621b7dffdc24e047cccc6fc346def[m[33m ([m[1;33mtag: [m[1;33mv1.0.16[m[33m)[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Feb 19 19:05:59 2024 -0500
+
+    prepare release
+
+[33mcommit cf09638f2d600ad60f3d4c5dcf8dbee70899b28b[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Feb 19 19:01:54 2024 -0500
+
+    hot fix for multi-dataset fsync
+
+[33mcommit e0757eb28b22ff46e8f41cad43147ca0da6ca31c[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Thu Feb 15 20:45:20 2024 +0000
+
+    minor bug fixes
+
+[33mcommit 811ec39be495018d9289caaeca79438513fc4f5c[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Wed Feb 14 12:16:28 2024 +0000
+
+    Added support for from_bytes which allows an object to be uploaded from memory.
+
+[33mcommit eb8dd5594fc4ed90fd2fe39c127ff543b6058bc2[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Tue Feb 13 15:12:46 2024 +0000
+
+    Setting default from and to dates on the distribution
+
+[33mcommit b3a99591b5fb7d211d07f91991695f5781d1d422[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Mon Feb 12 10:36:03 2024 +0000
+
+    Adds the ability to upload and download series members with non-date labels, e.g. to use when a dataset is a collection of objects
+    
+    Adds the ability to download an object into a bytes object in memory without writing to disk
+
+[33mcommit 3016ac40d1812239263443fcf1f504c99b965f83[m[33m ([m[1;33mtag: [m[1;33mv1.0.15[m[33m)[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Feb 8 22:07:49 2024 -0500
+
+    prepare release
+
+[33mcommit 646d3bb7c775d3d1de4756407a1a9da40441fdb5[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Feb 8 18:05:51 2024 -0500
+
+    prepare release
+
+[33mcommit 672bc7a3e5e30386f89c5dbcae439e68f783467a[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Feb 8 17:53:20 2024 -0500
+
+    PERSONAL_TOKEN -> GITHUB_TOKEN
+
+[33mcommit df18b5dafe5ef0ff21f74816017ec7c1a7656b00[m
+Merge: 860e727 cb36538
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Tue Feb 6 22:05:50 2024 +0000
+
+    Merge pull request #26 from jpmorganchase/feature/events_range_requests
+    
+    Fix to events and range requests in filesystem
+
+[33mcommit cb36538cfde865f5b6b6e186c077602beafc0d5e[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Feb 6 11:52:48 2024 -0500
+
+    pass bearer token to async sse client
+
+[33mcommit c45b4986d9c2e7243c96d77b996d6ea5930193ee[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Feb 6 11:43:04 2024 -0500
+
+    pass bearer token to async sse client
+
+[33mcommit 01e3a3439fe7eb79105d4bbc54cb1332417968bd[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Feb 6 11:30:25 2024 -0500
+
+    pass bearer token to async sse client
+
+[33mcommit 3d8c7db41cb72f13e79c5a785f15aadd0957d518[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Feb 2 17:23:31 2024 -0500
+
+    lint fixes
+
+[33mcommit 3bfdf02c36c2e678b76b70ebe676c69b1a4995df[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Feb 2 17:05:30 2024 -0500
+
+    lint fixes
+
+[33mcommit 2a192709372863a89017a8a659fab366b64d9b84[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Feb 2 16:38:13 2024 -0500
+
+    prepare release
+
+[33mcommit 860e7276e2ae9acc1a6a854fdf638686bcedfd8d[m[33m ([m[1;33mtag: [m[1;33mv1.0.14[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Dec 22 12:14:37 2023 -0500
+
+    prepare release
+
+[33mcommit bba486c11a9bc670d6642f9fe62aaaa20ef7994c[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Dec 22 11:33:12 2023 -0500
+
+    propagate upload exceptions
+
+[33mcommit 950c5adb33aa5873c1646a239b120a256e2e523a[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Dec 22 11:15:00 2023 -0500
+
+    propagate upload exceptions
+
+[33mcommit bd7d3820a4f0ad55990324d2be34342037a5fb9c[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Dec 22 09:41:48 2023 -0500
+
+    fix non parallel progress bars
+
+[33mcommit 0586c3a57a77d245e571e0972f7fa08da3926dd0[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Dec 22 07:40:28 2023 -0500
+
+    fix progress bar fox non parallel upload
+
+[33mcommit b737000f90683d45db0b4465f4cc1fb88eb1e058[m[33m ([m[1;33mtag: [m[1;33mv1.0.13[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Dec 15 14:56:15 2023 -0500
+
+    Update release.yml
+
+[33mcommit 4848d8891508473687aee77521e7e14c06e8f5da[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Dec 15 14:16:18 2023 -0500
+
+    Update release.yml
+
+[33mcommit 493677c84aa023d99630c6d5f6a51bcd35569fcb[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Dec 13 17:43:33 2023 -0500
+
+    Update release.yml
+
+[33mcommit 9cf1b0a1c8497037dd6b4aae74dbb749c62a4265[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Dec 13 17:20:51 2023 -0500
+
+    Update release.yml
+
+[33mcommit 78eb408894d956ae2be8a8df4c16f8040d3ad6a9[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Dec 13 17:09:42 2023 -0500
+
+    Update release.yml
+
+[33mcommit a728cfa794286b836391f706b8d24afb6559d62b[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Dec 13 16:47:50 2023 -0500
+
+    Update release.yml
+
+[33mcommit 82f2480f2669da4d022dcdf4fbe44d7e75bb693a[m
+Merge: c1d6bc3 62a654c
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Dec 13 15:53:55 2023 -0500
+
+    Merge remote-tracking branch 'origin/master'
+
+[33mcommit c1d6bc384708ad9eb348e44742911f5e79f987ae[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Dec 13 15:53:43 2023 -0500
+
+    prepare release
+
+[33mcommit 1f05ec5b70d409aeb5d427af39f54680ec462cd4[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Dec 13 15:52:29 2023 -0500
+
+    prepare release
+
+[33mcommit 62a654c0bfb81e14ef414c771f50c78da99d6e61[m
+Merge: e873f78 4bec51f
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Dec 13 15:49:35 2023 -0500
+
+    Merge pull request #24 from jpmorganchase/fixes-20231130
+    
+    add default local fs location and further fix to progress bar
+
+[33mcommit 4bec51fbf5068596ff793106d581e01c1998d663[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Dec 1 21:33:43 2023 -0500
+
+    flake8
+
+[33mcommit a27bb3dc9f1966d5b5fb16671dd7087a55000b23[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Nov 30 22:52:04 2023 -0500
+
+    flake8
+
+[33mcommit 367d1d5c8b87af5c54b439e3fcf9443bb48c10a5[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Nov 30 22:09:35 2023 -0500
+
+    add default local fs location and further fix to progress bar
+
+[33mcommit e873f7835aae089339cb0b939b503544f796ff11[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Nov 26 22:18:58 2023 -0500
+
+    fix lint
+
+[33mcommit aaa2ee02bac8bbf8e5e077d66754c5737d27ab9f[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Nov 26 22:07:17 2023 -0500
+
+    fix mypy
+
+[33mcommit 7f239376cf27448bfb20df673ab21071e0f8db3c[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Nov 26 21:47:32 2023 -0500
+
+    fix lint
+
+[33mcommit 24058489a0a2ead50325254b6ebd5729121e529f[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Nov 26 21:35:01 2023 -0500
+
+    fix lint
+
+[33mcommit 8b8651248d73feea277ac120cc66f889f21fac97[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Nov 26 21:02:50 2023 -0500
+
+    fix lint
+
+[33mcommit 0584c6ac011a4ace052d7fc7d274381d0821e8d8[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Nov 26 20:56:10 2023 -0500
+
+    fix lint
+
+[33mcommit 2734589934f496975cbc75c5d52c1c025e2dc6dd[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Nov 26 20:45:20 2023 -0500
+
+    fix lint
+
+[33mcommit 3527f32b8f681aa67ed261c703c00b66eba71b94[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Nov 26 20:30:36 2023 -0500
+
+    fix lint
+
+[33mcommit 843dfca74dda73144ade6476aa9633812bdd2029[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Nov 26 20:17:46 2023 -0500
+
+    try to fix token expiry
+
+[33mcommit 81e015d06fc89503defc4864f129d92b50bca04f[m
+Merge: da8f957 8af407a
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Sun Nov 19 18:27:22 2023 +0000
+
+    Merge pull request #23 from jpmorganchase/develop-enhancements-202309
+    
+    Develop enhancements 202309
+
+[33mcommit 8af407aa79c9102bc862a151d976c83e212a1d9f[m
+Merge: 73776cf da8f957
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Nov 16 23:39:08 2023 -0500
+
+    Merge branch 'master' into develop-enhancements-202309
+
+[33mcommit 73776cf408a29aad09ea49e811cca8606441fde0[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Nov 9 17:05:20 2023 -0500
+
+    progress bar enhancements
+
+[33mcommit da8f957c691595de95050bc93b4366795940adcf[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Nov 9 14:05:38 2023 -0500
+
+    update git actions
+
+[33mcommit 0228d0ea086adf539f3ca14814be1d6c6c11813d[m
+Merge: 069dc8c 13b5fac
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Nov 9 13:42:31 2023 -0500
+
+    Merge pull request #22 from jpmorganchase/small_fixes_oct
+    
+    Small fixes oct
+
+[33mcommit 13b5faca13d1bce9471d3a269032a7ec6e4ac5fd[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Fri Nov 3 10:23:40 2023 +0000
+
+    fix handling latest series member label
+
+[33mcommit ed1330a4d09262fd8c8bda47c8a7ef71410c4910[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Fri Nov 3 09:48:04 2023 +0000
+
+    adding missing updates to previous commit
+
+[33mcommit c45987899340e9938db02db6d7c3eab6e77127f7[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Fri Oct 20 21:03:55 2023 +0100
+
+    handle series members that aren't date based, including datetime
+
+[33mcommit bd02604ca8eefd95d6c549f2d1fb8fe657caf9be[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Thu Oct 19 13:27:12 2023 +0100
+
+    support sample file download
+
+[33mcommit e8d21af3f15dd34311cea18ef69f72bf812b79c7[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Wed Oct 18 17:49:22 2023 +0100
+
+    Fix reducing the number of columns to handle missing columns in the dataframe. e.g. empty attribute values are not returned
+
+[33mcommit a84041f97e109536c51c9845103215e0f295a03b[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Oct 11 14:14:42 2023 -0400
+
+    server events functionality
+
+[33mcommit f41f2d75f7088eab7ec73f56480c5b672ea7f88d[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Oct 11 14:12:30 2023 -0400
+
+    server events functionality
+
+[33mcommit b5f4bb4436c76605dba1ee234c5c1b677ee05c2d[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Oct 11 14:05:49 2023 -0400
+
+    server events functionality
+
+[33mcommit 05bfda3ddb373426fa2f4ae6ebec3008810ceb23[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Oct 11 12:53:19 2023 -0400
+
+    server events functionality
+
+[33mcommit f92064aca19718bfbe1ef097079ef5ca95d19ad8[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Oct 10 08:48:20 2023 -0400
+
+    head requests for file size
+
+[33mcommit a959a2d6ff8b6c0e14c0253a1eb1c4351671b9ac[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Sep 26 15:34:32 2023 -0400
+
+    improved exception when downloading files outside of the available range
+
+[33mcommit 7b2b71313121909a542306b392603decad441944[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Sep 26 15:14:48 2023 -0400
+
+    polars DataFrame support
+
+[33mcommit 069dc8c38895f62930f231d692a96e8d35439e6c[m[33m ([m[1;33mtag: [m[1;33mv1.0.12[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Jun 12 17:21:22 2023 -0400
+
+    release
+
+[33mcommit ad5e21553408680829d9e8d307858c03608bcbe7[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Jun 12 16:49:35 2023 -0400
+
+    add filtering on identifier of dataset instead of from and to dates
+
+[33mcommit d0b8b8481ba05dde164ecce65d54d1e6b37680f4[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Jun 5 15:47:00 2023 -0400
+
+    add filtering on products in list_datasets
+
+[33mcommit 086fc2fdb7ae2c747e222a496bd5c91bc4c2f559[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jun 1 16:11:04 2023 -0400
+
+    fix download folder
+
+[33mcommit a4890cdbc8f7211c4acf1ab5513658ca159709a7[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jun 1 16:10:34 2023 -0400
+
+    fix download folder
+
+[33mcommit bfe0fa7024b0dbf5c4b03135759b0047f37633f7[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jun 1 16:07:57 2023 -0400
+
+    fix download folder
+
+[33mcommit b48c641d94266f1c784ecfa64a1ef9c89fbe13ef[m[33m ([m[1;33mtag: [m[1;33mv1.0.11[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed May 10 09:02:12 2023 -0400
+
+    release
+
+[33mcommit c8d8035c610e94ef16d8a7134067341204adce12[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed May 10 08:51:33 2023 -0400
+
+    release
+
+[33mcommit b87ae047a894053218927fe427fb277b4c8518fc[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed May 10 08:47:48 2023 -0400
+
+    fix csv and json readers to supports filters
+
+[33mcommit 4489af4070ac6d5d4c7130d254ca5cc33f2accd7[m
+Merge: 0f5c3a4 7505449
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue May 9 20:54:03 2023 -0400
+
+    Merge pull request #20 from jpmorganchase/develop-timestamps
+    
+    Bearer token authentication
+
+[33mcommit 0f5c3a46ef528d53696ae6810bae35c1fee225d4[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue May 9 20:52:23 2023 -0400
+
+    docs fix
+
+[33mcommit 75054492d53ca952016057edd8689276ff3ce6c4[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue May 9 19:09:53 2023 -0400
+
+    lint
+
+[33mcommit f5a4ec09726d358482a01832ef180967b308f170[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue May 9 18:59:35 2023 -0400
+
+    lint
+
+[33mcommit 4d608854a62035eca3e6ff1385c956bfc8bf1b99[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue May 9 18:42:11 2023 -0400
+
+    docstrings
+
+[33mcommit d53c7e5c51505f0044ee169d5a7aa0bd084790b5[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue May 9 18:39:18 2023 -0400
+
+    code black
+
+[33mcommit a1a80bb1ece037a7826de71b5af58c8a9d91ed74[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue May 9 17:46:42 2023 -0400
+
+    formatting
+
+[33mcommit 75267d485a4e09b9aec930ad13909eba0c3bd8c7[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue May 9 15:08:59 2023 -0400
+
+    revert timestamp changes
+
+[33mcommit bd77a0c3377ce22088b7f2996dc6a8d4695173ae[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue May 9 15:04:55 2023 -0400
+
+    revert timestamp changes
+
+[33mcommit 6093532134565c7f5e8fea62c588cdaed7e1524e[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue May 9 14:58:46 2023 -0400
+
+    revert timestamp changes
+
+[33mcommit a1cdf7b6b8627da53f67725c130c13eb05dc3df2[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue May 2 15:25:49 2023 -0400
+
+    timestamps update
+
+[33mcommit 2c258d895365c8cd521a571eface0e270438caf4[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon May 1 17:13:11 2023 -0400
+
+    default bearer token settings
+
+[33mcommit 4664c683c8cb100e7acad478936ca08140dda905[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon May 1 17:09:40 2023 -0400
+
+    default bearer token settings
+
+[33mcommit 6564c57fe56c749a09c7698db213b2a4c13d60d1[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon May 1 17:07:06 2023 -0400
+
+    default bearer token settings
+
+[33mcommit a3abf29a532d6c0073bcffd98e8872188859ab81[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon May 1 17:03:04 2023 -0400
+
+    default bearer token settings
+
+[33mcommit 0f1ae6f1502ee711735ab365c91ea1e0457cab5c[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon May 1 17:01:07 2023 -0400
+
+    default bearer token settings
+
+[33mcommit e8ae6853ffa65fcfe814d046ff9eb68c0deff331[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon May 1 16:50:39 2023 -0400
+
+    default bearer token expiry init
+
+[33mcommit 2c294433f6a45273f0f06666a81d95ccd3143b32[m
+Merge: 1b63865 4e23b77
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon May 1 10:39:42 2023 -0400
+
+    Merge remote-tracking branch 'origin/develop-timestamps' into develop-timestamps
+
+[33mcommit 1b63865da60ed294e2e14d248b7c8492c49c31b3[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon May 1 10:38:22 2023 -0400
+
+    fix proxy for aiohttp
+    change the timestamp format
+
+[33mcommit 4e23b77dd8529550e6f4f28bf2cfa576cce2701e[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Apr 27 21:55:00 2023 -0400
+
+    bearer token login wip
+
+[33mcommit d0c543755f4dbff55dedbd9f42c84bb92e828bae[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Apr 18 10:30:54 2023 -0400
+
+    tweak docs build toml
+
+[33mcommit 9f915feaed0d5c631007debccd77ad95d5d83b7d[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Apr 18 10:27:25 2023 -0400
+
+    timestamp support
+
+[33mcommit aafa0699a91ab84db3e19530d793322781af1b94[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 14 14:40:19 2023 -0400
+
+    timestamp support
+
+[33mcommit 576f87c8fd83cce05ba5e0f55275842d8f70d4dc[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 14 14:37:02 2023 -0400
+
+    timestamp support
+
+[33mcommit 945b692a3edcb9f386d2d1726a6930f97c0d1cc8[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 14 14:32:00 2023 -0400
+
+    timestamp support
+
+[33mcommit 56d5f1db25ae4c1ec13a5c8e644a12fffe48b7b7[m
+Merge: 0f38b62 6b136f5
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Apr 14 14:12:32 2023 -0400
+
+    Merge branch 'master' into develop-timestamps
+
+[33mcommit 0f38b6225264e46a04adfda90557f0f1a9c077c5[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Apr 11 17:50:00 2023 -0400
+
+    timestamp support
+
+[33mcommit ac0ab6230d6fb0c32267a97790bc01a9c0dbe922[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Apr 11 17:08:54 2023 -0400
+
+    timestamp support
+
+[33mcommit 6b136f573ec3b6298647c59bad367c0ae8468744[m[33m ([m[1;33mtag: [m[1;33mv1.0.10[m[33m)[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Mar 24 11:26:12 2023 -0400
+
+    release
+
+[33mcommit 94bbcf7ebcd83c7cf5c5c031c7da384fce941ecb[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 23 09:54:13 2023 -0400
+
+    changelog
+
+[33mcommit 344bdbb202d51e9eca289fcdb27aadbaedc379e7[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Mar 21 21:24:58 2023 -0400
+
+    docstring fix
+
+[33mcommit 6e2b5de094f0c4483105c878a7a1cb9eca6005b2[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Mar 19 18:20:09 2023 -0400
+
+    mkdocstrings fix
+
+[33mcommit 6131506ad8fd61ac8d031b4a2b82b9ef684e58c9[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Mar 19 18:04:56 2023 -0400
+
+    downgrade mkdocs
+
+[33mcommit 6afb3280d7920b208732f9d92902814de82014ca[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Mar 19 17:43:51 2023 -0400
+
+    fix lint and handlers
+
+[33mcommit 33b1bf8331e2779c0f82ffad132152d52aef45af[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Mar 19 17:38:09 2023 -0400
+
+    change build to python 3.9
+
+[33mcommit a9e5ab220d5c75965f52cc7fc607d9c33b4d77b2[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Mar 19 17:36:42 2023 -0400
+
+    jinja2 versioning
+
+[33mcommit 85b4c4347a2d228de36acd5fab811c6db59c5931[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Mar 19 15:40:21 2023 -0400
+
+    jinja2 versioning
+
+[33mcommit 17067f93422d57bade8b54c1f35f9146982fe67f[m
+Merge: 6a5602d fc06ddf
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sun Mar 19 15:17:42 2023 -0400
+
+    Merge pull request #19 from jpmorganchase/develop-api-changes
+    
+    Develop api changes
+
+[33mcommit fc06ddf54cf93bbcba71cb7bbd8b174eb14f3e67[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Mar 19 14:36:56 2023 -0400
+
+    mypy fix
+
+[33mcommit 6a5602dd7caf91a9697377d9384f69754ac3c765[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sat Mar 18 23:16:30 2023 -0400
+
+    mypy fix
+
+[33mcommit 31cbd1c3fb137795868a8f2cdc21cb54d0834a0f[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sat Mar 18 22:30:53 2023 -0400
+
+    lint fix
+
+[33mcommit 42f553512bf1aa3fb1d9ab96182feb0b2ffbbb6d[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sat Mar 18 22:18:26 2023 -0400
+
+    lint fix
+
+[33mcommit 3ef5e43d67d0d786b8097e04f96a76ce243488f4[m
+Merge: ad830eb 64d006c
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sat Mar 18 22:08:18 2023 -0400
+
+    Merge remote-tracking branch 'origin/develop-api-changes' into develop-api-changes
+
+[33mcommit ad830eb5eb665400013f917e9a9ec59fa01864ab[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sat Mar 18 22:08:06 2023 -0400
+
+    jinja2 upgrade
+
+[33mcommit 64d006ce5f46388dd2dc8abef047924857dbf6ea[m
+Merge: f99b12a 46878f5
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sat Mar 18 21:47:38 2023 -0400
+
+    Merge branch 'master' into develop-api-changes
+
+[33mcommit 46878f560e265037c24c92ea7de29f0670c47922[m
+Merge: 7320ab4 c3bd952
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sat Mar 18 21:46:24 2023 -0400
+
+    Merge pull request #17 from jpmorganchase/develop-improvements3
+    
+    Develop improvements3
+
+[33mcommit f99b12a62ae3f2c75a767e64443340ff22efb4f5[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Mar 17 07:25:30 2023 -0400
+
+    fix hard-coded catalog
+
+[33mcommit 7df30942024d3ca91396a68210d6118fb58f4be7[m
+Merge: f020872 bdce2d2
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Mar 14 14:56:01 2023 -0400
+
+    Merge remote-tracking branch 'origin/develop-api-changes' into develop-api-changes
+
+[33mcommit f020872c703f1bfda6a76ba61fe609fb001491c3[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Mar 14 14:44:29 2023 -0400
+
+    enable upload and fsync for raw files
+
+[33mcommit bdce2d20f2fc01d8d0c1ff3ca971b0d404a25014[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Mar 10 15:54:57 2023 -0500
+
+    sha256 fix
+
+[33mcommit 82751ed1ae6f0195cf53f50df2a3d04ca63a648e[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Mar 10 15:38:34 2023 -0500
+
+    sha256 fix
+
+[33mcommit d179b7844dd6491eaa51007b5070b560a868e772[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Mar 10 15:00:20 2023 -0500
+
+    sha256 fix
+
+[33mcommit 7a25e098c03cccdb89ca60dd3a8c53d8ac9a0db2[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Mar 10 14:38:49 2023 -0500
+
+    sha256 fix
+
+[33mcommit ae1a6d07141979631ab82b17ee180be81a252b59[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Mar 10 10:36:16 2023 -0500
+
+    sha256 spelling fix
+
+[33mcommit d3145f3c38b6d440caf1161beab92390d63b4e75[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Mar 10 09:19:05 2023 -0500
+
+    fix fusion upload url
+
+[33mcommit 88599d47c3ef98d5cf423a629e5b9355c9b82697[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Mar 9 23:37:33 2023 -0500
+
+    fix fusion token pass
+
+[33mcommit cb842ac264eb5975d906f93e8b54c7a1033b3a59[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 20:17:20 2023 -0500
+
+    fusion auth changes
+
+[33mcommit d05cabd791ffe2a2efddf5d2cf1f2672f5f1cfe4[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 19:25:40 2023 -0500
+
+    fusion auth changes
+
+[33mcommit f6f8a2734b6c099737520ccb119a35113e3ab4bc[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 19:22:44 2023 -0500
+
+    fusion auth changes
+
+[33mcommit f08d485f5ff07fade60afcf0b10b4eed1e432557[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 19:20:41 2023 -0500
+
+    fusion auth changes
+
+[33mcommit b3625872b1445a7a39b895b84475974071d5a089[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 19:16:53 2023 -0500
+
+    fusion auth changes
+
+[33mcommit e4e214e4719c46749aed5383cc24852bebb90425[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 19:00:19 2023 -0500
+
+    fusion auth changes
+
+[33mcommit 264851288fb9824ec1a1dbf766552a6a24f2918d[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 18:17:04 2023 -0500
+
+    fusion auth changes
+
+[33mcommit d5f23cbe95212d8583f55744cada40c4e1b59908[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 18:11:09 2023 -0500
+
+    fusion auth changes
+
+[33mcommit c033836cc4f53ff67d02ad5af0650c31829f2423[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 17:59:04 2023 -0500
+
+    fusion auth changes
+
+[33mcommit fbe096052a828e186790b546620b0c6463d47163[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 15:10:22 2023 -0500
+
+    sha256 changes
+
+[33mcommit 5a6a2a47daaf15097cc3f6d4d6578f1575b457ac[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Mar 9 15:08:31 2023 -0500
+
+    sha256 changes
+
+[33mcommit c3bd9525db806fd94a980925ddd9aa57a7dc8564[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Mar 6 22:34:01 2023 -0500
+
+    add schema evolution capability for parquet
+
+[33mcommit aeb3f162d9f561fc46a5d0b30e922ce8e152e628[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Mar 6 22:31:56 2023 -0500
+
+    start preparing authentication changes
+
+[33mcommit 369a380c38f5510aec070a986dd107480f5f9558[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Mar 6 22:30:51 2023 -0500
+
+    start preparing authentication changes
+
+[33mcommit 82a8001ac82e04889c6885a1a71852e9fa611859[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Mar 1 23:48:52 2023 -0500
+
+    md5 to sha256 change for upload
+
+[33mcommit 7320ab486dad9ea88cc18733442a895d6f0384ef[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 27 16:03:36 2023 -0500
+
+    flake8 fix
+
+[33mcommit 3cfcdf6cf73865d9839c4423257ccff026e684e9[m
+Merge: 5c10f3b 9dca9b8
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 27 15:38:17 2023 -0500
+
+    Merge pull request #16 from jpmorganchase/fsync_fix
+    
+    bug fix - trigger download if fusion catalog state changes
+
+[33mcommit 57d2750d6d3f22410f7088aa4238de28236a719c[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 27 15:19:16 2023 -0500
+
+    correct typo
+
+[33mcommit 13f143c48690ff4bb84096ef76b28eb46efb2e73[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 27 13:55:48 2023 -0500
+
+    return pandas dataframe from read_csv and read_json functions
+
+[33mcommit 21ae199db15f9ce25beeb024c90f0ba27788525d[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 27 11:39:01 2023 -0500
+
+    Robustify folder creation with filesystem
+
+[33mcommit 9d26083e9fbb2b8c18e9bc1354e9053c7796506a[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 27 11:19:11 2023 -0500
+
+    Robustify folder creation with filesystem
+
+[33mcommit ccc6e87b789f22d4cfa502e92d1bea02b43c110f[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 27 10:59:03 2023 -0500
+
+    Robustify folder creation with filesystem
+
+[33mcommit b0f9ca815795f890f8147f44ef64be8e5448250b[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 27 10:21:13 2023 -0500
+
+    Robustify folder creation with filesystem
+
+[33mcommit 112a3c191cdb37495087ae99ab00753cc072ce29[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sun Feb 26 20:40:59 2023 -0500
+
+    improve command line argument env
+
+[33mcommit 9f600b6f1939e305d21fe384f8151a54d333dadd[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sun Feb 26 13:24:44 2023 -0500
+
+    hive partitioning fix
+
+[33mcommit 9082c514bfb1e8e2c06d5c6384231f12df8c56b2[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sun Feb 26 12:41:45 2023 -0500
+
+    add command line environment
+
+[33mcommit 9dca9b8d1c4828b06caaa7785d66104075038bc2[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Feb 22 15:56:06 2023 -0500
+
+    robustify exception handling
+
+[33mcommit 3c6f325415dbacd52e65b416e0debc6925bc8127[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Feb 22 15:32:24 2023 -0500
+
+    robustify changes output parsing
+
+[33mcommit f9be45261904ca10381fc01d363107744e9198c8[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Feb 22 13:59:09 2023 -0500
+
+    robustify changes output parsing
+
+[33mcommit fbd06476a7df1866169f468cd123230ef1d8af00[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Feb 22 11:49:51 2023 -0500
+
+    enhanced error message handling
+
+[33mcommit c5f53ca501221127a785f3ea13ffbc45c618fe20[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 20 12:22:52 2023 -0500
+
+    add to_table function to download with hive partitioning
+
+[33mcommit 18131560b042fb626494b4141bd00eed165105e2[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Mon Feb 20 11:55:51 2023 -0500
+
+    add to_table function to return pyarrow table
+
+[33mcommit 91044bb63b2515cd3c6d47f8c2d182337561a764[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sat Feb 18 11:54:41 2023 -0500
+
+    fix tqdm import and warning logging
+
+[33mcommit f3a2787253624d7eecbaa5d1b05e4ea4ecd85f42[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Sat Feb 18 11:54:30 2023 -0500
+
+    fix tqdm import and warning logging
+
+[33mcommit 8fa8e94a0821e808d820bedc0e6275f20bbde1fb[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Feb 14 17:05:32 2023 -0500
+
+    update pip
+
+[33mcommit d1a71d9d9848cecd6244ac1eaabaf41114590be2[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Feb 14 17:01:27 2023 -0500
+
+    bug fix - trigger download if fusion catalog state changes
+
+[33mcommit 8dd32b151dc3a5016233d11b83dca2a53e9b5b6e[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Feb 1 22:09:43 2023 -0500
+
+    bug fix - trigger download if fusion catalog state changes
+
+[33mcommit 54d1e7c46a3eb7fc27fa416622f2c1bb9b61b13f[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Feb 1 08:41:54 2023 +0000
+
+    bug fix - trigger download if fusion catalog state changes
+
+[33mcommit 5c10f3bd4ab1905571446ce7bf06917a798e85e8[m[33m ([m[1;33mtag: [m[1;33mv1.0.9[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Jan 25 07:35:38 2023 -0500
+
+    make release
+
+[33mcommit a1c145ad9c5b4f4b8279a0264f87977e1297b779[m
+Merge: 43892df 5ec1938
+Author: nazq <naz.quadri@gmail.com>
+Date:   Mon Jan 23 09:08:34 2023 -0500
+
+    Merge pull request #15 from jpmorganchase/multi_cloud
+    
+    Formatting + multi cloud optional deps
+
+[33mcommit 5ec1938aa5202f10bbf414df34634ee73557e54a[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Mon Jan 23 09:02:20 2023 -0500
+
+    Formatting + multi cloud optional deps
+
+[33mcommit 43892dfe96aa77ee63500eaf7d0b35f098e59788[m[33m ([m[1;33mtag: [m[1;33mv1.0.8[m[33m)[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jan 19 22:57:34 2023 -0500
+
+    make release
+
+[33mcommit 50c8e7b4e30039ca303341be7acb2bfb1f9e4f08[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jan 19 22:52:03 2023 -0500
+
+    mypy fix
+
+[33mcommit bb9427de53d93ffbfa1470e653582485b445b4d6[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jan 19 22:43:51 2023 -0500
+
+    mypy fix
+
+[33mcommit dbb949dbcfb9caeeedd65cc6a60073e639ed2174[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jan 19 22:39:16 2023 -0500
+
+    mypy fix
+
+[33mcommit 39b3e31f4e5ce60292b59e1a67d270d4d1414f0b[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jan 19 22:32:21 2023 -0500
+
+    lint fix
+
+[33mcommit a2429ac5752338ca51c9b2a62c43653d311634a4[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jan 19 22:02:19 2023 -0500
+
+    lint fix
+
+[33mcommit e92a1eac65114e0a29126186b047a7df789be2dc[m
+Merge: 2175578 36a4906
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jan 19 16:21:36 2023 -0500
+
+    Merge pull request #14 from jpmorganchase/block_stores
+    
+    Block stores
+
+[33mcommit 36a49068e97862b475c66e2607ded115553ea410[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jan 19 16:20:46 2023 -0500
+
+    small tidy
+
+[33mcommit 3efd02846d7eadd9f7bb081082512ebdcfd801a9[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Tue Jan 17 13:44:02 2023 -0500
+
+    add fsspec abstraction to DF reader
+
+[33mcommit 1177cd0fd2f52dac5cdebc2e0eabbb42f7c38154[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu Jan 12 12:25:09 2023 -0500
+
+    First pass at moving fully to fsspec
+
+[33mcommit 217557899583eafcf1233c5288655324dbc6fdb1[m[33m ([m[1;33mtag: [m[1;33mv1.0.7[m[33m)[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jan 12 12:30:54 2023 +0000
+
+    make release
+
+[33mcommit ce7c3b776ec3bcaf3d3127824c6b9b6fd670b913[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jan 12 12:18:38 2023 +0000
+
+    fix flake8
+
+[33mcommit e48ff811a23879a86eb9eac7ed0b779393774188[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jan 12 11:58:17 2023 +0000
+
+    flake8 fix
+
+[33mcommit 2ed927a2a1066f53ee131b4aa50449fe7c2b3a88[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jan 12 11:15:02 2023 +0000
+
+    freeze doc building package versions
+
+[33mcommit eb7748244015df95e9076e43683672ec296255e8[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jan 12 10:50:26 2023 +0000
+
+    fix lint and jinja dependency
+
+[33mcommit 782101468283823aebe4f817076372c93c9fbc1f[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jan 12 10:22:42 2023 +0000
+
+    fix dependencies
+
+[33mcommit f930f561f6b59626a73135039e3bbd46f57c9e01[m
+Merge: 155f459 c92662b
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Jan 12 09:57:40 2023 +0000
+
+    Merge pull request #13 from jpmorganchase/develop-multipart
+    
+    Develop multipart upload and fsync
+
+[33mcommit 155f45925a5b401a82ff031e0e95e67cb0a8000e[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jan 5 16:10:06 2023 +0000
+
+    get started notebook for docs/get_started.ipynb
+
+[33mcommit 4a207ad3506cc50a6978f1b36d3fbf1fb1f7855a[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jan 5 15:53:53 2023 +0000
+
+    update doc making setup
+
+[33mcommit f92b93553dac0bdcbad30c41272bf5c88077d0d3[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jan 5 14:57:19 2023 +0000
+
+    change of palette
+
+[33mcommit c92662b9f5aec8d5ce540c1929477f81c7dcad2c[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jan 5 12:12:44 2023 +0000
+
+    adding logging path override
+
+[33mcommit a3db29c5f648d54d925839f07edb997ff83b1c23[m
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Jan 4 19:44:04 2023 +0000
+
+    Update README.md
+
+[33mcommit a410307763cb0e6b08629a3a502e99e09a8a2286[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Jan 4 19:37:21 2023 +0000
+
+    docs tidy
+
+[33mcommit b4a7e086b53818306b20ba5b579bd0b2144d8906[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Jan 4 17:21:24 2023 +0000
+
+    small tidy
+
+[33mcommit 51bbc4d633f03fdccb982284f2c4889db5259ed0[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Dec 22 11:25:25 2022 +0000
+
+    fix bug
+
+[33mcommit 3df01842ca80268367b9c0ebfca3f46c833fe1cb[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Dec 22 09:22:27 2022 +0000
+
+    download error logging
+
+[33mcommit e3bf9d47ad505e3000057d981e9ea403b99f4b23[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Dec 21 12:14:05 2022 +0000
+
+    small tidy
+
+[33mcommit 24125a7ae3fb562e18773a0b03c48416d78e9978[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Dec 21 11:59:22 2022 +0000
+
+    small tidy
+
+[33mcommit 4777447338dcc2a060b32c84e38cb710c7b322f9[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Dec 21 11:56:29 2022 +0000
+
+    small tidy
+
+[33mcommit 4116ebda6a4dc717028e820e4a0b603aeea179cb[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Dec 20 21:46:29 2022 +0000
+
+    fsync mature draft
+
+[33mcommit dd2276dfbc72f9c70064057d232493187e9dcf35[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Dec 20 17:16:51 2022 +0000
+
+    fs_sync early draft
+
+[33mcommit a74d3a8e864e415e8ad4f7c7333b338e97893e00[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Dec 19 18:54:45 2022 +0000
+
+    fs_sync early draft
+
+[33mcommit f9bc47d2920e32334a888f319ef27aa212374897[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Dec 19 14:58:57 2022 +0000
+
+    fs_sync early draft
+
+[33mcommit ba6e0177d34c7ff6340b72e99f9b49476c010861[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Dec 19 14:35:57 2022 +0000
+
+    fs_sync early draft
+
+[33mcommit ef12c6a440af9b3dcef986f0357e4207240fe8ed[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Dec 18 19:02:36 2022 +0000
+
+    start on fsync
+
+[33mcommit a305bc59d7002d9ad9d21e8e89223fc5ea3d1b45[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Dec 18 17:27:08 2022 +0000
+
+    start on fsync
+
+[33mcommit ca4d25c736195f374b1d1276f1131d50224d19e1[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Sun Dec 18 13:53:52 2022 +0000
+
+    start on fsync
+
+[33mcommit bf7961a2e0d839ca5c8b3b382b7cc08c945443db[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Dec 16 17:38:23 2022 +0000
+
+    fs_sync early draft
+
+[33mcommit 5b5c423bc07f9f6c89f2c5acebb03854cf00d9f7[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Dec 13 18:48:30 2022 +0000
+
+    fs_sync early draft
+
+[33mcommit d00092d0f258b33fa94564c9ef20e665770113c1[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Dec 13 17:54:50 2022 +0000
+
+    add changes to info
+
+[33mcommit b0258922d366f69116674fe8d094ab2a67670ee1[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Dec 13 17:18:43 2022 +0000
+
+    fix proxy in fusion filesystem
+
+[33mcommit 00d84670fd873a53b368b4c2f276a8b1c6daebba[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Dec 13 17:15:09 2022 +0000
+
+    fix proxy in fusion filesystem
+
+[33mcommit 001572726fd1526bbdb8c12f0d1b306f4a5096cf[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Dec 12 19:47:13 2022 +0000
+
+    start on multipart upload
+
+[33mcommit f021e77bfa38fe281d7e135c23595f7ad820fd99[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Dec 12 19:33:25 2022 +0000
+
+    start on multipart upload
+
+[33mcommit e39384ff432ddf40794e860213ecf33cecf184ec[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Dec 12 19:30:23 2022 +0000
+
+    start on multipart upload
+
+[33mcommit 3641fea35288f7d4a4df5dbc018801e272f18058[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Dec 12 19:22:00 2022 +0000
+
+    start on multipart upload
+
+[33mcommit a1a5b4a6006a03ba35c9e737044aff3718129114[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Dec 12 17:12:15 2022 +0000
+
+    start on multipart upload
+
+[33mcommit 8398c660e811ce539e37e8a551554de37e6b3bb8[m
+Merge: 8a2f2f7 908ce40
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Dec 9 14:28:38 2022 +0000
+
+    Merge pull request #12 from jpmorganchase/raw-download
+    
+    Download raw datafile zips and load into a dataframe
+
+[33mcommit 908ce40020e3506ea4eb388d94f820c000561f9c[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Mon Nov 28 11:39:54 2022 +0000
+
+    Download raw datafile zips and load into a dataframe
+
+[33mcommit 8a2f2f7c5eab404d28421e96213e34bfab7a2010[m[33m ([m[1;33mtag: [m[1;33mv1.0.6[m[33m)[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Nov 21 10:39:31 2022 +0000
+
+    make release
+
+[33mcommit e8ddfc79133af22a97d3613d1899545bd5b0d462[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Nov 11 16:32:17 2022 +0000
+
+    flake8 fixes
+
+[33mcommit ee12a503e79ebbe3e2612522d2b1c760d80f81fb[m
+Merge: f8d949b df08806
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Fri Nov 11 11:37:33 2022 +0000
+
+    Merge pull request #11 from jpmorganchase/dev-fsync
+    
+    Dev fsync
+
+[33mcommit df088068791584729a9b5a46a0f1e38c6f0946d5[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Thu Nov 10 15:37:23 2022 +0000
+
+    pick up the default catalog in the upload function
+
+[33mcommit ac6002347afd9f15163a54741d98983b59d4952e[m
+Merge: 90f7a63 d757823
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Nov 9 15:49:26 2022 +0000
+
+    merge with master
+
+[33mcommit d75782321b9dde3fa0e442c8de1e67dee99bb3c1[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Nov 9 14:36:08 2022 +0000
+
+    removing redundant headers
+
+[33mcommit 79f78f19080696ad77d65b6cdf7832cadc313261[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Nov 9 14:24:29 2022 +0000
+
+    master merge
+
+[33mcommit 6e4516aba569fd8fae760e173987a39fb194c5c7[m
+Merge: aaa5091 f8d949b
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Nov 9 13:15:53 2022 +0000
+
+    master merge
+
+[33mcommit f8d949b38f0d696edc14fa839c6b7f814c08cd75[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Oct 5 11:19:59 2022 +0100
+
+    flake8 fixes
+
+[33mcommit fe8f5a0b9fb81c8a8ff29e314937b14fd2499d7d[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Oct 5 10:52:53 2022 +0100
+
+    flake8 fixes
+
+[33mcommit 223017c9d60275f32a11fb3f4d1f12e3d2df3da4[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Oct 5 10:05:49 2022 +0100
+
+    flake8 fixes
+
+[33mcommit 5231f94b4992004331c1939d44a960fe288c16c4[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Oct 4 19:28:57 2022 +0100
+
+    flake8 fixes
+
+[33mcommit 900cf3e4b4105c35496074537bfcc91b6e8e9b89[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Oct 4 19:25:18 2022 +0100
+
+    flake8 fixes
+
+[33mcommit 874638bc581a6ff180bb5f144115b87cf57b0f75[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Oct 4 19:04:09 2022 +0100
+
+    poetry - suppress multiple installs
+
+[33mcommit c5163723c682cb1279c91243493df9759148147d[m
+Merge: c419fdc b20f26a
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Tue Oct 4 10:57:59 2022 +0100
+
+    Merge pull request #10 from jpmorganchase/improvements-part2
+    
+    Improvements part2
+
+[33mcommit 90f7a63cd3a5f8206b35c836f4143212de881166[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Sep 30 14:36:06 2022 +0100
+
+    file upload functionality
+
+[33mcommit 5ad3f97e496c30a28be3f5aa301525f58ad59b68[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 29 13:52:29 2022 +0100
+
+    file upload functionality
+
+[33mcommit 16729fac1868905cf0ec478b78b3b5ac2b6233bc[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 29 10:46:16 2022 +0100
+
+    file upload functionality
+
+[33mcommit 54ea0baf8e2e965dd96b652c9f88665936b87172[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 29 10:40:23 2022 +0100
+
+    file upload functionality
+
+[33mcommit 8b2bff7da5800ced4f20bb81c55aefe77f4735e5[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 29 10:23:55 2022 +0100
+
+    file upload functionality
+
+[33mcommit 28b4686109d591a8b5d727f0b668fb90b565616e[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 29 10:19:38 2022 +0100
+
+    file upload functionality
+
+[33mcommit bc909712c88dcadf484dc329e9fda909e088b98d[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 29 10:15:18 2022 +0100
+
+    file upload functionality
+
+[33mcommit 4e644df7a5d6cdb8aa0a31c30f63cc9b938a811c[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 29 10:02:57 2022 +0100
+
+    file upload functionality
+
+[33mcommit 15bf189a426c9ec765258886dc3c63886332d61b[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Sep 28 17:45:25 2022 +0100
+
+    file upload functionality
+
+[33mcommit f2bf673f5a43885397040834dc61d75d2110f0a3[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Sep 28 17:41:52 2022 +0100
+
+    file upload functionality
+
+[33mcommit f0dcf53d6255875c7c2527132473f6e80e04d163[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Sep 28 17:28:04 2022 +0100
+
+    file upload functionality
+
+[33mcommit 7bdc163816e2a62d6db404ceb8210086587c91f1[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Sep 28 16:59:44 2022 +0100
+
+    file upload functionality
+
+[33mcommit 66d813be5b932d1dde94ebc7d6e0c5ee1525d504[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Sep 28 16:42:07 2022 +0100
+
+    file upload functionality
+
+[33mcommit b20f26a0936a3f6f928bd2337fbab916d603ee1b[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Sep 13 17:00:14 2022 +0100
+
+    delete redundant code
+
+[33mcommit ca492fe129edf47a1970cc1dd59f1ac1f897c06a[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Sep 13 16:10:44 2022 +0100
+
+    fix credentials pass
+
+[33mcommit 8b517efb55fccef9f78f73eac8e0093a791d5cb1[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 8 17:01:31 2022 +0100
+
+    fix proxy in get_client
+
+[33mcommit 290385f74d0f721eb243788fe1720090e3303c14[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 8 16:58:25 2022 +0100
+
+    fix proxy in get_client
+
+[33mcommit a831a635c55e2062100ce73079b67d1161674ecf[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Sep 7 18:30:00 2022 +0100
+
+    more retries
+
+[33mcommit aaa50912de4c6f80127226558205577be0a5ca81[m
+Merge: 164222d c419fdc
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 1 12:06:02 2022 +0100
+
+    Merge remote-tracking branch 'origin/master'
+    
+    # Conflicts:
+    #       fusion/authentication.py
+    #       fusion/fusion.py
+
+[33mcommit 1c1a8e4ef4798860ef59c9bfd0d4b93c98866dcd[m
+Merge: 164222d c419fdc
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Thu Sep 1 12:05:28 2022 +0100
+
+    Merge branch 'master' into improvements-part2
+
+[33mcommit 164222d951d752ea3355610498b8e41a72c1626b[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Sep 1 12:00:33 2022 +0100
+
+    tidy the attributes display
+
+[33mcommit 248b5953836263a1ce13bb6e092812ed6a161fdf[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Aug 25 14:09:13 2022 +0100
+
+    Fusion filesystem - old style tqdm to ensure correct display without widgets
+
+[33mcommit c419fdc71bef650e733cdc2d9801475d54456ff8[m
+Merge: d47555b fd1c125
+Author: Dawid Bernaciak <68283272+dbernaciak@users.noreply.github.com>
+Date:   Wed Aug 24 09:55:22 2022 +0100
+
+    Merge pull request #9 from jpmorganchase/rr-simple-config
+    
+    Support simple config
+
+[33mcommit fd1c1259f1dbff583894f61d3ff6382a1e19dbff[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Wed Aug 24 09:34:02 2022 +0100
+
+    decorated getters and setters
+
+[33mcommit f90fb92b888d94b5f364d724a6d58b26546e4edb[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Wed Aug 24 07:07:00 2022 +0100
+
+    removing unnecessary print statements
+
+[33mcommit 9a82a0cc761ae2b3a0d22bc541a651c8c362e819[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Tue Aug 23 18:02:45 2022 +0100
+
+    changes to add proxies to the credentials file and allow the default catalog to be overridden
+
+[33mcommit 8f956e80607948a75d17121c51d489b426fe1df7[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Aug 22 17:15:12 2022 +0100
+
+    Fusion filesystem - change the treatment of proxies for the filesystem
+
+[33mcommit 47dc37c3499203ae8eaed5298398bfa809d9a2da[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Aug 22 17:08:55 2022 +0100
+
+    Fusion filesystem - change the treatment of proxies for the filesystem
+
+[33mcommit 0bf64d8a6e90e1060b2039bdff33a6375db4362e[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Aug 19 17:17:49 2022 +0100
+
+    Fusion filesystem - tweaks to the filesystem
+
+[33mcommit 4a44b305130ac969a33df8d3a85d23af8acbfd7a[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Aug 16 17:19:00 2022 +0100
+
+    Fusion filesystem - Accept-Encoding identity
+
+[33mcommit 9063a722f46a93aaa72c6a3b238e2a5baaf682ae[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Aug 16 10:52:14 2022 +0100
+
+    Fusion filesystem - flake8
+
+[33mcommit 6bed400be2b180d65d76caea87dc92bdaece016d[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Aug 16 10:32:45 2022 +0100
+
+    Fusion filesystem - return paths from download optional. Default behaviour to return None
+
+[33mcommit 626033e0a33db22d57e7ee3875215e02af8a3b78[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Aug 15 19:04:34 2022 +0100
+
+    Fusion filesystem - more methods
+
+[33mcommit 12ce30d8c4f255d41419ce73c61b16320c0e8c44[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Aug 15 14:06:27 2022 +0100
+
+    Fusion filesystem - add aiohttp proxies to env variables if proxy present in credentials
+
+[33mcommit 5475db47dfacec6e2068e293ba4a15900ba122eb[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Aug 15 13:31:51 2022 +0100
+
+    Fusion filesystem - make more independent
+
+[33mcommit bf1a68af29ac748c32390b718550a736ea68e33e[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Aug 15 12:26:31 2022 +0100
+
+    Fusion filesystem - requirements
+
+[33mcommit e01221b7de14dc2260804a87995761402e8c9f90[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Aug 15 12:25:10 2022 +0100
+
+    Fusion filesystem - first draft
+
+[33mcommit 56cae891b1feca2cfd6107f806b9547ecbba77b7[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Aug 5 13:41:55 2022 +0100
+
+    start adding filesystem support for cloud
+
+[33mcommit 7e8f382f483b7c8a87cec1d2d73d2d80abd8dbc2[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Aug 5 12:07:22 2022 +0100
+
+    relax pathlib's unlink() Python 3.8 dependency
+
+[33mcommit 9060daef8deed73d792b0e81b8093909e43682ab[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Aug 5 11:16:30 2022 +0100
+
+    walk up the directory tree to find config
+
+[33mcommit dc6281c8f75517334ee301de2c6db8c96dd81521[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Aug 5 09:58:00 2022 +0100
+
+    dataframe printing - unravel lists
+
+[33mcommit d47555bf10c1454085a65ca60905c058b022412b[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Aug 3 17:26:54 2022 +0100
+
+    requirements update
+
+[33mcommit 9af529160d17b7f69eb241c39f4c84f5b64a62e2[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Aug 3 17:17:55 2022 +0100
+
+    flake8 fix
+
+[33mcommit 54946b19adee478ea1587c33724465bec6c6e583[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Aug 3 16:25:44 2022 +0100
+
+    python 3.6 backward compatibility of nullcontext + tabulate requirement
+
+[33mcommit 1b5c363e2351c879ed9c8eaf5396d117984a724b[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Jul 22 12:24:09 2022 +0100
+
+    fix mypy exceptions
+
+[33mcommit 8e96984bc1554427e4094fefc42e5ebfacfa813e[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Jul 22 11:18:06 2022 +0100
+
+    fix flake8 exceptions
+
+[33mcommit 78318e0780d4c83f1f14a55405cda48e0b6e9cad[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Fri Jul 22 10:28:42 2022 +0100
+
+    fix flake8 exceptions, fix nullcontext behaviour, add pyarrow to documentation
+
+[33mcommit 9764e6987a40118dbae741268a6b80e500ba7b6a[m
+Merge: 116a5c8 9cbe224
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Thu Jul 21 10:46:29 2022 -0400
+
+    Merge pull request #8 from jpmorganchase/minor-improvements
+    
+    Improvements
+
+[33mcommit 9cbe224b4d6f165d6d874baee66f7d4efb22a1f6[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Jul 19 13:10:58 2022 +0100
+
+    fix test imports
+
+[33mcommit 211bae3f53d8cbcf82cc56de7beeef233a9d0d68[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Mon Jul 18 15:07:03 2022 +0100
+
+    improve parallelisation by auto-adjusting the number of cpus
+
+[33mcommit 7ced84e422a0a8b47a287ebe6aec1b4fb29ad46c[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jul 14 15:18:34 2022 +0100
+
+    improve parallelisation by auto-adjusting the number of cpus
+
+[33mcommit a62c557b8accf0db12c0dcf5b5ff5cdd273ba16b[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Thu Jul 14 14:48:08 2022 +0100
+
+    big refactoring - split the fusion file into  smaller files for easier maintenance
+
+[33mcommit 8b80a3534df309caf6e52b80c88f4cfae55ca432[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Wed Jul 13 21:07:42 2022 +0100
+
+    pyarrow reading of parquet, json and csv - enable filters for all 3 formats, faster reading, implying delimiter for csv if comma fails, memmap for parquet
+
+[33mcommit d7f73a33e9b8b5655470bae9d8948c084e62fc1c[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Jul 12 17:54:27 2022 +0100
+
+    trim the amount of data displayed in list_products and list_datasets - part 1
+
+[33mcommit 6aebdba20b19f13b633f9187cf7963d74d21ded0[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Jul 12 13:23:45 2022 +0100
+
+    add __repr__ to display all available methods
+
+[33mcommit a16e5c2862b976c6925e84e00fc7f06bc59f8b73[m
+Author: dbernaciak <dawid.bernaciak@gmail.com>
+Date:   Tue Jul 12 13:19:07 2022 +0100
+
+    add __repr__ to display all available methods
+
+[33mcommit 116a5c8591d0a7694b6d81448e20f29a7fafef10[m[33m ([m[1;33mtag: [m[1;33mv1.0.5[m[33m)[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu Jun 23 08:38:08 2022 -0400
+
+    correct docs branch
+
+[33mcommit ccb5f34b5cded4005dbf652c674673ab023f0d55[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed Jun 22 15:51:01 2022 -0400
+
+    Bump version: 1.0.4 → 1.0.5
+
+[33mcommit 1bb29c6e9fc284915f4b3535698497f92b88f8d8[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed Jun 22 15:50:04 2022 -0400
+
+    Prep release 1.0.5
+
+[33mcommit 5ce8e73621721bfbc36490b37e721c8e53ef172a[m
+Merge: 1f9f6dd 7e94b56
+Author: nazq <naz.quadri@gmail.com>
+Date:   Wed Jun 22 15:46:41 2022 -0400
+
+    Merge pull request #7 from jpmorganchase/add_grant_types
+    
+    Add grant types
+
+[33mcommit 7e94b5684c1f68ec4bf1b01e29b4bb04040ff189[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed Jun 22 15:36:33 2022 -0400
+
+    remove multi repo doc publishing
+
+[33mcommit 8c0b17b5b4c0432938c0c3894aeab7b64eb073a0[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Thu Jun 9 09:24:04 2022 +0100
+
+    corrected the header fields required for password auth
+
+[33mcommit 55b2f28c0b9248457b5cec781feb6404437c27a7[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Thu Jun 9 08:00:00 2022 +0100
+
+    expanded comments on support for username and password auth, Note: although the password grant type is considered legacy, this is useful to support where the user is connecting directly.
+
+[33mcommit d411355d284a90a5f3a2c006775870d5bc58afd2[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Wed Jun 8 22:43:31 2022 +0100
+
+    added support for authentication with  username and password
+
+[33mcommit 1f9f6ddb2fb9b82be1d75111abe91d0630cc5705[m
+Merge: 63edee3 1f21fad
+Author: nazq <naz.quadri@gmail.com>
+Date:   Thu May 26 08:00:10 2022 -0400
+
+    Merge pull request #6 from jpmorganchase/no_data_fix
+    
+    Report error on download when there are no series members
+
+[33mcommit 1f21fadbb776f1fc671c5cd2f29f62a28a191766[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Wed May 25 10:18:40 2022 +0100
+
+    Report error on download when there are no series members for the request dataaset identifier
+
+[33mcommit 63edee3b2eba2704b49e472235410226f5bcd2d5[m[33m ([m[1;33mtag: [m[1;33mv1.0.4[m[33m)[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu May 19 08:47:41 2022 -0400
+
+    Bump version: 1.0.3 → 1.0.4
+
+[33mcommit 9988c7062f6cf73c31c28f93d149e530e9c12fe8[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu May 19 08:47:32 2022 -0400
+
+    Changelog for upcoming release 1.0.4
+
+[33mcommit d5f98a73f05d087e053a58388413b23884a69e76[m
+Merge: 2d4f929 cc9d6fa
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Thu May 19 12:52:13 2022 +0100
+
+    Merge pull request #5 from jpmorganchase/date_fmt
+    
+    Date fmt
+
+[33mcommit 2d4f9291be1438b127d0ca07c24a0800eb594b5e[m
+Merge: d2e23d2 9ce79bb
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Thu May 19 11:41:31 2022 +0100
+
+    Merge pull request #2 from jpmorganchase/proxy_fix
+    
+    Ensure the proxy setting is respected, even for auth srv
+
+[33mcommit cc9d6fa198d8d9a208a7dc0a8694c158a3a363f6[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed May 18 15:41:40 2022 -0400
+
+    Support both dashed and undashed dates
+
+[33mcommit 40c1b5559a92ba98e925efebac514a3483dade55[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed May 18 15:09:25 2022 -0400
+
+    Add tests for creds creation; fix bug w missing dir
+
+[33mcommit d2e23d254bcc857acb2d8e5fbd292fadd6331c60[m
+Merge: fcc0688 a625b41
+Author: nazq <naz.quadri@gmail.com>
+Date:   Wed May 18 12:49:37 2022 -0400
+
+    Merge pull request #1 from jpmorganchase/ld_function
+    
+    Make load function more descriptive
+
+[33mcommit f8757a2cb5c5121ff0ac8b8f8cd175cf2ddeb549[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Wed May 18 12:48:20 2022 -0400
+
+    Add defaults and convenience functionality to creds generation
+
+[33mcommit a625b410de1ebea9084df623ea9ea7ed04a9554e[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Wed May 18 09:34:08 2022 +0100
+
+    switched load to to_df to describe behaviour and raise exception when no data returned
+
+[33mcommit 9ce79bba4da5efa70897d6266446d501c46a887f[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Tue May 17 16:28:21 2022 -0400
+
+    Ensure the proxy setting is respected, even for auth srv
+
+[33mcommit fcc0688a6d6fc580169f04179d58a7797e663f87[m[33m ([m[1;33mtag: [m[1;33mv1.0.3[m[33m)[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Fri May 13 12:17:43 2022 -0400
+
+    fix to ubuntu build servers; add more docs
+
+[33mcommit bba37470ce08426aaef841c7421a4d170006ad2d[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Fri May 13 11:14:07 2022 -0400
+
+    cleanup docs
+
+[33mcommit 2f831c72771ea17bed1ac6d8effd3c962089d6e4[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Fri May 13 11:02:42 2022 -0400
+
+    add version to changelog reader
+
+[33mcommit 976a67ac75edbec41dd0af2108484e6c6428fa6d[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Fri May 13 09:48:48 2022 -0400
+
+    Clean up changelog
+
+[33mcommit 6b5c40f49e083229991bdf932a5f2da9497fb722[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Fri May 13 08:38:30 2022 -0400
+
+    Remove multi GH build platforms, push down to tox
+
+[33mcommit 11c22bdaa5d2fc9e29a7f39d5508c6deeca12c14[m
+Author: Richard Roberts <robertsdrm@hotmail.com>
+Date:   Fri May 13 10:36:50 2022 +0100
+
+    handle latest date (default)
+
+[33mcommit bbd84021232567410a4ac99157dbc7e56b8ebe26[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu May 12 16:03:21 2022 -0400
+
+    Bump version: 1.0.2 → 1.0.3
+
+[33mcommit 167efbc9965b9d636c1e79cd2082f098c6d103df[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu May 12 16:03:18 2022 -0400
+
+    Prepare v1.0.3
+
+[33mcommit a90650f768244b425c3bdde98114056eedf5db11[m[33m ([m[1;33mtag: [m[1;33mv1.0.2[m[33m)[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu May 12 15:45:00 2022 -0400
+
+    set upstream on docs repo
+
+[33mcommit 4847fdfc01bf7f55f8941a3e7a8ccee6169d8ede[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu May 12 15:01:30 2022 -0400
+
+    Bump version: 1.0.1 → 1.0.2
+
+[33mcommit a06db35b1313f11e0938aea53146fcff42552492[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu May 12 15:01:22 2022 -0400
+
+    Merge main docs branch into fusion docs
+
+[33mcommit 54da264d185e54a0b00f69814b1f91b7c64196ee[m[33m ([m[1;33mtag: [m[1;33mv1.0.1[m[33m)[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu May 12 14:14:41 2022 -0400
+
+    Bump version: 1.0.0 → 1.0.1
+
+[33mcommit 232b8db26d3f93a1130ff20530057ba17a01c39c[m
+Author: Naz Quadri <naz.quadri@gmail.com>
+Date:   Thu May 12 14:12:00 2022 -0400
+
+    Cut v1.0.0 release

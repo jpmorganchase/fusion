@@ -109,7 +109,7 @@ class ReportAttributes:
             if attr.name == name:
                 self.attributes.remove(attr)
                 return True
-        return False
+        return False    
 
     def get_attribute(self, name: str) -> ReportAttribute | None:
         for attr in self.attributes:
@@ -119,22 +119,27 @@ class ReportAttributes:
 
     def to_dict(self) -> dict[str, list[dict[str, Any]]]:
         return {"attributes": [attr.to_dict() for attr in self.attributes]}
-
-    @classmethod
-    def _from_dict_list(cls, data: list[dict[str, Any]]) -> ReportAttributes:
+    
+    def _from_dict_list(self, data: list[dict[str, Any]]) -> ReportAttributes:
         attributes = [ReportAttribute(**attr_data) for attr_data in data]
-        return cls(attributes=attributes)
+        result = ReportAttributes(attributes=attributes)
+        result.client = self._client  # Carry over the client
+        return result
 
-    @classmethod
-    def _from_dataframe(cls, data: pd.DataFrame) -> ReportAttributes:
+
+    def _from_dataframe(self, data: pd.DataFrame) -> ReportAttributes:
         data = data.where(data.notna(), None)
         attributes = [ReportAttribute(**series.dropna().to_dict()) for _, series in data.iterrows()]
-        return cls(attributes=attributes)
+        result = ReportAttributes(attributes=attributes)
+        result.client = self._client  # Carry over the client from the calling instance
+        return result
 
-    @classmethod
-    def _from_csv(cls: type[ReportAttributes], file_path: str) -> ReportAttributes:
+
+
+    def from_csv(self, file_path: str) -> ReportAttributes:
         data = pd.read_csv(file_path)
-        return cls._from_dataframe(data)
+        return self._from_dataframe(data)
+
     
 
     def from_object(
