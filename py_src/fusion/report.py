@@ -140,8 +140,10 @@ class Report(metaclass=CamelCaseMeta):
 
         converted_data = convert_keys(data)
 
+                # convert to field name used in class
         if "isBCBS239Program" in converted_data:
-            converted_data["isBCBS239Program"] = make_bool(converted_data["isBCBS239Program"])
+            converted_data["is_bcbs239_program"] = make_bool(converted_data.pop("isBCBS239Program"))
+
 
         # Filter keys that are valid fields in the class
         valid_fields = {f.name for f in fields(cls)}
