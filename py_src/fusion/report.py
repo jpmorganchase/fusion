@@ -116,11 +116,10 @@ class Report(metaclass=CamelCaseMeta):
 
     @classmethod
     def from_dict(cls: type[Report], data: dict[str, Any]) -> Report:
-        """Instantiate a Report object from a partial API-style dictionary.
-        
-        Only sets fields that are present in the input.
-        Missing fields are completely omitted from the instance.
-        Accessing them later will raise AttributeError.
+        """Instantiate a Report object from a dictionary.
+
+        All fields defined in the class will be set.
+        If a field is missing from input, it will be set to None.
         """
 
         def normalize_value(val: Any) -> Any:
@@ -131,6 +130,7 @@ class Report(metaclass=CamelCaseMeta):
         def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
             converted = {}
             for k, v in d.items():
+                # Special case: keep as-is if already matches the field name (e.g., isBCBS239Program)
                 key = k if k == "isBCBS239Program" else camel_to_snake(k)
                 if isinstance(v, dict) and not isinstance(v, str):
                     converted[key] = convert_keys(v)
@@ -140,28 +140,22 @@ class Report(metaclass=CamelCaseMeta):
 
         converted_data = convert_keys(data)
 
-                # convert to field name used in class
         if "isBCBS239Program" in converted_data:
-            converted_data["is_bcbs239_program"] = make_bool(converted_data.pop("isBCBS239Program"))
+            converted_data["isBCBS239Program"] = make_bool(converted_data["isBCBS239Program"])
 
-
-        # Filter keys that are valid fields in the class
         valid_fields = {f.name for f in fields(cls)}
         filtered_data = {k: v for k, v in converted_data.items() if k in valid_fields}
 
-        # Create instance without calling __init__
         report = cls.__new__(cls)
 
-        # Only set attributes that were in the input
-        for key, value in filtered_data.items():
-            setattr(report, key, value) 
+        for field in fields(cls):
+            if field.name in filtered_data:
+                setattr(report, field.name, filtered_data[field.name])
+            else:
+                setattr(report, field.name, None)
 
-        # Optionally call __post_init__ only if you know its fields were set
-        if hasattr(report, "name") and hasattr(report, "title") and hasattr(report, "description"):
-            report.__post_init__()
-
+        report.__post_init__()
         return report
-
 
 
     def to_dict(self) -> dict[str, Any]:
