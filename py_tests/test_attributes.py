@@ -665,7 +665,7 @@ def test_attributes_from_dict_list() -> None:
             }
         ]
     }
-    test_attributes = Attributes._from_dict_list(test_dict["attributes"])
+    test_attributes = Attributes.from_dict_list(test_dict["attributes"])
     assert test_attributes.attributes[0].title == "Test Attribute"
     assert test_attributes.attributes[0].identifier == "test_attribute"
     assert test_attributes.attributes[0].index == 0
@@ -699,7 +699,7 @@ def test_attributes_from_dataframe() -> None:
             "availableFrom": ["May 5, 2020"],
         }
     )
-    test_attributes = Attributes._from_dataframe(test_df)
+    test_attributes = Attributes.from_dataframe(test_df)
     assert test_attributes.attributes[0].title == "Test Attribute"
     assert test_attributes.attributes[0].identifier == "test_attribute"
     assert test_attributes.attributes[0].index == 0

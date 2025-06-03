@@ -633,7 +633,7 @@ class Attributes:
         return dict_out
 
     @classmethod
-    def _from_dict_list(cls: type[Attributes], data: list[dict[str, Any]]) -> Attributes:
+    def from_dict_list(cls: type[Attributes], data: list[dict[str, Any]]) -> Attributes:
         """Create an Attributes instance from a list of dictionaries.
 
         Args:
@@ -655,14 +655,14 @@ class Attributes:
             ...         "description": "My attribute description"
             ...     }
             ... ]
-            >>> attributes = fusion.attributes()._from_dict_list(data)
+            >>> attributes = fusion.attributes().from_dict_list(data)
 
         """
         attributes = [Attribute._from_dict(attr_data) for attr_data in data]
         return Attributes(attributes=attributes)
 
     @classmethod
-    def _from_dataframe(cls: type[Attributes], data: pd.DataFrame) -> Attributes:
+    def from_dataframe(cls: type[Attributes], data: pd.DataFrame) -> Attributes:
         """Create an Attributes instance from a pandas DataFrame.
 
         Args:
@@ -685,7 +685,7 @@ class Attributes:
             ...         "description": "My attribute description"
             ...     }
             ... ])
-            >>> attributes = fusion.attributes()._from_dataframe(data)
+            >>> attributes = fusion.attributes().from_dataframe(data)
 
         """
         data = data.replace(to_replace=np.nan, value=None)
@@ -746,9 +746,9 @@ class Attributes:
             if all(isinstance(attr, Attribute) for attr in attributes_source):
                 attributes = Attributes(cast(list[Attribute], attributes_source))
             elif all(isinstance(attr, dict) for attr in attributes_source):
-                attributes = Attributes._from_dict_list(cast(list[dict[str, Any]], attributes_source))
+                attributes = Attributes.from_dict_list(cast(list[dict[str, Any]], attributes_source))
         elif isinstance(attributes_source, pd.DataFrame):
-            attributes = Attributes._from_dataframe(attributes_source)
+            attributes = Attributes.from_dataframe(attributes_source)
         else:
             raise ValueError(f"Could not resolve the object provided: {attributes_source}")
         attributes.client = self._client

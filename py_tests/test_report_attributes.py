@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 import pytest
 import requests
@@ -57,7 +59,8 @@ def test_report_attributes_to_and_from_dict_list() -> None:
         "path": "finance/metrics",
         "dataPublisher": "JPM",
     }]
-    attrs = ReportAttributes._from_dict_list(data)
+    attrs_instance = ReportAttributes()
+    attrs = attrs_instance.from_dict_list(data)
     assert isinstance(attrs, ReportAttributes)
     assert attrs.to_dict() == {"attributes": data}
 
@@ -71,7 +74,24 @@ def test_report_attributes_from_dataframe() -> None:
         "path": "finance/metrics",
         "dataPublisher": "JPM",
     }])
-    attrs = ReportAttributes._from_dataframe(test_df)
+    attrs_instance = ReportAttributes()
+    attrs = attrs_instance.from_dataframe(test_df)
+    assert isinstance(attrs, ReportAttributes)
+    assert attrs.attributes[0].name == "revenue"
+
+
+def test_report_attributes_from_csv(tmp_path: Path) -> None:
+    file_path = tmp_path / "test.csv"
+    test_df = pd.DataFrame([{
+        "name": "revenue",
+        "title": "Revenue",
+        "description": "Total revenue",
+        "technicalDataType": "decimal",
+        "path": "finance/metrics",
+        "dataPublisher": "JPM",
+    }])
+    test_df.to_csv(file_path, index=False)
+    attrs = ReportAttributes().from_csv(str(file_path))
     assert isinstance(attrs, ReportAttributes)
     assert attrs.attributes[0].name == "revenue"
 
@@ -92,7 +112,7 @@ def test_report_attributes_from_object_dataframe() -> None:
 
 def test_report_attributes_from_object_invalid_type() -> None:
     with pytest.raises(TypeError):
-        ReportAttributes().from_object("invalid_input")
+        ReportAttributes().from_object("invalid_input")  # type: ignore[arg-type]
 
 
 def test_report_attributes_to_dataframe() -> None:
