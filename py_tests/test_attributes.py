@@ -652,7 +652,7 @@ def test_attributes_to_dict() -> None:
 
 
 def test_attributes_from_dict_list() -> None:
-    """Test attributes class from_dict_list method."""
+    """Test attributes class _from_dict_list method."""
     test_dict = {
         "attributes": [
             {
@@ -665,7 +665,7 @@ def test_attributes_from_dict_list() -> None:
             }
         ]
     }
-    test_attributes = Attributes.from_dict_list(test_dict["attributes"])
+    test_attributes = Attributes._from_dict_list(test_dict["attributes"])
     assert test_attributes.attributes[0].title == "Test Attribute"
     assert test_attributes.attributes[0].identifier == "test_attribute"
     assert test_attributes.attributes[0].index == 0
@@ -688,7 +688,7 @@ def test_attributes_from_dict_list() -> None:
 
 
 def test_attributes_from_dataframe() -> None:
-    """Test attributes class from_dataframe method."""
+    """Test attributes class _from_dataframe method."""
     test_df = pd.DataFrame(
         {
             "title": ["Test Attribute"],
@@ -699,7 +699,7 @@ def test_attributes_from_dataframe() -> None:
             "availableFrom": ["May 5, 2020"],
         }
     )
-    test_attributes = Attributes.from_dataframe(test_df)
+    test_attributes = Attributes._from_dataframe(test_df)
     assert test_attributes.attributes[0].title == "Test Attribute"
     assert test_attributes.attributes[0].identifier == "test_attribute"
     assert test_attributes.attributes[0].index == 0
@@ -799,7 +799,7 @@ def test_attributes_from_object_value_error() -> None:
 
 
 def test_attributes_from_object_dataframe() -> None:
-    """Test attributes class from_dataframe method."""
+    """Test attributes class _from_dataframe method."""
     test_df = pd.DataFrame(
         {
             "title": ["Test Attribute"],
