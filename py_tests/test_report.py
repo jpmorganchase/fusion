@@ -1,7 +1,6 @@
 """Test file for the updated reports.py"""
 
 import pytest
-import requests
 import requests_mock
 
 from fusion.fusion import Fusion
@@ -62,8 +61,9 @@ def test_create_report_success(requests_mock: requests_mock.Mocker, fusion_obj: 
     """Test Report.create() with mocked Fusion API."""
     url = f"{fusion_obj.get_new_root_url()}/api/corelineage-service/v1/reports"
     expected_response = {"status": "ok"}
+    http_ok = 200
 
-    requests_mock.post(url, json=expected_response, status_code=200)
+    requests_mock.post(url, json=expected_response, status_code=http_ok)
 
     report = Report(
         name="AutoReport",
@@ -75,7 +75,7 @@ def test_create_report_success(requests_mock: requests_mock.Mocker, fusion_obj: 
     report.client = fusion_obj
 
     resp = report.create(return_resp_obj=True)
-    assert resp.status_code == 200
+    assert resp.status_code == http_ok
     assert resp.json() == expected_response
 
 

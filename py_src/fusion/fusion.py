@@ -10,7 +10,7 @@ import sys
 import warnings
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 from zipfile import ZipFile
 
 import pandas as pd
@@ -26,7 +26,6 @@ from fusion.fusion_types import Types
 from fusion.product import Product
 from fusion.report import Report
 from fusion.report_attributes import ReportAttribute, ReportAttributes
-from typing import TypedDict, List, Union, Optional
 
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError, CredentialError, FileFormatError

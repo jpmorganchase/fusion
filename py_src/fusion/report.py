@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-import json as js
 from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any
 
-import pandas as pd
-
 from .utils import (
     CamelCaseMeta,
-    _is_json,
     camel_to_snake,
     make_bool,
     requests_raise_for_status,
@@ -148,11 +144,11 @@ class Report(metaclass=CamelCaseMeta):
 
         report = cls.__new__(cls)
 
-        for field in fields(cls):
-            if field.name in filtered_data:
-                setattr(report, field.name, filtered_data[field.name])
+        for fieldsingle in fields(cls):
+            if fieldsingle.name in filtered_data:
+                setattr(report, fieldsingle.name, filtered_data[fieldsingle.name])
             else:
-                setattr(report, field.name, None)
+                setattr(report, fieldsingle.name, None)
 
         report.__post_init__()
         return report
