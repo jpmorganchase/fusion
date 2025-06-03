@@ -1,73 +1,216 @@
+"""Fusion Report class and functions."""
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field, fields
+from typing import TYPE_CHECKING, Any
 
-from fusion.dataset import Dataset
-from fusion.utils import requests_raise_for_status
+from .utils import (
+    CamelCaseMeta,
+    camel_to_snake,
+    make_bool,
+    requests_raise_for_status,
+    snake_to_camel,
+    tidy_string,
+)
 
 if TYPE_CHECKING:
     import requests
 
-    from fusion.fusion import Fusion
+    from fusion import Fusion
 
 
 @dataclass
-class Report(Dataset):
-    """Fusion Report class for managing regulatory reporting metadata.
+class Report(metaclass=CamelCaseMeta):
+    """Fusion Report class for managing report metadata.
 
     Attributes:
-        report (dict[str, str]): The report metadata. Specifies the tier of the report.
-        type_ (str): The dataset type. Defaults to "Report", which is the required value for creating a Report object.
+        name (str): A unique name for the report.
+        tier_type (str): The tier classification of the report.
+        lob (str): The line of business associated with the report.
+        data_node_id (dict[str, str]): Identifier of the associated data node.
+        alternative_id (dict[str, str]): Alternate identifiers for the report.
 
+        title (str, optional): A title for the report. Defaults to None.
+        alternate_id (str, optional): A alternate identifier for the report. Defaults to None.
+        description (str, optional): A description of the report. Defaults to None.
+        frequency (str, optional): The frequency with which the report is generated. Defaults to None.
+        category (str, optional): The primary category of the report. Defaults to None.
+        sub_category (str, optional): A more specific classification under the main category. Defaults to None.
+        report_inventory_name (str, optional): Name of the report in the report inventory. Defaults to None.
+        report_inventory_id (str, optional): Identifier of the report in the inventory. Defaults to None.
+        report_owner (str, optional): Owner responsible for the report. Defaults to None.
+        sub_lob (str, optional): Subdivision of the line of business. Defaults to None.
+        is_bcbs239_program (bool, optional): Indicates if the report is part of the BCBS 239 program. Defaults to None.
+        risk_area (str, optional): The area of risk the report addresses. Defaults to None.
+        risk_stripe (str, optional): A specific risk category or stripe. Defaults to None.
+        sap_code (str, optional): Associated SAP code for financial tracking. Defaults to None.
+        sourced_object (str, optional): The original source object for the report. Defaults to None.
+        domain (dict[str, str | bool], optional): Domain information related to the report. Defaults to None.
+        data_model_id (dict[str, str], optional): Identifier of the data model used. Defaults to None.
+        _client (Any, optional): A Fusion client object. Defaults to None.
     """
 
-    report: dict[str, str] | None = field(default_factory=lambda: {"tier": ""})
-    type_: str | None = "Report"
+    name: str
+    tier_type: str
+    lob: str
+    data_node_id: dict[str, str]
+    alternative_id: dict[str, str]
 
-    def __repr__(self: Report) -> str:
-        """Return an object representation of the Report object.
+    # Optional fields
+    title: str | None = None
+    alternate_id: str | None = None
+    description: str | None = None
+    frequency: str | None = None
+    category: str | None = None
+    sub_category: str | None = None
+    report_inventory_name: str | None = None
+    report_inventory_id: str | None = None
+    report_owner: str | None = None
+    sub_lob: str | None = None
+    is_bcbs239_program: bool | None = None
+    risk_area: str | None = None
+    risk_stripe: str | None = None
+    sap_code: str | None = None
+    sourced_object: str | None = None
+    domain: dict[str, str | bool] | None = None
+    data_model_id: dict[str, str] | None = None
+
+    _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
+
+    def __post_init__(self) -> None:
+        self.name = tidy_string(self.name)
+        self.title = tidy_string(self.title) if self.title else None
+        self.description = tidy_string(self.description) if self.description else None
+
+    def __getattr__(self, name: str) -> Any:
+        snake_name = camel_to_snake(name)
+        if snake_name in self.__dict__:
+            return self.__dict__[snake_name]
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "client":
+            object.__setattr__(self, name, value)
+        else:
+            snake_name = camel_to_snake(name)
+            self.__dict__[snake_name] = value
+
+    @property
+    def client(self) -> Fusion | None:
+        return self._client
+
+    @client.setter
+    def client(self, client: Fusion | None) -> None:
+        self._client = client
+
+    def _use_client(self, client: Fusion | None) -> Fusion:
+        res = self._client if client is None else client
+        if res is None:
+            raise ValueError("A Fusion client object is required.")
+        return res
+
+    @classmethod
+    def from_dict(cls: type[Report], data: dict[str, Any]) -> Report:
+        """Instantiate a Report object from a dictionary.
+
+        All fields defined in the class will be set.
+        If a field is missing from input, it will be set to None.
+        """
+
+        def normalize_value(val: Any) -> Any:
+            if isinstance(val, str) and val.strip() == "":
+                return None
+            return val
+
+        def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
+            converted = {}
+            for k, v in d.items():
+                # Special case: keep as-is if already matches the field name (e.g., isBCBS239Program)
+                key = k if k == "isBCBS239Program" else camel_to_snake(k)
+                if isinstance(v, dict) and not isinstance(v, str):
+                    converted[key] = convert_keys(v)
+                else:
+                    converted[key] = normalize_value(v)
+            return converted
+
+        converted_data = convert_keys(data)
+
+        if "isBCBS239Program" in converted_data:
+            converted_data["isBCBS239Program"] = make_bool(converted_data["isBCBS239Program"])
+
+        valid_fields = {f.name for f in fields(cls)}
+        filtered_data = {k: v for k, v in converted_data.items() if k in valid_fields}
+
+        report = cls.__new__(cls)
+
+        for fieldsingle in fields(cls):
+            if fieldsingle.name in filtered_data:
+                setattr(report, fieldsingle.name, filtered_data[fieldsingle.name])
+            else:
+                setattr(report, fieldsingle.name, None)
+
+        report.__post_init__()
+        return report
+
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert the Report instance to a dictionary.
 
         Returns:
-            str: Object representation of the dataset.
+            dict[str, Any]: Report metadata as a dictionary.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> report = fusion.report("report")
+            >>> report_dict = report.to_dict()
 
         """
-        attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
-        return f"Report(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
 
-    def add_registered_attribute(
-        self: Report,
-        attribute_identifier: str,
-        is_key_data_element: bool,
-        catalog: str | None = None,
+        report_dict = {}
+        for k, v in self.__dict__.items():
+            if k.startswith("_"):
+                continue
+            if k == "is_bcbs239_program":
+                report_dict["isBCBS239Program"] = v
+            else:
+                report_dict[snake_to_camel(k)] = v
+        return report_dict
+
+    def create(
+        self,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Add a registered attribute to the Report.
+        """Upload a new report to a Fusion catalog.
 
         Args:
-            attribute_identifier (str): Attribute identifier.
-            is_key_data_element (bool): Key Data Element flag. An attribute can be proposed as a key data element when
-                it is linked to a report. This property is specific to the relationship between the attribute and the
-                report.
-            catalog (str | None, optional): Catalog identifier. Defaults to 'common'.
             client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
                 If instantiated from a Fusion object, then the client is set automatically.
             return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
 
         Returns:
             requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
+
+        Examples:
+
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> report = fusion.report(
+            ...     name="report_1",
+            ...     title="Quarterly Risk Report",
+            ...     category="Risk",
+            ...     frequency="Quarterly",
+            ... )
+            >>> report.create()
+
         """
         client = self._use_client(client)
-        catalog = client._use_catalog(catalog)
-        dataset = self.identifier
 
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{attribute_identifier}/registration"
+        data = self.to_dict()
 
-        data = {
-            "isCriticalDataElement": is_key_data_element,
-        }
-
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports"
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
 

@@ -120,6 +120,45 @@ def test_is_url() -> None:
     assert not _is_url(3.141)  # type: ignore
 
 
+def test_link_attributes_to_terms(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    report_id = "report_abc123"
+    base_url = fusion_obj._get_new_root_url()
+    path = f"/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
+    url = f"{base_url}{path}"
+
+
+    mock_response = {"status": "success"}
+    requests_mock.post(url, json=mock_response, status_code=200)
+
+
+    mappings: list[Fusion.AttributeTermMapping] = [
+        {
+            "attribute": {"id": "attr1"},
+            "term": {"id": "term1"},
+            "isKDE": True,
+        },
+        {
+            "attribute": {"id": "attr2"},
+            "term": {"id": "term2"},
+            "isKDE": False,
+        },
+    ]
+
+    response = fusion_obj.link_attributes_to_terms(
+        report_id=report_id,
+        mappings=mappings,
+        return_resp_obj=True,
+    )
+    http_ok = 200
+
+    assert response is not None
+
+
+    assert response.status_code == http_ok
+    assert response.json() == mock_response
+
+
+
 def test_fusion_class(fusion_obj: Fusion) -> None:
     assert fusion_obj
     assert repr(fusion_obj)
@@ -1815,51 +1854,28 @@ def test_list_registered_attributes(requests_mock: requests_mock.Mocker, fusion_
 def test_fusion_report(fusion_obj: Fusion) -> None:
     """Test Fusion Report class from client"""
     test_report = fusion_obj.report(
-        title="Test Report", identifier="Test Report", category="Test", application_id="12345", report={"tier": "tier"}
+        name="Test Report",
+        tier_type="Gold",
+        lob="Finance",
+        data_node_id={"id": "dn-001", "type": "DataNode"},
+        alternative_id={"id": "alt-001", "type": "Report AltId"},
+        title="Test Report",
+        alternate_id="TEST_REPORT",
+        description="Test Report",
+        frequency="Once",
+        category="Test"
     )
 
     assert str(test_report)
     assert repr(test_report)
     assert test_report.title == "Test Report"
-    assert test_report.identifier == "TEST_REPORT"
-    assert test_report.category == ["Test"]
     assert test_report.description == "Test Report"
     assert test_report.frequency == "Once"
-    assert test_report.is_internal_only_dataset is False
-    assert test_report.is_third_party_data is True
-    assert test_report.is_restricted is None
-    assert test_report.is_raw_data is True
-    assert test_report.maintainer == "J.P. Morgan Fusion"
-    assert test_report.source is None
-    assert test_report.region is None
-    assert test_report.publisher == "J.P. Morgan"
-    assert test_report.product is None
-    assert test_report.sub_category is None
-    assert test_report.tags is None
-    assert test_report.created_date is None
-    assert test_report.modified_date is None
-    assert test_report.delivery_channel == ["API"]
-    assert test_report.language == "English"
-    assert test_report.status == "Available"
-    assert test_report.type_ == "Report"
-    assert test_report.container_type == "Snapshot-Full"
-    assert test_report.snowflake is None
-    assert test_report.complexity is None
-    assert test_report.is_immutable is None
-    assert test_report.is_mnpi is None
-    assert test_report.is_pii is None
-    assert test_report.is_pci is None
-    assert test_report.is_client is None
-    assert test_report.is_public is None
-    assert test_report.is_internal is None
-    assert test_report.is_confidential is None
-    assert test_report.is_highly_confidential is None
-    assert test_report.is_active is None
+    assert test_report.category == "Test"
+    assert test_report.alternate_id == "TEST_REPORT"
     assert test_report.client == fusion_obj
-    assert test_report.application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_report.report == {"tier": "tier"}
     assert test_report._client == fusion_obj
-    assert test_report.owners is None
+
 
 
 def test_fusion_input_dataflow(fusion_obj: Fusion) -> None:
@@ -2154,8 +2170,6 @@ def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -
 
 
 def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCredentials) -> None:
-    
-
     # Clear logger handlers to avoid contamination
     logger.handlers.clear()
 
