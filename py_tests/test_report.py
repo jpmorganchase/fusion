@@ -75,6 +75,8 @@ def test_create_report_success(requests_mock: requests_mock.Mocker, fusion_obj: 
     report.client = fusion_obj
 
     resp = report.create(return_resp_obj=True)
+
+    assert resp is not None
     assert resp.status_code == http_ok
     assert resp.json() == expected_response
 
