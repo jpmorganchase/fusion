@@ -56,6 +56,43 @@ def test_from_dict_partial() -> None:
     assert report.is_bcbs239_program is True
     assert report.lob == "Compliance"
 
+def test_link_attributes_to_terms(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    report_id = "report_abc123"
+    base_url = fusion_obj._get_new_root_url()
+    path = f"/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
+    url = f"{base_url}{path}"
+
+
+    mock_response = {"status": "success"}
+    requests_mock.post(url, json=mock_response, status_code=200)
+
+
+    mappings: list[Fusion.AttributeTermMapping] = [
+        {
+            "attribute": {"id": "attr1"},
+            "term": {"id": "term1"},
+            "isKDE": True,
+        },
+        {
+            "attribute": {"id": "attr2"},
+            "term": {"id": "term2"},
+            "isKDE": False,
+        },
+    ]
+
+    response = fusion_obj.link_attributes_to_terms(
+        report_id=report_id,
+        mappings=mappings,
+        return_resp_obj=True,
+    )
+    http_ok = 200
+
+    assert response is not None
+
+
+    assert response.status_code == http_ok
+    assert response.json() == mock_response
+
 
 def test_create_report_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test Report.create() with mocked Fusion API."""
