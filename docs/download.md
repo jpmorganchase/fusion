@@ -24,7 +24,7 @@ The `Fusion` class provides powerful methods to retrieve your data from the Fusi
 ## Using the `download()` Method
 
 ### Overview
-The `download()` method is used to retrieve datasets from the Fusion platform. It supports downloading files in various formats, managing file paths, and handling parallel downloads for efficiency.
+The `download()` method is used to retrieve datasets from the Fusion platform. It supports downloading files in various formats, managing file paths, and handling downloads efficiently.
 
 ### Syntax
 

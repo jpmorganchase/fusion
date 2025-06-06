@@ -14,9 +14,6 @@ nav:
   - Changelog: changelog.md
   - Download: download.md
   - Upload: upload.md
-  - Products: products.md
-  - Datasets: datasets.md
-  - Attributes: attributes.md
   - Examples:
         - Get Started: get_started.ipynb
         - Metadata Creation: metadata_creation.ipynb

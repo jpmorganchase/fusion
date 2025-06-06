@@ -201,4 +201,4 @@ fusion.list_dataset_attributes(dataset="<DATASET_ID>", catalog="<CATALOG_ID>")
 
 # Additional Resources
 
-Now that you are set up with the SDK, you can start exploring our pages on [downloading](download.md) and [uploading](upload.md), as well as learn about our [Products](products.md), [Datasets](datasets.md), and [Attributes](attributes.md) objects for creating and updating your own metadata.
+Now that you are set up with the SDK, you can start exploring our pages on [downloading](download.md) and [uploading](upload.md).

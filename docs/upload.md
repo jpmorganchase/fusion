@@ -1,37 +1,38 @@
-# User Guide: Uploading Data with the `Fusion` Class
+# Uploading Data with the `Fusion` Class
 
 ## Overview
 The `upload()` method allows you to upload files or folders to the Fusion Data Management Platform. It supports local file systems and cloud storage (e.g., S3), automatically handles file formats, and validates schemas for datasets with defined structures. This guide explains the key arguments, functionality, and best practices for using the `upload()` method.
 
 ### Syntax
+
+The following examples will assume you have already successfully established a connection to the API and have instantiated your client as below.
+
+User guide for this set up can be found in the [Getting Started](quickstart.md) tab.
+
 ```python
-upload(
-    path: str,
-    dataset: str | None = None,
-    dt_str: str = "latest",
-    catalog: str | None = None,
-    n_par: int | None = None,
-    show_progress: bool = True,
-    return_paths: bool = False,
-    multipart: bool = True,
-    chunk_size: int = 5 * 2**20,
-    from_date: str | None = None,
-    to_date: str | None = None,
-    preserve_original_name: bool | None = False,
-    additional_headers: dict[str, str] | None = None
-) -> list[tuple[bool, str, str | None]] | None
+fusion = Fusion()
+```
+
+In order to upload data to a dataset, the following information is required:
+
+
+- **path**: The path to the file you wish to upload.
+- **dataset**: The dataset identifier.
+- **dt_str**: A string (usually a date) representing the series member. Refer to the populating the ``dt_str`` argument [guide](#populating-the-dt_str-argument) for more details on how the ``dt_str`` argument is used during download. Must be in `YYYYMMDD` format for range-based downloads. Defaults to ``"latest"``.
+- **catalog**: The catalog identifier. Defaults to ``"common"``.
+
+
+```python
+fusion.upload(
+    path = "path/to/my/file.csv",
+    dataset= "MY_DATASET",
+    dt_str= "20250430",
+    catalog="my_catalog"
+)
 ```
 
 
-## Arguments
-
-- **`path`**: The path to the file or folder to upload. Can be a local path or an S3 path, depending on the filesystem you set.
-
-- **`dataset`**: The dataset identifier to which the file will be uploaded. If not provided, the dataset will be inferred from the file name.
-
-- **`dt_str`**: A string (usually a date) representing the series member. Defaults to `"latest"`. Must be in `YYYYMMDD` format for range-based downloads.
-
-- **`catalog`**: The catalog identifier. Defaults to `"common"`.
+### Additional Arguments
 
 - **`n_par`**: The number of parallel uploads. Defaults to the number of available CPUs.
 
@@ -52,8 +53,6 @@ upload(
 - **`additional_headers`**: Additional headers to include in the upload request.
 
 
-## Key Features and Best Practices
-
 ### Path
 The `path` argument specifies the file or folder to upload. It supports both:
 
@@ -61,35 +60,70 @@ The `path` argument specifies the file or folder to upload. It supports both:
 Provide the absolute or relative path to the file or folder.
 
 #### S3 Paths
-If your filesystem is configured for S3, you can provide an S3 path (e.g., `s3://my-bucket/my-folder/`).
+If your file system is configured for S3, you can provide an S3 path (e.g., `s3://my-bucket/my-folder/`).
+
+The file system is defined during instantiation of the `Fusion` client, and will default to your local file system.
+
+To customize your file system, populate the `fs` argument when you define your `Fusion` client.
+
+```python
+import fsspec
+
+my_fs = fsspec.filestsytem('s3')
+
+fusion = Fusion(fs=my_fs)
+
+```
 
 Example:
 ```python
 fusion.upload(
-    path="data/my_file.csv",
+    path="s3://app-id-my--bucket/data/my_file.csv",
     dataset="MY_DATASET",
     catalog="my_catalog"
 )
 ```
 
 ### Automatic File Format Detection
-The `upload()` method automatically detects the file format based on the file extension if it is a supported format. Supported formats include:
+The `upload()` method automatically detects the file format based on the file extension in order to preserve the original the file format during download for supported file extensions.
 
-- `csv`
-- `parquet`
-- `json`
-- `raw` (assumed to be zipped CSV files)
+!!! info Supported extensions include:
+    - `csv`
+    - `parquet`
+    - `psv`
+    - `json`
+    - `pdf`
+    - `txt`
+    - `doc`
+    - `docx`
+    - `htm`
+    - `html`
+    - `xls`
+    - `xlsx`
+    - `xlsm`
+    - `dot`
+    - `dotx`
+    - `docm`
+    - `dotm`
+    - `rtf`
+    - `odt`
+    - `xltx`
+    - `xlsb`
+    - `jpg`
+    - `jpeg`
+    - `bmp`
+    - `png`
+    - `tif`
+    - `gif`
+    - `mp3`
+    - `wav`
+    - `mp4`
+    - `mov`
+    - `mkv`
+    - `gz`
 
-If the file format is not recognized, it defaults to `raw`.
+!!! note If the file format is not recognized, it defaults to `raw`.
 
-Example:
-```python
-fusion.upload(
-    path="data/my_file.csv",
-    dataset="MY_DATASET",
-    catalog="my_catalog"
-)
-```
 
 ### Formatting the `dt_str` Argument
 The `dt_str` argument is used to specify the series member for the upload. It is typically a date in `YYYYMMDD` format. For range-based downloads, this format is required.
@@ -109,8 +143,6 @@ If `dt_str` is not provided, it defaults to `"latest"`, which represents the mos
 ### Using the `preserve_original_name` Argument
 The `preserve_original_name` argument ensures that the original file name is preserved during the upload. This is useful when the file name contains meaningful metadata.
 
-**Important:** This argument can only be used when both `catalog` and `dataset` are provided.
-
 Example:
 ```python
 fusion.upload(
@@ -120,6 +152,8 @@ fusion.upload(
     preserve_original_name=True
 )
 ```
+
+When a file is uploaded with `preserve_original_name` set to `True`, the file name will be preserved when users call the `download()` method on this file.
 
 ### Schema Validation
 For datasets with defined schemas (i.e., not raw datasets), the `upload()` method validates the uploaded file against the schema. This includes:
@@ -132,46 +166,6 @@ The data types of the columns must match the schema.
 
 If the file does not conform to the schema, the upload will fail.
 
-Example:
-```python
-fusion.upload(
-    path="data/my_file.csv",
-    dataset="MY_STRUCTURED_DATASET",
-    catalog="my_catalog"
-)
-```
-
-### Example Usage
-
-#### Uploading a Single File
-```python
-fusion.upload(
-    path="data/my_file.csv",
-    dataset="MY_DATASET",
-    catalog="my_catalog",
-    dt_str="20231001",
-    show_progress=True
-)
-```
-
-#### Uploading a Folder
-```python
-fusion.upload(
-    path="data/my_folder/",
-    catalog="my_catalog",
-    show_progress=True
-)
-```
-
-#### Preserving the Original File Name
-```python
-fusion.upload(
-    path="data/my_file.csv",
-    dataset="MY_DATASET",
-    catalog="my_catalog",
-    preserve_original_name=True
-)
-```
 
 ### Tips for Efficient Uploads
 - Use `n_par` to increase the number of parallel uploads for large datasets.
