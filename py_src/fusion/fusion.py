@@ -10,7 +10,7 @@ import sys
 import warnings
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
 
 import pandas as pd
