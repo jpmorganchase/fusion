@@ -220,7 +220,8 @@ class Report(metaclass=CamelCaseMeta):
         attribute: dict[str, str]
         term: dict[str, str]
         isKDE: bool
-        
+
+
     def link_attributes_to_terms(
         self,
         report_id: str,
@@ -243,16 +244,21 @@ class Report(metaclass=CamelCaseMeta):
         Returns:
             requests.Response | None: Response object from the API if return_resp_obj is True, otherwise None.
         """
-        # Basic validation
+        # Validate mappings structure
         for i, m in enumerate(mappings):
             if not isinstance(m, dict):
                 raise ValueError(f"Mapping at index {i} is not a dictionary.")
             if not ("attribute" in m and "term" in m and "isKDE" in m):
                 raise ValueError(f"Mapping at index {i} must include 'attribute', 'term', and 'isKDE'.")
 
-        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
+        # Get the Fusion client
+        client = self._use_client(None)
+        base = client._get_new_root_url()
+        url = f"{base}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
 
-        response = self.session.post(url, json=mappings)
+
+        # Make the request
+        response = client.session.post(url, json=mappings)
         requests_raise_for_status(response)
 
         return response if return_resp_obj else None

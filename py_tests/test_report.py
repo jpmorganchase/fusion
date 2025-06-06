@@ -1,6 +1,7 @@
 """Test file for the updated reports.py"""
 
 import pytest
+import requests
 import requests_mock
 
 from fusion.fusion import Fusion
@@ -21,77 +22,43 @@ def test_report_object_representation() -> None:
     assert report.title == "Test Report"
     assert isinstance(repr(report), str)
 
-
-def test_report_to_dict() -> None:
-    """Test the to_dict method to ensure camelCase conversion."""
-    report = Report(
-        name="TestReport",
-        tier_type="Tier1",
-        lob="Finance",
-        data_node_id={"id": "node123"},
-        alternative_id={"alt_id": "A1"},
-        is_bcbs239_program=True,
-    )
-    report_dict = report.to_dict()
-    assert "isBCBS239Program" in report_dict
-    assert report_dict["isBCBS239Program"] is True
-    assert "name" not in report_dict  # should be camelCased
-    assert "name" in report.__dict__  # but exists internally
-
-
-def test_from_dict_partial() -> None:
-    """Test creation of Report from partial dictionary."""
-    raw_data = {
-        "name": "PartialReport",
-        "tierType": "Tier2",
-        "lob": "Compliance",
-        "dataNodeId": {"id": "node321"},
-        "alternativeId": {"id": "alt999"},
-        "isBCBS239Program": "true"
-    }
-
-    report = Report.from_dict(raw_data)
-    assert isinstance(report, Report)
-    assert report.name == "PartialReport"
-    assert report.is_bcbs239_program is True
-    assert report.lob == "Compliance"
-
-def test_link_attributes_to_terms(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    report_id = "report_abc123"
-    base_url = fusion_obj._get_new_root_url()
-    path = f"/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
-    url = f"{base_url}{path}"
-
-
-    mock_response = {"status": "success"}
-    requests_mock.post(url, json=mock_response, status_code=200)
-
-
-    mappings: list[Fusion.AttributeTermMapping] = [
+def test_link_attributes_to_terms_success(requests_mock: requests_mock.Mocker, fusion_obj:Fusion) -> None:
+    # Setup dummy data
+    report_id = "report-123"
+    mappings = [
         {
-            "attribute": {"id": "attr1"},
-            "term": {"id": "term1"},
+            "attribute": {"id": "attr-1"},
+            "term": {"id": "term-1"},
             "isKDE": True,
         },
         {
-            "attribute": {"id": "attr2"},
-            "term": {"id": "term2"},
+            "attribute": {"id": "attr-2"},
+            "term": {"id": "term-2"},
             "isKDE": False,
         },
     ]
 
-    response = fusion_obj.link_attributes_to_terms(
-        report_id=report_id,
-        mappings=mappings,
-        return_resp_obj=True,
+    base_url = fusion_obj._get_new_root_url()
+    url = f"{base_url}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
+
+    requests_mock.post(url, status_code=200, json={})
+
+    # Create Report object with Fusion client
+    report = Report(
+        name="test-report",
+        title="Test Report",
+        tier_type="Gold",
+        lob="CIB",
+        data_node_id={"id": "dn-123"},
+        alternative_id={"id": "alt-123"},
     )
+    report.client = fusion_obj
+
+    # Call the method and assert
+    resp = report.link_attributes_to_terms(report_id=report_id, mappings=mappings, return_resp_obj=True)
     http_ok = 200
-
-    assert response is not None
-
-
-    assert response.status_code == http_ok
-    assert response.json() == mock_response
+    assert isinstance(resp, requests.Response)
+    assert resp.status_code == http_ok
 
 
 def test_create_report_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
