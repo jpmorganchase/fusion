@@ -7,7 +7,6 @@ import requests_mock
 from fusion.fusion import Fusion
 from fusion.report import Report
 
-
 def test_report_object_representation() -> None:
     """Test that Report object is correctly instantiated and represented."""
     report = Report(
@@ -22,10 +21,10 @@ def test_report_object_representation() -> None:
     assert report.title == "Test Report"
     assert isinstance(repr(report), str)
 
-def test_link_attributes_to_terms_success(requests_mock: requests_mock.Mocker, fusion_obj:Fusion) -> None:
-    # Setup dummy data
+def test_link_attributes_to_terms_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    # Setup dummy data using AttributeTermMapping
     report_id = "report-123"
-    mappings = [
+    mappings: list[Report.AttributeTermMapping] = [
         {
             "attribute": {"id": "attr-1"},
             "term": {"id": "term-1"},
@@ -38,12 +37,12 @@ def test_link_attributes_to_terms_success(requests_mock: requests_mock.Mocker, f
         },
     ]
 
+    # Mock URL
     base_url = fusion_obj._get_new_root_url()
     url = f"{base_url}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
-
     requests_mock.post(url, status_code=200, json={})
 
-    # Create Report object with Fusion client
+    # Create Report with client
     report = Report(
         name="test-report",
         title="Test Report",
@@ -54,11 +53,16 @@ def test_link_attributes_to_terms_success(requests_mock: requests_mock.Mocker, f
     )
     report.client = fusion_obj
 
-    # Call the method and assert
-    resp = report.link_attributes_to_terms(report_id=report_id, mappings=mappings, return_resp_obj=True)
+    # Call method
+    resp = report.link_attributes_to_terms(
+        report_id=report_id,
+        mappings=mappings,
+        return_resp_obj=True,
+    )
     http_ok = 200
     assert isinstance(resp, requests.Response)
     assert resp.status_code == http_ok
+
 
 
 def test_create_report_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
