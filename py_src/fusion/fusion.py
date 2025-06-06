@@ -2122,47 +2122,6 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
     
-    class AttributeTermMapping(TypedDict):
-        attribute: dict[str, str]
-        term: dict[str, str]
-        isKDE: bool
-        
-    def link_attributes_to_terms(
-        self,
-        report_id: str,
-        mappings: list[AttributeTermMapping],
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        """
-        Links attributes to business terms for a report using pre-formatted mappings.
-
-        Args:
-            report_id (str): Report identifier.
-            mappings (list[dict]): List of mappings in the format:
-                {
-                    "attribute": {"id": str},
-                    "term": {"id": str},
-                    "isKDE": bool
-                }
-            return_resp_obj (bool, optional): If True, returns the response object. Defaults to False.
-
-        Returns:
-            requests.Response | None: Response object from the API if return_resp_obj is True, otherwise None.
-        """
-        # Basic validation
-        for i, m in enumerate(mappings):
-            if not isinstance(m, dict):
-                raise ValueError(f"Mapping at index {i} is not a dictionary.")
-            if not ("attribute" in m and "term" in m and "isKDE" in m):
-                raise ValueError(f"Mapping at index {i} must include 'attribute', 'term', and 'isKDE'.")
-
-        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
-
-        response = self.session.post(url, json=mappings)
-        requests_raise_for_status(response)
-
-        return response if return_resp_obj else None
-
 
     def delete_datasetmembers(
         self,
