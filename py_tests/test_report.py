@@ -7,6 +7,7 @@ import requests_mock
 from fusion.fusion import Fusion
 from fusion.report import Report
 
+
 def test_report_object_representation() -> None:
     """Test that Report object is correctly instantiated and represented."""
     report = Report(
