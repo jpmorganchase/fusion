@@ -1249,28 +1249,8 @@ class Fusion:
                 date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
                 if date_identifier.match(dt_str):
                     dt_str = dt_str if dt_str != "latest" else pd.Timestamp("today").date().strftime("%Y%m%d")
-                    dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
-
-                try:
-                    catalog_list = fs_fusion.ls(catalog)
-                except FileNotFoundError:
-                    raise RuntimeError(f"The catalog '{catalog}' does not exist.") from None
-
-                try:
-                    if (
-                        catalog not in [i.split("/")[0] for i in catalog_list]
-                        or not js.loads(fs_fusion.cat(f"{catalog}/datasets/{dataset}"))["identifier"]
-                    ):
-                        msg = (
-                            f"File file has not been uploaded, one of the catalog: {catalog} "
-                            f"or dataset: {dataset} does not exist."
-                        )
-                        warnings.warn(msg, stacklevel=2)
-                        return [(False, path, msg)]
-                except Exception as e:  # noqa: BLE001
-                    msg = f"An error occurred while checking the dataset: {str(e)}"
-                    warnings.warn(msg, stacklevel=2)
-                    return [(False, path, msg)]
+                    dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")                
+                
                 file_format = path.split(".")[-1]
                 file_name = [path.split("/")[-1]]
                 file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
