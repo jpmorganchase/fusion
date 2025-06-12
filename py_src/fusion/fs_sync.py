@@ -21,6 +21,7 @@ from .utils import (
     is_dataset_raw,
     path_to_url,
     upload_files,
+    validate_file_names,
 )
 
 logger = logging.getLogger(__name__)
@@ -154,7 +155,9 @@ def _get_local_state(
             fs_local.mkdir(local_dir, exist_ok=True, create_parents=True)
 
         local_files_temp = fs_local.find(local_dir)
-        local_files += local_files_temp
+        local_rel_path = [i[i.find(local_dir) :] for i in local_files_temp]
+        local_file_validation = validate_file_names(local_rel_path, fs_fusion)
+        local_files += [f for flag, f in zip(local_file_validation, local_files_temp) if flag]
         local_files_rel += [
             Path(local_dir, relpath(loc_file, local_dir).replace("\\", "/").replace(local_path, ""))
             for loc_file in local_files_temp
