@@ -47,7 +47,6 @@ from .utils import (
     read_parquet,
     requests_raise_for_status,
     upload_files,
-    validate_file_names,
 )
 
 if TYPE_CHECKING:
@@ -1231,16 +1230,12 @@ class Fusion:
         fs_fusion = self.get_fusion_filesystem()
         if self.fs.info(path)["type"] == "directory":
             file_path_lst = self.fs.find(path)
-            local_file_validation = validate_file_names(file_path_lst, fs_fusion)
-            file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
             file_name = [f.split("/")[-1] for f in file_path_lst]
             is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
             local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
         else:
             file_path_lst = [path]
             if not catalog or not dataset:
-                local_file_validation = validate_file_names(file_path_lst, fs_fusion)
-                file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
                 is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
                 local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
                 if preserve_original_name:
