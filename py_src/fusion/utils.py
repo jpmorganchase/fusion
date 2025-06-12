@@ -672,54 +672,6 @@ def get_session(
     session.mount(mount_url, auth_handler)
     return session
 
-
-def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) -> list[bool]:
-    """Validate if the file name format adheres to the standard.
-
-    Args:
-        paths (list): List of file paths.
-        fs_fusion: Fusion filesystem.
-
-    Returns (list): List of booleans.
-
-    """
-    file_names = [i.split("/")[-1].split(".")[0] for i in paths]
-    validation = []
-    file_seg_cnt = 3
-    for i, f_n in enumerate(file_names):
-        tmp = f_n.split("__")
-        if len(tmp) == file_seg_cnt:
-            try:
-                val = tmp[1] in [i.split("/")[0] for i in fs_fusion.ls(tmp[1])]
-            except FileNotFoundError:
-                val = False
-            if not val:
-                validation.append(False)
-            else:
-                # check if dataset exists
-                try:
-                    val = tmp[0] in js.loads(fs_fusion.cat(f"{tmp[1]}/datasets/{tmp[0]}"))["identifier"]
-                except Exception:  # noqa: BLE001
-                    val = False
-                validation.append(val)
-        else:
-            validation.append(False)
-        if not validation[-1] and len(tmp) == file_seg_cnt:
-            logger.warning(
-                "You might not have access to the catalog %s or dataset %s. "
-                "Please check your permission on the platform.",
-                tmp[1],
-                tmp[0],
-            )
-        if not validation[-1] and len(tmp) != file_seg_cnt:
-            logger.warning(
-                f"The file in {paths[i]} has a non-compliant name and will not be processed. "
-                f"Please rename the file to dataset__catalog__yyyymmdd.format"
-            )
-
-    return validation
-
-
 def is_dataset_raw(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) -> list[bool]:
     """Check if the files correspond to a raw dataset.
 

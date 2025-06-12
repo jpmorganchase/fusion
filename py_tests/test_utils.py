@@ -36,8 +36,7 @@ from fusion.utils import (
     read_json,
     snake_to_camel,
     tidy_string,
-    upload_files,
-    validate_file_names,
+    upload_files,   
 )
 
 
@@ -622,50 +621,6 @@ def mock_fs_fusion() -> MagicMock:
     }.get(path, [])
     fs.cat.side_effect = lambda _: js.dumps({"identifier": "dataset1"})
     return fs
-
-
-def test_validate_correct_file_names(mock_fs_fusion: MagicMock) -> None:
-    paths = ["path/to/dataset1__catalog1__20230101.csv"]
-    expected = [True]
-    assert validate_file_names(paths, mock_fs_fusion) == expected
-
-
-def test_validate_incorrect_format_file_names(mock_fs_fusion: MagicMock) -> None:
-    paths = ["path/to/incorrectformatfile.csv"]
-    expected = [False]
-    assert validate_file_names(paths, mock_fs_fusion) == expected
-
-
-def test_validate_non_existing_catalog(mock_fs_fusion: MagicMock) -> None:
-    paths = ["path/to/dataset1__catalog3__20230101.csv"]
-    expected = [False]
-    assert validate_file_names(paths, mock_fs_fusion) == expected
-
-
-def test_validate_non_existing_dataset(mock_fs_fusion: MagicMock) -> None:
-    paths = ["path/to/dataset4__catalog1__20230101.csv"]
-    expected = [False]
-    assert validate_file_names(paths, mock_fs_fusion) == expected
-
-
-def test_validate_error_paths(mock_fs_fusion: MagicMock) -> None:
-    paths = ["path/to/catalog1__20230101.csv"]
-    expected = [False]
-    assert validate_file_names(paths, mock_fs_fusion) == expected
-
-
-def test_empty_input_list(mock_fs_fusion: MagicMock) -> None:
-    paths: list[str] = []
-    expected: list[bool] = []
-    assert validate_file_names(paths, mock_fs_fusion) == expected
-
-
-def test_filesystem_exceptions(mock_fs_fusion: MagicMock) -> None:
-    mock_fs_fusion.ls.side_effect = Exception("Failed to list directories")
-    paths = ["path/to/dataset1__catalog1__20230101.csv"]
-    with pytest.raises(Exception, match="Failed to list directories"):
-        validate_file_names(paths, mock_fs_fusion)
-
 
 def test_get_session(mocker: MockerFixture, credentials: FusionCredentials, fusion_obj: Fusion) -> None:
     session = get_session(credentials, fusion_obj.root_url)
