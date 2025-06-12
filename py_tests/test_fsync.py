@@ -456,11 +456,13 @@ def test_get_fusion_df_no_changes(mock_fs: mock.Mock) -> None:
 
 @patch("fusion.fs_sync._generate_sha256_token", return_value="47DEQpnsdfno3489HBFAQ=AF+sdjgbw3=")
 @patch("fusion.fs_sync.is_dataset_raw", return_value=[False])
+@patch("fusion.fs_sync.validate_file_names", return_value=[True])
 @patch("fusion.fs_sync.fsspec.filesystem")
 @patch("fusion.fs_sync.relpath", return_value="20241119/DATASET__catalog__20241119.csv")
 def test_get_local_state(
     mock_relpath: mock.Mock,  # noqa: ARG001
     mock_fs: mock.Mock,
+    mock_validate_file_names: mock.Mock,  # noqa: ARG001
     mock_is_dataset_raw: mock.Mock,  # noqa: ARG001
     mock_generate_sha256_token: mock.Mock,  # noqa: ARG001
 ) -> None:
@@ -510,11 +512,13 @@ def test_get_local_state(
 
 @patch("fusion.fs_sync._generate_sha256_token", return_value="47DEQpnsdfno3489HBFAQ=AF+sdjgbw3=")
 @patch("fusion.fs_sync.is_dataset_raw", return_value=[False])
+@patch("fusion.fs_sync.validate_file_names", return_value=[True])
 @patch("fusion.fs_sync.fsspec.filesystem")
 @patch("fusion.fs_sync.relpath", return_value="20241119/DATASET__catalog__20241119.csv")
 def test_get_local_state_mkdir(
     mock_relpath: mock.Mock,  # noqa: ARG001
     mock_fs: mock.Mock,
+    mock_validate_file_names: mock.Mock,  # noqa: ARG001
     mock_is_dataset_raw: mock.Mock,  # noqa: ARG001
     mock_generate_sha256_token: mock.Mock,  # noqa: ARG001
 ) -> None:
@@ -567,11 +571,13 @@ def test_get_local_state_mkdir(
 
 @patch("fusion.fs_sync._generate_sha256_token", return_value="47DEQpnsdfno3489HBFAQ=AF+sdjgbw3=")
 @patch("fusion.fs_sync.is_dataset_raw", return_value=[False])
+@patch("fusion.fs_sync.validate_file_names", return_value=[True])
 @patch("fusion.fs_sync.fsspec.filesystem")
 @patch("fusion.fs_sync.relpath", return_value="20241119/DATASET__catalog__20241119.csv")
 def test_get_local_state_with_local_state(
     mock_relpath: mock.Mock,  # noqa: ARG001
     mock_fs: mock.Mock,
+    mock_validate_file_names: mock.Mock,  # noqa: ARG001
     mock_is_dataset_raw: mock.Mock,  # noqa: ARG001
     mock_generate_sha256_token: mock.Mock,  # noqa: ARG001
 ) -> None:
