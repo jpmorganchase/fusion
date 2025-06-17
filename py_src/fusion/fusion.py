@@ -48,6 +48,7 @@ from .utils import (
     requests_raise_for_status,
     upload_files,
     validate_file_names,
+    add_pagination_headers
 )
 
 if TYPE_CHECKING:
@@ -67,20 +68,25 @@ class Fusion:
     """Core Fusion class for API access."""
 
     @staticmethod
-    def _call_for_dataframe(url: str, session: requests.Session) -> pd.DataFrame:
+    def _call_for_dataframe(url: str, session: requests.Session, headers: dict = None) -> pd.DataFrame:
         """Private function that calls an API endpoint and returns the data as a pandas dataframe.
 
         Args:
-            url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
-            session (requests.Session): Specify a proxy if required to access the authentication server. Defaults to {}.
+            url (str): URL for an API endpoint with valid parameters.
+            session (requests.Session): Specify a proxy if required to access the authentication server.
+            headers (dict, optional): Optional headers to include in the request.
 
         Returns:
             pandas.DataFrame: a dataframe containing the requested data.
+            The DataFrame's ret_df.attrs['response_headers'] contains all response headers.
         """
-        response = session.get(url)
+        response = session.get(url, headers=headers)
         response.raise_for_status()
-        table = response.json()["resources"]
+        # Support both dict with "resources" key and direct list
+        data = response.json()
+        table = data["resources"] if isinstance(data, dict) and "resources" in data else data
         ret_df = pd.DataFrame(table).reset_index(drop=True)
+        ret_df.attrs["response_headers"] = dict(response.headers)
         return ret_df
 
     @staticmethod
@@ -246,7 +252,7 @@ class Fusion:
             asynchronous=as_async, client_kwargs={"root_url": self.root_url, "credentials": self.credentials}
         )
 
-    def list_catalogs(self, output: bool = False) -> pd.DataFrame:
+    def list_catalogs(self, output: bool = False, paginate: bool = False, page_size: int = 20, next_token: str | None = None) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
 
         Args:
@@ -256,7 +262,8 @@ class Fusion:
             class:`pandas.DataFrame`: A dataframe with a row for each catalog
         """
         url = f"{self.root_url}catalogs/"
-        cat_df = Fusion._call_for_dataframe(url, self.session)
+        headers = add_pagination_headers(getattr(self.session, "headers", None), paginate=paginate, page_size=page_size, next_token=next_token)
+        cat_df = Fusion._call_for_dataframe(url, self.session, headers=headers)
 
         if output:
             pass
