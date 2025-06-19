@@ -947,14 +947,3 @@ def requests_raise_for_status(response: requests.Response) -> None:
         response.reason = real_reason
     finally:
         response.raise_for_status()
-
-
-def add_pagination_headers(headers, paginate, page_size, next_token):
-    headers = headers.copy() if headers else {}
-    headers["x-jpmc-paginate"] = "true" if paginate else "false"
-    headers["x-jpmc-page-size"] = str(page_size)
-    if next_token:
-        headers["x-jpmc-next-token"] = next_token
-    elif "x-jpmc-next-token" in headers:
-        del headers["x-jpmc-next-token"]
-    return headers
