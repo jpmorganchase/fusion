@@ -29,6 +29,7 @@ from fusion.report import Report
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError, CredentialError, FileFormatError
 from .fusion_filesystem import FusionHTTPFileSystem
+from .pagination_utils import handle_api_request
 from .utils import (
     RECOGNIZED_FORMATS,
     cpu_count,
@@ -66,20 +67,19 @@ VERBOSE_LVL = 25
 class Fusion:
     """Core Fusion class for API access."""
 
-    @staticmethod
+    @staticmethod    
     def _call_for_dataframe(url: str, session: requests.Session) -> pd.DataFrame:
-        """Private function that calls an API endpoint and returns the data as a pandas dataframe.
-
+        """
+        Calls an API endpoint and returns the data as a pandas dataframe, with pagination support.        
+        Private function that calls an API endpoint and returns the data as a pandas dataframe.
         Args:
             url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
             session (requests.Session): Specify a proxy if required to access the authentication server. Defaults to {}.
-
         Returns:
-            pandas.DataFrame: a dataframe containing the requested data.
+            pandas.DataFrame: a dataframe containing the requested data.        
         """
-        response = session.get(url)
-        response.raise_for_status()
-        table = response.json()["resources"]
+        response_data = handle_api_request(session, url)
+        table = response_data.get("resources", [])
         ret_df = pd.DataFrame(table).reset_index(drop=True)
         return ret_df
 
