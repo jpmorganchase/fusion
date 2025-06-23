@@ -14,7 +14,9 @@ from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Union, cast
+from typing import (
+    TYPE_CHECKING, Any, Union, cast, Dict, Optional
+)
 from urllib.parse import urlparse, urlunparse
 
 import aiohttp
@@ -25,6 +27,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
+from requests import Session
 from dateutil import parser
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
@@ -947,3 +950,37 @@ def requests_raise_for_status(response: requests.Response) -> None:
         response.reason = real_reason
     finally:
         response.raise_for_status()
+
+def handle_paginated_request(session: Session, url: str, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+    """
+    Always checks for x-jpmc-next-token and paginates if present.
+    """
+    all_responses = []
+    current_headers = headers or {}
+    next_token = None
+
+    while True:
+        if next_token:
+            current_headers['x-jpmc-next-token'] = next_token
+
+        response = session.get(url, headers=current_headers)
+        response.raise_for_status()
+        response_data = response.json()
+        all_responses.append(response_data)
+
+        next_token = response.headers.get('x-jpmc-next-token')
+        if not next_token:
+            break
+
+    return _merge_responses(all_responses)
+
+def _merge_responses(responses: list[Dict[str, Any]]) -> Dict[str, Any]:
+    if not responses:
+        return {"resources": []}
+    merged = responses[0].copy()
+    if "resources" in merged:
+        merged["resources"] = list(merged["resources"])
+        for response in responses[1:]:
+            if "resources" in response:
+                merged["resources"].extend(response["resources"])
+    return merged
