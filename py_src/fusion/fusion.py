@@ -29,7 +29,6 @@ from fusion.report import Report
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError, CredentialError, FileFormatError
 from .fusion_filesystem import FusionHTTPFileSystem
-from .pagination_utils import handle_api_request
 from .utils import (
     RECOGNIZED_FORMATS,
     cpu_count,
@@ -49,6 +48,7 @@ from .utils import (
     requests_raise_for_status,
     upload_files,
     validate_file_names,
+    handle_paginated_request,
 )
 
 if TYPE_CHECKING:
@@ -78,7 +78,7 @@ class Fusion:
         Returns:
             pandas.DataFrame: a dataframe containing the requested data.        
         """
-        response_data = handle_api_request(session, url)
+        response_data = handle_paginated_request(session, url)
         table = response_data.get("resources", [])
         ret_df = pd.DataFrame(table).reset_index(drop=True)
         return ret_df
@@ -1545,8 +1545,7 @@ class Fusion:
         resp_dataset.raise_for_status()
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}/lineage"
-        resp = self.session.get(url)
-        data = resp.json()
+        data = handle_paginated_request(self.session, url)
         relations_data = data["relations"]
 
         restricted_datasets = [
@@ -2690,8 +2689,8 @@ class Fusion:
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
 
-        resp = self.session.get(url)
-        dists = resp.json()["datasets"][0]["distributions"]
+        data = handle_paginated_request(self.session, url)
+        dists = data["datasets"][0]["distributions"]
 
         data = []
         for dist in dists:
