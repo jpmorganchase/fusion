@@ -15,7 +15,7 @@ from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
 from typing import (
-    TYPE_CHECKING, Any, Union, cast, Dict, Optional
+    TYPE_CHECKING, Any, Union, cast, dict, Optional
 )
 from urllib.parse import urlparse, urlunparse
 
@@ -951,7 +951,7 @@ def requests_raise_for_status(response: requests.Response) -> None:
     finally:
         response.raise_for_status()
 
-def handle_paginated_request(session: Session, url: str, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+def handle_paginated_request(session: Session, url: str, headers: Optional[dict[str, str]] = None) -> dict[str, Any]:
     """
     Always checks for x-jpmc-next-token and paginates if present.
     """
@@ -974,7 +974,7 @@ def handle_paginated_request(session: Session, url: str, headers: Optional[Dict[
 
     return _merge_responses(all_responses)
 
-def _merge_responses(responses: list[Dict[str, Any]]) -> Dict[str, Any]:
+def _merge_responses(responses: list[dict[str, Any]]) -> dict[str, Any]:
     if not responses:
         return {"resources": []}
     merged = responses[0].copy()
