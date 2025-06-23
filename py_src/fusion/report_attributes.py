@@ -179,7 +179,7 @@ class ReportAttributes:
 
         Args:
             report_id (str): The identifier of the report.
-            client (Fusion, optional): Fusion client, for auth and config. Uses self._client if not passed.
+            client (Fusion, optional): Fusion client, for auth and config. Uses self._client incase not passed.
             return_resp_obj (bool, optional): If True, returns the response object. Otherwise, returns None.
 
         Returns:
