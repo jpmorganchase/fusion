@@ -2684,17 +2684,21 @@ class Fusion:
 
         """
         catalog = self._use_catalog(catalog)
-
         url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
-
         data = handle_paginated_request(self.session, url)
-        dists = data.get("datasets", [{}])[0].get("distributions", [])
+
+        datasets = data.get("datasets", [])
+        if not datasets:
+            return pd.DataFrame(columns=["identifier", "format"])
+        
+        dists = datasets[0].get("distributions", [])
         rows = []
         for dist in dists:
             values = dist.get("values")
-            member_id = values[5]
-            member_format = values[6]
-            rows.append((member_id, member_format))
+            if values and len(values) > 6:
+                member_id = values[5]
+                member_format = values[6]
+                rows.append((member_id, member_format))
 
         members_df = pd.DataFrame(rows, columns=["identifier", "format"])
         return members_df
