@@ -948,13 +948,9 @@ def requests_raise_for_status(response: requests.Response) -> None:
         response.reason = real_reason
     finally:
         response.raise_for_status()
-        
 
-def handle_paginated_request(
-    session: Session,
-    url: str,
-    headers: dict[str, str] | None = None
-) -> dict[str, Any]:
+
+def handle_paginated_request(session: Session, url: str, headers: dict[str, str] | None = None) -> dict[str, Any]:
     """
     Fetches all pages from a paginated API endpoint using the x-jpmc-next-token header,
     merges the results, and returns a single combined response dictionary.
@@ -977,6 +973,7 @@ def handle_paginated_request(
             break
 
     return _merge_responses(all_responses)
+
 
 def _merge_responses(responses: list[dict[str, Any]]) -> dict[str, Any]:
     """
