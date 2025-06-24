@@ -393,7 +393,7 @@ class Fusion:
         if contains and isinstance(contains, str):
             url = f"{self.root_url}catalogs/{catalog}/datasets/{contains}"
             resp_json = handle_paginated_request(self.session, url)
-            
+
             if not display_all_columns:
                 cols = [
                     "identifier",
@@ -2686,16 +2686,15 @@ class Fusion:
         catalog = self._use_catalog(catalog)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
-    
+
         data = handle_paginated_request(self.session, url)
         dists = data.get("datasets", [{}])[0].get("distributions", [])
         rows = []
         for dist in dists:
             values = dist.get("values")
-            if values and len(values) > 6:
-                member_id = values[5]
-                member_format = values[6]
-                rows.append((member_id, member_format))
+            member_id = values[5]
+            member_format = values[6]
+            rows.append((member_id, member_format))
 
-        members_df = pd.DataFrame(data, columns=["identifier", "format"])
+        members_df = pd.DataFrame(rows, columns=["identifier", "format"])
         return members_df
