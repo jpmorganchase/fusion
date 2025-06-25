@@ -2697,11 +2697,12 @@ class Fusion:
         
         dists = datasets[0].get("distributions", [])
         rows = []
+        MEMBER_FORMAT_INDEX = 6  # Index for member_format in values list
         for dist in dists:
             values = dist.get("values")
-            if values and len(values) > 6:
+            if values and len(values) > MEMBER_FORMAT_INDEX:
                 member_id = values[5]
-                member_format = values[6]
+                member_format = values[MEMBER_FORMAT_INDEX]
                 rows.append((member_id, member_format))
 
         members_df = pd.DataFrame(rows, columns=["identifier", "format"])
