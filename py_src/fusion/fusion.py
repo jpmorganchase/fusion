@@ -1538,9 +1538,13 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
+        """  removing below api call as it's an extra check which is not required
+
         url_dataset = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}"
         resp_dataset = self.session.get(url_dataset)
         resp_dataset.raise_for_status()
+
+        """
 
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}/lineage"
         data = handle_paginated_request(self.session, url)
@@ -2689,7 +2693,7 @@ class Fusion:
 
         datasets = data.get("datasets", [])
         if not datasets:
-            return pd.DataFrame(columns=["identifier", "format"])
+            return pd.DataFrame()
         
         dists = datasets[0].get("distributions", [])
         rows = []
