@@ -2694,7 +2694,7 @@ class Fusion:
         datasets = data.get("datasets", [])
         if not datasets:
             return pd.DataFrame()
-        
+
         dists = datasets[0].get("distributions", [])
         rows = []
         MEMBER_FORMAT_INDEX = 6  # Index for member_format in values list
