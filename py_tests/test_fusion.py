@@ -1184,6 +1184,7 @@ def test_list_dataset_lineage_resticted(requests_mock: requests_mock.Mocker, fus
     )
     pd.testing.assert_frame_equal(test_df, expected_df)
 
+""" since extra api call is removed, this test is not needed anymore
 
 def test_list_dataset_lineage_dataset_not_found(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     dataset_id = "dataset_id"
@@ -1193,7 +1194,7 @@ def test_list_dataset_lineage_dataset_not_found(requests_mock: requests_mock.Moc
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_dataset_lineage(dataset_id, catalog=catalog)
-
+"""    
 
 def test_create_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     base_dataset = "base_dataset"
@@ -2154,8 +2155,6 @@ def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -
 
 
 def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCredentials) -> None:
-    
-
     # Clear logger handlers to avoid contamination
     logger.handlers.clear()
 
