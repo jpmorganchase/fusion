@@ -6,7 +6,7 @@ from collections.abc import Generator
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
-
+import requests
 import fsspec
 import joblib
 import pandas as pd
@@ -38,6 +38,8 @@ from fusion.utils import (
     tidy_string,
     upload_files,
     validate_file_names,
+    handle_paginated_request,
+    _merge_responses,
 )
 
 
@@ -901,3 +903,93 @@ def test_snake_to_camel() -> None:
     output_ = snake_to_camel(input_)
     exp_output = "thisIsSnake"
     assert output_ == exp_output
+
+
+def test_handle_paginated_request_preserves_auth_headers(mocker):
+    session = requests.Session()
+    auth_headers = {"Authorization": "Bearer testtoken"}
+    mock_response = mocker.Mock()
+    mock_response.json.return_value = {"resources": []}
+    mock_response.headers = {}
+    mock_response.status_code = 200
+    mock_response.raise_for_status.return_value = None
+
+    mocker.patch.object(session, "get", return_value=mock_response)
+    handle_paginated_request(session, "http://dummy", headers=auth_headers)
+    # Get the actual headers used in the call
+    actual_headers = session.get.call_args[1]["headers"]
+    assert actual_headers["Authorization"] == "Bearer testtoken"    
+
+
+def test_handle_paginated_request_pass(requests_mock):
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
+    # First page with next token
+    page1 = {"resources": [1, 2]}
+    page2 = {"resources": [3, 4]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    session = requests.Session()
+    result = handle_paginated_request(session, url)
+    assert result["resources"] == [1, 2, 3, 4]
+
+
+def test_handle_paginated_request_fail(requests_mock):
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
+    page1 = {"resources": [1, 2]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    session = requests.Session()
+    with pytest.raises(requests.exceptions.HTTPError):
+        handle_paginated_request(session, url)
+
+
+def test_merge_responses_empty():
+    # Should return an empty dict if no responses
+    result = _merge_responses([])
+    assert result == {}
+
+def test_merge_responses_single_response():
+    # Should return the single response unchanged
+    resp = {"resources": [1, 2], "meta": "info"}
+    result = _merge_responses([resp])
+    assert result == resp
+
+def test_merge_responses_multiple_list_keys():
+    # Should merge all top-level list keys
+    resp1 = {"resources": [1], "datasets": ["a"], "meta": "info"}
+    resp2 = {"resources": [2], "datasets": ["b"], "meta": "other"}
+    result = _merge_responses([resp1, resp2])
+    assert result["resources"] == [1, 2]
+    assert result["datasets"] == ["a", "b"]
+    # Non-list field should be from the first response
+    assert result["meta"] == "info"
+
+def test_merge_responses_missing_keys():
+    # Should handle missing list keys in some responses
+    resp1 = {"resources": [1, 2], "meta": "info"}
+    resp2 = {"meta": "other"}
+    result = _merge_responses([resp1, resp2])
+    assert result["resources"] == [1, 2]
+    assert result["meta"] == "info"
+
+def test_merge_responses_non_list_keys():
+    # Should not attempt to merge non-list keys
+    resp1 = {"resources": [1], "count": 1}
+    resp2 = {"resources": [2], "count": 2}
+    result = _merge_responses([resp1, resp2])
+    assert result["resources"] == [1, 2]
+    assert result["count"] == 1  # from first response
