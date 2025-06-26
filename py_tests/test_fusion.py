@@ -133,7 +133,7 @@ def test_get_fusion_filesystem(fusion_obj: Fusion) -> None:
     assert filesystem is not None
 
 
-def test__call_for_dataframe_success(requests_mock: requests_mock.Mocker) -> None:
+def test__call_for_dataframe_success_single_page(requests_mock: requests_mock.Mocker) -> None:
     # Mock the response from the API endpoint
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
@@ -147,8 +147,27 @@ def test__call_for_dataframe_success(requests_mock: requests_mock.Mocker) -> Non
 
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
-    pd.testing.assert_frame_equal(test_df, expected_df)
+    pd.testing.assert_frame_equal(test_df, expected_df)  
 
+def test__call_for_dataframe_success_paginated(requests_mock: requests_mock.Mocker) -> None:
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
+    # First page with next token
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+    page2 = {"resources": [{"id": 2, "name": "Resource 2"}]}
+
+    # Set up paginated responses
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    session = requests.Session()
+    test_df = Fusion._call_for_dataframe(url, session)
+    expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
+    pd.testing.assert_frame_equal(test_df, expected_df)     
 
 def test__call_for_dataframe_error(requests_mock: requests_mock.Mocker) -> None:
     # Mock the response from the API endpoint with an error status code
@@ -161,6 +180,22 @@ def test__call_for_dataframe_error(requests_mock: requests_mock.Mocker) -> None:
     # Call the _call_for_dataframe function and expect an exception to be raised
     with pytest.raises(requests.exceptions.HTTPError):
         Fusion._call_for_dataframe(url, session)
+
+def test__call_for_dataframe_error_paginated(requests_mock: requests_mock.Mocker) -> None:
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
+    # First page is OK, second page returns 500
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    session = requests.Session()
+    with pytest.raises(requests.exceptions.HTTPError):
+        Fusion._call_for_dataframe(url, session)        
 
 
 def test__call_for_bytes_object_success(requests_mock: requests_mock.Mocker) -> None:
@@ -206,6 +241,25 @@ def test_list_catalogs_success(requests_mock: requests_mock.Mocker, fusion_obj: 
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
+def test_list_catalogs_paginated(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
+    # First page with next token
+    page1 = {"resources": [{"id": 1, "name": "Catalog 1"}]}
+    page2 = {"resources": [{"id": 2, "name": "Catalog 2"}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.list_catalogs()
+    expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
 def test_list_catalogs_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     # Mock the response from the API endpoint with an error status code
     url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
@@ -215,6 +269,20 @@ def test_list_catalogs_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fus
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_catalogs()
 
+def test_list_catalogs_paginated_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
+    # First page is OK, second page returns 500
+    page1 = {"resources": [{"id": 1, "name": "Catalog 1"}]}
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_catalogs()
 
 def test_catalog_resources_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     # Mock the response from the API endpoint
@@ -230,6 +298,36 @@ def test_catalog_resources_success(requests_mock: requests_mock.Mocker, fusion_o
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
+
+def test_catalog_resources_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}"
+    # First page with next token
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+    page2 = {"resources": [{"id": 2, "name": "Resource 2"}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.catalog_resources(new_catalog)
+    expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_catalog_resources_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}"
+    # Mock the response with an error status code
+    requests_mock.get(url, status_code=500)
+
+    # Call the catalog_resources method and expect an exception to be raised
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.catalog_resources(new_catalog)
 
 
 def test_list_products_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -247,6 +345,48 @@ def test_list_products_success(requests_mock: requests_mock.Mocker, fusion_obj: 
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_products_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/products"
+    # First page with next token
+    page1 = {"resources": [{"category": ["FX"], "region": ["US"]}]}
+    page2 = {"resources": [{"category": ["FX"], "region": ["US", "EU"]}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.list_products(catalog=new_catalog, max_results=2)
+    expected_data = {"resources": [
+        {"category": "FX", "region": "US"},
+        {"category": "FX", "region": "US, EU"}
+    ]}
+    expected_df = pd.DataFrame(expected_data["resources"])
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_products_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/products"
+    # First page is OK, second page returns 500 error
+    page1 = {"resources": [{"category": ["FX"], "region": ["US"]}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+    
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_products(catalog=new_catalog, max_results=2)
 
 
 def test_list_products_contains_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
