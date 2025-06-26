@@ -1230,18 +1230,13 @@ class Fusion:
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
         
-        # Normalize the dt_str
-        date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
-        if dt_str == "latest":
-            dt_str = pd.Timestamp("today").date().strftime("%Y%m%d")
-        elif date_identifier.match(dt_str):
-            dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
-        else:
-            raise ValueError(f"Invalid date format: {dt_str}. Expected YYYYMMDD or 'latest'.")
-
         fs_fusion = self.get_fusion_filesystem()
         if self.fs.info(path)["type"] == "directory":
             validate_file_formats(self.fs, path)
+            if dt_str and dt_str != "latest":
+                logger.warning("`dt_str` is not considered when uploading a directory. "
+                                "File names in the directory are used as series members instead.")
+
             file_path_lst = [f for f in self.fs.find(path) if self.fs.info(f)["type"] == "file"]
 
             # Construct unique file names by flattening the relative path from the base directory.
@@ -1277,6 +1272,15 @@ class Fusion:
                 if preserve_original_name:
                     raise ValueError("preserve_original_name can only be used when catalog and dataset are provided.")
             else:
+                # Normalize the dt_str
+                date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
+                if dt_str == "latest":
+                    dt_str = pd.Timestamp("today").date().strftime("%Y%m%d")
+                elif date_identifier.match(dt_str):
+                    dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
+                else:
+                    raise ValueError(f"Invalid date format: {dt_str}. Expected YYYYMMDD or 'latest'.")
+        
                 file_format = path.split(".")[-1]
                 file_name = [path.split("/")[-1]]
                 file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
