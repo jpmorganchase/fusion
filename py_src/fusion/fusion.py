@@ -1239,13 +1239,14 @@ class Fusion:
 
             file_path_lst = [f for f in self.fs.find(path) if self.fs.info(f)["type"] == "file"]
 
+            base_path = Path(path).resolve()
             # Construct unique file names by flattening the relative path from the base directory.
             # For example, if the base directory is 'data_folder' and a file is at 'data_folder/sub1/file.txt',
             # the resulting name will be 'data_folder__sub1__file.txt'.
             # This ensures that files in different subdirectories with the same base name do not conflict
             # and helps preserve the folder structure in the filename.  
             file_name = [
-                Path(path).name + "__" + "__".join(Path(f).relative_to(path).parts)
+                base_path.name + "__" + "__".join(Path(f).resolve().relative_to(base_path).parts)
                 for f in file_path_lst
             ]
 
