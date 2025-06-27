@@ -6,12 +6,13 @@ from collections.abc import Generator
 from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
-import requests
+
 import fsspec
 import joblib
 import pandas as pd
 import polars as pl
 import pytest
+import requests
 from pytest_mock import MockerFixture
 
 from fusion._fusion import FusionCredentials
@@ -20,10 +21,12 @@ from fusion.fusion import Fusion
 from fusion.utils import (
     PathLikeT,
     _filename_to_distribution,
+    _merge_responses,
     convert_date_format,
     cpu_count,
     csv_to_table,
     get_session,
+    handle_paginated_request,
     is_dataset_raw,
     joblib_progress,
     json_to_table,
@@ -38,8 +41,6 @@ from fusion.utils import (
     tidy_string,
     upload_files,
     validate_file_names,
-    handle_paginated_request,
-    _merge_responses,
 )
 
 
@@ -918,7 +919,7 @@ def test_handle_paginated_request_preserves_auth_headers(mocker):
     handle_paginated_request(session, "http://dummy", headers=auth_headers)
     # Get the actual headers used in the call
     actual_headers = session.get.call_args[1]["headers"]
-    assert actual_headers["Authorization"] == "Bearer testtoken"    
+    assert actual_headers["Authorization"] == "Bearer testtoken"
 
 
 def test_handle_paginated_request_pass(requests_mock):
@@ -962,11 +963,13 @@ def test_merge_responses_empty():
     result = _merge_responses([])
     assert result == {}
 
+
 def test_merge_responses_single_response():
     # Should return the single response unchanged
     resp = {"resources": [1, 2], "meta": "info"}
     result = _merge_responses([resp])
     assert result == resp
+
 
 def test_merge_responses_multiple_list_keys():
     # Should merge all top-level list keys
@@ -978,6 +981,7 @@ def test_merge_responses_multiple_list_keys():
     # Non-list field should be from the first response
     assert result["meta"] == "info"
 
+
 def test_merge_responses_missing_keys():
     # Should handle missing list keys in some responses
     resp1 = {"resources": [1, 2], "meta": "info"}
@@ -985,6 +989,7 @@ def test_merge_responses_missing_keys():
     result = _merge_responses([resp1, resp2])
     assert result["resources"] == [1, 2]
     assert result["meta"] == "info"
+
 
 def test_merge_responses_non_list_keys():
     # Should not attempt to merge non-list keys
