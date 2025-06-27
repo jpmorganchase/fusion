@@ -19,6 +19,7 @@ from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
 from fusion.utils import _normalise_dt_param, distribution_to_url
 
+
 def test_rust_ok() -> None:
     from fusion import rust_ok
 
@@ -146,7 +147,8 @@ def test__call_for_dataframe_success_single_page(requests_mock: requests_mock.Mo
 
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
-    pd.testing.assert_frame_equal(test_df, expected_df)  
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
 
 def test__call_for_dataframe_success_paginated(requests_mock: requests_mock.Mocker) -> None:
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
@@ -166,7 +168,8 @@ def test__call_for_dataframe_success_paginated(requests_mock: requests_mock.Mock
     session = requests.Session()
     test_df = Fusion._call_for_dataframe(url, session)
     expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
-    pd.testing.assert_frame_equal(test_df, expected_df)     
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
 
 def test__call_for_dataframe_error(requests_mock: requests_mock.Mocker) -> None:
     # Mock the response from the API endpoint with an error status code
@@ -179,6 +182,7 @@ def test__call_for_dataframe_error(requests_mock: requests_mock.Mocker) -> None:
     # Call the _call_for_dataframe function and expect an exception to be raised
     with pytest.raises(requests.exceptions.HTTPError):
         Fusion._call_for_dataframe(url, session)
+
 
 def test__call_for_dataframe_error_paginated(requests_mock: requests_mock.Mocker) -> None:
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
@@ -194,7 +198,7 @@ def test__call_for_dataframe_error_paginated(requests_mock: requests_mock.Mocker
 
     session = requests.Session()
     with pytest.raises(requests.exceptions.HTTPError):
-        Fusion._call_for_dataframe(url, session)        
+        Fusion._call_for_dataframe(url, session)
 
 
 def test__call_for_bytes_object_success(requests_mock: requests_mock.Mocker) -> None:
@@ -268,6 +272,7 @@ def test_list_catalogs_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fus
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_catalogs()
 
+
 def test_list_catalogs_paginated_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
     # First page is OK, second page returns 500
@@ -283,6 +288,7 @@ def test_list_catalogs_paginated_error(requests_mock: requests_mock.Mocker, fusi
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_catalogs()
 
+
 def test_catalog_resources_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     # Mock the response from the API endpoint
 
@@ -297,6 +303,7 @@ def test_catalog_resources_success(requests_mock: requests_mock.Mocker, fusion_o
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
+
 
 def test_catalog_resources_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
@@ -377,10 +384,7 @@ def test_list_products_paginated_success(requests_mock: requests_mock.Mocker, fu
     )
 
     test_df = fusion_obj.list_products(catalog=new_catalog, max_results=2)
-    expected_data = {"resources": [
-        {"category": "FX", "region": "US"},
-        {"category": "FX", "region": "US, EU"}
-    ]}
+    expected_data = {"resources": [{"category": "FX", "region": "US"}, {"category": "FX", "region": "US, EU"}]}
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
 
@@ -398,7 +402,7 @@ def test_list_products_paginated_fail(requests_mock: requests_mock.Mocker, fusio
             {"status_code": 500},
         ],
     )
-    
+
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_products(catalog=new_catalog, max_results=2)
 
@@ -433,7 +437,8 @@ def test_list_products_contains_success(requests_mock: requests_mock.Mocker, fus
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, expected_df)
 
-#uncomment below unit test when warning will be fixed in list_products method for contains(backlogs)
+
+# uncomment below unit test when warning will be fixed in list_products method for contains(backlogs)
 
 # def test_list_products_contains_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
 #     new_catalog = "catalog_id"
@@ -472,7 +477,7 @@ def test_list_products_contains_success(requests_mock: requests_mock.Mocker, fus
 #     pd.testing.assert_frame_equal(test_df, expected_df)
 
 #     test_df = fusion_obj.list_products(catalog=new_catalog, max_results=2, contains="1", id_contains=True)
-#     pd.testing.assert_frame_equal(test_df, expected_df)    
+#     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
 def test_list_products_contains_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -495,7 +500,6 @@ def test_list_products_contains_paginated_fail(requests_mock: requests_mock.Mock
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_products(catalog=new_catalog, max_results=2, contains=["1"])
-
 
 
 def test_list_datasets_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -533,7 +537,8 @@ def test_list_datasets_paginated_success(requests_mock: requests_mock.Mocker, fu
     )
 
     test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2)
-    pd.testing.assert_frame_equal(test_df, expected_df)    
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
 
 def test_list_datasets_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
@@ -548,7 +553,7 @@ def test_list_datasets_paginated_fail(requests_mock: requests_mock.Mocker, fusio
         ],
     )
     with pytest.raises(requests.exceptions.HTTPError):
-        fusion_obj.list_datasets(catalog=new_catalog, max_results=2)    
+        fusion_obj.list_datasets(catalog=new_catalog, max_results=2)
 
 
 def test_list_datasets_type_filter(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -679,7 +684,6 @@ def test_list_datasets_type_filter_paginated_fail(requests_mock: requests_mock.M
         fusion_obj.list_datasets(catalog=new_catalog, max_results=2, dataset_type="type1")
 
 
-
 def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
@@ -765,6 +769,7 @@ def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fus
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, expected_df)
 
+
 def test_list_datasets_contains_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
@@ -776,7 +781,13 @@ def test_list_datasets_contains_fail(requests_mock: requests_mock.Mocker, fusion
     }
     page2 = {
         "resources": [
-            {"identifier": "TWO", "description": "some desc", "category": ["FX"], "region": ["US", "EU"], "status": "inactive"},
+            {
+                "identifier": "TWO",
+                "description": "some desc",
+                "category": ["FX"],
+                "region": ["US", "EU"],
+                "status": "inactive",
+            },
         ]
     }
 
@@ -792,6 +803,7 @@ def test_list_datasets_contains_fail(requests_mock: requests_mock.Mocker, fusion
     test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["THREE"])
     # The result should be an empty DataFrame
     assert test_df.empty
+
 
 def test_list_datasets_contains_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
@@ -871,7 +883,7 @@ def test_list_datasets_contains_paginated_success(requests_mock: requests_mock.M
 
     test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["ONE"])
     pd.testing.assert_frame_equal(test_df.reset_index(drop=True), expected_df.reset_index(drop=True))
-    
+
 
 def test_list_datasets_contains_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
@@ -904,9 +916,9 @@ def test_list_datasets_contains_paginated_fail(requests_mock: requests_mock.Mock
     requests_mock.get(dataset_url, json=page1["resources"][0])
 
     with pytest.raises(requests.exceptions.HTTPError):
-        fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["ONE"])    
+        fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["ONE"])
 
-    
+
 def test_dataset_resources_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
     dataset = "my_dataset"
@@ -929,7 +941,7 @@ def test_dataset_resources_fail(requests_mock: requests_mock.Mocker, fusion_obj:
     requests_mock.get(url, status_code=500)
 
     with pytest.raises(requests.exceptions.HTTPError):
-        fusion_obj.dataset_resources(dataset, new_catalog)  
+        fusion_obj.dataset_resources(dataset, new_catalog)
 
 
 def test_dataset_resources_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -950,7 +962,7 @@ def test_dataset_resources_paginated_success(requests_mock: requests_mock.Mocker
     )
 
     test_df = fusion_obj.dataset_resources(dataset, new_catalog)
-    pd.testing.assert_frame_equal(test_df, expected_df)  
+    pd.testing.assert_frame_equal(test_df, expected_df)
 
 
 def test_dataset_resources_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -1165,7 +1177,6 @@ def test_list_dataset_attributes_paginated_fail(requests_mock: requests_mock.Moc
         fusion_obj.list_dataset_attributes(dataset, catalog=new_catalog)
 
 
-
 def test_list_datasetmembers_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
     dataset = "my_dataset"
@@ -1190,6 +1201,7 @@ def test_list_datasetmembers_fail(requests_mock: requests_mock.Mocker, fusion_ob
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_datasetmembers(dataset, new_catalog, max_results=2)
+
 
 def test_list_datasetmembers_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
@@ -1231,7 +1243,6 @@ def test_list_datasetmembers_paginated_fail(requests_mock: requests_mock.Mocker,
         fusion_obj.list_datasetmembers(dataset, new_catalog, max_results=2)
 
 
-
 def test_datasetmember_resources_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
     dataset = "my_dataset"
@@ -1257,6 +1268,7 @@ def test_datasetmember_resources_fail(requests_mock: requests_mock.Mocker, fusio
     requests_mock.get(url, status_code=500)
 
     import pytest
+
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.datasetmember_resources(dataset, series, new_catalog)
 
@@ -1301,7 +1313,7 @@ def test_datasetmember_resources_paginated_fail(requests_mock: requests_mock.Moc
         ],
     )
     with pytest.raises(requests.exceptions.HTTPError):
-        fusion_obj.datasetmember_resources(dataset, series, new_catalog)    
+        fusion_obj.datasetmember_resources(dataset, series, new_catalog)
 
 
 def test_list_distributions_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -1373,7 +1385,7 @@ def test_list_distributions_paginated_fail(requests_mock: requests_mock.Mocker, 
     )
 
     with pytest.raises(requests.exceptions.HTTPError):
-        fusion_obj.list_distributions(dataset, series, new_catalog)    
+        fusion_obj.list_distributions(dataset, series, new_catalog)
 
 
 def test__resolve_distro_tuples(mocker: MockerFixture, fusion_obj: Fusion) -> None:
@@ -1980,6 +1992,7 @@ def test_list_dataset_lineage_resticted(requests_mock: requests_mock.Mocker, fus
     )
     pd.testing.assert_frame_equal(test_df, expected_df)
 
+
 """ since extra api call is removed, this test is not needed anymore
 
 def test_list_dataset_lineage_dataset_not_found(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -1990,7 +2003,8 @@ def test_list_dataset_lineage_dataset_not_found(requests_mock: requests_mock.Moc
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_dataset_lineage(dataset_id, catalog=catalog)
-"""    
+"""
+
 
 def test_create_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     base_dataset = "base_dataset"
@@ -2677,7 +2691,7 @@ def test_list_registered_attributes_paginated_success(requests_mock: requests_mo
 
     test_df = fusion_obj.list_registered_attributes(catalog=catalog)
     pd.testing.assert_frame_equal(test_df, expected_df)
-    assert all(col in core_cols for col in test_df.columns)    
+    assert all(col in core_cols for col in test_df.columns)
 
 
 def test_list_registered_attributes_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -3034,7 +3048,9 @@ def test_list_datasetmembers_distributions(requests_mock: requests_mock.Mocker, 
     assert all(resp == expected_df)
 
 
-def test_list_datasetmembers_distributions_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_list_datasetmembers_distributions_paginated_success(
+    requests_mock: requests_mock.Mocker, fusion_obj: Fusion
+) -> None:
     """Test list_datasetmembers_distributions with pagination"""
     catalog = "my_catalog"
     dataset = "MY_DATASET"
@@ -3104,7 +3120,9 @@ def test_list_datasetmembers_distributions_paginated_success(requests_mock: requ
     pd.testing.assert_frame_equal(resp, expected_df)
 
 
-def test_list_datasetmembers_distributions_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_list_datasetmembers_distributions_paginated_fail(
+    requests_mock: requests_mock.Mocker, fusion_obj: Fusion
+) -> None:
     """Test list_datasetmembers_distributions with pagination error."""
     catalog = "my_catalog"
     dataset = "MY_DATASET"
@@ -3116,8 +3134,15 @@ def test_list_datasetmembers_distributions_paginated_fail(requests_mock: request
         "checksum": "SHA-256=vFdIF:HSLDBV:VBLHD/xe8Mom9yqooZA=-1",
         "metadata": {
             "fields": [
-                "lastModified", "size", "checksum", "catalog", "dataset",
-                "seriesMember", "distribution", "storageProvider", "version"
+                "lastModified",
+                "size",
+                "checksum",
+                "catalog",
+                "dataset",
+                "seriesMember",
+                "distribution",
+                "storageProvider",
+                "version",
             ]
         },
         "datasets": [
@@ -3129,8 +3154,15 @@ def test_list_datasetmembers_distributions_paginated_fail(requests_mock: request
                     {
                         "key": "MY_DATASET/20250317/distribution.csv",
                         "values": [
-                            "2025-03-18T09:04:22Z", "3054", "SHA-256=vlfaDJFb:VbSdfOHLvnL/xe8Mom9yqooZA=-1",
-                            "my_catalog", "MY_DATASET", "20250317", "csv", "api-bucket", "SJLDHGF;eflSBVLS"
+                            "2025-03-18T09:04:22Z",
+                            "3054",
+                            "SHA-256=vlfaDJFb:VbSdfOHLvnL/xe8Mom9yqooZA=-1",
+                            "my_catalog",
+                            "MY_DATASET",
+                            "20250317",
+                            "csv",
+                            "api-bucket",
+                            "SJLDHGF;eflSBVLS",
                         ],
                     }
                 ],
@@ -3148,7 +3180,6 @@ def test_list_datasetmembers_distributions_paginated_fail(requests_mock: request
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_datasetmembers_distributions(catalog=catalog, dataset=dataset)
-
 
 
 def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -> None:
