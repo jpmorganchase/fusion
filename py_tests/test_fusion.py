@@ -134,29 +134,19 @@ def test_get_fusion_filesystem(fusion_obj: Fusion) -> None:
 
 
 def test__call_for_dataframe_success_single_page(requests_mock: requests_mock.Mocker) -> None:
-    # Mock the response from the API endpoint
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
     requests_mock.get(url, json=expected_data)
-
-    # Create a mock session
     session = requests.Session()
-
-    # Call the _call_for_dataframe function
     test_df = Fusion._call_for_dataframe(url, session)
-
-    # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
 def test__call_for_dataframe_success_paginated(requests_mock: requests_mock.Mocker) -> None:
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
-    # First page with next token
     page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
     page2 = {"resources": [{"id": 2, "name": "Resource 2"}]}
-
-    # Set up paginated responses
     requests_mock.get(
         url,
         [
@@ -172,21 +162,15 @@ def test__call_for_dataframe_success_paginated(requests_mock: requests_mock.Mock
 
 
 def test__call_for_dataframe_error(requests_mock: requests_mock.Mocker) -> None:
-    # Mock the response from the API endpoint with an error status code
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     requests_mock.get(url, status_code=500)
-
-    # Create a mock session
     session = requests.Session()
-
-    # Call the _call_for_dataframe function and expect an exception to be raised
     with pytest.raises(requests.exceptions.HTTPError):
         Fusion._call_for_dataframe(url, session)
 
 
 def test__call_for_dataframe_error_paginated(requests_mock: requests_mock.Mocker) -> None:
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
-    # First page is OK, second page returns 500
     page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
     requests_mock.get(
         url,
@@ -202,51 +186,33 @@ def test__call_for_dataframe_error_paginated(requests_mock: requests_mock.Mocker
 
 
 def test__call_for_bytes_object_success(requests_mock: requests_mock.Mocker) -> None:
-    # Mock the response from the API endpoint
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     expected_data = b"some binary data"
     requests_mock.get(url, content=expected_data)
-
-    # Create a mock session
     session = requests.Session()
-
-    # Call the _call_for_bytes_object function
     data = Fusion._call_for_bytes_object(url, session)
-
-    # Check if the data is returned correctly
     assert data.getbuffer() == expected_data
 
 
 def test__call_for_bytes_object_fail(requests_mock: requests_mock.Mocker) -> None:
-    # Mock the response from the API endpoint with an error status code
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     requests_mock.get(url, status_code=500)
-
-    # Create a mock session
     session = requests.Session()
-
-    # Call the _call_for_dataframe function and expect an exception to be raised
     with pytest.raises(requests.exceptions.HTTPError):
         Fusion._call_for_bytes_object(url, session)
 
 
 def test_list_catalogs_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    # Mock the response from the API endpoint
     url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
     expected_data = {"resources": [{"id": 1, "name": "Catalog 1"}, {"id": 2, "name": "Catalog 2"}]}
     requests_mock.get(url, json=expected_data)
-
-    # Call the list_catalogs method
     test_df = fusion_obj.list_catalogs()
-
-    # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
 def test_list_catalogs_paginated(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
-    # First page with next token
     page1 = {"resources": [{"id": 1, "name": "Catalog 1"}]}
     page2 = {"resources": [{"id": 2, "name": "Catalog 2"}]}
 
@@ -264,18 +230,15 @@ def test_list_catalogs_paginated(requests_mock: requests_mock.Mocker, fusion_obj
 
 
 def test_list_catalogs_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    # Mock the response from the API endpoint with an error status code
     url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
     requests_mock.get(url, status_code=500)
 
-    # Call the list_catalogs method and expect an exception to be raised
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_catalogs()
 
 
 def test_list_catalogs_paginated_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
-    # First page is OK, second page returns 500
     page1 = {"resources": [{"id": 1, "name": "Catalog 1"}]}
     requests_mock.get(
         url,
@@ -436,48 +399,6 @@ def test_list_products_contains_success(requests_mock: requests_mock.Mocker, fus
     test_df = fusion_obj.list_products(catalog=new_catalog, max_results=2, contains="1", id_contains=True)
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, expected_df)
-
-
-# uncomment below unit test when warning will be fixed in list_products method for contains(backlogs)
-
-# def test_list_products_contains_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-#     new_catalog = "catalog_id"
-#     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/products"
-#     # First page with next token
-#     page1 = {
-#         "resources": [
-#             {"identifier": "1", "description": "some desc", "category": ["FX"], "region": ["US"]},
-#         ]
-#     }
-#     # Second page
-#     page2 = {
-#         "resources": [
-#             {"identifier": "2", "description": "some desc", "category": ["FX"], "region": ["US", "EU"]},
-#         ]
-#     }
-#     expected_data = {
-#         "resources": [
-#             {"identifier": "1", "description": "some desc", "category": "FX", "region": "US"},
-#         ]
-#     }
-#     expected_df = pd.DataFrame(expected_data["resources"])
-
-#     requests_mock.get(
-#         url,
-#         [
-#             {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
-#             {"json": page2, "headers": {}},
-#         ],
-#     )
-
-#     test_df = fusion_obj.list_products(catalog=new_catalog, max_results=2, contains=["1"])
-#     pd.testing.assert_frame_equal(test_df, expected_df)
-
-#     test_df = fusion_obj.list_products(catalog=new_catalog, max_results=2, contains="1")
-#     pd.testing.assert_frame_equal(test_df, expected_df)
-
-#     test_df = fusion_obj.list_products(catalog=new_catalog, max_results=2, contains="1", id_contains=True)
-#     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
 def test_list_products_contains_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
