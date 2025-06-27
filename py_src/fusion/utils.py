@@ -957,9 +957,9 @@ def handle_paginated_request(session: Session, url: str, headers: dict[str, str]
     """
     all_responses: list[dict[str, Any]] = []
     current_headers = headers.copy() if headers else {}
-    # --- TEMPORARY FOR PAGINATION TESTING ---
-    current_headers.setdefault("x-jpmc-page-size", "1000")
-    current_headers.setdefault("x-jpmc-paginate", "true")
+    # --- TEMPORARY FOR PAGINATION TESTING -- uncomment below 2 lines for testing with minimum number of size---
+    #current_headers.setdefault("x-jpmc-page-size", "1000")
+    #current_headers.setdefault("x-jpmc-paginate", "true")
     # ----------------------------------------
 
     next_token = None
