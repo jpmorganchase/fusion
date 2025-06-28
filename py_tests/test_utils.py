@@ -942,7 +942,7 @@ def test_file_name_to_url(
 ) -> None:
 
     def mock_distribution_to_url(
-        root_url: str,
+        root_url: str, # noqa: ARG001
         dataset_arg: str,
         series: str,
         ext: str,
