@@ -1204,22 +1204,25 @@ class Fusion:
             path (str): path to a file or a folder with sub folders and files
             dataset (str, optional): Dataset identifier to which the files will be uploaded.
                                     If not provided the dataset will be implied from file's name.
+                                    This is mandatory when uploading a directory.
             dt_str (str, optional): A file name. Can be any string but is usually a date.
                                     Defaults to 'latest' which will return the most recent.
                                     Relevant for a single file upload only. If not provided the dataset will
-                                    be implied from file's name.
+                                    be implied from file's name. dt_str will be ignored when uploading 
+                                    a directory.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
-            n_par (int, optional): Specify how many distributions to download in parallel.
+            n_par (int, optional): Specify how many distributions to upload in parallel.
                 Defaults to all cpus available.
-            show_progress (bool, optional): Display a progress bar during data download Defaults to True.
-            return_paths (bool, optional): Return paths and success statuses of the downloaded files.
-            multipart (bool, optional): Is multipart upload.
+            show_progress (bool, optional): Display a progress bar during data upload Defaults to True.
+            return_paths (bool, optional): Return paths and success statuses of the uploaded files.
+            multipart (bool, optional): Is multipart upload. Defaults to True.
             chunk_size (int, optional): Maximum chunk size.
             from_date (str, optional): start of the data date range contained in the distribution,
                 defaults to upoad date
             to_date (str, optional): end of the data date range contained in the distribution,
                 defaults to upload date.
             preserve_original_name (bool, optional): Preserve the original name of the file. Defaults to False.
+                Original name not preserved when uploading a directory.
 
         Returns:
 
