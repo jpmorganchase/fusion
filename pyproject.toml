@@ -1,6 +1,6 @@
 [project]
 name = "pyfusion"
-version = "2.0.13"
+version = "2.0.14-dev0"
 
 homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
