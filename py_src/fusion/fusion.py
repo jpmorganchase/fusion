@@ -310,7 +310,6 @@ class Fusion:
 
         if output:
             pass
-
         return cat_df
 
     def list_products(
@@ -374,7 +373,7 @@ class Fusion:
                 )
             ]
 
-        if max_results > -1:
+        if max_results > -1: 
             filtered_df = filtered_df[0:max_results]
 
         if output:
@@ -499,6 +498,123 @@ class Fusion:
             pass
 
         return ds_df
+        
+    def list_reports(
+        self,
+        report_id: str | None = None,
+        output: bool = False,
+        display_all_columns: bool = False,
+    ) -> pd.DataFrame:
+        """Retrieve a single report or all reports from the Fusion system.
+
+        If a `report_id` is provided, this function fetches a specific report
+        using GET /v1/reports/{reportId}. If not, it retrieves all available
+        reports using POST /v1/reports/list with no filters.
+
+        The result is returned as a pandas DataFrame, optionally filtered to
+        show only key metadata fields.
+
+        Args:
+            report_id (str, optional): Unique identifier for a report. If provided,
+                a GET request is made to retrieve that report.
+            output (bool, optional): If True, print the resulting DataFrame. Defaults to False.
+            display_all_columns (bool, optional): If True, return all fields from the response.
+                Otherwise, return a subset of key fields.
+
+        Returns:
+            pandas.DataFrame: A dataframe with one or more report records.
+        """
+        key_columns = [
+            "id",
+            "name",
+            "alternateId",
+            "tierType",
+            "frequency",
+            "category",
+            "subCategory",
+            "reportOwner",
+            "lob"
+        ]
+
+        if report_id:
+            url = f"{self.root_url}/v1/reports/{report_id}"
+            resp = self.session.get(url)
+            if resp.status_code == 200:
+                resp_json = resp.json()
+                df = pd.json_normalize(resp_json)
+                if not display_all_columns:
+                    cols = [c for c in key_columns if c in df.columns]
+                    df = df[cols]
+                if output:
+                    print(df)
+                return df
+            else:
+                resp.raise_for_status()
+
+        else:
+            url = f"{self.root_url}/v1/reports/list"
+            resp = self.session.post(url)  # No body
+            if resp.status_code == 200:
+                data = resp.json()
+                df = pd.json_normalize(data.get("content", data))
+                if not display_all_columns:
+                    cols = [c for c in key_columns if c in df.columns]
+                    df = df[cols]
+                if output:
+                    print(df)
+                return df
+            else:
+                resp.raise_for_status()
+
+
+
+    def list_report_attributes(
+        self,
+        report_id: str,
+        output: bool = False,
+        display_all_columns: bool = False,
+    ) -> pd.DataFrame:
+        """Retrieve the attributes (report elements) of a specific report.
+
+        This function calls the GET /v1/reports/{reportId}/reportElements endpoint to
+        fetch detailed attributes of a given report. It returns the result as a
+        pandas DataFrame for easier analysis and processing.
+
+        Args:
+            report_id (str): The unique identifier of the report whose attributes
+                (report elements) are to be retrieved.
+            output (bool, optional): If True, print the resulting DataFrame. Defaults to False.
+            display_all_columns (bool, optional): If True, return all fields from the response.
+                Otherwise, return only a subset of key fields.
+
+        Returns:
+            pandas.DataFrame: A dataframe with a row for each report element (attribute).
+        """
+        url = f"{self.root_url}/v1/reports/{report_id}/reportElements"
+        resp = self.session.get(url)
+        
+        if resp.status_code == 200:
+            data = resp.json()
+            df = pd.json_normalize(data)
+            
+            if not display_all_columns:
+                cols = [
+                    "elementId",
+                    "elementName",
+                    "elementType",
+                    "dataType",
+                    "isMandatory",
+                    "defaultValue"
+                ]
+                cols = [c for c in cols if c in df.columns]
+                df = df[cols]
+
+            if output:
+                print(df)
+            return df
+        else:
+            resp.raise_for_status()
+
 
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
