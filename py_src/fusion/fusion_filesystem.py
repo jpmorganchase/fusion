@@ -24,7 +24,7 @@ from fsspec.utils import nullcontext
 from fusion._fusion import FusionCredentials
 from fusion.exceptions import APIResponseError
 
-from .utils import cpu_count, get_client, get_default_fs, get_session
+from .utils import cpu_count, get_client, get_default_fs, get_session, _merge_responses
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -144,19 +144,31 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             Dict containing json-ified return from endpoint.
         """
         url = self._decorate_url(url)
+        all_responses = []
+        next_token = None
+        session = await self.set_session()
+        headers = self.kwargs.get("headers", {}).copy() if "headers" in self.kwargs else {}
+
         try:
-            session = await self.set_session()
-            async with session.get(url, **self.kwargs) as r:
-                self._raise_not_found_for_status(r, url)
-                try:
-                    out: dict[Any, Any] = await r.json()
-                except BaseException:
-                    logger.exception(VERBOSE_LVL, f"{url} cannot be parsed to json")
-                    out = {}
-            return out
+            while True:
+                if next_token:
+                    headers["x-jpmc-next-token"] = next_token
+                async with session.get(url, headers=headers, **self.kwargs) as r:
+                    self._raise_not_found_for_status(r, url)
+                    try:
+                        out: dict[Any, Any] = await r.json()
+                    except BaseException:
+                        logger.exception(VERBOSE_LVL, f"{url} cannot be parsed to json")
+                        out = {}
+                    all_responses.append(out)
+                    next_token = r.headers.get("x-jpmc-next-token")
+                    if not next_token:
+                        break
+            return _merge_responses(all_responses)
         except Exception as ex:
             logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
             raise ex
+        
 
     async def _ls_real(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
         # ignoring URL-encoded arguments
@@ -267,30 +279,61 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
         url = self._decorate_url(url)
-        ret = super().ls(url, detail=detail, **kwargs)
+        session = self.sync_session
+        headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
+        all_resources = []
+        next_token = None
+
+        while True:
+            if next_token:
+                headers["x-jpmc-next-token"] = next_token
+            response = session.get(url, headers=headers, **self.kwargs)
+            response.raise_for_status()
+            data = response.json()
+            resources = data.get("resources", [])
+            all_resources.extend(resources)
+            next_token = response.headers.get("x-jpmc-next-token")
+            if not next_token:
+                break
+
+        ret = all_resources
         keep_protocol = kwargs.pop("keep_protocol", False)
         if detail:
             if not keep_protocol:
                 for k in ret:
                     k["name"] = k["name"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1]
-
         elif not keep_protocol:
-            return [x.split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
-
+            return [x["identifier"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
         return ret
 
     async def _ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
         await self._async_startup()
         url = await self._decorate_url_a(url)
-        ret = await super()._ls(url, detail, **kwargs)
+        session = await self.set_session()
+        headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
+        all_resources = []
+        next_token = None
+
+        while True:
+            if next_token:
+                headers["x-jpmc-next-token"] = next_token
+            async with session.get(url, headers=headers, **self.kwargs) as response:
+                response.raise_for_status()
+                data = await response.json()
+                resources = data.get("resources", [])
+                all_resources.extend(resources)
+                next_token = response.headers.get("x-jpmc-next-token")
+                if not next_token:
+                    break
+
+        ret = all_resources
         keep_protocol = kwargs.pop("keep_protocol", False)
         if detail:
             if not keep_protocol:
                 for k in ret:
                     k["name"] = k["name"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1]
         elif not keep_protocol:
-            return [x.split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
-
+            return [x["identifier"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
         return ret
 
     def exists(self, url: str, **kwargs: Any) -> Any:
