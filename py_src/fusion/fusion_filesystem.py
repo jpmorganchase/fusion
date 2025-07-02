@@ -24,7 +24,7 @@ from fsspec.utils import nullcontext
 from fusion._fusion import FusionCredentials
 from fusion.exceptions import APIResponseError
 
-from .utils import cpu_count, get_client, get_default_fs, get_session, _merge_responses
+from .utils import _merge_responses, cpu_count, get_client, get_default_fs, get_session
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -168,7 +168,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         except Exception as ex:
             logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
             raise ex
-        
 
     async def _ls_real(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
         # ignoring URL-encoded arguments
