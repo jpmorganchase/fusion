@@ -380,13 +380,56 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
         url = self._decorate_url(url)
-        return super().cat(url, start=start, end=end, **kwargs)
+        session = self.sync_session
+        headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
+        all_content = b""
+        next_token = None
+
+        while True:
+            if next_token:
+                headers["x-jpmc-next-token"] = next_token
+            if start is not None or end is not None:
+                range_header = "bytes={}-{}".format(
+                    start if start is not None else "",
+                    (end - 1) if end is not None else ""
+                )
+                headers["Range"] = range_header
+            response = session.get(url, headers=headers, **self.kwargs)
+            response.raise_for_status()
+            content = response.content
+            all_content += content
+            next_token = response.headers.get("x-jpmc-next-token")
+            if not next_token:
+                break
+
+        return all_content
 
     async def _cat(self, url: str, start: Optional[int] = None, end: Optional[int] = None, **kwargs: Any) -> Any:
         await self._async_startup()
         url = self._decorate_url(url)
-        out = await super()._cat(url, start=start, end=end, **kwargs)
-        return out
+        session = await self.set_session()
+        headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
+        all_content = b""
+        next_token = None
+
+        while True:
+            if next_token:
+                headers["x-jpmc-next-token"] = next_token
+            if start is not None or end is not None:
+                range_header = "bytes={}-{}".format(
+                    start if start is not None else "",
+                    (end - 1) if end is not None else ""
+                )
+                headers["Range"] = range_header
+            async with session.get(url, headers=headers, **self.kwargs) as response:
+                response.raise_for_status()
+                content = await response.read()
+                all_content += content
+                next_token = response.headers.get("x-jpmc-next-token")
+                if not next_token:
+                    break
+
+        return all_content
 
     async def _stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
         """Return an async stream to file at the given url.
