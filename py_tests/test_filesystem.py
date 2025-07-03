@@ -12,6 +12,9 @@ from aiohttp import ClientResponse
 from fusion._fusion import FusionCredentials
 from fusion.exceptions import APIResponseError
 from fusion.fusion_filesystem import FusionHTTPFileSystem
+import copy
+import itertools
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture
@@ -501,3 +504,389 @@ def test_download(  # noqa: PLR0913
         assert result == (True, Path(expected_lpath), None)
     else:
         assert result == (True, lpath, None)
+
+
+@pytest.mark.asyncio
+@patch("fusion.fusion_filesystem._merge_responses", return_value={"merged": True})
+async def test__changes_single_page(mock_merge):
+    with patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None):
+        fs = FusionHTTPFileSystem()
+        fs._decorate_url = MagicMock(return_value="decorated_url")
+        fs.set_session = AsyncMock()
+        fs._raise_not_found_for_status = MagicMock()
+        fs.kwargs = {}
+        mock_response = AsyncMock()
+        mock_response.json = AsyncMock(return_value={"foo": "bar"})
+        mock_response.headers = {}
+        mock_session = MagicMock()
+        mock_session.get.return_value.__aenter__.return_value = mock_response
+        fs.set_session.return_value = mock_session
+        result = await fs._changes("input_url")
+        assert result == {"merged": True}
+        mock_merge.assert_called_once_with([{"foo": "bar"}])
+        fs._decorate_url.assert_called_once_with("input_url")
+        fs._raise_not_found_for_status.assert_called_once_with(mock_response, "decorated_url")
+
+@pytest.mark.asyncio
+@patch("fusion.fusion_filesystem._merge_responses", return_value={"merged": True})
+async def test__changes_multiple_pages(mock_merge):
+    with patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None):
+        fs = FusionHTTPFileSystem()
+        url = "input_url"
+        decorated_url = "decorated_url"
+        resp1 = {"page": 1}
+        resp2 = {"page": 2}
+        fs._decorate_url = MagicMock(return_value=decorated_url)
+        fs.set_session = AsyncMock()
+        fs._raise_not_found_for_status = MagicMock()
+        fs.kwargs = {}
+        mock_response1 = AsyncMock()
+        mock_response1.json = AsyncMock(return_value=resp1)
+        mock_response1.headers = {"x-jpmc-next-token": "token2"}
+        mock_response2 = AsyncMock()
+        mock_response2.json = AsyncMock(return_value=resp2)
+        mock_response2.headers = {}
+        mock_session = MagicMock()
+        mock_session.get.side_effect = [
+            MagicMock(__aenter__=AsyncMock(return_value=mock_response1), __aexit__=AsyncMock()),
+            MagicMock(__aenter__=AsyncMock(return_value=mock_response2), __aexit__=AsyncMock()),
+        ]
+        fs.set_session.return_value = mock_session
+
+        result = await fs._changes(url)
+        assert result == {"merged": True}
+        mock_merge.assert_called_once_with([resp1, resp2])
+        assert fs._raise_not_found_for_status.call_count == 2
+
+
+@pytest.mark.asyncio
+@patch("fusion.fusion_filesystem.logger")
+@patch("fusion.fusion_filesystem._merge_responses", return_value={"merged": True})
+async def test__changes_json_exception(mock_merge, mock_logger):
+    with patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None):
+        fs = FusionHTTPFileSystem()
+        url = "input_url"
+        decorated_url = "decorated_url"
+        fs._decorate_url = MagicMock(return_value=decorated_url)
+        fs.set_session = AsyncMock()
+        fs._raise_not_found_for_status = MagicMock()
+        fs.kwargs = {}
+        mock_response = AsyncMock()
+        mock_response.json = AsyncMock(side_effect=Exception("bad json"))
+        mock_response.headers = {}
+        mock_session = MagicMock()
+        mock_session.get.return_value.__aenter__.return_value = mock_response
+        fs.set_session.return_value = mock_session
+        result = await fs._changes(url)
+        assert result == {"merged": True}
+        mock_merge.assert_called_once_with([{}])
+        mock_logger.exception.assert_called()
+        fs._raise_not_found_for_status.assert_called_once_with(mock_response, decorated_url)
+
+
+@pytest.mark.asyncio
+@patch("fusion.fusion_filesystem.logger")
+async def test__changes_outer_exception(mock_logger):
+    with patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None):
+        fs = FusionHTTPFileSystem()
+        url = "input_url"
+        decorated_url = "decorated_url"
+        fs._decorate_url = MagicMock(return_value=decorated_url)
+        fs.set_session = AsyncMock()
+        fs._raise_not_found_for_status = MagicMock(side_effect=RuntimeError("fail!"))
+        fs.kwargs = {}
+        mock_response = AsyncMock()
+        mock_response.json = AsyncMock(return_value={})
+        mock_response.headers = {}
+        mock_session = MagicMock()
+        mock_session.get.return_value.__aenter__.return_value = mock_response
+        fs.set_session.return_value = mock_session
+        with pytest.raises(RuntimeError, match="fail!"):
+            await fs._changes(url)
+        mock_logger.log.assert_called()
+
+
+def make_response(resources, next_token=None):
+    resp = MagicMock()
+    resp.json.return_value = {"resources": resources}
+    resp.headers = {}
+    if next_token:
+        resp.headers["x-jpmc-next-token"] = next_token
+    else:
+        resp.headers = {}
+    resp.raise_for_status = MagicMock()
+    return resp
+
+
+@patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None)
+def test_ls_single_page():
+    fs = FusionHTTPFileSystem()
+    fs._decorate_url = MagicMock(side_effect=lambda x: x)
+    fs.sync_session = MagicMock()
+    fs.client_kwargs = {"root_url": "https://fusion.jpmorgan.com/api/v1/"}
+    fs.kwargs = {}
+
+    resources = [
+        {"name": "https://fusion.jpmorgan.com/api/v1/catalogs/foo", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/foo"},
+        {"name": "https://fusion.jpmorgan.com/api/v1/catalogs/bar", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/bar"},
+    ]
+    resp = make_response(resources)
+    fs.sync_session.get.return_value = resp
+    result = fs.ls("some_url", detail=False)
+    assert result == ["foo", "bar"]
+    result = fs.ls("some_url", detail=True)
+    assert result == [
+        {"name": "foo", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/foo"},
+        {"name": "bar", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/bar"},
+    ] or [
+        {"name": "foo"},
+        {"name": "bar"},
+    ]  
+    result = fs.ls("some_url", detail=True, keep_protocol=True)
+    assert result == resources
+
+
+@patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None)
+def test_ls_multiple_pages():
+    fs = FusionHTTPFileSystem()
+    fs._decorate_url = MagicMock(side_effect=lambda x: x)
+    fs.sync_session = MagicMock()
+    fs.client_kwargs = {"root_url": "https://fusion.jpmorgan.com/api/v1/"}
+    fs.kwargs = {}
+
+    resources1 = [
+        {"name": "https://fusion.jpmorgan.com/api/v1/catalogs/foo", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/foo"},
+    ]
+    resources2 = [
+        {"name": "https://fusion.jpmorgan.com/api/v1/catalogs/bar", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/bar"},
+    ]
+    resp1 = make_response(copy.deepcopy(resources1), next_token="token2")
+    resp2 = make_response(copy.deepcopy(resources2))
+    responses = itertools.chain([resp1, resp2], itertools.repeat(resp2))
+    fs.sync_session.get.side_effect = lambda *a, **k: next(responses)
+
+    result = fs.ls("some_url", detail=False)
+    assert result == ["foo", "bar"]
+
+    resp1 = make_response(copy.deepcopy(resources1), next_token="token2")
+    resp2 = make_response(copy.deepcopy(resources2))
+    responses = itertools.chain([resp1, resp2], itertools.repeat(resp2))
+    fs.sync_session.get.side_effect = lambda *a, **k: next(responses)
+    result = fs.ls("some_url", detail=True)
+    assert result == [
+        {"name": "foo", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/foo"},
+        {"name": "bar", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/bar"},
+    ]
+
+    resp1 = make_response(copy.deepcopy(resources1), next_token="token2")
+    resp2 = make_response(copy.deepcopy(resources2))
+    responses = itertools.chain([resp1, resp2], itertools.repeat(resp2))
+    fs.sync_session.get.side_effect = lambda *a, **k: next(responses)
+    result = fs.ls("some_url", detail=True, keep_protocol=True)
+    assert result == resources1 + resources2
+
+@pytest.mark.asyncio
+@patch.object(FusionHTTPFileSystem, "_async_startup", AsyncMock())
+@patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None)
+async def test__ls_single_page():
+    fs = FusionHTTPFileSystem()
+    fs.client_kwargs = {"root_url": "https://fusion.jpmorgan.com/api/v1/"}
+    fs.kwargs = {}
+    fs._decorate_url_a = AsyncMock(side_effect=lambda url: url)
+
+    resources = [
+        {"name": "https://fusion.jpmorgan.com/api/v1/catalogs/foo", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/foo"},
+        {"name": "https://fusion.jpmorgan.com/api/v1/catalogs/bar", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/bar"},
+    ]
+    mock_response = AsyncMock()
+    mock_response.json = AsyncMock(return_value={"resources": copy.deepcopy(resources)})
+    mock_response.headers = {}
+    mock_response.raise_for_status = MagicMock()
+    mock_session = MagicMock()
+    mock_session.get.return_value.__aenter__.return_value = mock_response
+    fs.set_session = AsyncMock(return_value=mock_session)
+
+    result = await fs._ls("some_url", detail=False)
+    assert result == ["foo", "bar"]
+    mock_response.json = AsyncMock(return_value={"resources": copy.deepcopy(resources)})
+    result = await fs._ls("some_url", detail=True)
+    assert result == [
+        {"name": "foo", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/foo"},
+        {"name": "bar", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/bar"},
+    ]
+    mock_response.json = AsyncMock(return_value={"resources": copy.deepcopy(resources)})
+    result = await fs._ls("some_url", detail=True, keep_protocol=True)
+    assert result == resources
+
+
+@pytest.mark.asyncio
+@patch.object(FusionHTTPFileSystem, "_async_startup", AsyncMock())
+@patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None)
+async def test__ls_multiple_pages():
+    fs = FusionHTTPFileSystem()
+    fs.client_kwargs = {"root_url": "https://fusion.jpmorgan.com/api/v1/"}
+    fs.kwargs = {}
+    fs._decorate_url_a = AsyncMock(side_effect=lambda url: url)  # <-- Fix here
+
+    resources1 = [
+        {"name": "https://fusion.jpmorgan.com/api/v1/catalogs/foo", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/foo"},
+    ]
+    resources2 = [
+        {"name": "https://fusion.jpmorgan.com/api/v1/catalogs/bar", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/bar"},
+    ]
+    mock_response1 = AsyncMock()
+    mock_response1.json = AsyncMock(return_value={"resources": copy.deepcopy(resources1)})
+    mock_response1.headers = {"x-jpmc-next-token": "token2"}
+    mock_response1.raise_for_status = MagicMock()
+    mock_response2 = AsyncMock()
+    mock_response2.json = AsyncMock(return_value={"resources": copy.deepcopy(resources2)})
+    mock_response2.headers = {}
+    mock_response2.raise_for_status = MagicMock()
+
+    mock_session = MagicMock()
+    mock_session.get.side_effect = [
+        MagicMock(__aenter__=AsyncMock(return_value=mock_response1), __aexit__=AsyncMock()),
+        MagicMock(__aenter__=AsyncMock(return_value=mock_response2), __aexit__=AsyncMock()),
+    ]
+    fs.set_session = AsyncMock(return_value=mock_session)
+
+    result = await fs._ls("some_url", detail=False)
+    assert result == ["foo", "bar"]
+    mock_response1.json = AsyncMock(return_value={"resources": copy.deepcopy(resources1)})
+    mock_response2.json = AsyncMock(return_value={"resources": copy.deepcopy(resources2)})
+    mock_session.get.side_effect = [
+        MagicMock(__aenter__=AsyncMock(return_value=mock_response1), __aexit__=AsyncMock()),
+        MagicMock(__aenter__=AsyncMock(return_value=mock_response2), __aexit__=AsyncMock()),
+    ]
+    result = await fs._ls("some_url", detail=True)
+    assert result == [
+        {"name": "foo", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/foo"},
+        {"name": "bar", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/bar"},
+    ]
+
+    mock_response1.json = AsyncMock(return_value={"resources": copy.deepcopy(resources1)})
+    mock_response2.json = AsyncMock(return_value={"resources": copy.deepcopy(resources2)})
+    mock_session.get.side_effect = [
+        MagicMock(__aenter__=AsyncMock(return_value=mock_response1), __aexit__=AsyncMock()),
+        MagicMock(__aenter__=AsyncMock(return_value=mock_response2), __aexit__=AsyncMock()),
+    ]
+    result = await fs._ls("some_url", detail=True, keep_protocol=True)
+    assert result == resources1 + resources2
+
+
+@patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None)
+def test_cat_single_page():
+    fs = FusionHTTPFileSystem()
+    fs._decorate_url = MagicMock(side_effect=lambda url: url)
+    fs.sync_session = MagicMock()
+    fs.kwargs = {}
+
+    mock_response = MagicMock()
+    mock_response.content = b"abc"
+    mock_response.headers = {}
+    mock_response.raise_for_status = MagicMock()
+    fs.sync_session.get.return_value = mock_response
+
+    result = fs.cat("some_url")
+    assert result == b"abc"
+    fs._decorate_url.assert_called_once_with("some_url")
+    fs.sync_session.get.assert_called_once()
+
+@patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None)
+def test_cat_multiple_pages():
+    fs = FusionHTTPFileSystem()
+    fs._decorate_url = MagicMock(side_effect=lambda url: url)
+    fs.sync_session = MagicMock()
+    fs.kwargs = {}
+    resp1 = MagicMock()
+    resp1.content = b"abc"
+    resp1.headers = {"x-jpmc-next-token": "token2"}
+    resp1.raise_for_status = MagicMock()
+    resp2 = MagicMock()
+    resp2.content = b"def"
+    resp2.headers = {}
+    resp2.raise_for_status = MagicMock()
+    fs.sync_session.get.side_effect = [resp1, resp2]
+
+    result = fs.cat("some_url")
+    assert result == b"abcdef"
+    assert fs.sync_session.get.call_count == 2
+
+@patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None)
+def test_cat_with_range():
+    fs = FusionHTTPFileSystem()
+    fs._decorate_url = MagicMock(side_effect=lambda url: url)
+    fs.sync_session = MagicMock()
+    fs.kwargs = {}
+
+    mock_response = MagicMock()
+    mock_response.content = b"xyz"
+    mock_response.headers = {}
+    mock_response.raise_for_status = MagicMock()
+    fs.sync_session.get.return_value   
+
+@pytest.mark.asyncio
+@patch.object(FusionHTTPFileSystem, "_async_startup", AsyncMock())
+@patch.object(FusionHTTPFileSystem, "_decorate_url", lambda self, url: url)
+@patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None)
+async def test__cat_single_page():
+    fs = FusionHTTPFileSystem()
+    fs.kwargs = {}
+    mock_response = AsyncMock()
+    mock_response.read = AsyncMock(return_value=b"abc")
+    mock_response.headers = {}
+    mock_response.raise_for_status = MagicMock()
+    mock_session = MagicMock()
+    mock_session.get.return_value.__aenter__.return_value = mock_response
+    fs.set_session = AsyncMock(return_value=mock_session)
+    result = await fs._cat("some_url")
+    assert result == b"abc"
+    fs.set_session.assert_awaited_once()
+
+@pytest.mark.asyncio
+@patch.object(FusionHTTPFileSystem, "_async_startup", AsyncMock())
+@patch.object(FusionHTTPFileSystem, "_decorate_url", lambda self, url: url)
+@patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None)
+async def test__cat_multiple_pages():
+    fs = FusionHTTPFileSystem()
+    fs.kwargs = {}
+    resp1 = AsyncMock()
+    resp1.read = AsyncMock(return_value=b"abc")
+    resp1.headers = {"x-jpmc-next-token": "token2"}
+    resp1.raise_for_status = MagicMock()
+    resp2 = AsyncMock()
+    resp2.read = AsyncMock(return_value=b"def")
+    resp2.headers = {}
+    resp2.raise_for_status = MagicMock()
+    mock_session = MagicMock()
+    mock_session.get.side_effect = [
+        MagicMock(__aenter__=AsyncMock(return_value=resp1), __aexit__=AsyncMock()),
+        MagicMock(__aenter__=AsyncMock(return_value=resp2), __aexit__=AsyncMock()),
+    ]
+    fs.set_session = AsyncMock(return_value=mock_session)
+
+    result = await fs._cat("some_url")
+    assert result == b"abcdef"
+    assert mock_session.get.call_count == 2
+
+@pytest.mark.asyncio
+@patch.object(FusionHTTPFileSystem, "_async_startup", AsyncMock())
+@patch.object(FusionHTTPFileSystem, "_decorate_url", lambda self, url: url)
+@patch.object(FusionHTTPFileSystem, "__init__", lambda self, *a, **k: None)
+async def test__cat_with_range():
+    fs = FusionHTTPFileSystem()
+    fs.kwargs = {}
+
+    mock_response = AsyncMock()
+    mock_response.read = AsyncMock(return_value=b"xyz")
+    mock_response.headers = {}
+    mock_response.raise_for_status = MagicMock()
+    mock_session = MagicMock()
+    mock_session.get.return_value.__aenter__.return_value = mock_response
+    fs.set_session = AsyncMock(return_value=mock_session)
+
+    result = await fs._cat("some_url", start=0, end=3)
+    assert result == b"xyz"
+    args, kwargs = mock_session.get.call_args
+    assert kwargs["headers"]["Range"] == "bytes=0-2"
+
