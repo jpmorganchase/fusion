@@ -533,7 +533,8 @@ class Fusion:
             "category",
             "subCategory",
             "reportOwner",
-            "lob"
+            "lob",
+            "description"
         ]
 
         if report_id:
@@ -602,12 +603,14 @@ class Fusion:
             
             if not display_all_columns:
                 cols = [
-                    "elementId",
-                    "elementName",
-                    "elementType",
+                    "id",
+                    "path",
+                    "status",
                     "dataType",
                     "isMandatory",
-                    "defaultValue"
+                    "description",
+                    "createdBy",
+                    "name"
                 ]
                 cols = [c for c in cols if c in rep_df.columns]
                 rep_df = rep_df[cols]
