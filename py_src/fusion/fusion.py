@@ -537,7 +537,7 @@ class Fusion:
         ]
 
         if report_id:
-            url = f"{self.root_url}/v1/reports/{report_id}"
+            url = f"{self.root_url}reports/{report_id}"
             resp = self.session.get(url)
             if resp.status_code == 200:
                 resp_json = resp.json()
@@ -552,7 +552,7 @@ class Fusion:
                 resp.raise_for_status()
 
         else:
-            url = f"{self.root_url}/v1/reports/list"
+            url = f"{self.root_url}reports/list"
             resp = self.session.post(url)  # No body
             if resp.status_code == 200:
                 data = resp.json()
@@ -590,7 +590,7 @@ class Fusion:
         Returns:
             pandas.DataFrame: A dataframe with a row for each report element (attribute).
         """
-        url = f"{self.root_url}/v1/reports/{report_id}/reportElements"
+        url = f"{self.root_url}reports/{report_id}/reportElements"
         resp = self.session.get(url)
         
         if resp.status_code == 200:
