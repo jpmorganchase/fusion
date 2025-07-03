@@ -537,32 +537,34 @@ class Fusion:
         ]
 
         if report_id:
-            url = f"{self.root_url}reports/{report_id}"
+            url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
             resp = self.session.get(url)
-            if resp.status_code == 200:
+            status_success = 200
+            if resp.status_code == status_success:
                 resp_json = resp.json()
-                df = pd.json_normalize(resp_json)
+                rep_df = pd.json_normalize(resp_json)
                 if not display_all_columns:
-                    cols = [c for c in key_columns if c in df.columns]
-                    df = df[cols]
+                    cols = [c for c in key_columns if c in rep_df.columns]
+                    rep_df = rep_df[cols]
                 if output:
-                    print(df)
-                return df
+                    print(rep_df)
+                return rep_df
             else:
                 resp.raise_for_status()
 
         else:
-            url = f"{self.root_url}reports/list"
-            resp = self.session.post(url)  # No body
-            if resp.status_code == 200:
+            url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/list"
+            resp = self.session.post(url)
+            status_success = 200  # No body
+            if resp.status_code == status_success:
                 data = resp.json()
-                df = pd.json_normalize(data.get("content", data))
+                rep_df = pd.json_normalize(data.get("content", data))
                 if not display_all_columns:
-                    cols = [c for c in key_columns if c in df.columns]
-                    df = df[cols]
+                    cols = [c for c in key_columns if c in rep_df.columns]
+                    rep_df = rep_df[cols]
                 if output:
-                    print(df)
-                return df
+                    print(rep_df)
+                return rep_df
             else:
                 resp.raise_for_status()
 
@@ -590,12 +592,13 @@ class Fusion:
         Returns:
             pandas.DataFrame: A dataframe with a row for each report element (attribute).
         """
-        url = f"{self.root_url}reports/{report_id}/reportElements"
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
         resp = self.session.get(url)
+        status_success = 200
         
-        if resp.status_code == 200:
+        if resp.status_code == status_success:
             data = resp.json()
-            df = pd.json_normalize(data)
+            rep_df = pd.json_normalize(data)
             
             if not display_all_columns:
                 cols = [
@@ -606,12 +609,12 @@ class Fusion:
                     "isMandatory",
                     "defaultValue"
                 ]
-                cols = [c for c in cols if c in df.columns]
-                df = df[cols]
+                cols = [c for c in cols if c in rep_df.columns]
+                rep_df = rep_df[cols]
 
             if output:
-                print(df)
-            return df
+                print(rep_df)
+            return rep_df
         else:
             resp.raise_for_status()
 
