@@ -133,7 +133,8 @@ def test_report_attributes_create(requests_mock: requests_mock.Mocker, fusion_ob
     url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
 
     expected_payload = [{
-        "name": "revenue",
+        "name": "revenue",#
+        
         "title": "Revenue",
         "description": None,
         "technicalDataType": None,
