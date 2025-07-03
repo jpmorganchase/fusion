@@ -548,7 +548,7 @@ class Fusion:
                     cols = [c for c in key_columns if c in rep_df.columns]
                     rep_df = rep_df[cols]
                 if output:
-                    print(rep_df)
+                    print(rep_df) #noqa
                 return rep_df
             else:
                 resp.raise_for_status()
@@ -564,7 +564,7 @@ class Fusion:
                     cols = [c for c in key_columns if c in rep_df.columns]
                     rep_df = rep_df[cols]
                 if output:
-                    print(rep_df)
+                    print(rep_df) #noqa
                 return rep_df
             else:
                 resp.raise_for_status()
@@ -616,7 +616,7 @@ class Fusion:
                 rep_df = rep_df[cols]
 
             if output:
-                print(rep_df)
+                print(rep_df)#noqa
             return rep_df
         else:
             resp.raise_for_status()
