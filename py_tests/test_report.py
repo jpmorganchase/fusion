@@ -1,4 +1,4 @@
-"""Test file for report.py"""
+"""Test file for the updated reports.py"""
 
 import pytest
 import requests
@@ -8,81 +8,97 @@ from fusion.fusion import Fusion
 from fusion.report import Report
 
 
-def test_report_class_object_representation() -> None:
-    """Test the object representation of the Report class."""
-    report = Report(identifier="my_report", report={"key": "value"})
-    assert repr(report)
-
-
-def test_add_registered_attribute(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    """Test the add_registered_attribute method."""
-    catalog = "my_catalog"
-    report = "TEST_REPORT"
-    attribute_identifier = "my_attribute"
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{report}/attributes/{attribute_identifier}/registration"
-
-    requests_mock.post(url, json={"isCriticalDataElement": True})
-
-    report_obj = Report(identifier="TEST_REPORT")
-    report_obj.client = fusion_obj
-    resp = report_obj.add_registered_attribute(
-        attribute_identifier="my_attribute", is_key_data_element=True, catalog=catalog, return_resp_obj=True
+def test_report_object_representation() -> None:
+    """Test that Report object is correctly instantiated and represented."""
+    report = Report(
+        name="MyReport",
+        tier_type="Tier1",
+        lob="Risk",
+        data_node_id={"id": "node123"},
+        alternative_id={"alt_id": "A1"},
+        title="Test Report"
     )
+    assert report.name == "MyReport"
+    assert report.title == "Test Report"
+    assert isinstance(repr(report), str)
+
+def test_link_attributes_to_terms_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    # Setup dummy data using AttributeTermMapping
+    report_id = "report-123"
+    mappings: list[Report.AttributeTermMapping] = [
+        {
+            "attribute": {"id": "attr-1"},
+            "term": {"id": "term-1"},
+            "isKDE": True,
+        },
+        {
+            "attribute": {"id": "attr-2"},
+            "term": {"id": "term-2"},
+            "isKDE": False,
+        },
+    ]
+
+    # Mock URL
+    base_url = fusion_obj._get_new_root_url()
+    url = f"{base_url}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
+    requests_mock.post(url, status_code=200, json={})
+
+    # Create Report with client
+    report = Report(
+        name="test-report",
+        title="Test Report",
+        tier_type="Gold",
+        lob="CIB",
+        data_node_id={"id": "dn-123"},
+        alternative_id={"id": "alt-123"},
+    )
+    report.client = fusion_obj
+
+    # Call method
+    resp = report.link_attributes_to_terms(
+        report_id=report_id,
+        mappings=mappings,
+        return_resp_obj=True,
+    )
+    http_ok = 200
     assert isinstance(resp, requests.Response)
-    status_code = 200
-    assert resp.status_code == status_code
+    assert resp.status_code == http_ok
 
 
-def test_create_report_no_tier(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    """Test creating a Report object without a tier."""
-    catalog = "my_catalog"
-    report = "REPORT"
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{report}"
 
-    exp_data = {
-        "identifier": "REPORT",
-        "title": "Report",
-        "category": None,
-        "description": "Report",
-        "frequency": "Once",
-        "isInternalOnlyDataset": False,
-        "isThirdPartyData": True,
-        "isRestricted": None,
-        "isRawData": True,
-        "maintainer": "J.P. Morgan Fusion",
-        "source": None,
-        "region": None,
-        "publisher": "J.P. Morgan",
-        "product": None,
-        "subCategory": None,
-        "tags": None,
-        "createdDate": None,
-        "modifiedDate": None,
-        "deliveryChannel": ["API"],
-        "language": "English",
-        "status": "Available",
-        "type": "Report",
-        "containerType": "Snapshot-Full",
-        "snowflake": None,
-        "complexity": None,
-        "isImmutable": None,
-        "isMnpi": None,
-        "isPci": None,
-        "isPii": None,
-        "isClient": None,
-        "isPublic": None,
-        "isInternal": None,
-        "isConfidential": None,
-        "isHighlyConfidential": None,
-        "isActive": None,
-        "owners": None,
-        "applicationId": None,
-        "report": {"tier": ""},
-    }
+def test_create_report_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test Report.create() with mocked Fusion API."""
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports"
+    expected_response = {"status": "ok"}
+    http_ok = 200
 
-    requests_mock.post(url, json=exp_data)
+    requests_mock.post(url, json=expected_response, status_code=http_ok)
 
-    report_obj = Report(identifier="REPORT")
-    report_obj.client = fusion_obj
-    with pytest.raises(ValueError, match="Tier cannot be blank for reports."):
-        report_obj.create(catalog=catalog)
+    report = Report(
+        name="AutoReport",
+        tier_type="TierX",
+        lob="Ops",
+        data_node_id={"id": "node001"},
+        alternative_id={"alt": "alt001"},
+    )
+    report.client = fusion_obj
+
+    resp = report.create(return_resp_obj=True)
+
+    assert resp is not None
+    assert resp.status_code == http_ok
+    assert resp.json() == expected_response
+
+
+def test_create_without_client_raises() -> None:
+    """Test that Report.create() raises if no Fusion client is set."""
+    report = Report(
+        name="BrokenReport",
+        tier_type="TierX",
+        lob="Ops",
+        data_node_id={"id": "node001"},
+        alternative_id={"alt": "alt001"},
+    )
+
+    with pytest.raises(ValueError, match="A Fusion client object is required."):
+        report.create()
