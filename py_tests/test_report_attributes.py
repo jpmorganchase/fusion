@@ -134,7 +134,6 @@ def test_report_attributes_create(requests_mock: requests_mock.Mocker, fusion_ob
 
     expected_payload = [{
         "name": "revenue",
-        
         "title": "Revenue",
         "description": None,
         "technicalDataType": None,

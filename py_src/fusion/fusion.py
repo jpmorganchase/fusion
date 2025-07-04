@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from http import HTTPStatus
 import json as js
 import logging
 import re
@@ -499,10 +500,11 @@ class Fusion:
 
         return ds_df
             
+
     def list_reports(
         self,
         report_id: str | None = None,
-        output: bool = False,  # Retained for compatibility, no longer used
+        output: bool = False,
         display_all_columns: bool = False,
     ) -> pd.DataFrame:
         """Retrieve a single report or all reports from the Fusion system."""
@@ -512,24 +514,27 @@ class Fusion:
         ]
 
         if report_id:
-            status_success = 200
             url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
             resp = self.session.get(url)
-            if resp.status_code == status_success:
+            if resp.status_code == HTTPStatus.OK:
                 rep_df = pd.json_normalize(resp.json())
                 if not display_all_columns:
                     rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
+                if output:
+                    pass
                 return rep_df
             else:
                 resp.raise_for_status()
         else:
             url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/list"
             resp = self.session.post(url)
-            if resp.status_code == 200:
+            if resp.status_code == HTTPStatus.OK:
                 data = resp.json()
                 rep_df = pd.json_normalize(data.get("content", data))
                 if not display_all_columns:
                     rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
+                if output:
+                    pass
                 return rep_df
             else:
                 resp.raise_for_status()
@@ -538,15 +543,14 @@ class Fusion:
     def list_report_attributes(
         self,
         report_id: str,
-        output: bool = False,  # Retained for compatibility, no longer used
+        output: bool = False,
         display_all_columns: bool = False,
     ) -> pd.DataFrame:
         """Retrieve the attributes (report elements) of a specific report."""
         url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
         resp = self.session.get(url)
-        status_success = 200
 
-        if resp.status_code == status_success:
+        if resp.status_code == HTTPStatus.OK:
             rep_df = pd.json_normalize(resp.json())
             if not display_all_columns:
                 key_columns = [
@@ -554,9 +558,12 @@ class Fusion:
                     "description", "createdBy", "name"
                 ]
                 rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
+            if output:
+                pass
             return rep_df
         else:
             resp.raise_for_status()
+
 
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
