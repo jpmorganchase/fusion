@@ -28,6 +28,7 @@ import requests
 from dateutil import parser
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
+from requests import Session
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -984,3 +985,50 @@ def file_name_to_url(
         distribution_to_url("", dataset, datasetseries, ext, catalog, is_download).split("/")[1:]
     )
 
+
+
+def handle_paginated_request(session: Session, url: str, headers: dict[str, str] | None = None) -> dict[str, Any]:
+    """
+    Fetches all pages from a paginated API endpoint using the x-jpmc-next-token header,
+    merges the results, and returns a single combined response dictionary.
+    """
+    all_responses: list[dict[str, Any]] = []
+    current_headers = headers.copy() if headers else {}
+
+    next_token = None
+
+    while True:
+        if next_token:
+            current_headers["x-jpmc-next-token"] = next_token
+
+        response = session.get(url, headers=current_headers)
+        response.raise_for_status()
+        response_data = response.json()
+        all_responses.append(response_data)
+
+        next_token = response.headers.get("x-jpmc-next-token")
+        if not next_token:
+            break
+
+    return _merge_responses(all_responses)
+
+
+def _merge_responses(responses: list[dict[str, Any]]) -> dict[str, Any]:
+    """
+    Merges all top-level list fields from a list of response dictionaries.
+    For each top-level key that is a list, concatenates the lists across all responses.
+    Non-list fields are taken from the first response.
+    """
+    if not responses:
+        return {}
+
+    merged = responses[0].copy()
+    # Find all top-level keys that are lists in the first response
+    list_keys = [k for k, v in merged.items() if isinstance(v, list)]
+
+    for key in list_keys:
+        for response in responses[1:]:
+            if key in response and isinstance(response[key], list):
+                merged[key].extend(response[key])
+
+    return merged

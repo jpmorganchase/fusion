@@ -38,6 +38,7 @@ from .utils import (
     file_name_to_url,
     get_default_fs,
     get_session,
+    handle_paginated_request,
     is_dataset_raw,
     json_to_table,
     normalise_dt_param_str,
@@ -70,18 +71,17 @@ class Fusion:
 
     @staticmethod
     def _call_for_dataframe(url: str, session: requests.Session) -> pd.DataFrame:
-        """Private function that calls an API endpoint and returns the data as a pandas dataframe.
-
+        """
+        Calls an API endpoint and returns the data as a pandas dataframe, with pagination support.
+        Private function that calls an API endpoint and returns the data as a pandas dataframe.
         Args:
             url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
             session (requests.Session): Specify a proxy if required to access the authentication server. Defaults to {}.
-
         Returns:
             pandas.DataFrame: a dataframe containing the requested data.
         """
-        response = session.get(url)
-        response.raise_for_status()
-        table = response.json()["resources"]
+        response_data = handle_paginated_request(session, url)
+        table = response_data.get("resources", [])
         ret_df = pd.DataFrame(table).reset_index(drop=True)
         return ret_df
 
@@ -394,27 +394,25 @@ class Fusion:
         # try for exact match
         if contains and isinstance(contains, str):
             url = f"{self.root_url}catalogs/{catalog}/datasets/{contains}"
-            resp = self.session.get(url)
-            status_success = 200
-            if resp.status_code == status_success:
-                resp_json = resp.json()
-                if not display_all_columns:
-                    cols = [
-                        "identifier",
-                        "title",
-                        "containerType",
-                        "region",
-                        "category",
-                        "coverageStartDate",
-                        "coverageEndDate",
-                        "description",
-                        "status",
-                        "type",
-                    ]
-                    data = {col: resp_json.get(col, None) for col in cols}
-                    return pd.DataFrame([data])
-                else:
-                    return pd.json_normalize(resp_json)
+            resp_json = handle_paginated_request(self.session, url)
+
+            if not display_all_columns:
+                cols = [
+                    "identifier",
+                    "title",
+                    "containerType",
+                    "region",
+                    "category",
+                    "coverageStartDate",
+                    "coverageEndDate",
+                    "description",
+                    "status",
+                    "type",
+                ]
+                data = {col: resp_json.get(col, None) for col in cols}
+                return pd.DataFrame([data])
+            else:
+                return pd.json_normalize(resp_json)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets"
         ds_df = Fusion._call_for_dataframe(url, self.session)
@@ -1554,14 +1552,9 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        url_dataset = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}"
-        resp_dataset = self.session.get(url_dataset)
-        resp_dataset.raise_for_status()
-
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}/lineage"
-        resp = self.session.get(url)
-        data = resp.json()
-        relations_data = data["relations"]
+        data = handle_paginated_request(self.session, url)
+        relations_data = data.get("relations", [])
 
         restricted_datasets = [
             dataset_metadata["identifier"]
@@ -2701,18 +2694,22 @@ class Fusion:
 
         """
         catalog = self._use_catalog(catalog)
-
         url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+        data = handle_paginated_request(self.session, url)
 
-        resp = self.session.get(url)
-        dists = resp.json()["datasets"][0]["distributions"]
+        datasets = data.get("datasets", [])
+        if not datasets:
+            return pd.DataFrame()
 
-        data = []
+        dists = datasets[0].get("distributions", [])
+        rows = []
+        MEMBER_FORMAT_INDEX = 6  # Index for member_format in values list
         for dist in dists:
             values = dist.get("values")
-            member_id = values[5]
-            member_format = values[6]
-            data.append((member_id, member_format))
+            if values and len(values) > MEMBER_FORMAT_INDEX:
+                member_id = values[5]
+                member_format = values[MEMBER_FORMAT_INDEX]
+                rows.append((member_id, member_format))
 
-        members_df = pd.DataFrame(data, columns=["identifier", "format"])
+        members_df = pd.DataFrame(rows, columns=["identifier", "format"])
         return members_df
