@@ -640,6 +640,7 @@ def test_validate_incorrect_format_file_names() -> None:
     expected = [False]
     assert validate_file_names(paths) == expected
 
+
 def test_validate_error_paths() -> None:
     paths = ["path/to/catalog1__20230101.csv"]
     expected = [False]
@@ -650,6 +651,7 @@ def test_empty_input_list() -> None:
     paths: list[str] = []
     expected: list[bool] = []
     assert validate_file_names(paths) == expected
+
 
 def test_get_session(mocker: MockerFixture, credentials: FusionCredentials, fusion_obj: Fusion) -> None:
     session = get_session(credentials, fusion_obj.root_url)
@@ -886,16 +888,19 @@ def test_snake_to_camel() -> None:
     exp_output = "thisIsSnake"
     assert output_ == exp_output
 
-def test_folder_does_not_exist(mock_fs_fusion: MagicMock)  -> None:
+
+def test_folder_does_not_exist(mock_fs_fusion: MagicMock) -> None:
     mock_fs_fusion.exists.return_value = False
     with pytest.raises(FileNotFoundError, match="does not exist"):
         validate_file_formats(mock_fs_fusion, "/nonexistent")
+
 
 def test_single_raw_file(mock_fs_fusion: MagicMock) -> None:
     mock_fs_fusion.makedirs("/test")
     mock_fs_fusion.touch("/test/file1.raw")
     # Should not raise
     validate_file_formats(mock_fs_fusion, "/test")
+
 
 def test_only_supported_files(mock_fs_fusion: MagicMock) -> None:
     mock_fs_fusion.makedirs("/data")
@@ -905,17 +910,15 @@ def test_only_supported_files(mock_fs_fusion: MagicMock) -> None:
     # Should not raise
     validate_file_formats(mock_fs_fusion, "/data")
 
+
 def test_multiple_raw_files(mock_fs_fusion: MagicMock) -> None:
     mock_fs_fusion.exists.return_value = True
-    mock_fs_fusion.find.return_value = [
-        "/mixed/file1.unknown",
-        "/mixed/file2.custom",
-        "/mixed/readme.txt"
-    ]
+    mock_fs_fusion.find.return_value = ["/mixed/file1.unknown", "/mixed/file2.custom", "/mixed/readme.txt"]
     mock_fs_fusion.info.side_effect = lambda _: {"type": "file"}
 
     with pytest.raises(ValueError, match="Multiple raw files detected"):
         validate_file_formats(mock_fs_fusion, "/mixed")
+
 
 @pytest.mark.parametrize(
     (
@@ -943,9 +946,8 @@ def test_file_name_to_url(
     expected_ext: str,
     expected_series: str,
 ) -> None:
-
     def mock_distribution_to_url(
-        root_url: str, # noqa: ARG001
+        root_url: str,  # noqa: ARG001
         dataset_arg: str,
         series: str,
         ext: str,
@@ -959,7 +961,6 @@ def test_file_name_to_url(
     result = file_name_to_url(file_name, dataset, catalog, is_download)
     expected_url = f"mock/{catalog}/{dataset}/{expected_series}.{expected_ext}?dl={is_download}"
     assert result == expected_url
-
 
 
 def test_handle_paginated_request_preserves_auth_headers(mocker: MockerFixture) -> None:

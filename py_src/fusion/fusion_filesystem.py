@@ -390,8 +390,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 headers["x-jpmc-next-token"] = next_token
             if start is not None or end is not None:
                 range_header = "bytes={}-{}".format(
-                    start if start is not None else "",
-                    (end - 1) if end is not None else ""
+                    start if start is not None else "", (end - 1) if end is not None else ""
                 )
                 headers["Range"] = range_header
             response = session.get(url, headers=headers, **self.kwargs)
@@ -417,8 +416,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 headers["x-jpmc-next-token"] = next_token
             if start is not None or end is not None:
                 range_header = "bytes={}-{}".format(
-                    start if start is not None else "",
-                    (end - 1) if end is not None else ""
+                    start if start is not None else "", (end - 1) if end is not None else ""
                 )
                 headers["Range"] = range_header
             async with session.get(url, headers=headers, **self.kwargs) as response:
