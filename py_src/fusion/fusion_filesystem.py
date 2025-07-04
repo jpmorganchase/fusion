@@ -286,7 +286,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         while True:
             if next_token:
                 headers["x-jpmc-next-token"] = next_token
-            response = session.get(url, headers=headers, **self.kwargs)
+            kwargs["headers"] = headers
+            response = session.get(url, **kwargs)
             response.raise_for_status()
             data = response.json()
             resources = data.get("resources", [])
