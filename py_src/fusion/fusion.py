@@ -498,129 +498,65 @@ class Fusion:
             pass
 
         return ds_df
-        
+            
     def list_reports(
         self,
         report_id: str | None = None,
-        output: bool = False,
+        output: bool = False,  # Retained for compatibility, no longer used
         display_all_columns: bool = False,
     ) -> pd.DataFrame:
-        """Retrieve a single report or all reports from the Fusion system.
-
-        If a `report_id` is provided, this function fetches a specific report
-        using GET /v1/reports/{reportId}. If not, it retrieves all available
-        reports using POST /v1/reports/list with no filters.
-
-        The result is returned as a pandas DataFrame, optionally filtered to
-        show only key metadata fields.
-
-        Args:
-            report_id (str, optional): Unique identifier for a report. If provided,
-                a GET request is made to retrieve that report.
-            output (bool, optional): If True, print the resulting DataFrame. Defaults to False.
-            display_all_columns (bool, optional): If True, return all fields from the response.
-                Otherwise, return a subset of key fields.
-
-        Returns:
-            pandas.DataFrame: A dataframe with one or more report records.
-        """
+        """Retrieve a single report or all reports from the Fusion system."""
         key_columns = [
-            "id",
-            "name",
-            "alternateId",
-            "tierType",
-            "frequency",
-            "category",
-            "subCategory",
-            "reportOwner",
-            "lob",
-            "description"
+            "id", "name", "alternateId", "tierType", "frequency",
+            "category", "subCategory", "reportOwner", "lob", "description"
         ]
 
         if report_id:
+            status_success = 200
             url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
             resp = self.session.get(url)
-            status_success = 200
             if resp.status_code == status_success:
-                resp_json = resp.json()
-                rep_df = pd.json_normalize(resp_json)
+                rep_df = pd.json_normalize(resp.json())
                 if not display_all_columns:
-                    cols = [c for c in key_columns if c in rep_df.columns]
-                    rep_df = rep_df[cols]
-                if output:
-                    print(rep_df) #noqa
+                    rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
                 return rep_df
             else:
                 resp.raise_for_status()
-
         else:
             url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/list"
             resp = self.session.post(url)
-            status_success = 200  # No body
-            if resp.status_code == status_success:
+            if resp.status_code == 200:
                 data = resp.json()
                 rep_df = pd.json_normalize(data.get("content", data))
                 if not display_all_columns:
-                    cols = [c for c in key_columns if c in rep_df.columns]
-                    rep_df = rep_df[cols]
-                if output:
-                    print(rep_df) #noqa
+                    rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
                 return rep_df
             else:
                 resp.raise_for_status()
-
 
 
     def list_report_attributes(
         self,
         report_id: str,
-        output: bool = False,
+        output: bool = False,  # Retained for compatibility, no longer used
         display_all_columns: bool = False,
     ) -> pd.DataFrame:
-        """Retrieve the attributes (report elements) of a specific report.
-
-        This function calls the GET /v1/reports/{reportId}/reportElements endpoint to
-        fetch detailed attributes of a given report. It returns the result as a
-        pandas DataFrame for easier analysis and processing.
-
-        Args:
-            report_id (str): The unique identifier of the report whose attributes
-                (report elements) are to be retrieved.
-            output (bool, optional): If True, print the resulting DataFrame. Defaults to False.
-            display_all_columns (bool, optional): If True, return all fields from the response.
-                Otherwise, return only a subset of key fields.
-
-        Returns:
-            pandas.DataFrame: A dataframe with a row for each report element (attribute).
-        """
+        """Retrieve the attributes (report elements) of a specific report."""
         url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
         resp = self.session.get(url)
         status_success = 200
-        
-        if resp.status_code == status_success:
-            data = resp.json()
-            rep_df = pd.json_normalize(data)
-            
-            if not display_all_columns:
-                cols = [
-                    "id",
-                    "path",
-                    "status",
-                    "dataType",
-                    "isMandatory",
-                    "description",
-                    "createdBy",
-                    "name"
-                ]
-                cols = [c for c in cols if c in rep_df.columns]
-                rep_df = rep_df[cols]
 
-            if output:
-                print(rep_df)#noqa
+        if resp.status_code == status_success:
+            rep_df = pd.json_normalize(resp.json())
+            if not display_all_columns:
+                key_columns = [
+                    "id", "path", "status", "dataType", "isMandatory",
+                    "description", "createdBy", "name"
+                ]
+                rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
             return rep_df
         else:
             resp.raise_for_status()
-
 
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
