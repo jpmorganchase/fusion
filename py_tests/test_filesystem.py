@@ -650,7 +650,7 @@ def test_ls_single_page() -> None:
             },
         ]
         resp = make_response(resources)
-        fs.sync_session.get.return_value = resp  # type: ignore[attr-defined]
+        fs.sync_session.get.return_value = resp
         result = fs.ls("some_url", detail=False)
         assert result == ["foo", "bar"]
         result = fs.ls("some_url", detail=True)
@@ -694,13 +694,13 @@ def test_ls_multiple_pages() -> None:
         resp1 = make_response(copy.deepcopy(resources1), next_token="token2")
         resp2 = make_response(copy.deepcopy(resources2))
         responses = itertools.chain([resp1, resp2], itertools.repeat(resp2))
-        fs.sync_session.get.side_effect = lambda *_, **__: next(responses)  # type: ignore[attr-defined]
+        fs.sync_session.get.side_effect = lambda *_, **__: next(responses)
         result = fs.ls("some_url", detail=False)
         assert result == ["foo", "bar"]
         resp1 = make_response(copy.deepcopy(resources1), next_token="token2")
         resp2 = make_response(copy.deepcopy(resources2))
         responses = itertools.chain([resp1, resp2], itertools.repeat(resp2))
-        fs.sync_session.get.side_effect = lambda *_, **__: next(responses)  # type: ignore[attr-defined]
+        fs.sync_session.get.side_effect = lambda *_, **__: next(responses)
         result = fs.ls("some_url", detail=True)
         assert result == [
             {"name": "foo", "identifier": "https://fusion.jpmorgan.com/api/v1/catalogs/foo"},
@@ -709,7 +709,7 @@ def test_ls_multiple_pages() -> None:
         resp1 = make_response(copy.deepcopy(resources1), next_token="token2")
         resp2 = make_response(copy.deepcopy(resources2))
         responses = itertools.chain([resp1, resp2], itertools.repeat(resp2))
-        fs.sync_session.get.side_effect = lambda *_, **__: next(responses)  # type: ignore[attr-defined]
+        fs.sync_session.get.side_effect = lambda *_, **__: next(responses)
         result = fs.ls("some_url", detail=True, keep_protocol=True)
         assert result == resources1 + resources2
 
@@ -826,12 +826,12 @@ def test_cat_single_page() -> None:
         mock_response.content = b"abc"
         mock_response.headers = {}
         mock_response.raise_for_status = MagicMock()
-        fs.sync_session.get.return_value = mock_response  # type: ignore[attr-defined]
+        fs.sync_session.get.return_value = mock_response
 
         result = fs.cat("some_url")
         assert result == b"abc"
         fs._decorate_url.assert_called_once_with("some_url")  # type: ignore[attr-defined]
-        fs.sync_session.get.assert_called_once()  # type: ignore[attr-defined]
+        fs.sync_session.get.assert_called_once()
 
 
 @patch.object(FusionHTTPFileSystem, "__init__", lambda *_, **__: None)
@@ -851,11 +851,11 @@ def test_cat_multiple_pages() -> None:
         resp2.content = b"def"
         resp2.headers = {}
         resp2.raise_for_status = MagicMock()
-        fs.sync_session.get.side_effect = [resp1, resp2]  # type: ignore[attr-defined]
+        fs.sync_session.get.side_effect = [resp1, resp2]
 
         result = fs.cat("some_url")
         assert result == b"abcdef"
-        assert fs.sync_session.get.call_count == PAGINATED  # type: ignore[attr-defined]
+        assert fs.sync_session.get.call_count == PAGINATED
 
 
 @patch.object(FusionHTTPFileSystem, "__init__", lambda *_, **__: None)
@@ -872,11 +872,11 @@ def test_cat_with_range() -> None:
         mock_response.content = b"xyz"
         mock_response.headers = {}
         mock_response.raise_for_status = MagicMock()
-        fs.sync_session.get.return_value = mock_response  # type: ignore[attr-defined]
+        fs.sync_session.get.return_value = mock_response
 
         result = fs.cat("some_url", start=0, end=3)
         assert result == b"xyz"
-        args, kwargs = fs.sync_session.get.call_args  # type: ignore[attr-defined]
+        args, kwargs = fs.sync_session.get.call_args
         assert kwargs["headers"]["Range"] == "bytes=0-2"
 
 
