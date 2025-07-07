@@ -399,7 +399,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     start if start is not None else "", (end - 1) if end is not None else ""
                 )
                 headers["Range"] = range_header
-            response = session.get(url, headers=headers, **self.kwargs)
+
+            kwargs["headers"] = headers
+            response = session.get(url, **kwargs)
             response.raise_for_status()
             content = response.content
             all_content += content
@@ -425,7 +427,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     start if start is not None else "", (end - 1) if end is not None else ""
                 )
                 headers["Range"] = range_header
-            async with session.get(url, headers=headers, **self.kwargs) as response:
+
+            kwargs["headers"] = headers
+            async with session.get(url, **kwargs) as response:
                 response.raise_for_status()
                 content = await response.read()
                 all_content += content
