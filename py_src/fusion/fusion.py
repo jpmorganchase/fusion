@@ -538,7 +538,7 @@ class Fusion:
                 return rep_df
             else:
                 resp.raise_for_status()
-        return None
+        return pd.DataFrame(columns=key_columns)
 
 
     def list_report_attributes(
@@ -564,7 +564,7 @@ class Fusion:
             return rep_df
         else:
             resp.raise_for_status()
-        return None
+        return pd.DataFrame(columns=["id", "path", "status", "dataType", "isMandatory", "description", "createdBy", "name"])
 
 
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
