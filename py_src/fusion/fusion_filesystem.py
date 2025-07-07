@@ -149,11 +149,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         session = await self.set_session()
         headers = self.kwargs.get("headers", {}).copy() if "headers" in self.kwargs else {}
 
+        call_kwargs = {k: v for k, v in self.kwargs.items() if k != "headers"}
+        headers = self.kwargs.get("headers", {}).copy() if "headers" in self.kwargs else {}
+
         try:
             while True:
                 if next_token:
                     headers["x-jpmc-next-token"] = next_token
-                async with session.get(url, headers=headers, **self.kwargs) as r:
+                call_kwargs["headers"] = headers
+                async with session.get(url, **call_kwargs) as r:
                     self._raise_not_found_for_status(r, url)
                     try:
                         out: dict[Any, Any] = await r.json()
@@ -317,7 +321,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         while True:
             if next_token:
                 headers["x-jpmc-next-token"] = next_token
-            async with session.get(url, headers=headers, **self.kwargs) as response:
+            kwargs["headers"] = headers
+            async with session.get(url, **kwargs) as response:
                 response.raise_for_status()
                 data = await response.json()
                 resources = data.get("resources", [])
