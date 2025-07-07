@@ -307,7 +307,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 for k in ret:
                     k["name"] = k["name"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1]
         elif not keep_protocol:
-            return [x["identifier"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
+            return [x.split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
         return ret
 
     async def _ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
@@ -338,7 +338,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 for k in ret:
                     k["name"] = k["name"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1]
         elif not keep_protocol:
-            return [x["identifier"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
+            return [x.split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
         return ret
 
     def exists(self, url: str, **kwargs: Any) -> Any:
