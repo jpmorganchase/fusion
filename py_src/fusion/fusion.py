@@ -564,7 +564,8 @@ class Fusion:
             return rep_df
         else:
             resp.raise_for_status()
-        return pd.DataFrame(columns=["id", "path", "status", "dataType", "isMandatory", "description", "createdBy", "name"])
+        return pd.DataFrame(columns=["id", "path", "status", "dataType", "isMandatory", 
+                                     "description", "createdBy", "name"])
 
 
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
