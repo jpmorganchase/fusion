@@ -538,6 +538,7 @@ class Fusion:
                 return rep_df
             else:
                 resp.raise_for_status()
+        return None
 
 
     def list_report_attributes(
@@ -563,6 +564,7 @@ class Fusion:
             return rep_df
         else:
             resp.raise_for_status()
+        return None
 
 
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
