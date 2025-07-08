@@ -77,23 +77,23 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         self.sync_session = get_session(self.credentials, kwargs["client_kwargs"].get("root_url"))
         super().__init__(*args, **kwargs)
 
-    def get_last_response(self):
+    def _get_last_response(self):
         """Access the last HTTP response"""
         return self._last_response
 
-    async def get_last_async_response(self):
+    async def _get_last_async_response(self):
         """Access the last async HTTP response"""
         return self._last_async_response    
 
-    def get_next_token(self, token_header="x-jpmc-next-token"):
+    def _get_next_token(self, token_header="x-jpmc-next-token"):
         """Get pagination token from last response if available"""
         if self._last_response and token_header in self._last_response.headers:
             return self._last_response.headers[token_header]
         return None
     
-    async def get_next_async_token(self, token_header="x-jpmc-next-token"):
+    async def _get_next_async_token(self, token_header="x-jpmc-next-token"):
         """Get pagination token from last async response if available"""
-        resp = await self.get_last_async_response()
+        resp = await self._get_last_async_response()
         if resp and token_header in resp.headers:
             return resp.headers[token_header]
         return None
@@ -319,7 +319,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
         url = self._decorate_url(url)
         ret = super().ls(url, detail=detail, **kwargs)
-        next_token = self.get_next_token()
+        next_token = self._get_next_token()
         if next_token:
             all_results = list(ret)  
             while next_token:
@@ -328,7 +328,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 kwargs["headers"] = headers
                 more_results = super().ls(url, detail=detail, **kwargs)
                 all_results.extend(more_results)
-                next_token = self.get_next_token()
+                next_token = self._get_next_token()
                 
             ret = all_results
         
@@ -347,7 +347,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         await self._async_startup()
         url = await self._decorate_url_a(url)
         ret = await super()._ls(url, detail, **kwargs)
-        next_token = await self.get_next_async_token()
+        next_token = await self._get_next_async_token()
    
         if next_token:
             all_results = list(ret) 
@@ -360,7 +360,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 more_results = await super()._ls(url, detail, **kwargs)
                 all_results.extend(more_results)
 
-                next_token = await self.get_next_async_token()
+                next_token = await self._get_next_async_token()
                 
             ret = all_results
 
@@ -421,7 +421,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         url = self._decorate_url(url)
 
         content = super().cat(url, start=start, end=end, **kwargs)
-        next_token = self.get_next_token()
+        next_token = self._get_next_token()
         
         if next_token:
             all_content = content if isinstance(content, bytes) else b""
@@ -435,7 +435,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 if isinstance(more_content, bytes):
                     all_content += more_content
                 
-                next_token = self.get_next_token()
+                next_token = self._get_next_token()
                 
             return all_content
         
@@ -460,7 +460,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         content = await super()._cat(url, start=start, end=end, **kwargs)
         
         # Check if pagination is needed
-        next_token = await self.get_next_async_token()
+        next_token = await self._get_next_async_token()
         
         # If pagination is needed, collect additional content
         if next_token:
@@ -478,7 +478,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     all_content += more_content
                 
                 # Check for more pages
-                next_token = await self.get_next_async_token()
+                next_token = await self._get_next_async_token()
                 
             return all_content
         
