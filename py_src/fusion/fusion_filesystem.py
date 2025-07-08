@@ -254,6 +254,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if len(split_path) > 1 and split_path[-2] == "distributions":
             res = res[0]
         return res
+        
 
     def ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
         """List resources.
@@ -267,17 +268,54 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
         url = self._decorate_url(url)
-        ret = super().ls(url, detail=detail, **kwargs)
+        session = self.sync_session
+        headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
+        all_resources = []
+        next_token = None
+        
+        # Get the path prefix for constructing proper paths
+        path_prefix = url.split(f"{self.client_kwargs['root_url']}catalogs/")[-1]
+        if path_prefix and not path_prefix.endswith('/'):
+            path_prefix += '/'
+
+        while True:
+            if next_token:
+                headers["x-jpmc-next-token"] = next_token
+            kwargs["headers"] = headers
+            response = session.get(url, **kwargs)
+            response.raise_for_status()
+            data = response.json()
+            resources = data.get("resources", [])
+            
+            # Process each resource to match the format expected by the caller
+            for resource in resources:
+                if detail:
+                    # For detail=True, each item needs to be a dict with 'name' field
+                    resource_path = f"{path_prefix}{resource.get('name', '')}"
+                    resource_info = {
+                        "name": resource_path,
+                        "size": resource.get("size", 0),
+                        "type": resource.get("type", "file")
+                    }
+                    all_resources.append(resource_info)
+                else:
+                    # For detail=False, each item should be just a string path
+                    resource_path = f"{path_prefix}{resource.get('name', '')}"
+                    all_resources.append(resource_path)
+                    
+            next_token = response.headers.get("x-jpmc-next-token")
+            if not next_token:
+                break    
         keep_protocol = kwargs.pop("keep_protocol", False)
         if detail:
             if not keep_protocol:
-                for k in ret:
+                for k in all_resources:
                     k["name"] = k["name"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1]
-
         elif not keep_protocol:
-            return [x.split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
+            all_resources = [x.split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in all_resources]
 
-        return ret
+        return all_resources
+    
 
     async def _ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
         await self._async_startup()
