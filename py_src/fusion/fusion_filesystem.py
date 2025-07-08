@@ -48,6 +48,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             **kwargs: Kwargs.
         """
         self._last_response = None
+        self._last_async_response = None
 
         if "get_client" not in kwargs:
             kwargs["get_client"] = get_client
