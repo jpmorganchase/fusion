@@ -183,7 +183,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         all_responses = []
         next_token = None
         session = await self.set_session()
-        headers = self.kwargs.get("headers", {}).copy() if "headers" in self.kwargs else {}
 
         call_kwargs = {k: v for k, v in self.kwargs.items() if k != "headers"}
         headers = self.kwargs.get("headers", {}).copy() if "headers" in self.kwargs else {}
