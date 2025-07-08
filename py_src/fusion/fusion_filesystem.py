@@ -47,6 +47,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             *args: Args.
             **kwargs: Kwargs.
         """
+        self._last_response = None
 
         if "get_client" not in kwargs:
             kwargs["get_client"] = get_client
@@ -74,6 +75,24 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             kwargs["headers"] = {"Accept-Encoding": "identity"}
         self.sync_session = get_session(self.credentials, kwargs["client_kwargs"].get("root_url"))
         super().__init__(*args, **kwargs)
+
+    def get_last_response(self):
+        """Access the last HTTP response"""
+        return self._last_response    
+
+    def get_next_token(self, token_header="x-jpmc-next-token"):
+        """Get pagination token from last response if available"""
+        if self._last_response and token_header in self._last_response.headers:
+            return self._last_response.headers[token_header]
+        return None
+    
+    def _request(self, method, url, **kwargs):
+        """Make HTTP request and store the response object"""
+        session = self.session
+        response = session.request(method, url, **kwargs)
+        self._last_response = response  # Store response for later access
+        return response
+
 
     def _raise_not_found_for_status(self, response: Any, url: str) -> None:
         try:
@@ -271,7 +290,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         return res
 
     def ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
-        """List resources.
+        """List resources with pagination support.
 
         Args:
             url: Url.
@@ -282,34 +301,30 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
         url = self._decorate_url(url)
-        session = self.sync_session
-        headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
-        all_resources = []
-        next_token = None
-
-        while True:
-            if next_token:
+        ret = super().ls(url, detail=detail, **kwargs)
+        next_token = self.get_next_token()
+        if next_token:
+            all_results = list(ret)  
+            while next_token:
+                headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
                 headers["x-jpmc-next-token"] = next_token
-            kwargs["headers"] = headers
-            response = session.get(url, **kwargs)
-            response.raise_for_status()
-            data = response.json()
-            resources = data.get("resources", [])
-            all_resources.extend(resources)
-            next_token = response.headers.get("x-jpmc-next-token")
-            if not next_token:
-                break
-
-        ret = all_resources
+                kwargs["headers"] = headers
+                more_results = super().ls(url, detail=detail, **kwargs)
+                all_results.extend(more_results)
+                next_token = self.get_next_token()
+                
+            ret = all_results
+        
         keep_protocol = kwargs.pop("keep_protocol", False)
         if detail:
             if not keep_protocol:
                 for k in ret:
                     k["name"] = k["name"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1]
         elif not keep_protocol:
-            return [resource["identifier"] for resource in ret]
+            return [x.split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
+            
         return ret
-
+    
     async def _ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
         await self._async_startup()
         url = await self._decorate_url_a(url)
