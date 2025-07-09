@@ -56,16 +56,18 @@ class Report(metaclass=CamelCaseMeta):
     lob: str
     data_node_id: dict[str, str]
     alternative_id: dict[str, str]
+    title: str
+    description: str
+    frequency: str 
+    category: str
+    sub_category: str
+    domain: dict[str,str]
+    regulatoryRelated: str 
+
+
 
     # Optional fields
-    title: str | None = None
     alternate_id: str | None = None
-    description: str | None = None
-    frequency: str | None = None
-    category: str | None = None
-    sub_category: str | None = None
-    report_inventory_name: str | None = None
-    report_inventory_id: str | None = None
     report_owner: str | None = None
     sub_lob: str | None = None
     is_bcbs239_program: bool | None = None
@@ -73,8 +75,13 @@ class Report(metaclass=CamelCaseMeta):
     risk_stripe: str | None = None
     sap_code: str | None = None
     sourced_object: str | None = None
-    domain: dict[str, str | bool] | None = None
-    data_model_id: dict[str, str] | None = None
+    countryOfReportingObligation:str | None = None
+    primaryRegulator: str | None = None
+    mnpiIndicator: bool | None = None
+    tierDesignation: str | None = None
+
+    
+    
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
