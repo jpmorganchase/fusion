@@ -2732,7 +2732,6 @@ class Fusion:
         risk_stripe: str | None = None,
         sap_code: str | None = None,
         domain: dict[str, str | bool] | None = None,
-        data_model_id: dict[str, str] | None = None,
         **kwargs: Any
     ) -> Report:
         """Instantiate a Report object with this client for metadata creation.
@@ -2795,7 +2794,6 @@ class Fusion:
             risk_stripe=risk_stripe,
             sap_code=sap_code,
             domain=domain,
-            data_model_id=data_model_id,
             **kwargs,
         )
         report_obj.client = self
