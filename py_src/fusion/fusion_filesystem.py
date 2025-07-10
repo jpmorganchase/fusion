@@ -24,7 +24,7 @@ from fsspec.utils import nullcontext
 from fusion._fusion import FusionCredentials
 from fusion.exceptions import APIResponseError
 
-from .utils import cpu_count, get_client, get_default_fs, get_session
+from .utils import _merge_responses, cpu_count, get_client, get_default_fs, get_session
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -47,6 +47,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             *args: Args.
             **kwargs: Kwargs.
         """
+        self._last_response = None
+        self._last_async_response = None
 
         if "get_client" not in kwargs:
             kwargs["get_client"] = get_client
@@ -74,6 +76,41 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             kwargs["headers"] = {"Accept-Encoding": "identity"}
         self.sync_session = get_session(self.credentials, kwargs["client_kwargs"].get("root_url"))
         super().__init__(*args, **kwargs)
+
+    def _get_last_response(self) -> Any:
+        """Access the last HTTP response"""
+        return self._last_response
+
+    async def _get_last_async_response(self) -> Any:
+        """Access the last async HTTP response"""
+        return self._last_async_response
+
+    def _get_next_token(self, token_header: str = "x-jpmc-next-token") -> Any:
+        """Get pagination token from last response if available"""
+        if self._last_response and token_header in self._last_response.headers:
+            return self._last_response.headers[token_header]
+        return None
+
+    async def _get_next_async_token(self, token_header: str = "x-jpmc-next-token") -> Any:
+        """Get pagination token from last async response if available"""
+        resp = await self._get_last_async_response()
+        if resp and token_header in resp.headers:
+            return resp.headers[token_header]
+        return None
+
+    def _request(self, method: str, url: str, **kwargs: Any) -> Any:
+        """Make HTTP request and store the response object"""
+        session = self.session
+        response = session.request(method, url, **kwargs)
+        self._last_response = response  # Store response for later access
+        return response
+
+    async def _async_request(self, method: str, url: str, **kwargs: Any) -> Any:
+        """Make async HTTP request and store the response object"""
+        session = await self.set_session()
+        response = await session.request(method, url, **kwargs)
+        self._last_async_response = response
+        return response
 
     def _raise_not_found_for_status(self, response: Any, url: str) -> None:
         try:
@@ -144,16 +181,30 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             Dict containing json-ified return from endpoint.
         """
         url = self._decorate_url(url)
+        all_responses = []
+        next_token = None
+        session = await self.set_session()
+
+        call_kwargs = {k: v for k, v in self.kwargs.items() if k != "headers"}
+        headers = self.kwargs.get("headers", {}).copy() if "headers" in self.kwargs else {}
+
         try:
-            session = await self.set_session()
-            async with session.get(url, **self.kwargs) as r:
-                self._raise_not_found_for_status(r, url)
-                try:
-                    out: dict[Any, Any] = await r.json()
-                except BaseException:
-                    logger.exception(VERBOSE_LVL, f"{url} cannot be parsed to json")
-                    out = {}
-            return out
+            while True:
+                if next_token:
+                    headers["x-jpmc-next-token"] = next_token
+                call_kwargs["headers"] = headers
+                async with session.get(url, **call_kwargs) as r:
+                    self._raise_not_found_for_status(r, url)
+                    try:
+                        out: dict[Any, Any] = await r.json()
+                    except BaseException:
+                        logger.exception(VERBOSE_LVL, f"{url} cannot be parsed to json")
+                        out = {}
+                    all_responses.append(out)
+                    next_token = r.headers.get("x-jpmc-next-token")
+                    if not next_token:
+                        break
+            return _merge_responses(all_responses)
         except Exception as ex:
             logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
             raise ex
@@ -256,7 +307,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         return res
 
     def ls(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
-        """List resources.
+        """List resources with pagination support.
 
         Args:
             url: Url.
@@ -268,12 +319,24 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
         url = self._decorate_url(url)
         ret = super().ls(url, detail=detail, **kwargs)
+        next_token = self._get_next_token()
+        if next_token:
+            all_results = list(ret)
+            while next_token:
+                headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
+                headers["x-jpmc-next-token"] = next_token
+                kwargs["headers"] = headers
+                more_results = super().ls(url, detail=detail, **kwargs)
+                all_results.extend(more_results)
+                next_token = self._get_next_token()
+
+            ret = all_results
+
         keep_protocol = kwargs.pop("keep_protocol", False)
         if detail:
             if not keep_protocol:
                 for k in ret:
                     k["name"] = k["name"].split(f"{self.client_kwargs['root_url']}catalogs/")[-1]
-
         elif not keep_protocol:
             return [x.split(f"{self.client_kwargs['root_url']}catalogs/")[-1] for x in ret]
 
@@ -283,6 +346,23 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         await self._async_startup()
         url = await self._decorate_url_a(url)
         ret = await super()._ls(url, detail, **kwargs)
+        next_token = await self._get_next_async_token()
+
+        if next_token:
+            all_results = list(ret)
+
+            while next_token:
+                headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
+                headers["x-jpmc-next-token"] = next_token
+                kwargs["headers"] = headers
+
+                more_results = await super()._ls(url, detail, **kwargs)
+                all_results.extend(more_results)
+
+                next_token = await self._get_next_async_token()
+
+            ret = all_results
+
         keep_protocol = kwargs.pop("keep_protocol", False)
         if detail:
             if not keep_protocol:
@@ -326,7 +406,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         return super().isfile(path)
 
     def cat(self, url: str, start: Optional[int] = None, end: Optional[int] = None, **kwargs: Any) -> Any:
-        """Fetch paths' contents.
+        """Fetch paths' contents with pagination support.
 
         Args:
             url: Url.
@@ -338,13 +418,70 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
         url = self._decorate_url(url)
-        return super().cat(url, start=start, end=end, **kwargs)
+
+        content = super().cat(url, start=start, end=end, **kwargs)
+        next_token = self._get_next_token()
+
+        if next_token:
+            all_content = content if isinstance(content, bytes) else b""
+
+            while next_token:
+                headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
+                headers["x-jpmc-next-token"] = next_token
+                kwargs["headers"] = headers
+
+                more_content = super().cat(url, start=start, end=end, **kwargs)
+                if isinstance(more_content, bytes):
+                    all_content += more_content
+
+                next_token = self._get_next_token()
+
+            return all_content
+
+        return content
 
     async def _cat(self, url: str, start: Optional[int] = None, end: Optional[int] = None, **kwargs: Any) -> Any:
+        """Fetch paths' contents with pagination support (async).
+
+        Args:
+            url: Url.
+            start: Start.
+            end: End.
+            **kwargs: Kwargs.
+
+        Returns:
+
+        """
         await self._async_startup()
         url = self._decorate_url(url)
-        out = await super()._cat(url, start=start, end=end, **kwargs)
-        return out
+
+        # First page from parent implementation
+        content = await super()._cat(url, start=start, end=end, **kwargs)
+
+        # Check if pagination is needed
+        next_token = await self._get_next_async_token()
+
+        # If pagination is needed, collect additional content
+        if next_token:
+            all_content = content if isinstance(content, bytes) else b""
+
+            while next_token:
+                # Add pagination token to headers
+                headers = kwargs.get("headers", {}).copy() if "headers" in kwargs else {}
+                headers["x-jpmc-next-token"] = next_token
+                kwargs["headers"] = headers
+
+                # Get next page of content
+                more_content = await super()._cat(url, start=start, end=end, **kwargs)
+                if isinstance(more_content, bytes):
+                    all_content += more_content
+
+                # Check for more pages
+                next_token = await self._get_next_async_token()
+
+            return all_content
+
+        return content
 
     async def _stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
         """Return an async stream to file at the given url.

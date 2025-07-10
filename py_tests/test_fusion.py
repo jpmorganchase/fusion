@@ -133,85 +133,121 @@ def test_get_fusion_filesystem(fusion_obj: Fusion) -> None:
     assert filesystem is not None
 
 
-def test__call_for_dataframe_success(requests_mock: requests_mock.Mocker) -> None:
-    # Mock the response from the API endpoint
+def test__call_for_dataframe_success_single_page(requests_mock: requests_mock.Mocker) -> None:
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
     requests_mock.get(url, json=expected_data)
-
-    # Create a mock session
     session = requests.Session()
-
-    # Call the _call_for_dataframe function
     test_df = Fusion._call_for_dataframe(url, session)
-
-    # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
+def test__call_for_dataframe_success_paginated(requests_mock: requests_mock.Mocker) -> None:
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+    page2 = {"resources": [{"id": 2, "name": "Resource 2"}]}
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    session = requests.Session()
+    test_df = Fusion._call_for_dataframe(url, session)
+    expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
 def test__call_for_dataframe_error(requests_mock: requests_mock.Mocker) -> None:
-    # Mock the response from the API endpoint with an error status code
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     requests_mock.get(url, status_code=500)
-
-    # Create a mock session
     session = requests.Session()
+    with pytest.raises(requests.exceptions.HTTPError):
+        Fusion._call_for_dataframe(url, session)
 
-    # Call the _call_for_dataframe function and expect an exception to be raised
+
+def test__call_for_dataframe_error_paginated(requests_mock: requests_mock.Mocker) -> None:
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    session = requests.Session()
     with pytest.raises(requests.exceptions.HTTPError):
         Fusion._call_for_dataframe(url, session)
 
 
 def test__call_for_bytes_object_success(requests_mock: requests_mock.Mocker) -> None:
-    # Mock the response from the API endpoint
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     expected_data = b"some binary data"
     requests_mock.get(url, content=expected_data)
-
-    # Create a mock session
     session = requests.Session()
-
-    # Call the _call_for_bytes_object function
     data = Fusion._call_for_bytes_object(url, session)
-
-    # Check if the data is returned correctly
     assert data.getbuffer() == expected_data
 
 
 def test__call_for_bytes_object_fail(requests_mock: requests_mock.Mocker) -> None:
-    # Mock the response from the API endpoint with an error status code
     url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     requests_mock.get(url, status_code=500)
-
-    # Create a mock session
     session = requests.Session()
-
-    # Call the _call_for_dataframe function and expect an exception to be raised
     with pytest.raises(requests.exceptions.HTTPError):
         Fusion._call_for_bytes_object(url, session)
 
 
 def test_list_catalogs_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    # Mock the response from the API endpoint
     url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
     expected_data = {"resources": [{"id": 1, "name": "Catalog 1"}, {"id": 2, "name": "Catalog 2"}]}
     requests_mock.get(url, json=expected_data)
-
-    # Call the list_catalogs method
     test_df = fusion_obj.list_catalogs()
-
-    # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
+def test_list_catalogs_paginated(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
+    page1 = {"resources": [{"id": 1, "name": "Catalog 1"}]}
+    page2 = {"resources": [{"id": 2, "name": "Catalog 2"}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.list_catalogs()
+    expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
 def test_list_catalogs_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    # Mock the response from the API endpoint with an error status code
     url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
     requests_mock.get(url, status_code=500)
 
-    # Call the list_catalogs method and expect an exception to be raised
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_catalogs()
+
+
+def test_list_catalogs_paginated_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
+    page1 = {"resources": [{"id": 1, "name": "Catalog 1"}]}
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_catalogs()
 
@@ -232,6 +268,54 @@ def test_catalog_resources_success(requests_mock: requests_mock.Mocker, fusion_o
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
+def test_catalog_resources_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}"
+    # First page with next token
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+    page2 = {"resources": [{"id": 2, "name": "Resource 2"}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.catalog_resources(new_catalog)
+    expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_catalog_resources_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}"
+    # Mock the response with an error status code
+    requests_mock.get(url, status_code=500)
+
+    # Call the catalog_resources method and expect an exception to be raised
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.catalog_resources(new_catalog)
+
+
+def test_catalog_resources_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}"
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.catalog_resources(new_catalog)
+
+
 def test_list_products_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/products"
@@ -241,12 +325,49 @@ def test_list_products_success(requests_mock: requests_mock.Mocker, fusion_obj: 
     expected_data = {"resources": [{"category": "FX", "region": "US"}, {"category": "FX", "region": "US, EU"}]}
 
     requests_mock.get(url, json=server_mock_data)
-
-    # Call the catalog_resources method
     test_df = fusion_obj.list_products(catalog=new_catalog, max_results=2)
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_products_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/products"
+    # First page with next token
+    page1 = {"resources": [{"category": ["FX"], "region": ["US"]}]}
+    page2 = {"resources": [{"category": ["FX"], "region": ["US", "EU"]}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.list_products(catalog=new_catalog, max_results=2)
+    expected_data = {"resources": [{"category": "FX", "region": "US"}, {"category": "FX", "region": "US, EU"}]}
+    expected_df = pd.DataFrame(expected_data["resources"])
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_products_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/products"
+    # First page is OK, second page returns 500 error
+    page1 = {"resources": [{"category": ["FX"], "region": ["US"]}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_products(catalog=new_catalog, max_results=2)
 
 
 def test_list_products_contains_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -267,7 +388,6 @@ def test_list_products_contains_success(requests_mock: requests_mock.Mocker, fus
 
     requests_mock.get(url, json=server_mock_data)
 
-    # Call the catalog_resources method
     test_df = fusion_obj.list_products(catalog=new_catalog, max_results=2, contains=["1"])
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, expected_df)
@@ -281,6 +401,28 @@ def test_list_products_contains_success(requests_mock: requests_mock.Mocker, fus
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
+def test_list_products_contains_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/products"
+    # First page with next token
+    page1 = {
+        "resources": [
+            {"identifier": "1", "description": "some desc", "category": ["FX"], "region": ["US"]},
+        ]
+    }
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_products(catalog=new_catalog, max_results=2, contains=["1"])
+
+
 def test_list_datasets_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
     url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
@@ -291,11 +433,48 @@ def test_list_datasets_success(requests_mock: requests_mock.Mocker, fusion_obj: 
 
     requests_mock.get(url, json=server_mock_data)
 
-    # Call the catalog_resources method
     test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2)
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_datasets_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
+    # First page with next token
+    page1 = {"resources": [{"category": ["FX"], "region": ["US"]}]}
+    # Second page
+    page2 = {"resources": [{"category": ["FX"], "region": ["US", "EU"]}]}
+    expected_data = {"resources": [{"region": "US", "category": "FX"}, {"region": "US, EU", "category": "FX"}]}
+    expected_df = pd.DataFrame(expected_data["resources"])
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2)
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_datasets_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
+    page1 = {"resources": [{"category": ["FX"], "region": ["US"]}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_datasets(catalog=new_catalog, max_results=2)
 
 
 def test_list_datasets_type_filter(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -341,6 +520,89 @@ def test_list_datasets_type_filter(requests_mock: requests_mock.Mocker, fusion_o
     test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, dataset_type="type1")
 
     pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_datasets_type_filter_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
+    # First page with next token
+    page1 = {
+        "resources": [
+            {
+                "identifier": "ONE",
+                "description": "some desc",
+                "category": ["FX"],
+                "region": ["US"],
+                "status": "active",
+                "type": "type1",
+            }
+        ]
+    }
+    # Second page
+    page2 = {
+        "resources": [
+            {
+                "identifier": "TWO",
+                "description": "some desc",
+                "category": ["FX"],
+                "region": ["US", "EU"],
+                "status": "inactive",
+                "type": "type2",
+            }
+        ]
+    }
+    expected_data = {
+        "resources": [
+            {
+                "identifier": "ONE",
+                "region": "US",
+                "category": "FX",
+                "description": "some desc",
+                "status": "active",
+                "type": "type1",
+            }
+        ]
+    }
+    expected_df = pd.DataFrame(expected_data["resources"])
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, dataset_type="type1")
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_datasets_type_filter_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
+    page1 = {
+        "resources": [
+            {
+                "identifier": "ONE",
+                "description": "some desc",
+                "category": ["FX"],
+                "region": ["US"],
+                "status": "active",
+                "type": "type1",
+            }
+        ]
+    }
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_datasets(catalog=new_catalog, max_results=2, dataset_type="type1")
 
 
 def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -408,7 +670,6 @@ def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fus
 
     expected_df_exact_match = pd.DataFrame([data], columns=cols)
 
-    # Call the catalog_resources method
     test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["ONE"])
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, expected_df)
@@ -430,6 +691,155 @@ def test_list_datasets_contains_success(requests_mock: requests_mock.Mocker, fus
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
+def test_list_datasets_contains_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
+    # Both pages do NOT contain the identifier "THREE"
+    page1 = {
+        "resources": [
+            {"identifier": "ONE", "description": "some desc", "category": ["FX"], "region": ["US"], "status": "active"},
+        ]
+    }
+    page2 = {
+        "resources": [
+            {
+                "identifier": "TWO",
+                "description": "some desc",
+                "category": ["FX"],
+                "region": ["US", "EU"],
+                "status": "inactive",
+            },
+        ]
+    }
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    # Try to filter for a dataset that does not exist
+    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["THREE"])
+    # The result should be an empty DataFrame
+    assert test_df.empty
+
+
+def test_list_datasets_contains_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
+    # First page with next token
+    page1 = {
+        "resources": [
+            {
+                "identifier": "ONE",
+                "description": "some desc",
+                "category": ["FX"],
+                "region": ["US"],
+                "status": "active",
+                "title": "Title 1",
+                "containerType": "TypeA",
+                "coverageStartDate": None,
+                "coverageEndDate": None,
+                "type": None,
+            }
+        ]
+    }
+    # Second page
+    page2 = {
+        "resources": [
+            {
+                "identifier": "TWO",
+                "description": "some desc",
+                "category": ["FX"],
+                "region": ["US", "EU"],
+                "status": "inactive",
+                "title": "Title 2",
+                "containerType": "TypeB",
+                "coverageStartDate": None,
+                "coverageEndDate": None,
+                "type": None,
+            }
+        ]
+    }
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    # The expected DataFrame should only include the row where identifier contains "ONE"
+    expected_data = [
+        {
+            "identifier": "ONE",
+            "title": "Title 1",
+            "containerType": "TypeA",
+            "region": "US",
+            "category": "FX",
+            "coverageStartDate": None,
+            "coverageEndDate": None,
+            "description": "some desc",
+            "status": "active",
+            "type": None,
+        }
+    ]
+    expected_df = pd.DataFrame(expected_data)[
+        [
+            "identifier",
+            "title",
+            "containerType",
+            "region",
+            "category",
+            "coverageStartDate",
+            "coverageEndDate",
+            "description",
+            "status",
+            "type",
+        ]
+    ]
+
+    test_df = fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["ONE"])
+    pd.testing.assert_frame_equal(test_df.reset_index(drop=True), expected_df.reset_index(drop=True))
+
+
+def test_list_datasets_contains_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets"
+    page1 = {
+        "resources": [
+            {"identifier": "ONE", "description": "some desc", "category": ["FX"], "region": ["US"], "status": "active"},
+        ]
+    }
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    select_prod = "prod_a"
+    prod_url = f"{fusion_obj.root_url}catalogs/{new_catalog}/productDatasets"
+    server_prod_mock_data = {
+        "resources": [
+            {"product": select_prod, "dataset": "one"},
+            {"product": "prod_b", "dataset": "two"},
+        ]
+    }
+    requests_mock.get(prod_url, json=server_prod_mock_data)
+
+    dataset_url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/ONE"
+    requests_mock.get(dataset_url, json=page1["resources"][0])
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_datasets(catalog=new_catalog, max_results=2, contains=["ONE"])
+
+
 def test_dataset_resources_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     new_catalog = "catalog_id"
     dataset = "my_dataset"
@@ -437,12 +847,61 @@ def test_dataset_resources_success(requests_mock: requests_mock.Mocker, fusion_o
     expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
     requests_mock.get(url, json=expected_data)
 
-    # Call the catalog_resources method
     test_df = fusion_obj.dataset_resources(dataset, new_catalog)
 
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_dataset_resources_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}"
+
+    requests_mock.get(url, status_code=500)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.dataset_resources(dataset, new_catalog)
+
+
+def test_dataset_resources_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}"
+    # First page with next token
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+    page2 = {"resources": [{"id": 2, "name": "Resource 2"}]}
+    expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.dataset_resources(dataset, new_catalog)
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_dataset_resources_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}"
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.dataset_resources(dataset, new_catalog)
 
 
 def test_list_dataset_attributes(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -498,7 +957,6 @@ def test_list_dataset_attributes(requests_mock: requests_mock.Mocker, fusion_obj
 
     requests_mock.get(url, json=server_mock_data)
 
-    # Call the catalog_resources method
     test_df = fusion_obj.list_dataset_attributes(dataset, catalog=new_catalog)
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, expected_df)
@@ -526,11 +984,118 @@ def test_list_dataset_attributes(requests_mock: requests_mock.Mocker, fusion_obj
     }
 
     ext_expected_df = pd.DataFrame(ext_expected_data["resources"])
-    # Call the catalog_resources method
     test_df = fusion_obj.list_dataset_attributes(dataset, catalog=new_catalog, display_all_columns=True)
 
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, ext_expected_df)
+
+
+def test_list_dataset_attributes_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
+
+    core_cols = [
+        "identifier",
+        "title",
+        "dataType",
+        "isDatasetKey",
+        "description",
+        "source",
+    ]
+
+    # First page with next token
+    page1 = {
+        "resources": [
+            {
+                "index": 0,
+                "identifier": "attr_1",
+                "title": "some title",
+                "dataType": "string",
+                "isDatasetKey": True,
+                "description": "desc1",
+                "source": "src1",
+            }
+        ]
+    }
+    # Second page
+    page2 = {
+        "resources": [
+            {
+                "index": 1,
+                "identifier": "attr_2",
+                "title": "some title",
+                "dataType": "int",
+                "isDatasetKey": False,
+                "description": "desc2",
+                "source": "src2",
+            }
+        ]
+    }
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    expected_data = {
+        "resources": [
+            {
+                "identifier": "attr_1",
+                "title": "some title",
+                "dataType": "string",
+                "isDatasetKey": True,
+                "description": "desc1",
+                "source": "src1",
+            },
+            {
+                "identifier": "attr_2",
+                "title": "some title",
+                "dataType": "int",
+                "isDatasetKey": False,
+                "description": "desc2",
+                "source": "src2",
+            },
+        ]
+    }
+    expected_df = pd.DataFrame(expected_data["resources"])[core_cols]
+
+    test_df = fusion_obj.list_dataset_attributes(dataset, catalog=catalog)
+    pd.testing.assert_frame_equal(test_df.reset_index(drop=True), expected_df.reset_index(drop=True))
+    assert all(col in core_cols for col in test_df.columns)
+
+
+def test_list_dataset_attributes_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/attributes"
+
+    page1 = {
+        "resources": [
+            {
+                "index": 0,
+                "identifier": "attr_1",
+                "title": "some title",
+                "dataType": "string",
+                "other_meta_attr": "some val",
+                "status": "active",
+            }
+        ]
+    }
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_dataset_attributes(dataset, catalog=new_catalog)
 
 
 def test_list_datasetmembers_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -540,12 +1105,63 @@ def test_list_datasetmembers_success(requests_mock: requests_mock.Mocker, fusion
     expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
     requests_mock.get(url, json=expected_data)
 
-    # Call the catalog_resources method
     test_df = fusion_obj.list_datasetmembers(dataset, new_catalog, max_results=2)
 
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_datasetmembers_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/datasetseries"
+
+    # Mock the response with an error status code
+    requests_mock.get(url, status_code=500)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_datasetmembers(dataset, new_catalog, max_results=2)
+
+
+def test_list_datasetmembers_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/datasetseries"
+    # First page with next token
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+    page2 = {"resources": [{"id": 2, "name": "Resource 2"}]}
+    expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.list_datasetmembers(dataset, new_catalog, max_results=2)
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_datasetmembers_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/datasetseries"
+    # First page with next token
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_datasetmembers(dataset, new_catalog, max_results=2)
 
 
 def test_datasetmember_resources_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -556,12 +1172,69 @@ def test_datasetmember_resources_success(requests_mock: requests_mock.Mocker, fu
     expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
     requests_mock.get(url, json=expected_data)
 
-    # Call the catalog_resources method
     test_df = fusion_obj.datasetmember_resources(dataset, series, new_catalog)
 
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_datasetmember_resources_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    series = "2022-02-02"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/datasetseries/{series}"
+
+    # Mock the response with an error status code
+    requests_mock.get(url, status_code=500)
+
+    import pytest
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.datasetmember_resources(dataset, series, new_catalog)
+
+
+def test_datasetmember_resources_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    series = "2022-02-02"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/datasetseries/{series}"
+
+    # First page with next token
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+    page2 = {"resources": [{"id": 2, "name": "Resource 2"}]}
+    expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.datasetmember_resources(dataset, series, new_catalog)
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_datasetmember_resources_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    series = "2022-02-02"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/datasetseries/{series}"
+
+    # First page with next token, second page fails
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.datasetmember_resources(dataset, series, new_catalog)
 
 
 def test_list_distributions_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -572,12 +1245,68 @@ def test_list_distributions_success(requests_mock: requests_mock.Mocker, fusion_
     expected_data = {"resources": [{"id": 1, "name": "Resource 1"}, {"id": 2, "name": "Resource 2"}]}
     requests_mock.get(url, json=expected_data)
 
-    # Call the catalog_resources method
     test_df = fusion_obj.list_distributions(dataset, series, new_catalog)
 
     # Check if the dataframe is created correctly
     expected_df = pd.DataFrame(expected_data["resources"])
     pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_distributions_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    series = "2022-02-02"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/datasetseries/{series}/distributions"
+
+    # Mock the response with an error status code
+    requests_mock.get(url, status_code=500)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_distributions(dataset, series, new_catalog)
+
+
+def test_list_distributions_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    series = "2022-02-02"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/datasetseries/{series}/distributions"
+
+    # First page with next token
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+    page2 = {"resources": [{"id": 2, "name": "Resource 2"}]}
+    expected_df = pd.DataFrame(page1["resources"] + page2["resources"])
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.list_distributions(dataset, series, new_catalog)
+    pd.testing.assert_frame_equal(test_df, expected_df)
+
+
+def test_list_distributions_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    new_catalog = "catalog_id"
+    dataset = "my_dataset"
+    series = "2022-02-02"
+    url = f"{fusion_obj.root_url}catalogs/{new_catalog}/datasets/{dataset}/datasetseries/{series}/distributions"
+
+    # First page with next token, second page fails
+    page1 = {"resources": [{"id": 1, "name": "Resource 1"}]}
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_distributions(dataset, series, new_catalog)
 
 
 def test__resolve_distro_tuples(mocker: MockerFixture, fusion_obj: Fusion) -> None:
@@ -1185,6 +1914,8 @@ def test_list_dataset_lineage_resticted(requests_mock: requests_mock.Mocker, fus
     pd.testing.assert_frame_equal(test_df, expected_df)
 
 
+""" since extra api call is removed, this test is not needed anymore
+
 def test_list_dataset_lineage_dataset_not_found(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     dataset_id = "dataset_id"
     catalog = "catalog_id"
@@ -1193,6 +1924,7 @@ def test_list_dataset_lineage_dataset_not_found(requests_mock: requests_mock.Moc
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_dataset_lineage(dataset_id, catalog=catalog)
+"""
 
 
 def test_create_dataset_lineage_from_df(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -1805,11 +2537,113 @@ def test_list_registered_attributes(requests_mock: requests_mock.Mocker, fusion_
 
     requests_mock.get(url, json=server_mock_data)
 
-    # Call the catalog_resources method
     test_df = fusion_obj.list_registered_attributes(catalog=catalog)
     # Check if the dataframe is created correctly
     pd.testing.assert_frame_equal(test_df, expected_df)
     assert all(col in core_cols for col in test_df.columns)
+
+
+def test_list_registered_attributes_paginated_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list registered attributes with pagination."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes"
+    core_cols = [
+        "identifier",
+        "title",
+        "dataType",
+        "publisher",
+        "description",
+        "applicationId",
+    ]
+
+    # First page with next token
+    page1 = {
+        "resources": [
+            {
+                "identifier": "attr_1",
+                "title": "some title",
+                "dataType": "string",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+                "catalog": {"@id": "12345/", "description": "catalog"},
+            }
+        ]
+    }
+    # Second page
+    page2 = {
+        "resources": [
+            {
+                "identifier": "attr_2",
+                "title": "some title",
+                "dataType": "int",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+                "catalog": {"@id": "12345/", "description": "catalog"},
+            }
+        ]
+    }
+    expected_data = {
+        "resources": [
+            {
+                "identifier": "attr_1",
+                "title": "some title",
+                "dataType": "string",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+            },
+            {
+                "identifier": "attr_2",
+                "title": "some title",
+                "dataType": "int",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+            },
+        ]
+    }
+    expected_df = pd.DataFrame(expected_data["resources"])
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    test_df = fusion_obj.list_registered_attributes(catalog=catalog)
+    pd.testing.assert_frame_equal(test_df, expected_df)
+    assert all(col in core_cols for col in test_df.columns)
+
+
+def test_list_registered_attributes_paginated_fail(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list registered attributes with pagination error."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/attributes"
+
+    # First page with next token, second page fails
+    page1 = {
+        "resources": [
+            {
+                "identifier": "attr_1",
+                "title": "some title",
+                "dataType": "string",
+                "publisher": "J.P Morgan",
+                "applicationId": {"id": "12345", "type": "application"},
+                "catalog": {"@id": "12345/", "description": "catalog"},
+            }
+        ]
+    }
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_registered_attributes(catalog=catalog)
 
 
 def test_fusion_report(fusion_obj: Fusion) -> None:
@@ -2135,6 +2969,140 @@ def test_list_datasetmembers_distributions(requests_mock: requests_mock.Mocker, 
     assert all(resp == expected_df)
 
 
+def test_list_datasetmembers_distributions_paginated_success(
+    requests_mock: requests_mock.Mocker, fusion_obj: Fusion
+) -> None:
+    """Test list_datasetmembers_distributions with pagination"""
+    catalog = "my_catalog"
+    dataset = "MY_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+
+    # First page with next token, first dataset with one distribution
+    page1 = {
+        "datasets": [
+            {
+                "key": "MY_DATASET",
+                "distributions": [
+                    {
+                        "key": "MY_DATASET/20250317/distribution.csv",
+                        "values": [
+                            "2025-03-18T09:04:22Z",
+                            "3054",
+                            "SHA-256=vlfaDJFb:VbSdfOHLvnL/xe8Mom9yqooZA=-1",
+                            "my_catalog",
+                            "MY_DATASET",
+                            "20250317",
+                            "csv",
+                            "api-bucket",
+                            "SJLDHGF;eflSBVLS",
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    # Second page, another dataset (should be ignored by your logic)
+    page2 = {
+        "datasets": [
+            {
+                "key": "ANOTHER_DATASET",
+                "distributions": [
+                    {
+                        "key": "ANOTHER_DATASET/20250317/distribution.csv",
+                        "values": [
+                            "2025-03-18T09:04:22Z",
+                            "3054",
+                            "SHA-256=vlfaDJFb:VbSdfOHLvnL/xe8Mom9yqooZA=-1",
+                            "my_catalog",
+                            "ANOTHER_DATASET",
+                            "20250317",
+                            "csv",
+                            "api-bucket",
+                            "SJLDHGF;eflSBVLS",
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"json": page2, "headers": {}},
+        ],
+    )
+
+    expected_data = [("20250317", "csv")]
+    expected_df = pd.DataFrame(expected_data, columns=["identifier", "format"])
+
+    resp = fusion_obj.list_datasetmembers_distributions(catalog=catalog, dataset=dataset)
+    pd.testing.assert_frame_equal(resp, expected_df)
+
+
+def test_list_datasetmembers_distributions_paginated_fail(
+    requests_mock: requests_mock.Mocker, fusion_obj: Fusion
+) -> None:
+    """Test list_datasetmembers_distributions with pagination error."""
+    catalog = "my_catalog"
+    dataset = "MY_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+
+    # First page with next token, second page fails
+    page1 = {
+        "lastModified": "2025-03-18T09:04:22Z",
+        "checksum": "SHA-256=vFdIF:HSLDBV:VBLHD/xe8Mom9yqooZA=-1",
+        "metadata": {
+            "fields": [
+                "lastModified",
+                "size",
+                "checksum",
+                "catalog",
+                "dataset",
+                "seriesMember",
+                "distribution",
+                "storageProvider",
+                "version",
+            ]
+        },
+        "datasets": [
+            {
+                "key": "MY_DATASET",
+                "lastModified": "2025-03-18T09:04:22Z",
+                "checksum": "SHA-256=vSLKFGNSDFGJBADFGsjfgl/xe8Mom9yqooZA=-1",
+                "distributions": [
+                    {
+                        "key": "MY_DATASET/20250317/distribution.csv",
+                        "values": [
+                            "2025-03-18T09:04:22Z",
+                            "3054",
+                            "SHA-256=vlfaDJFb:VbSdfOHLvnL/xe8Mom9yqooZA=-1",
+                            "my_catalog",
+                            "MY_DATASET",
+                            "20250317",
+                            "csv",
+                            "api-bucket",
+                            "SJLDHGF;eflSBVLS",
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    requests_mock.get(
+        url,
+        [
+            {"json": page1, "headers": {"x-jpmc-next-token": "abc"}},
+            {"status_code": 500},
+        ],
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_datasetmembers_distributions(catalog=catalog, dataset=dataset)
+
+
 def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -> None:
     # Clear handlers to avoid test contamination
     logger.handlers.clear()
@@ -2154,8 +3122,6 @@ def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -
 
 
 def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCredentials) -> None:
-    
-
     # Clear logger handlers to avoid contamination
     logger.handlers.clear()
 
