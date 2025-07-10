@@ -184,6 +184,35 @@ class Report(metaclass=CamelCaseMeta):
             else:
                 report_dict[snake_to_camel(k)] = v
         return report_dict
+    
+    @classmethod
+    def from_dataframe(cls, data: pd.DataFrame) -> list[Report]:
+        """
+        Create a list of Report objects from a DataFrame.
+
+        Args:
+            data (pd.DataFrame): DataFrame containing report data.
+
+        Returns:
+            list[Report]: List of Report objects.
+        """
+        data = data.where(data.notna(), None)  # Replace NaN with None
+        reports = [cls(**series.dropna().to_dict()) for _, series in data.iterrows()]
+        return reports
+
+    @classmethod
+    def from_csv(cls, file_path: str) -> list[Report]:
+        """
+        Create a list of Report objects from a CSV file.
+
+        Args:
+            file_path (str): Path to the CSV file.
+
+        Returns:
+            list[Report]: List of Report objects.
+        """
+        data = pd.read_csv(file_path)
+        return cls.from_dataframe(data)
 
     def create(
         self,
