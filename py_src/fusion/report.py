@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any, TypedDict
 
+import pandas as pd 
+
 from .utils import (
     CamelCaseMeta,
     camel_to_snake,
