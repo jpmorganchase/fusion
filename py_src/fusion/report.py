@@ -79,22 +79,19 @@ class Report(metaclass=CamelCaseMeta):
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
-        self.name = tidy_string(self.name)
-        self.title = tidy_string(self.title) if self.title else None
-        self.description = tidy_string(self.description) if self.description else None
+            self.title = tidy_string(self.title) if self.title else None
+            self.description = tidy_string(self.description) if self.description else None
 
     def __getattr__(self, name: str) -> Any:
-        snake_name = camel_to_snake(name)
-        if snake_name in self.__dict__:
-            return self.__dict__[snake_name]
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+            snake_name = camel_to_snake(name)
+            return self.__dict__.get(snake_name, None)
 
     def __setattr__(self, name: str, value: Any) -> None:
-        if name == "client":
-            object.__setattr__(self, name, value)
-        else:
-            snake_name = camel_to_snake(name)
-            self.__dict__[snake_name] = value
+            if name == "client":
+                object.__setattr__(self, name, value)
+            else:
+                snake_name = camel_to_snake(name)
+                self.__dict__[snake_name] = value
 
     @property
     def client(self) -> Fusion | None:
