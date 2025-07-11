@@ -79,27 +79,27 @@ class Report(metaclass=CamelCaseMeta):
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
-    COLUMN_MAPPING: dict[str, str] = field(default_factory=lambda: {
-        "Report/Process Name": "title",
-        "Report/Process Description": "description",
-        "Activity Type": "tier_type",
-        "Frequency": "frequency",
-        "Category": "category",
-        "Sub Category": "sub_category",
-        "LOB": "lob",
-        "Sub-LOB": "sub_lob",
-        "JPMSE BCBS Related": "is_bcbs239_program",
-        "Report Type": "risk_stripe",
-        "Tier Type": "tier_designation",
-        "Region": "region",
-        "MNPI Indicator": "mnpi_indicator",
-        "Country of Reporting Obligation": "country_of_reporting_obligation",
-        "Regulatory Designated": "regulatory_related",
-        "Primary Regulator": "primary_regulator",
-        "CDO Office": "domain_name",  # Map to "name" inside "domain"
-        "Application ID": "data_node_name",
-        "Application Type": "data_node_type",
-    })
+    COLUMN_MAPPING: dict[str, str] = {
+            "Report/Process Name": "title",
+            "Report/Process Description": "description",
+            "Activity Type": "tier_type",
+            "Frequency": "frequency",
+            "Category": "category",
+            "Sub Category": "sub_category",
+            "LOB": "lob",
+            "Sub-LOB": "sub_lob",
+            "JPMSE BCBS Related": "is_bcbs239_program",
+            "Report Type": "risk_stripe",
+            "Tier Type": "tier_designation",
+            "Region": "region",
+            "MNPI Indicator": "mnpi_indicator",
+            "Country of Reporting Obligation": "country_of_reporting_obligation",
+            "Regulatory Designated": "regulatory_related",
+            "Primary Regulator": "primary_regulator",
+            "CDO Office": "domain_name",  # Map to "name" inside "domain"
+            "Application ID": "data_node_name",
+            "Application Type": "data_node_type",
+        }
 
     def __post_init__(self) -> None:
         self.name = tidy_string(self.name)
