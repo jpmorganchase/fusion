@@ -53,12 +53,11 @@ class Report(metaclass=CamelCaseMeta):
         _client (Any, optional): A Fusion client object. Defaults to None.
     """
 
-    name: str
+    title: str
     tier_type: str
     lob: str
     data_node_id: dict[str, str]
     alternative_id: dict[str, str]
-    title: str
     description: str
     frequency: str
     category: str
