@@ -354,6 +354,7 @@ Report.COLUMN_MAPPING = {
             "Activity Type": "tier_type",
             "Frequency": "frequency",
             "Category": "category",
+            "Report/Process Owner SID": "report_owner",
             "Sub Category": "sub_category",
             "LOB": "lob",
             "Sub-LOB": "sub_lob",
