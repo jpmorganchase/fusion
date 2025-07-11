@@ -210,7 +210,7 @@ class Report(metaclass=CamelCaseMeta):
             list[Report]: List of Report objects.
         """
         # Apply permanent column mapping
-        data = data.rename(columns=cls.COLUMN_MAPPING)
+        data = data.rename(columns=Report.COLUMN_MAPPING)
 
         # Replace NaN with None
         data = data.where(data.notna(), None)
@@ -341,7 +341,7 @@ class Report(metaclass=CamelCaseMeta):
         return response if return_resp_obj else None
 
 
-Report.COLUMN_MAPPING: = {
+Report.COLUMN_MAPPING = {
             "Report/Process Name": "title",
             "Report/Process Description": "description",
             "Activity Type": "tier_type",
