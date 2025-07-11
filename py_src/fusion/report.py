@@ -60,32 +60,46 @@ class Report(metaclass=CamelCaseMeta):
     alternative_id: dict[str, str]
     title: str
     description: str
-    frequency: str 
+    frequency: str
     category: str
     sub_category: str
-    domain: dict[str,str]
-    regulatoryRelated: str 
-
-
+    domain: dict[str, str]  # Dictionary with "name" key populated from "CDO Office"
+    regulatory_related: str
 
     # Optional fields
-    alternate_id: str | None = None
-    report_owner: str | None = None
     sub_lob: str | None = None
     is_bcbs239_program: bool | None = None
-    risk_area: str | None = None
     risk_stripe: str | None = None
-    sap_code: str | None = None
-    sourced_object: str | None = None
-    countryOfReportingObligation:str | None = None
-    primaryRegulator: str | None = None
-    mnpiIndicator: bool | None = None
-    tierDesignation: str | None = None
+    tier_designation: str | None = None
+    region: str | None = None
+    mnpi_indicator: bool | None = None
+    country_of_reporting_obligation: str | None = None
+    primary_regulator: str | None = None
 
-    
-    
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
+
+    COLUMN_MAPPING: dict[str, str] = field(default_factory=lambda: {
+        "Report/Process Name": "title",
+        "Report/Process Description": "description",
+        "Activity Type": "tier_type",
+        "Frequency": "frequency",
+        "Category": "category",
+        "Sub Category": "sub_category",
+        "LOB": "lob",
+        "Sub-LOB": "sub_lob",
+        "JPMSE BCBS Related": "is_bcbs239_program",
+        "Report Type": "risk_stripe",
+        "Tier Type": "tier_designation",
+        "Region": "region",
+        "MNPI Indicator": "mnpi_indicator",
+        "Country of Reporting Obligation": "country_of_reporting_obligation",
+        "Regulatory Designated": "regulatory_related",
+        "Primary Regulator": "primary_regulator",
+        "CDO Office": "domain_name",  # Map to "name" inside "domain"
+        "Application ID": "data_node_name",
+        "Application Type": "data_node_type",
+    })
 
     def __post_init__(self) -> None:
         self.name = tidy_string(self.name)
@@ -187,10 +201,29 @@ class Report(metaclass=CamelCaseMeta):
                 report_dict[snake_to_camel(k)] = v
         return report_dict
     
+    def map_application_type(app_type: str) -> str:
+        """Map application types to enum values."""
+        mapping = {
+            "Application (SEAL)": "Application (SEAL)",
+            "Intelligent Solutions": "Intelligent Solutions",
+            "User Tool": "User Tool"
+        }
+        return mapping.get(app_type, None)
+
+
+    def map_tier_type(tier_type: str) -> str:
+        """Map tier types to enum values."""
+        tier_mapping = {
+            "Tier 1": "Tier 1",
+            "Non Tier 1": "Non Tier 1"
+        }
+        return tier_mapping.get(tier_type, None)
+        
+
     @classmethod
     def from_dataframe(cls, data: pd.DataFrame) -> list[Report]:
         """
-        Create a list of Report objects from a DataFrame.
+        Create a list of Report objects from a DataFrame, applying permanent column mapping.
 
         Args:
             data (pd.DataFrame): DataFrame containing report data.
@@ -198,14 +231,40 @@ class Report(metaclass=CamelCaseMeta):
         Returns:
             list[Report]: List of Report objects.
         """
-        data = data.where(data.notna(), None)  # Replace NaN with None
-        reports = [cls(**series.dropna().to_dict()) for _, series in data.iterrows()]
+        # Apply permanent column mapping
+        data = data.rename(columns=cls.COLUMN_MAPPING)
+
+        # Replace NaN with None
+        data = data.where(data.notna(), None)
+
+        # Process each row and create Report objects
+        reports = []
+        for _, row in data.iterrows():
+            report_data = row.to_dict()
+
+            # Handle nested fields like domain and data_node_id
+            report_data["domain"] = {"name": report_data.pop("domain_name", None)}  # Populate "name" inside "domain"
+            report_data["data_node_id"] = {
+                "name": report_data.pop("data_node_name", None),
+                "dataNodeType": map_application_type(report_data.pop("data_node_type", None)),
+            }
+
+            # Convert boolean fields
+            report_data["is_bcbs239_program"] = report_data["is_bcbs239_program"] == "Yes" if report_data["is_bcbs239_program"] else None
+            report_data["mnpi_indicator"] = report_data["mnpi_indicator"] == "Yes" if report_data["mnpi_indicator"] else None
+            report_data["regulatory_related"] = report_data["regulatory_related"] == "Yes" if report_data["regulatory_related"] else None
+
+            # Map tier designation
+            report_data["tier_designation"] = map_tier_type(report_data["tier_designation"])
+
+            reports.append(cls(**report_data))
+
         return reports
 
     @classmethod
     def from_csv(cls, file_path: str) -> list[Report]:
         """
-        Create a list of Report objects from a CSV file.
+        Create a list of Report objects from a CSV file, applying permanent column mapping.
 
         Args:
             file_path (str): Path to the CSV file.
@@ -215,6 +274,8 @@ class Report(metaclass=CamelCaseMeta):
         """
         data = pd.read_csv(file_path)
         return cls.from_dataframe(data)
+
+
 
     def create(
         self,
