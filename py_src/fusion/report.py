@@ -238,7 +238,9 @@ class Report(metaclass=CamelCaseMeta):
 
 
             # Map tier designation
-            report_data["tier_designation"] = cls.map_tier_type(report_data["tier_designation"])
+            tier_val = report_data.get("tier_designation")
+            report_data["tier_designation"] = cls.map_tier_type(tier_val) if tier_val else None
+
 
             reports.append(cls(**report_data))
 
