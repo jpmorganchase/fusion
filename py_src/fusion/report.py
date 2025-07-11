@@ -227,7 +227,9 @@ class Report(metaclass=CamelCaseMeta):
                 "dataNodeType": cls.map_application_type(report_data.pop("data_node_type", None)),
             }
             # Convert boolean fields
-            report_data["is_bcbs239_program"] = report_data["is_bcbs239_program"] == "Yes" if report_data["is_bcbs239_program"] else None
+            is_bcbs = report_data.get("is_bcbs239_program")
+            report_data["is_bcbs239_program"] = is_bcbs == "Yes" if is_bcbs else None
+
             report_data["mnpi_indicator"] = report_data["mnpi_indicator"] == "Yes" if report_data["mnpi_indicator"] else None
             report_data["regulatory_related"] = report_data["regulatory_related"] == "Yes" if report_data["regulatory_related"] else None
 
