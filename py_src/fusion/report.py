@@ -178,8 +178,8 @@ class Report(metaclass=CamelCaseMeta):
             else:
                 report_dict[snake_to_camel(k)] = v
         return report_dict
-    
-    def map_application_type(app_type: str) -> str:
+    @classmethod
+    def map_application_type(cls, app_type: str) -> str:
         """Map application types to enum values."""
         mapping = {
             "Application (SEAL)": "Application (SEAL)",
@@ -188,8 +188,8 @@ class Report(metaclass=CamelCaseMeta):
         }
         return mapping.get(app_type, None)
 
-
-    def map_tier_type(tier_type: str) -> str:
+    @classmethod
+    def map_tier_type(cls, tier_type: str) -> str:
         """Map tier types to enum values."""
         tier_mapping = {
             "Tier 1": "Tier 1",
@@ -224,16 +224,15 @@ class Report(metaclass=CamelCaseMeta):
             report_data["domain"] = {"name": report_data.pop("domain_name", None)}  # Populate "name" inside "domain"
             report_data["data_node_id"] = {
                 "name": report_data.pop("data_node_name", None),
-                "dataNodeType": map_application_type(report_data.pop("data_node_type", None)),
+                "dataNodeType": cls.map_application_type(report_data.pop("data_node_type", None)),
             }
-
             # Convert boolean fields
             report_data["is_bcbs239_program"] = report_data["is_bcbs239_program"] == "Yes" if report_data["is_bcbs239_program"] else None
             report_data["mnpi_indicator"] = report_data["mnpi_indicator"] == "Yes" if report_data["mnpi_indicator"] else None
             report_data["regulatory_related"] = report_data["regulatory_related"] == "Yes" if report_data["regulatory_related"] else None
 
             # Map tier designation
-            report_data["tier_designation"] = map_tier_type(report_data["tier_designation"])
+            report_data["tier_designation"] = cls.map_tier_type(report_data["tier_designation"])
 
             reports.append(cls(**report_data))
 
