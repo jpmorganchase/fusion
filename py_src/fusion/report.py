@@ -240,6 +240,10 @@ class Report(metaclass=CamelCaseMeta):
             # Map tier designation
             tier_val = report_data.get("tier_designation")
             report_data["tier_designation"] = cls.map_tier_type(tier_val) if tier_val else None
+            # Filter out any fields not defined in the class
+            # This ensures that only valid fields are passed to the Report constructor
+            valid_fields = {f.name for f in fields(cls)}
+            report_data = {k: v for k, v in report_data.items() if k in valid_fields}
 
 
             reports.append(cls(**report_data))
