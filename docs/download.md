@@ -243,7 +243,7 @@ df = fusion_obj.to_df(
 !!! warning
     The ``to_df()`` method retrieves the dataset as a Pandas DataFrame, which is stored entirely in memory (RAM). This means that the size of the DataFrame is limited by the available memory on your machine.
 
-### Filtering the Returned DataFrame with ``filters()``
+### Filtering the Returned DataFrame with ``filters``
 
 The ``filters`` argument allows users to filter the data to be returned in the outputted DataFrame.
 
