@@ -230,8 +230,12 @@ class Report(metaclass=CamelCaseMeta):
             is_bcbs = report_data.get("is_bcbs239_program")
             report_data["is_bcbs239_program"] = is_bcbs == "Yes" if is_bcbs else None
 
-            report_data["mnpi_indicator"] = report_data["mnpi_indicator"] == "Yes" if report_data["mnpi_indicator"] else None
-            report_data["regulatory_related"] = report_data["regulatory_related"] == "Yes" if report_data["regulatory_related"] else None
+            mnpi = report_data.get("mnpi_indicator")
+            report_data["mnpi_indicator"] = mnpi == "Yes" if mnpi else None
+
+            reg_related = report_data.get("regulatory_related")
+            report_data["regulatory_related"] = reg_related == "Yes" if reg_related else None
+
 
             # Map tier designation
             report_data["tier_designation"] = cls.map_tier_type(report_data["tier_designation"])
