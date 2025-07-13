@@ -2,7 +2,7 @@ import io
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -508,13 +508,13 @@ def test_download(  # noqa: PLR0913
 @patch("fsspec.AbstractFileSystem", autospec=True)
 def test_download_mkdir_logs_exception(
     mock_fs_class: MagicMock,
-    mock_set_session: AsyncMock,
-    mock_get: MagicMock,
+    mock_set_session: AsyncMock, # noqa: ARG001
+    mock_get: MagicMock, # noqa: ARG001
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     # Setup dummy credentials
-    creds_dict: Dict[str, Any] = {
+    creds_dict: dict[str, Any] = {
         "auth_url": "https://authe.mysite.com/as/token.oauth2",
         "client_id": "test",
         "client_secret": "secret",
