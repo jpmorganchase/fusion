@@ -1,5 +1,6 @@
 import io
 import json
+import logging
 from pathlib import Path
 from typing import Any, Literal
 from unittest import mock
@@ -501,3 +502,54 @@ def test_download(  # noqa: PLR0913
         assert result == (True, Path(expected_lpath), None)
     else:
         assert result == (True, lpath, None)
+
+@patch.object(FusionHTTPFileSystem, "get", return_value=("mocked_return", "mocked_lpath", "mocked_extra"))
+@patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
+@patch("fsspec.AbstractFileSystem", autospec=True)
+def test_download_mkdir_logs_exception(
+    mock_fs_class: MagicMock,
+    mock_set_session: AsyncMock, # noqa: ARG001
+    mock_get: MagicMock, # noqa: ARG001
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # Setup dummy credentials
+    creds_dict: dict[str, Any] = {
+        "auth_url": "https://authe.mysite.com/as/token.oauth2",
+        "client_id": "test",
+        "client_secret": "secret",
+        "proxies": {},
+        "scope": "test_scope",
+    }
+    credentials_file = tmp_path / "creds.json"
+    with credentials_file.open("w") as f:
+        json.dump(creds_dict, f)
+    creds = FusionCredentials.from_file(credentials_file)
+
+    # Arrange
+    fs = FusionHTTPFileSystem(credentials=creds)
+    lfs = mock_fs_class.return_value
+    rpath = "http://example.com/skip"
+    lpath = tmp_path / "output/file.txt"
+
+    # Simulate parent dir missing and mkdir failing
+    lfs.exists.return_value = False
+    lfs.mkdir.side_effect = Exception("directory exists")
+
+    caplog.set_level(logging.INFO)
+
+    # Act
+    result = fs.download(
+        lfs=lfs,
+        rpath=rpath,
+        lpath=lpath,
+        chunk_size=5 * 2**20,
+        overwrite=True,
+        preserve_original_name=False,
+    )
+
+    # Assert expected call result
+    assert result == ("mocked_return", "mocked_lpath", "mocked_extra")
+
+    # Confirm log message and exception info were recorded
+    assert any("exists already" in record.getMessage() for record in caplog.records)
