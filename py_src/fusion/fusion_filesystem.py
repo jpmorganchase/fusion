@@ -578,7 +578,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             try:
                 lfs.mkdir(Path(lpath).parent, create_parents=True)
             except Exception as ex:  # noqa: BLE001
-                logger.info(f"Path {lpath} exists already", exc_info=ex)
+                logger.info(f"Path {Path(lpath).parent} exists already", exc_info=ex)
 
         is_local_fs = type(lfs).__name__ == "LocalFileSystem"
 
