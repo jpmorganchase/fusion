@@ -119,7 +119,7 @@ class ReportAttributes:
 
     def to_dict(self) -> dict[str, list[dict[str, Any]]]:
         return {"attributes": [attr.to_dict() for attr in self.attributes]}
-    
+    1
     def from_dict_list(self, data: list[dict[str, Any]]) -> ReportAttributes:
         attributes = [ReportAttribute(**attr_data) for attr_data in data]
         result = ReportAttributes(attributes=attributes)

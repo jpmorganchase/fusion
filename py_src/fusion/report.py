@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any, TypedDict
 
+import numpy as np
 import pandas as pd 
 
 from .utils import (
@@ -57,7 +58,6 @@ class Report(metaclass=CamelCaseMeta):
     tier_type: str
     lob: str
     data_node_id: dict[str, str]
-    alternative_id: dict[str, str]
     description: str
     frequency: str
     category: str
@@ -69,7 +69,10 @@ class Report(metaclass=CamelCaseMeta):
     sub_lob: str | None = None
     is_bcbs239_program: bool | None = None
     risk_stripe: str | None = None
+    risk_area: str | None = None
+    sap_code: str | None = None
     tier_designation: str | None = None
+    alternative_id: dict[str, str] | None = None
     region: str | None = None
     mnpi_indicator: bool | None = None
     country_of_reporting_obligation: str | None = None
@@ -195,7 +198,7 @@ class Report(metaclass=CamelCaseMeta):
         
 
     @classmethod
-    def from_dataframe(cls, data: pd.DataFrame) -> list[Report]:
+    def from_dataframe(cls, data: pd.DataFrame, client: Fusion | None = None)-> list[Report]:
         """
         Create a list of Report objects from a DataFrame, applying permanent column mapping.
 
@@ -207,6 +210,7 @@ class Report(metaclass=CamelCaseMeta):
         """
         # Apply permanent column mapping
         data = data.rename(columns=Report.COLUMN_MAPPING)
+        data = data.replace([np.nan,np.inf,-np.inf], None)  # Replace NaN, inf, -inf with None
 
         # Replace NaN with None
         data = data.where(data.notna(), None)
@@ -241,26 +245,28 @@ class Report(metaclass=CamelCaseMeta):
             valid_fields = {f.name for f in fields(cls)}
             report_data = {k: v for k, v in report_data.items() if k in valid_fields}
 
-
-            reports.append(cls(**report_data))
+            report_obj  = cls(**report_data)
+            report_obj.client = client  # Attach the client if provided
+            reports.append(report_obj)
 
         return reports
 
     @classmethod
-    def from_csv(cls, file_path: str) -> list[Report]:
+    def from_csv(cls, file_path: str, client: Fusion | None = None) -> list[Report]:
         """
         Create a list of Report objects from a CSV file, applying permanent column mapping.
 
         Args:
             file_path (str): Path to the CSV file.
+            client (Any, optional): Client instance to attach to each Report.
 
         Returns:
             list[Report]: List of Report objects.
         """
         data = pd.read_csv(file_path)
-        return cls.from_dataframe(data)
+        return cls.from_dataframe(data, client=client)
 
-   
+
 
     def create(
         self,
@@ -370,3 +376,43 @@ Report.COLUMN_MAPPING = {
             "Application ID": "data_node_name",
             "Application Type": "data_node_type",
         }
+
+class Reports:
+    def __init__(self, reports: list[Report] | None = None):
+        self.reports = reports or []
+        self._client: Fusion | None = None
+
+    def __getitem__(self, index: int) -> Report:
+        return self.reports[index]
+
+    def __iter__(self):
+        return iter(self.reports)
+
+    def __len__(self):
+        return len(self.reports)
+
+    @property
+    def client(self) -> Fusion | None:
+        return self._client
+
+    @client.setter
+    def client(self, client: Fusion | None) -> None:
+        self._client = client
+        for report in self.reports:
+            report.client = client
+
+    @classmethod
+    def from_csv(cls, file_path: str, client: Fusion | None = None) -> Reports:
+        data = pd.read_csv(file_path)
+        return cls.from_dataframe(data, client=client)
+
+    @classmethod
+    def from_dataframe(cls, df: pd.DataFrame, client: Fusion | None = None) -> Reports:
+        report_objs = Report.from_dataframe(df, client=client)
+        obj = cls(report_objs)
+        obj.client = client
+        return obj
+
+    def create_all(self) -> None:
+        for report in self.reports:
+            report.create()
