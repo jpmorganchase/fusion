@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.14] - 2025-07-14
+* Removed the need for list datasets and list catalog calls during file uploads
+* Bulk upload of files functionality enhanced to support file uploads from a folder path that contains subfolders
+* Resolved the issue where downloading files would fail if the download folder already existed
+
 ## [2.0.13] - 2025-05-06
 * Exception handling improvement
 * Limit Licensing service calls
