@@ -2149,40 +2149,37 @@ class Fusion:
         attributes_obj = Attributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
-
+    
     def report_attribute(
         self,
-        name: str,
         title: str,
+        sourceIdentifier: str | None = None,
         description: str | None = None,
         technicalDataType: str | None = None,
         path: str | None = None,
-        dataPublisher: str | None = None,
     ) -> ReportAttribute:
         """Instantiate a ReportAttribute object with this client for metadata creation.
+
         Args:
-            name (str): The unique name of the attribute. Mandatory.
+            sourceIdentifier (str): The unique identifier of the attribute. Mandatory.
             title (str): The display title of the attribute. Mandatory.
-            description (str | None, optional): Description of the attribute. Defaults to None.
-            technicalDataType (str | None, optional): The technical data type. Defaults to None.
-            path (str | None, optional): The hierarchical path for the attribute. Defaults to None.
-            dataPublisher (str | None, optional): The publisher of the data. Defaults to None.
+            description (str | None, optional): Description of the attribute.
+            technicalDataType (str | None, optional): The technical data type.
+            path (str | None, optional): The hierarchical path for the attribute.
+
         Returns:
             ReportAttribute: A new ReportAttribute instance connected to this client.
-        Example:
-            >>> fusion = Fusion()
-            >>> attr = fusion.report_attribute(name="region_code", title="Region Code")
         """
         attribute_obj = ReportAttribute(
-            name=name,
+            sourceIdentifier=sourceIdentifier,
             title=title,
             description=description,
             technicalDataType=technicalDataType,
             path=path,
-            dataPublisher=dataPublisher,
         )
         attribute_obj.client = self
         return attribute_obj
+
 
     def report_attributes(
         self,
@@ -2741,7 +2738,6 @@ class Fusion:
             sub_category: str,
             data_node_id: dict[str, str],
             alternative_id: dict[str, str],
-            alternate_id: str | None = None,
             sub_lob: str | None = None,
             is_bcbs239_program: bool | None = None,
             risk_area: str | None = None,
@@ -2755,7 +2751,6 @@ class Fusion:
             Args:
                 name (str): Name of the report.
                 tier_type (str): Tier type classification.
-                alternate_id (str): Alternate ID used to identify the report.
                 data_node_id (dict[str, str]): Associated data node identifier (as a dictionary).
                 title (str, optional): Report title.
                 frequency (str, optional): Frequency of the report.
@@ -2798,7 +2793,6 @@ class Fusion:
                 data_node_id=data_node_id,
                 alternative_id=alternative_id,
                 title=title,
-                alternate_id=alternate_id,
                 description=description,
                 frequency=frequency,
                 category=category,
