@@ -26,7 +26,7 @@ from fusion.dataflow import InputDataFlow, OutputDataFlow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
-from fusion.report import Report
+from fusion.report import Report, ReportsWrapper
 from fusion.report_attributes import ReportAttribute, ReportAttributes
 
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
@@ -67,17 +67,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 
-    # fusion.py
-class ReportsWrapper(Reports):
-        def __init__(self, client: Fusion):
-            super().__init__([])
-            self.client = client
-
-        def from_csv(self, file_path: str) -> Reports:
-            return Reports.from_csv(file_path, client=self.client)
-
-        def from_dataframe(self, df: pd.DataFrame) -> Reports:
-            return Reports.from_dataframe(df, client=self.client)
+    
         
 
 class Fusion:
