@@ -2192,10 +2192,19 @@ class Fusion:
         return attributes_obj
       # import at top
 
-    def reports(self, reports: list[Report] | None = None) -> Reports:
-        reports_obj = Reports(reports)
-        reports_obj.client = self
-        return reports_obj
+    # fusion.py
+    def reports(self) -> type[Reports]:
+        class ReportsWrapper(Reports):
+            @classmethod
+            def from_csv(cls, file_path: str) -> Reports:
+                return super().from_csv(file_path, client=self)
+
+            @classmethod
+            def from_dataframe(cls, df: pd.DataFrame) -> Reports:
+                return super().from_dataframe(df, client=self)
+
+        return ReportsWrapper
+
 
 
     def delete_datasetmembers(
