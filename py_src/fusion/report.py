@@ -403,3 +403,14 @@ class Reports:
     def create_all(self) -> None:
         for report in self.reports:
             report.create()
+
+class ReportsWrapper(Reports):
+        def __init__(self, client: Fusion):
+            super().__init__([])
+            self.client = client
+
+        def from_csv(self, file_path: str) -> Reports:
+            return Reports.from_csv(file_path, client=self.client)
+
+        def from_dataframe(self, df: pd.DataFrame) -> Reports:
+            return Reports.from_dataframe(df, client=self.client)
