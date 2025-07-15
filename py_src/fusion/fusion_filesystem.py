@@ -641,15 +641,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     return True, lpath, None
         except Exception as ex:  # noqa: BLE001
             headers = {}
-            logger.info(f"Failed to get headers for {rpath}", ex)
+            logger.info(f"Failed to get headers for {rpath}", exc_info=ex)
 
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
 
-        if not lfs.exists(lpath):
+        if not lfs.exists(Path(lpath).parent):
             try:
-                lfs.mkdir(Path(lpath).parent, exist_ok=True, create_parents=True)
+                lfs.mkdir(Path(lpath).parent, create_parents=True)
             except Exception as ex:  # noqa: BLE001
-                logger.info(f"Path {lpath} exists already", ex)
+                logger.info(f"Path {Path(lpath).parent} exists already", exc_info=ex)
 
         is_local_fs = type(lfs).__name__ == "LocalFileSystem"
 
