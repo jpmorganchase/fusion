@@ -2822,4 +2822,24 @@ class Fusion:
             report_obj.client = self
             return report_obj
 
+
+def link_attributes_to_terms(
+    self,
+    report_id: str,
+    mappings: list[Report.AttributeTermMapping],
+    return_resp_obj: bool = False,
+) -> requests.Response | None:
+    """
+    Allow notebook users to link attributes to terms using `fusion.link_attributes_to_terms(...)`.
+
+    This wraps `Report.link_attributes_to_terms(...)` and passes the Fusion client automatically.
+    """
+
+    return Report.link_attributes_to_terms(
+        report_id=report_id,
+        mappings=mappings,
+        client=self,
+        return_resp_obj=return_resp_obj
+    )
+
     
