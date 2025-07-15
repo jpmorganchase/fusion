@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class ReportAttribute(metaclass=CamelCaseMeta):
-    sourceIdentifier: str | None = None
     title: str
+    sourceIdentifier: str | None = None
     description: str | None = None
     technicalDataType: str | None = None
     path: str | None = None
