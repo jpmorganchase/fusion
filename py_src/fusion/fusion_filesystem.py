@@ -337,6 +337,20 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return ret
 
+    def exists(self, url: str, **kwargs: Any) -> Any:
+        """Check existence.
+
+        Args:
+            url: Url.
+            detail: Detail.
+            **kwargs: Kwargs.
+
+        Returns:
+
+        """
+        url = self._decorate_url(url)
+        return super().exists(url, **kwargs)
+
     async def _exists(self, url: str, **kwargs: Any) -> Any:
         await self._async_startup()
         url = self._decorate_url(url)
@@ -1157,4 +1171,3 @@ class FusionFile(HTTPFile):  # type: ignore
             return out
 
     _fetch_range = sync_wrapper(async_fetch_range)
-
