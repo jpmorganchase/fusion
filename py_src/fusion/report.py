@@ -311,47 +311,34 @@ class Report(metaclass=CamelCaseMeta):
         term: dict[str, str]
         isKDE: bool
 
-
+    @classmethod
     def link_attributes_to_terms(
-        self,
+        cls,
         report_id: str,
-        mappings: list[AttributeTermMapping],
+        mappings: list[Report.AttributeTermMapping],
+        client: Fusion,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
         """
-        Links attributes to business terms for a report using pre-formatted mappings.
+        Class method to link attributes to business terms for a report.
+
+        Can be called without an actual Report object.
 
         Args:
-            report_id (str): Report identifier.
-            mappings (list[dict]): List of mappings in the format:
-                {
-                    "attribute": {"id": str},
-                    "term": {"id": str},
-                    "isKDE": bool
-                }
-            return_resp_obj (bool, optional): If True, returns the response object. Defaults to False.
+            report_id (str): ID of the report to link terms to.
+            mappings (list): List of attribute-to-term mappings.
+            client (Fusion): Fusion client instance.
+            return_resp_obj (bool): Whether to return the raw response object.
 
         Returns:
-            requests.Response | None: Response object from the API if return_resp_obj is True, otherwise None.
+            requests.Response | None: API response
         """
-        # Validate mappings structure
-        for i, m in enumerate(mappings):
-            if not isinstance(m, dict):
-                raise ValueError(f"Mapping at index {i} is not a dictionary.")
-            if not ("attribute" in m and "term" in m and "isKDE" in m):
-                raise ValueError(f"Mapping at index {i} must include 'attribute', 'term', and 'isKDE'.")
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
+        resp = client.session.post(url, json=mappings)
+        requests_raise_for_status(resp)
 
-        # Get the Fusion client
-        client = self._use_client(None)
-        base = client._get_new_root_url()
-        url = f"{base}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
+        return resp if return_resp_obj else None
 
-
-        # Make the request
-        response = client.session.post(url, json=mappings)
-        requests_raise_for_status(response)
-
-        return response if return_resp_obj else None
 
 
 Report.COLUMN_MAPPING = {
