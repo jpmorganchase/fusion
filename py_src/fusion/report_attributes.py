@@ -133,29 +133,33 @@ class ReportAttributes:
 
 
     def from_csv(self, file_path: str) -> ReportAttributes:
-        """Load ReportAttributes from a CSV file with custom column mappings."""
+        """Load ReportAttributes from a CSV file with custom column mappings and ignore irrelevant columns."""
         df = pd.read_csv(file_path)
 
-        # Rename incoming columns to match internal ReportAttribute fields
+        # Only keep relevant columns
         column_map = {
             "Local Data Element Reference ID": "sourceIdentifier",
             "Data Element Name": "title",
             "Data Element Description": "description",
         }
 
+        # Filter to only needed columns (drop all others)
+        df = df[[col for col in column_map if col in df.columns]]
+
+        # Rename to match ReportAttribute fields
         df = df.rename(columns=column_map)
 
-        # Add missing expected fields with default None
+        # Add any missing required fields with default None
         for col in ["technicalDataType", "path"]:
             if col not in df:
                 df[col] = None
 
-        # Ensure consistent handling of missing values
+        # Replace NaN/missing values with None
         df = df.where(pd.notna(df), None)
 
         return self.from_dataframe(df)
 
-    
+
 
     def from_object(
         self,
