@@ -65,6 +65,18 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 
+    # fusion.py
+class ReportsWrapper(Reports):
+        def __init__(self, client: Fusion):
+            super().__init__([])
+            self.client = client
+
+        def from_csv(self, file_path: str) -> Reports:
+            return Reports.from_csv(file_path, client=self.client)
+
+        def from_dataframe(self, df: pd.DataFrame) -> Reports:
+            return Reports.from_dataframe(df, client=self.client)
+        
 
 class Fusion:
     """Core Fusion class for API access."""
@@ -2192,19 +2204,8 @@ class Fusion:
         return attributes_obj
       # import at top
 
-    # fusion.py
-    def reports(self) -> type[Reports]:
-        class ReportsWrapper(Reports):
-            @classmethod
-            def from_csv(cls, file_path: str) -> Reports:
-                return super().from_csv(file_path, client=self)
-
-            @classmethod
-            def from_dataframe(cls, df: pd.DataFrame) -> Reports:
-                return super().from_dataframe(df, client=self)
-
-        return ReportsWrapper
-
+    def reports(self) -> ReportsWrapper:
+        return ReportsWrapper(client=self)
 
 
     def delete_datasetmembers(
