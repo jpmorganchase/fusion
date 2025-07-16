@@ -181,12 +181,12 @@ class Report(metaclass=CamelCaseMeta):
         for k, v in self.__dict__.items():
             if k.startswith("_"):
                 continue
-        if k == "is_bcbs239_program":
-            report_dict["isBCBS239Program"] = v
-        elif k == "regulatory_related":
-            report_dict["regulatoryRelated"] = v
-        else:
-            report_dict[snake_to_camel(k)] = v
+            if k == "is_bcbs239_program":
+                report_dict["isBCBS239Program"] = v
+            elif k == "regulatory_related":
+                report_dict["regulatoryRelated"] = v
+            else:
+                report_dict[snake_to_camel(k)] = v
 
         return report_dict
     @classmethod
