@@ -2733,14 +2733,14 @@ class Fusion:
 
     def report(  # noqa: PLR0913
             self,
-            tier_type: str,
-            lob: str,
             description: str,
             title: str,
             frequency: str,
             category: str,
             sub_category: str,
             data_node_id: dict[str, str],
+            tier_type: str | None = None, 
+            lob: str | None = None,
             alternative_id: dict[str, str] | None = None,
             sub_lob: str | None = None,
             is_bcbs239_program: bool | None = None,
@@ -2748,6 +2748,7 @@ class Fusion:
             risk_stripe: str | None = None,
             sap_code: str | None = None,
             domain: dict[str, str | bool] | None = None,
+        
             **kwargs: Any
         ) -> Report:
             """Instantiate a Report object with this client for metadata creation.
