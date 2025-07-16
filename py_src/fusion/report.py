@@ -55,18 +55,18 @@ class Report(metaclass=CamelCaseMeta):
     """
 
     title: str
-    tier_type: str
-    lob: str
     data_node_id: dict[str, str]
     description: str
     frequency: str
     category: str
     sub_category: str
     domain: dict[str, str]  # Dictionary with "name" key populated from "CDO Office"
-    regulatory_related: str
+    regulatory_related: bool
 
     # Optional fields
+    lob: str | None = None
     sub_lob: str | None = None
+    tier_type: str | None = None
     is_bcbs239_program: bool | None = None
     risk_stripe: str | None = None
     risk_area: str | None = None
@@ -181,10 +181,13 @@ class Report(metaclass=CamelCaseMeta):
         for k, v in self.__dict__.items():
             if k.startswith("_"):
                 continue
-            if k == "is_bcbs239_program":
-                report_dict["isBCBS239Program"] = v
-            else:
-                report_dict[snake_to_camel(k)] = v
+        if k == "is_bcbs239_program":
+            report_dict["isBCBS239Program"] = v
+        elif k == "regulatory_related":
+            report_dict["regulatoryRelated"] = v
+        else:
+            report_dict[snake_to_camel(k)] = v
+
         return report_dict
     @classmethod
     def map_application_type(cls, app_type: str) -> str:
