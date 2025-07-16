@@ -212,7 +212,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
                 next_token = self._extract_token_from_response(r)
                 if next_token:
-                    all_resources = out.get("resources", [])
+                    all_resources = out.get("resources", []).     # type: ignore
 
                     while next_token:
                         headers = kw.get("headers", {}).copy()
@@ -228,6 +228,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
                         if not next_token:
                             break
+
+                    out["resources"] = all_resources   # type: ignore
 
         if not is_file:
             out = [urljoin(clean_url + "/", x["identifier"]) for x in out["resources"]]  # type: ignore
