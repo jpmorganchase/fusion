@@ -152,6 +152,15 @@ class Report(metaclass=CamelCaseMeta):
 
         report.__post_init__()
         return report
+    
+    def validate(self) -> None:
+        required_fields = [
+            "title", "data_node_id",
+            "category", "frequency", "description","sub_category", "domain"
+        ]
+        missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
+        if missing:
+            raise ValueError(f"Missing required fields in Report: {', '.join(missing)}")
 
 
     def to_dict(self) -> dict[str, Any]:
@@ -247,7 +256,13 @@ class Report(metaclass=CamelCaseMeta):
 
             report_obj  = cls(**report_data)
             report_obj.client = client  # Attach the client if provided
-            reports.append(report_obj)
+
+            try:
+                report_obj.validate()
+                reports.append(report_obj)
+            except ValueError as e:
+                print(f" Skipping invalid row: {e}")
+
 
         return reports
 
@@ -366,6 +381,7 @@ class Report(metaclass=CamelCaseMeta):
         requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
+    
 
 
 
