@@ -212,7 +212,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
                 next_token = self._extract_token_from_response(r)
                 if next_token:
-                    all_resources = out.get("resources", []).     # type: ignore
+                    all_resources = out.get("resources", [])     # type: ignore
 
                     while next_token:
                         headers = kw.get("headers", {}).copy()
