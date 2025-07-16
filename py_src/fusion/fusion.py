@@ -2730,88 +2730,79 @@ class Fusion:
 
         members_df = pd.DataFrame(data, columns=["identifier", "format"])
         return members_df
-
+    
     def report(  # noqa: PLR0913
-            self,
-            description: str,
-            title: str,
-            frequency: str,
-            category: str,
-            sub_category: str,
-            data_node_id: dict[str, str],
-            tier_type: str | None = None, 
-            lob: str | None = None,
-            alternative_id: dict[str, str] | None = None,
-            sub_lob: str | None = None,
-            is_bcbs239_program: bool | None = None,
-            risk_area: str | None = None,
-            risk_stripe: str | None = None,
-            sap_code: str | None = None,
-            domain: dict[str, str | bool] | None = None,
-        
-            **kwargs: Any
-        ) -> Report:
-            """Instantiate a Report object with this client for metadata creation.
+        self,
+        description: str,
+        title: str,
+        frequency: str,
+        category: str,
+        sub_category: str,
+        data_node_id: dict[str, str],
+        regulatory_related: bool,
+        tier_type: str | None = None, 
+        lob: str | None = None,
+        alternative_id: dict[str, str] | None = None,
+        sub_lob: str | None = None,
+        is_bcbs239_program: bool | None = None,
+        risk_area: str | None = None,
+        risk_stripe: str | None = None,
+        sap_code: str | None = None,
+        domain: dict[str, str | bool] | None = None,
+        **kwargs: Any,
+    ) -> Report:
+        """
+        Instantiate a Report object with the current Fusion client attached.
 
-            Args:
-                name (str): Name of the report.
-                tier_type (str): Tier type classification.
-                data_node_id (dict[str, str]): Associated data node identifier (as a dictionary).
-                title (str, optional): Report title.
-                frequency (str, optional): Frequency of the report.
-                category (str, optional): High-level category of the report.
-                sub_category (str, optional): Sub-category of the report.
-                report_inventory_name (str, optional): Inventory name for internal tracking.
-                report_owner (str, optional): Name of the report owner.
-                lob (str, optional): Line of business.
-                sub_lob (str, optional): Sub line of business.
-                is_bcbs239_program (bool, optional): Flag for BCBS 239 compliance. Defaults to False.
-                risk_area (str, optional): Risk area associated with the report.
-                riskstripe (str, optional): Riskstripe code.
-                sap_code (str, optional): SAP code.
-                domain (str, optional): Domain classification.
-                sourced_object (str, optional): Source object reference.
-                alternative_id (dict[str, str], optional): Alternate identifiers map.
-                data_model_id (dict[str, str], optional): Associated data model.
-                d (str, optional): Unique identifier for the report.
-                description (str, optional): Description of the report.
-                report_inventory_id (str, optional): Internal report inventory ID.
-                created_service (str, optional): Originating service name.
-                originator_firm_id (str, optional): ID of the originating firm.
-                is_instance (bool, optional): Whether this is a report instance.
-                version (str, optional): Version of the report.
-                status (str, optional): Status of the report.
-                created_by (str, optional): Creator's identifier.
-                created_datetime (str, optional): Timestamp of creation.
-                modified_by (str, optional): Last modifier's identifier.
-                modified_datetime (str, optional): Timestamp of last modification.
-                approved_by (str, optional): Approver's identifier.
-                approved_datetime (str, optional): Timestamp of approval.
-                kwargs (Any): Additional fields.
+        Args:
+            description (str): Description of the report.
+            title (str): Title of the report or process.
+            frequency (str): Reporting frequency (e.g., Monthly, Quarterly).
+            category (str): Main classification of the report.
+            sub_category (str): Sub-classification under the main category.
+            data_node_id (dict[str, str]): Associated data node details. Should include "name" and "dataNodeType".
+            regulatory_related (bool): Whether the report is regulatory-designated. This is a required field.
+            tier_type (str, optional): Tier classification (e.g., "Tier 1", "Non Tier 1").
+            lob (str, optional): Line of business.
+            alternative_id (dict[str, str], optional): Alternate identifiers for the report.
+            sub_lob (str, optional): Subdivision of the line of business.
+            is_bcbs239_program (bool, optional): Whether the report is part of the BCBS 239 program.
+            risk_area (str, optional): Risk area covered by the report.
+            risk_stripe (str, optional): Stripe or classification under the risk area.
+            sap_code (str, optional): SAP financial tracking code.
+            domain (dict[str, str | bool], optional): Domain details. Typically contains a "name" key.
+            **kwargs (Any): Additional optional fields such as:
+                - tier_designation (str)
+                - region (str)
+                - mnpi_indicator (bool)
+                - country_of_reporting_obligation (str)
+                - primary_regulator (str)
 
-            Returns:
-                Report: Fusion Report class instance.
-            """
-            report_obj = Report(
-                tier_type=tier_type,
-                lob=lob,
-                data_node_id=data_node_id,
-                alternative_id=alternative_id,
-                title=title,
-                description=description,
-                frequency=frequency,
-                category=category,
-                sub_category=sub_category,
-                sub_lob=sub_lob,
-                is_bcbs239_program=is_bcbs239_program,
-                risk_area=risk_area,
-                risk_stripe=risk_stripe,
-                sap_code=sap_code,
-                domain=domain,
-                **kwargs,
-            )
-            report_obj.client = self
-            return report_obj
+        Returns:
+            Report: A Report object ready for API upload or further manipulation.
+        """
+        report_obj = Report(
+            title=title,
+            description=description,
+            frequency=frequency,
+            category=category,
+            sub_category=sub_category,
+            data_node_id=data_node_id,
+            regulatory_related=regulatory_related,
+            tier_type=tier_type,
+            lob=lob,
+            alternative_id=alternative_id,
+            sub_lob=sub_lob,
+            is_bcbs239_program=is_bcbs239_program,
+            risk_area=risk_area,
+            risk_stripe=risk_stripe,
+            sap_code=sap_code,
+            domain=domain,
+            **kwargs,
+        )
+        report_obj.client = self
+        return report_obj
+
 
 
     def link_attributes_to_terms(

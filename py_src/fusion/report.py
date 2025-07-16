@@ -22,36 +22,36 @@ if TYPE_CHECKING:
 
     from fusion import Fusion
 
-
 @dataclass
 class Report(metaclass=CamelCaseMeta):
-    """Fusion Report class for managing report metadata.
+    """
+    Fusion Report class for managing report metadata.
 
     Attributes:
-        name (str): A unique name for the report.
-        tier_type (str): The tier classification of the report.
-        lob (str): The line of business associated with the report.
-        data_node_id (dict[str, str]): Identifier of the associated data node.
-        alternative_id (dict[str, str]): Alternate identifiers for the report.
+        title (str): Title of the report or process.
+        data_node_id (dict[str, str]): Identifier of the associated data node (e.g., name, dataNodeType).
+        description (str): Description of the report.
+        frequency (str): Reporting frequency (e.g., Monthly, Quarterly).
+        category (str): Primary category classification.
+        sub_category (str): Sub-category under the main category.
+        domain (dict[str, str]): Domain metadata (typically with a "name" key).
+        regulatory_related (bool): Whether the report is regulatory-related.
 
-        title (str, optional): A title for the report. Defaults to None.
-        alternate_id (str, optional): A alternate identifier for the report. Defaults to None.
-        description (str, optional): A description of the report. Defaults to None.
-        frequency (str, optional): The frequency with which the report is generated. Defaults to None.
-        category (str, optional): The primary category of the report. Defaults to None.
-        sub_category (str, optional): A more specific classification under the main category. Defaults to None.
-        report_inventory_name (str, optional): Name of the report in the report inventory. Defaults to None.
-        report_inventory_id (str, optional): Identifier of the report in the inventory. Defaults to None.
-        report_owner (str, optional): Owner responsible for the report. Defaults to None.
-        sub_lob (str, optional): Subdivision of the line of business. Defaults to None.
-        is_bcbs239_program (bool, optional): Indicates if the report is part of the BCBS 239 program. Defaults to None.
-        risk_area (str, optional): The area of risk the report addresses. Defaults to None.
-        risk_stripe (str, optional): A specific risk category or stripe. Defaults to None.
-        sap_code (str, optional): Associated SAP code for financial tracking. Defaults to None.
-        sourced_object (str, optional): The original source object for the report. Defaults to None.
-        domain (dict[str, str | bool], optional): Domain information related to the report. Defaults to None.
-        data_model_id (dict[str, str], optional): Identifier of the data model used. Defaults to None.
-        _client (Any, optional): A Fusion client object. Defaults to None.
+        lob (str, optional): Line of Business.
+        sub_lob (str, optional): Subdivision of the Line of Business.
+        tier_type (str, optional): Report's tier classification.
+        is_bcbs239_program (bool, optional): Flag indicating BCBS 239 program inclusion.
+        risk_stripe (str, optional): Stripe under risk category.
+        risk_area (str, optional): The area of risk addressed.  
+        sap_code (str, optional): Associated SAP cost code.
+        tier_designation (str, optional): Tier designation (e.g., Tier 1, Non Tier 1).
+        alternative_id (dict[str, str], optional): Alternate report identifiers.
+        region (str, optional): Associated region.
+        mnpi_indicator (bool, optional): Whether report contains MNPI.
+        country_of_reporting_obligation (str, optional): Country of regulatory obligation.
+        primary_regulator (str, optional): Main regulatory authority.
+
+        _client (Fusion, optional): Fusion client for making API calls (injected automatically).
     """
 
     title: str
