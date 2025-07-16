@@ -389,13 +389,19 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         headers = kw.get("headers", {}).copy()
         kw["headers"] = headers
 
+        session = self.sync_session
+        file_size = self.info(url).get("size", None)
+        range_start = start if start is not None else 0
+        range_end = end if end is not None else file_size
+
+        fusion_file = FusionFile(self, url, session=session, size=file_size, **kw)
+
         while True:
-            response = super().cat(url, start=start, end=end, **kw)
-            all_data.extend(response)
-            next_token = self._extract_token_from_response(response)
+            out, resp_headers = sync(self.loop, fusion_file.async_fetch_range_with_headers, range_start, range_end)
+            all_data.extend(out)
+            next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
                 break
-
             headers["x-jpmc-next-token"] = next_token
             kw["headers"] = headers
 
@@ -420,17 +426,22 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         headers = kw.get("headers", {}).copy() if "headers" in kwargs else {}
         kw["headers"] = headers
 
-        while True:
-            response = await super()._cat(url, start=start, end=end, **kw)
-            all_data.extend(response)
+        session = await self.set_session()
+        file_size = await self._info(url)
+        file_size = file_size.get("size", None)
+        range_start = start if start is not None else 0
+        range_end = end if end is not None else file_size
 
-            next_token = self._extract_token_from_response(response)
+        fusion_file = FusionFile(self, url, session=session, size=file_size, **kw)
+
+        while True:
+            out, resp_headers = await fusion_file.async_fetch_range_with_headers(range_start, range_end)
+            all_data.extend(out)
+            next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
                 break
-
             headers["x-jpmc-next-token"] = next_token
             kw["headers"] = headers
-
         return bytes(all_data)
 
     async def _stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
@@ -1173,3 +1184,13 @@ class FusionFile(HTTPFile):  # type: ignore
             return out
 
     _fetch_range = sync_wrapper(async_fetch_range)
+
+    async def async_fetch_range_with_headers(self, start: int, end: int) -> tuple[bytes, dict]:
+        kwargs = self.kwargs.copy()
+        headers = kwargs.pop("headers", {}).copy()
+        headers["Range"] = f"bytes={start}-{end - 1}"
+        r = await self.session.get(self.fs.encode_url(self.url), headers=headers, **kwargs)
+        async with r:
+            r.raise_for_status()
+            out = await r.read()
+            return out, r.headers
