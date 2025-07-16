@@ -2741,7 +2741,7 @@ class Fusion:
             category: str,
             sub_category: str,
             data_node_id: dict[str, str],
-            alternative_id: dict[str, str],
+            alternative_id: dict[str, str] | None = None,
             sub_lob: str | None = None,
             is_bcbs239_program: bool | None = None,
             risk_area: str | None = None,

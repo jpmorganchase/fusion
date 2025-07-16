@@ -163,8 +163,18 @@ class ReportAttributes:
 
     def from_object(
         self,
-        attributes_source: Union[list[ReportAttribute], list[dict[str, Any]], pd.DataFrame], #noqa
+        attributes_source: Union[
+            list[ReportAttribute], 
+            list[dict[str, Any]], 
+            pd.DataFrame, 
+            str
+        ],
     ) -> ReportAttributes:
+        """
+        Load ReportAttributes from various sources: list, DataFrame, .csv path, or JSON string.
+        """
+        import json
+
         if isinstance(attributes_source, list):
             if all(isinstance(attr, ReportAttribute) for attr in attributes_source):
                 attributes_obj = ReportAttributes(attributes=cast(list[ReportAttribute], attributes_source))
@@ -174,6 +184,14 @@ class ReportAttributes:
                 raise TypeError("List must contain either ReportAttribute instances or dicts.")
         elif isinstance(attributes_source, pd.DataFrame):
             attributes_obj = self.from_dataframe(attributes_source) 
+        elif isinstance(attributes_source, str):
+            if attributes_source.strip().endswith(".csv"):
+                attributes_obj = self.from_csv(attributes_source)
+            elif attributes_source.strip().startswith("[{"):
+                dict_list = json.loads(attributes_source)
+                attributes_obj = self.from_dict_list(dict_list)
+            else:
+                raise ValueError("String must be a .csv path or JSON array string.")
         else:
             raise TypeError("Unsupported type for attributes_source.")
 

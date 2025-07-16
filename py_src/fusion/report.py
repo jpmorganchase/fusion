@@ -265,6 +265,34 @@ class Report(metaclass=CamelCaseMeta):
         """
         data = pd.read_csv(file_path)
         return cls.from_dataframe(data, client=client)
+    
+    @classmethod
+    def from_object(
+        cls,
+        source: pd.DataFrame | list[dict[str, Any]] | str,
+        client: Fusion | None = None
+    ) -> Reports:
+        """Unified loader for Reports from CSV path, DataFrame, list of dicts, or JSON string."""
+        if isinstance(source, pd.DataFrame):
+            return cls.from_dataframe(source, client=client)
+
+        elif isinstance(source, list) and all(isinstance(item, dict) for item in source):
+            df = pd.DataFrame(source)
+            return cls.from_dataframe(df, client=client)
+
+        elif isinstance(source, str):
+            if source.strip().endswith(".csv"):
+                return cls.from_csv(source, client=client)
+            elif source.strip().startswith("[{"):
+                import json
+                data = json.loads(source)
+                df = pd.DataFrame(data)
+                return cls.from_dataframe(df, client=client)
+            else:
+                raise ValueError("Unsupported string input — must be .csv path or JSON array string")
+
+        raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
+
 
 
 
@@ -414,3 +442,7 @@ class ReportsWrapper(Reports):
 
         def from_dataframe(self, df: pd.DataFrame) -> Reports:
             return Reports.from_dataframe(df, client=self.client)
+        
+        def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports:
+           return Reports.from_object(source, client=self.client)
+
