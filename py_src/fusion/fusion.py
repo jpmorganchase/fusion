@@ -2829,14 +2829,28 @@ class Fusion:
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
         """
-        Allow notebook users to link attributes to terms using `fusion.link_attributes_to_terms(...)`.
+        Link one or more report attributes to business glossary terms.
 
-        This wraps `Report.link_attributes_to_terms(...)` and passes the Fusion client automatically.
+        Each mapping should follow this format:
+            {
+                "attribute": {"id": "attribute-id"},
+                "term": {"id": "term-id"},
+                "isKDE": True  # Optional; defaults to True if not provided
+            }
+
+        This method wraps `Report.link_attributes_to_terms` and automatically attaches the Fusion client.
         """
+
+        processed_mappings = []
+        for mapping in mappings:
+            new_mapping = mapping.copy()
+            if "isKDE" not in new_mapping:
+                new_mapping["isKDE"] = True 
+            processed_mappings.append(new_mapping)
 
         return Report.link_attributes_to_terms(
             report_id=report_id,
-            mappings=mappings,
+            mappings=processed_mappings,
             client=self,
             return_resp_obj=return_resp_obj
         )
