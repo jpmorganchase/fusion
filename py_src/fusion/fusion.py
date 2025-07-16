@@ -2153,7 +2153,7 @@ class Fusion:
         attributes_obj = Attributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
-    
+        
     def report_attribute(
         self,
         title: str,
@@ -2162,17 +2162,28 @@ class Fusion:
         technicalDataType: str | None = None,
         path: str | None = None,
     ) -> ReportAttribute:
-        """Instantiate a ReportAttribute object with this client for metadata creation.
+        """
+        Instantiate a ReportAttribute object with this client for metadata creation.
 
         Args:
-            sourceIdentifier (str): The unique identifier of the attribute. Mandatory.
-            title (str): The display title of the attribute. Mandatory.
-            description (str | None, optional): Description of the attribute.
-            technicalDataType (str | None, optional): The technical data type.
-            path (str | None, optional): The hierarchical path for the attribute.
+            title (str): The display title of the attribute (required).
+            sourceIdentifier (str | None, optional): A unique identifier or reference ID from the source system.
+            description (str | None, optional): A longer description of the attribute.
+            technicalDataType (str | None, optional): The technical data type (e.g., string, int, boolean).
+            path (str | None, optional): The hierarchical path or logical grouping for the attribute.
 
         Returns:
-            ReportAttribute: A new ReportAttribute instance connected to this client.
+            ReportAttribute: A single ReportAttribute instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.report_attribute(
+            ...     title="Customer ID",
+            ...     sourceIdentifier="cust_id_123",
+            ...     description="Unique customer identifier",
+            ...     technicalDataType="String",
+            ...     path="Customer.Details"
+            ... )
         """
         attribute_obj = ReportAttribute(
             sourceIdentifier=sourceIdentifier,
@@ -2189,21 +2200,27 @@ class Fusion:
         self,
         attributes: list[ReportAttribute] | None = None,
     ) -> ReportAttributes:
-        """Instantiate a ReportAttributes collection with this client for managing multiple attributes.
+        """
+        Instantiate a ReportAttributes collection with this client, allowing batch creation or manipulation.
+
         Args:
-            attributes (list[ReportAttribute] | None, optional): List of ReportAttribute instances. Defaults to None.
+            attributes (list[ReportAttribute] | None, optional): A list of ReportAttribute objects to include.
+                Defaults to an empty list if not provided.
+
         Returns:
-            ReportAttributes: A ReportAttributes collection object with client attached.
+            ReportAttributes: A ReportAttributes collection object with the client context attached.
+
         Example:
             >>> fusion = Fusion()
-            >>> attr1 = fusion.report_attribute(name="code", title="Code")
-            >>> attr2 = fusion.report_attribute(name="label", title="Label")
-            >>> attrs = fusion.report_attributes([attr1, attr2])
+            >>> attr1 = fusion.report_attribute(title="Code")
+            >>> attr2 = fusion.report_attribute(title="Label")
+            >>> attr_collection = fusion.report_attributes([attr1, attr2])
+            >>> attr_collection.create(report_id="abc-123")
         """
         attributes_obj = ReportAttributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
-      # import at top
+
 
     def reports(self) -> ReportsWrapper:
         return ReportsWrapper(client=self)
