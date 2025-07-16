@@ -432,6 +432,30 @@ class Reports:
         for report in self.reports:
             report.create()
 
+    @classmethod
+    def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None) -> Reports:
+        """Load Reports from DataFrame, list of dicts, .csv path, or JSON string."""
+        import json
+        import os
+
+        if isinstance(source, pd.DataFrame):
+            return cls.from_dataframe(source, client=client)
+
+        elif isinstance(source, list) and all(isinstance(item, dict) for item in source):
+            return cls.from_dataframe(pd.DataFrame(source), client=client)
+
+        elif isinstance(source, str):
+            if source.lower().endswith(".csv") and os.path.exists(source):
+                return cls.from_csv(source, client=client)
+            elif source.strip().startswith("[{"):
+                dict_list = json.loads(source)
+                return cls.from_dataframe(pd.DataFrame(dict_list), client=client)
+            else:
+                raise ValueError("Unsupported string input — must be .csv path or JSON array string")
+
+        raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
+
+
 class ReportsWrapper(Reports):
         def __init__(self, client: Fusion):
             super().__init__([])
