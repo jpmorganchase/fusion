@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import logging
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -20,6 +21,7 @@ from fusion.fs_sync import (
     _upload,
     _url_to_path,
     fsync,
+    logger,
 )
 from fusion.fusion_filesystem import FusionHTTPFileSystem
 
@@ -820,3 +822,82 @@ def test_fsync_invalid_direction(
             log_level,
             log_path,
         )
+
+
+@patch("fusion.fs_sync._get_local_state")
+@patch("fusion.fs_sync._get_fusion_df")
+@patch("fusion.fs_sync._synchronize", side_effect=KeyboardInterrupt)
+@patch("builtins.input", return_value="exit")
+def test_fsync_preserves_existing_handlers(
+    mock_input: Any,  # noqa: ARG001
+    mock_sync: Any,  # noqa: ARG001
+    mock_get_fusion_df: Any,
+    mock_get_local_state: Any,
+) -> None:
+    logger.handlers.clear()
+    custom_handler = logging.StreamHandler()
+    logger.addHandler(custom_handler)
+
+    mock_get_local_state.return_value = pd.DataFrame({"a": [1]})
+    mock_get_fusion_df.return_value = pd.DataFrame({"a": [1]})
+
+    fs_fusion = fsspec.filesystem("memory")
+    fs_local = fsspec.filesystem("memory")
+
+    fsync(
+        fs_fusion,
+        fs_local,
+        products=["p"],
+        datasets=[],
+        catalog="c",
+        direction="upload",
+        flatten=False,
+        dataset_format=None,
+        n_par=1,
+        show_progress=False,
+        local_path="",
+        log_level=logging.ERROR,
+        log_path=".",
+    )
+
+    assert custom_handler in logger.handlers
+    logger.handlers.clear()
+
+
+@patch("fusion.fs_sync._get_local_state")
+@patch("fusion.fs_sync._get_fusion_df")
+@patch("fusion.fs_sync._synchronize", side_effect=KeyboardInterrupt)
+@patch("builtins.input", return_value="exit")
+def test_fsync_adds_handlers_when_none(
+    mock_input: Any,  # noqa: ARG001
+    mock_sync: Any,  # noqa: ARG001
+    mock_get_fusion_df: Any,
+    mock_get_local_state: Any,
+) -> None:
+    logger.handlers.clear()
+    mock_get_local_state.return_value = pd.DataFrame({"a": [1]})
+    mock_get_fusion_df.return_value = pd.DataFrame({"a": [1]})
+
+    fs_fusion = fsspec.filesystem("memory")
+    fs_local = fsspec.filesystem("memory")
+
+    fsync(
+        fs_fusion,
+        fs_local,
+        products=["p"],
+        datasets=[],
+        catalog="c",
+        direction="upload",
+        flatten=False,
+        dataset_format=None,
+        n_par=1,
+        show_progress=False,
+        local_path="",
+        log_level=logging.ERROR,
+        log_path=".",
+    )
+
+    assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
+    assert any(isinstance(h, logging.FileHandler) for h in logger.handlers)
+    assert all(not isinstance(h, logging.NullHandler) for h in logger.handlers)
+    logger.handlers.clear()
