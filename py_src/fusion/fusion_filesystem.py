@@ -397,7 +397,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         fusion_file = FusionFile(self, url, session=session, size=file_size, **kw)
 
         while True:
-            out, resp_headers = sync(self.loop, fusion_file.async_fetch_range_with_headers, range_start, range_end)
+            out, resp_headers = fusion_file._fetch_range_with_headers(range_start, range_end)
             all_data.extend(out)
             next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
@@ -423,9 +423,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         url = self._decorate_url(url)
         all_data = bytearray()
         kw = kwargs.copy()
-        headers = kw.get("headers", {}).copy() if "headers" in kwargs else {}
+        headers = kw.get("headers", {}).copy()
         kw["headers"] = headers
-
         session = await self.set_session()
         file_size = await self._info(url)
         file_size = file_size.get("size", None)
@@ -435,7 +434,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         fusion_file = FusionFile(self, url, session=session, size=file_size, **kw)
 
         while True:
-            out, resp_headers = await fusion_file.async_fetch_range_with_headers(range_start, range_end)
+            out, resp_headers = await fusion_file._async_fetch_range_with_headers(range_start, range_end)
             all_data.extend(out)
             next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
@@ -1185,7 +1184,7 @@ class FusionFile(HTTPFile):  # type: ignore
 
     _fetch_range = sync_wrapper(async_fetch_range)
 
-    async def async_fetch_range_with_headers(self, start: int, end: int) -> tuple[bytes, dict]:
+    async def _async_fetch_range_with_headers(self, start: int, end: int) -> tuple[bytes, dict]:
         kwargs = self.kwargs.copy()
         headers = kwargs.pop("headers", {}).copy()
         headers["Range"] = f"bytes={start}-{end - 1}"
@@ -1194,3 +1193,12 @@ class FusionFile(HTTPFile):  # type: ignore
             r.raise_for_status()
             out = await r.read()
             return out, r.headers
+        
+    def _fetch_range_with_headers(self, start: int, end: int) -> tuple[bytes, dict]:
+        kwargs = self.kwargs.copy()
+        headers = kwargs.pop("headers", {}).copy()
+        headers["Range"] = f"bytes={start}-{end - 1}"
+        with self.session.get(self.fs.encode_url(self.url), headers=headers, **kwargs) as r:
+            r.raise_for_status()
+            out = r.content
+            return out, r.headers    
