@@ -4,6 +4,7 @@ import asyncio
 import base64
 import hashlib
 import io
+import json
 import logging
 import time
 from collections.abc import AsyncGenerator, Generator
@@ -11,7 +12,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Optional, Union
 from urllib.parse import quote, urljoin
-import json
+
 import aiohttp
 import fsspec
 import fsspec.asyn
@@ -23,7 +24,6 @@ from fsspec.utils import nullcontext
 
 from fusion._fusion import FusionCredentials
 from fusion.exceptions import APIResponseError
-
 from .utils import _merge_responses, cpu_count, get_client, get_default_fs, get_session
 
 logger = logging.getLogger(__name__)
@@ -371,6 +371,34 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         path = self._decorate_url(path)
         return super().isfile(path)
 
+    @staticmethod
+    def _merge_all_data(all_data: Optional[dict], response_dict: dict) -> dict:
+        # Handles merging of paginated resources
+        if all_data is None:
+            return response_dict
+        elif isinstance(response_dict, dict):
+            resources = response_dict.get("resources", [])
+            if isinstance(all_data, dict) and "resources" in all_data:
+                all_data["resources"].extend(resources)
+            else:
+                all_data = {"resources": resources}
+        elif isinstance(response_dict, list):
+            flat_resources = []
+            for item in response_dict:
+                if isinstance(item, dict) and "resources" in item:
+                    flat_resources.extend(item["resources"])
+                else:
+                    flat_resources.append(item)
+            if isinstance(all_data, dict) and "resources" in all_data:
+                all_data["resources"].extend(flat_resources)
+            else:
+                all_data = {"resources": flat_resources}
+        elif isinstance(all_data, dict) and "resources" in all_data:
+            all_data["resources"].append(response_dict)
+        else:
+            all_data = {"resources": [response_dict]}
+        return all_data
+
     def cat(self, url: str, start: Optional[int] = None, end: Optional[int] = None, **kwargs: Any) -> Any:
         """Fetch paths' contents with pagination support.
 
@@ -400,39 +428,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         range_start = start if start is not None else 0
         range_end = end if end is not None else file_size if file_size is not None else 0
-
         fusion_file = FusionFile(self, url, session=session, size=file_size, **kw)
-
         while True:
             out, resp_headers = fusion_file._fetch_range_with_headers(range_start, range_end)
             response_dict = json.loads(out.decode("utf-8"))
-            if all_data is None:
-                all_data = response_dict
-            else:               
-                if isinstance(response_dict, dict):
-                    resources = response_dict.get("resources", [])
-                    if isinstance(all_data, dict) and "resources" in all_data:
-                        all_data["resources"].extend(resources)
-                    else:
-                        all_data = {"resources": resources}
-                elif isinstance(response_dict, list):
-                    flat_resources = []
-                    for item in response_dict:
-                        if isinstance(item, dict) and "resources" in item:
-                            flat_resources.extend(item["resources"])
-                        else:
-                            flat_resources.append(item)
-
-                    if isinstance(all_data, dict) and "resources" in all_data:
-                        all_data["resources"].extend(flat_resources)
-                    else:
-                        all_data = {"resources": flat_resources}
-                else:
-                    if isinstance(all_data, dict) and "resources" in all_data:
-                        all_data["resources"].append(response_dict)
-                    else:
-                        all_data = {"resources": [response_dict]}
-
+            all_data = self._merge_all_data(all_data, response_dict)
             next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
                 break
@@ -440,6 +440,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             kw["headers"] = headers
 
         return json.dumps(all_data).encode("utf-8")
+
 
     async def _cat(self, url: str, start: Optional[int] = None, end: Optional[int] = None, **kwargs: Any) -> Any:
         """Fetch paths' contents with pagination support (async).
@@ -471,39 +472,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         range_start = start if start is not None else 0
         range_end = end if end is not None else file_size if file_size is not None else 0
-    
         fusion_file = FusionFile(self, url, session=session, size=file_size, **kw)
-
         while True:
             out, resp_headers = await fusion_file._async_fetch_range_with_headers(range_start, range_end)
             response_dict = json.loads(out.decode("utf-8"))
-            if all_data is None:
-                all_data = response_dict
-            else:
-                if isinstance(response_dict, dict):
-                    resources = response_dict.get("resources", [])
-                    if isinstance(all_data, dict) and "resources" in all_data:
-                        all_data["resources"].extend(resources)
-                    else:
-                        all_data = {"resources": resources}
-                elif isinstance(response_dict, list):
-                    flat_resources = []
-                    for item in response_dict:
-                        if isinstance(item, dict) and "resources" in item:
-                            flat_resources.extend(item["resources"])
-                        else:
-                            flat_resources.append(item)
-
-                    if isinstance(all_data, dict) and "resources" in all_data:
-                        all_data["resources"].extend(flat_resources)
-                    else:
-                        all_data = {"resources": flat_resources}
-                else:
-                    if isinstance(all_data, dict) and "resources" in all_data:
-                        all_data["resources"].append(response_dict)
-                    else:
-                        all_data = {"resources": [response_dict]}
-                 
+            all_data = self._merge_all_data(all_data, response_dict)
             next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
                 break
