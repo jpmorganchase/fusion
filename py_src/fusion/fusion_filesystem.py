@@ -11,7 +11,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Optional, Union
 from urllib.parse import quote, urljoin
-
+import json
 import aiohttp
 import fsspec
 import fsspec.asyn
@@ -384,7 +384,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
         url = self._decorate_url(url)
-        all_data = bytearray()
+        all_data = None
         kw = kwargs.copy()
         headers = kw.get("headers", {}).copy()
         kw["headers"] = headers
@@ -398,14 +398,20 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         while True:
             out, resp_headers = fusion_file._fetch_range_with_headers(range_start, range_end)
-            all_data.extend(out)
+            response_dict = json.loads(out.decode("utf-8"))
+            if all_data is None:
+                all_data = response_dict
+            else:
+                resources = response_dict.get("resources", [])
+                all_data["resources"].extend(resources)
+
             next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
                 break
             headers["x-jpmc-next-token"] = next_token
             kw["headers"] = headers
 
-        return bytes(all_data)
+        return json.dumps(all_data).encode("utf-8")
 
     async def _cat(self, url: str, start: Optional[int] = None, end: Optional[int] = None, **kwargs: Any) -> Any:
         """Fetch paths' contents with pagination support (async).
@@ -421,10 +427,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
         await self._async_startup()
         url = self._decorate_url(url)
-        all_data = bytearray()
+        all_data = None
         kw = kwargs.copy()
         headers = kw.get("headers", {}).copy()
         kw["headers"] = headers
+       
         session = await self.set_session()
         file_size = await self._info(url)
         file_size = file_size.get("size", None)
@@ -435,13 +442,20 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         while True:
             out, resp_headers = await fusion_file._async_fetch_range_with_headers(range_start, range_end)
-            all_data.extend(out)
+            response_dict = json.loads(out.decode("utf-8"))
+            if all_data is None:
+                all_data = response_dict
+            else:
+                resources = response_dict.get("resources", [])
+                all_data["resources"].extend(resources)
+
             next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
                 break
             headers["x-jpmc-next-token"] = next_token
             kw["headers"] = headers
-        return bytes(all_data)
+
+        return json.dumps(all_data).encode("utf-8")
 
     async def _stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
         """Return an async stream to file at the given url.
