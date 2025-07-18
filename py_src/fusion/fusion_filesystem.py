@@ -390,9 +390,16 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         kw["headers"] = headers
 
         session = self.sync_session
-        file_size = self.info(url).get("size", None)
+        info_result = self.info(url)
+        if isinstance(info_result, dict):
+            file_size = info_result.get("size", None)
+        elif isinstance(info_result, list) and info_result:
+            file_size = info_result[0].get("size", None) if isinstance(info_result[0], dict) else None
+        else:
+            file_size = None
+
         range_start = start if start is not None else 0
-        range_end = end if end is not None else file_size
+        range_end = end if end is not None else file_size if file_size is not None else 0
 
         fusion_file = FusionFile(self, url, session=session, size=file_size, **kw)
 
@@ -401,9 +408,30 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             response_dict = json.loads(out.decode("utf-8"))
             if all_data is None:
                 all_data = response_dict
-            else:
-                resources = response_dict.get("resources", [])
-                all_data["resources"].extend(resources)
+            else:               
+                if isinstance(response_dict, dict):
+                    resources = response_dict.get("resources", [])
+                    if isinstance(all_data, dict) and "resources" in all_data:
+                        all_data["resources"].extend(resources)
+                    else:
+                        all_data = {"resources": resources}
+                elif isinstance(response_dict, list):
+                    flat_resources = []
+                    for item in response_dict:
+                        if isinstance(item, dict) and "resources" in item:
+                            flat_resources.extend(item["resources"])
+                        else:
+                            flat_resources.append(item)
+
+                    if isinstance(all_data, dict) and "resources" in all_data:
+                        all_data["resources"].extend(flat_resources)
+                    else:
+                        all_data = {"resources": flat_resources}
+                else:
+                    if isinstance(all_data, dict) and "resources" in all_data:
+                        all_data["resources"].append(response_dict)
+                    else:
+                        all_data = {"resources": [response_dict]}
 
             next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
@@ -433,11 +461,17 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         kw["headers"] = headers
        
         session = await self.set_session()
-        file_size = await self._info(url)
-        file_size = file_size.get("size", None)
-        range_start = start if start is not None else 0
-        range_end = end if end is not None else file_size
+        info_result = await self._info(url)
+        if isinstance(info_result, dict):
+            file_size = info_result.get("size", None)
+        elif isinstance(info_result, list) and info_result:
+            file_size = info_result[0].get("size", None) if isinstance(info_result[0], dict) else None
+        else:
+            file_size = None
 
+        range_start = start if start is not None else 0
+        range_end = end if end is not None else file_size if file_size is not None else 0
+    
         fusion_file = FusionFile(self, url, session=session, size=file_size, **kw)
 
         while True:
@@ -446,9 +480,30 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             if all_data is None:
                 all_data = response_dict
             else:
-                resources = response_dict.get("resources", [])
-                all_data["resources"].extend(resources)
+                if isinstance(response_dict, dict):
+                    resources = response_dict.get("resources", [])
+                    if isinstance(all_data, dict) and "resources" in all_data:
+                        all_data["resources"].extend(resources)
+                    else:
+                        all_data = {"resources": resources}
+                elif isinstance(response_dict, list):
+                    flat_resources = []
+                    for item in response_dict:
+                        if isinstance(item, dict) and "resources" in item:
+                            flat_resources.extend(item["resources"])
+                        else:
+                            flat_resources.append(item)
 
+                    if isinstance(all_data, dict) and "resources" in all_data:
+                        all_data["resources"].extend(flat_resources)
+                    else:
+                        all_data = {"resources": flat_resources}
+                else:
+                    if isinstance(all_data, dict) and "resources" in all_data:
+                        all_data["resources"].append(response_dict)
+                    else:
+                        all_data = {"resources": [response_dict]}
+                 
             next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
                 break
