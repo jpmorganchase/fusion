@@ -24,6 +24,7 @@ from fsspec.utils import nullcontext
 
 from fusion._fusion import FusionCredentials
 from fusion.exceptions import APIResponseError
+
 from .utils import _merge_responses, cpu_count, get_client, get_default_fs, get_session
 
 logger = logging.getLogger(__name__)
@@ -212,7 +213,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
                 next_token = self._extract_token_from_response(r)
                 if next_token:
-                    all_resources = out.get("resources", [])     # type: ignore
+                    all_resources = out.get("resources", [])  # type: ignore
 
                     while next_token:
                         headers = kw.get("headers", {}).copy()
@@ -229,7 +230,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                         if not next_token:
                             break
 
-                    out["resources"] = all_resources   # type: ignore
+                    out["resources"] = all_resources  # type: ignore
 
         if not is_file:
             out = [urljoin(clean_url + "/", x["identifier"]) for x in out["resources"]]  # type: ignore
@@ -372,7 +373,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         return super().isfile(path)
 
     @staticmethod
-    def _merge_all_data(all_data: Optional[dict], response_dict: dict) -> dict:
+    def _merge_all_data(all_data: Optional[dict[str, Any]], response_dict: dict[str, Any]) -> dict[str, Any]:
         # Handles merging of paginated resources
         if all_data is None:
             return response_dict
@@ -441,7 +442,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return json.dumps(all_data).encode("utf-8")
 
-
     async def _cat(self, url: str, start: Optional[int] = None, end: Optional[int] = None, **kwargs: Any) -> Any:
         """Fetch paths' contents with pagination support (async).
 
@@ -460,7 +460,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         kw = kwargs.copy()
         headers = kw.get("headers", {}).copy()
         kw["headers"] = headers
-       
+
         session = await self.set_session()
         info_result = await self._info(url)
         if isinstance(info_result, dict):
@@ -1226,7 +1226,7 @@ class FusionFile(HTTPFile):  # type: ignore
 
     _fetch_range = sync_wrapper(async_fetch_range)
 
-    async def _async_fetch_range_with_headers(self, start: int, end: int) -> tuple[bytes, dict]:
+    async def _async_fetch_range_with_headers(self, start: int, end: int) -> tuple[bytes, dict[str, Any]]:
         kwargs = self.kwargs.copy()
         headers = kwargs.pop("headers", {}).copy()
         headers["Range"] = f"bytes={start}-{end - 1}"
@@ -1235,12 +1235,12 @@ class FusionFile(HTTPFile):  # type: ignore
             r.raise_for_status()
             out = await r.read()
             return out, r.headers
-        
-    def _fetch_range_with_headers(self, start: int, end: int) -> tuple[bytes, dict]:
+
+    def _fetch_range_with_headers(self, start: int, end: int) -> tuple[bytes, dict[str, Any]]:
         kwargs = self.kwargs.copy()
         headers = kwargs.pop("headers", {}).copy()
         headers["Range"] = f"bytes={start}-{end - 1}"
         with self.session.get(self.fs.encode_url(self.url), headers=headers, **kwargs) as r:
             r.raise_for_status()
             out = r.content
-            return out, r.headers    
+            return out, r.headers
