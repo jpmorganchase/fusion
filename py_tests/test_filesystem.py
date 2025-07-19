@@ -624,6 +624,7 @@ def fusion_file() -> FusionFile:
 
 def test_fetch_range_with_headers_success(fusion_file: FusionFile) -> None:
     content = b"test-bytes"
+    headers: dict[str, Any] = {"Content-Length": "10", "Range": "bytes=0-9"}
     headers = {"Content-Length": "10", "Range": "bytes=0-9"}
     dummy_response = DummyResponse(content, headers)
     fusion_file.session = DummySession(dummy_response)
@@ -635,6 +636,7 @@ def test_fetch_range_with_headers_success(fusion_file: FusionFile) -> None:
 
 def test_fetch_range_with_headers_sets_range_header(fusion_file: FusionFile) -> None:
     content = b"abc"
+    headers: dict[str, Any] = {"Content-Length": "3"}
     headers = {"Content-Length": "3"}
     dummy_response = DummyResponse(content, headers)
     fusion_file.session = DummySession(dummy_response)
@@ -647,6 +649,7 @@ def test_fetch_range_with_headers_sets_range_header(fusion_file: FusionFile) -> 
 
 def test_fetch_range_with_headers_raises_for_status_called(fusion_file: FusionFile) -> None:
     content = b"xyz"
+    headers: dict[str, Any] = {}
     headers = {}
     dummy_response = DummyResponse(content, headers)
     with mock.patch.object(dummy_response, "raise_for_status", wraps=dummy_response.raise_for_status) as mock_raise:
@@ -659,81 +662,78 @@ def test_fetch_range_with_headers_raises_for_status_called(fusion_file: FusionFi
 def fusion_http_fs() -> FusionHTTPFileSystem:
     fs = FusionHTTPFileSystem.__new__(FusionHTTPFileSystem)
     fs.sync_session = mock.Mock()
-    fs._decorate_url = mock.Mock(side_effect=lambda x: x)
-    fs.info = mock.Mock()
-    fs._merge_all_data = FusionHTTPFileSystem._merge_all_data
-    fs._session = mock.Mock()
+    object.__setattr__(fs, "_decorate_url", mock.Mock(side_effect=lambda x: x))
+    fs._merge_all_data = FusionHTTPFileSystem._merge_all_data  # type: ignore
+    object.__setattr__(fs, "_session", mock.Mock())
     object.__setattr__(fs, "_async_startup", mock.AsyncMock())
     object.__setattr__(fs, "_info", mock.AsyncMock())
     return fs
 
 
 def test_cat_single_page(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: FusionHTTPFileSystem) -> None:
-    fusion_http_fs.info.return_value = {"size": 10}
-    fusion_file_mock = mock.Mock(spec=FusionFile)
-    fusion_file_mock._fetch_range_with_headers.return_value = (
-        b'{"resources": ["item1", "item2"]}',
-        {"x-jpmc-next-token": None},
-    )
-    monkeypatch.setattr("fusion.fusion_filesystem.FusionFile", lambda *_args, **_kwargs: fusion_file_mock)
+    with mock.patch.object(fusion_http_fs, "info", mock.Mock(return_value={"size": 10})):
+        fusion_file_mock = mock.Mock(spec=FusionFile)
+        fusion_file_mock._fetch_range_with_headers = mock.Mock()
+        fusion_file_mock._fetch_range_with_headers.return_value = (
+            b'{"resources": ["item1", "item2"]}',
+            {"x-jpmc-next-token": None},
+        )
+        monkeypatch.setattr("fusion.fusion_filesystem.FusionFile", lambda *_args, **_kwargs: fusion_file_mock)
 
-    result = fusion_http_fs.cat("test-url")
-    assert b"item1" in result
-    assert b"item2" in result
-    fusion_file_mock._fetch_range_with_headers.assert_called_once()
+        result = fusion_http_fs.cat("test-url")
+        assert b"item1" in result
+        assert b"item2" in result
+        fusion_file_mock._fetch_range_with_headers.assert_called_once()
 
 
 def test_cat_multiple_pages(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: FusionHTTPFileSystem) -> None:
-    fusion_http_fs.info.return_value = {"size": 10}
-    fusion_file_mock = mock.Mock(spec=FusionFile)
-    fusion_file_mock._fetch_range_with_headers.side_effect = [
-        (b'{"resources": ["item1"]}', {"x-jpmc-next-token": "token123"}),
-        (b'{"resources": ["item2"]}', {"x-jpmc-next-token": None}),
-    ]
-    monkeypatch.setattr("fusion.fusion_filesystem.FusionFile", lambda *_args, **_kwargs: fusion_file_mock)
+    with mock.patch.object(fusion_http_fs, "info", mock.Mock(return_value={"size": 10})):
+        fusion_file_mock = mock.Mock(spec=FusionFile)
+        fusion_file_mock._fetch_range_with_headers = mock.Mock()
+        fusion_file_mock._fetch_range_with_headers.side_effect = [
+            (b'{"resources": ["item1"]}', {"x-jpmc-next-token": "token123"}),
+            (b'{"resources": ["item2"]}', {"x-jpmc-next-token": None}),
+        ]
+        monkeypatch.setattr("fusion.fusion_filesystem.FusionFile", lambda *_args, **_kwargs: fusion_file_mock)
 
-    result = fusion_http_fs.cat("test-url")
-    assert b"item1" in result
-    assert b"item2" in result
-    CALLS_EXPECTED = 2
-    assert fusion_file_mock._fetch_range_with_headers.call_count == CALLS_EXPECTED
+        result = fusion_http_fs.cat("test-url")
+        assert b"item1" in result
+        assert b"item2" in result
+        CALLS_EXPECTED = 2
+        assert fusion_file_mock._fetch_range_with_headers.call_count == CALLS_EXPECTED
 
 
 def test_cat_empty(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: FusionHTTPFileSystem) -> None:
-    fusion_http_fs.info.return_value = {"size": 10}
-    fusion_file_mock = mock.Mock(spec=FusionFile)
-    fusion_file_mock._fetch_range_with_headers.return_value = (b'{"resources": []}', {"x-jpmc-next-token": None})
-    monkeypatch.setattr("fusion.fusion_filesystem.FusionFile", lambda *_args, **_kwargs: fusion_file_mock)
+    with mock.patch.object(fusion_http_fs, "info", mock.Mock(return_value={"size": 10})):
+        fusion_file_mock = mock.Mock(spec=FusionFile)
+        fusion_file_mock._fetch_range_with_headers = mock.Mock()
+        fusion_file_mock._fetch_range_with_headers.return_value = (b'{"resources": []}', {"x-jpmc-next-token": None})
+        monkeypatch.setattr("fusion.fusion_filesystem.FusionFile", lambda *_args, **_kwargs: fusion_file_mock)
 
-    result = fusion_http_fs.cat("test-url")
-    assert b"resources" in result
-    assert b"item" not in result
+        result = fusion_http_fs.cat("test-url")
+        assert b"resources" in result
+        assert b"item" not in result
 
 
 def test_cat_handles_list_info(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: FusionHTTPFileSystem) -> None:
-    fusion_http_fs.info.return_value = [{"size": 20}]
-    fusion_file_mock = mock.Mock(spec=FusionFile)
-    fusion_file_mock._fetch_range_with_headers.return_value = (b'{"resources": ["itemA"]}', {"x-jpmc-next-token": None})
-    monkeypatch.setattr("fusion.fusion_filesystem.FusionFile", lambda *_args, **_kwargs: fusion_file_mock)
+    with mock.patch.object(fusion_http_fs, "info", mock.Mock(return_value=[{"size": 20}])):
+        fusion_file_mock = mock.Mock(spec=FusionFile)
+        fusion_file_mock._fetch_range_with_headers = mock.Mock()
+        fusion_file_mock._fetch_range_with_headers.return_value = (
+            b'{"resources": ["itemA"]}',
+            {"x-jpmc-next-token": None},
+        )
+        monkeypatch.setattr("fusion.fusion_filesystem.FusionFile", lambda *_args, **_kwargs: fusion_file_mock)
 
-    result = fusion_http_fs.cat("test-url")
-    assert b"itemA" in result
-
-
-def test_cat_handles_no_size(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: FusionHTTPFileSystem) -> None:
-    fusion_file_mock = mock.Mock(spec=FusionFile)
-    fusion_file_mock._fetch_range_with_headers.return_value = (b'{"resources": ["itemX"]}', {"x-jpmc-next-token": None})
-    monkeypatch.setattr("fusion.fusion_filesystem.FusionFile", lambda *_args, **_kwargs: fusion_file_mock)
-
-    result = fusion_http_fs.cat("test-url")
-    assert b"itemX" in result
+        result = fusion_http_fs.cat("test-url")
+        assert b"itemA" in result
 
 
 @pytest.mark.asyncio
 async def test__cat_single_page(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: FusionHTTPFileSystem) -> None:
-    fusion_http_fs._async_startup = mock.AsyncMock()
-    fusion_http_fs._decorate_url = mock.Mock(side_effect=lambda x: x)
-    fusion_http_fs._info = mock.AsyncMock(return_value={"size": 10})
+    object.__setattr__(fusion_http_fs, "_async_startup", mock.AsyncMock())
+    object.__setattr__(fusion_http_fs, "_decorate_url", mock.Mock(side_effect=lambda x: x))
+    object.__setattr__(fusion_http_fs, "_info", mock.AsyncMock(return_value={"size": 10}))
 
     fusion_file_mock = mock.Mock(spec=FusionFile)
     fusion_file_mock._async_fetch_range_with_headers = mock.AsyncMock(
@@ -749,9 +749,9 @@ async def test__cat_single_page(monkeypatch: pytest.MonkeyPatch, fusion_http_fs:
 
 @pytest.mark.asyncio
 async def test__cat_multiple_pages(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: FusionHTTPFileSystem) -> None:
-    fusion_http_fs._async_startup = mock.AsyncMock()
-    fusion_http_fs._decorate_url = mock.Mock(side_effect=lambda x: x)
-    fusion_http_fs._info = mock.AsyncMock(return_value={"size": 10})
+    object.__setattr__(fusion_http_fs, "_async_startup", mock.AsyncMock())
+    object.__setattr__(fusion_http_fs, "_decorate_url", mock.Mock(side_effect=lambda x: x))
+    object.__setattr__(fusion_http_fs, "_info", mock.AsyncMock(return_value={"size": 10}))
 
     fusion_file_mock = mock.Mock(spec=FusionFile)
     fusion_file_mock._async_fetch_range_with_headers = mock.AsyncMock(
@@ -771,9 +771,9 @@ async def test__cat_multiple_pages(monkeypatch: pytest.MonkeyPatch, fusion_http_
 
 @pytest.mark.asyncio
 async def test__cat_empty(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: FusionHTTPFileSystem) -> None:
-    fusion_http_fs._async_startup = mock.AsyncMock()
-    fusion_http_fs._decorate_url = mock.Mock(side_effect=lambda x: x)
-    fusion_http_fs._info = mock.AsyncMock(return_value={"size": 10})
+    object.__setattr__(fusion_http_fs, "_async_startup", mock.AsyncMock())
+    object.__setattr__(fusion_http_fs, "_decorate_url", mock.Mock(side_effect=lambda x: x))
+    object.__setattr__(fusion_http_fs, "_info", mock.AsyncMock(return_value={"size": 10}))
 
     fusion_file_mock = mock.Mock(spec=FusionFile)
     fusion_file_mock._async_fetch_range_with_headers = mock.AsyncMock(
@@ -788,9 +788,9 @@ async def test__cat_empty(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: Fusio
 
 @pytest.mark.asyncio
 async def test__cat_handles_list_info(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: FusionHTTPFileSystem) -> None:
-    fusion_http_fs._async_startup = mock.AsyncMock()
-    fusion_http_fs._decorate_url = mock.Mock(side_effect=lambda x: x)
-    fusion_http_fs._info = mock.AsyncMock(return_value=[{"size": 20}])
+    object.__setattr__(fusion_http_fs, "_async_startup", mock.AsyncMock())
+    object.__setattr__(fusion_http_fs, "_decorate_url", mock.Mock(side_effect=lambda x: x))
+    object.__setattr__(fusion_http_fs, "_info", mock.AsyncMock(return_value=[{"size": 20}]))
 
     fusion_file_mock = mock.Mock(spec=FusionFile)
     fusion_file_mock._async_fetch_range_with_headers = mock.AsyncMock(
@@ -804,9 +804,9 @@ async def test__cat_handles_list_info(monkeypatch: pytest.MonkeyPatch, fusion_ht
 
 @pytest.mark.asyncio
 async def test__cat_handles_no_size(monkeypatch: pytest.MonkeyPatch, fusion_http_fs: FusionHTTPFileSystem) -> None:
-    fusion_http_fs._async_startup = mock.AsyncMock()
-    fusion_http_fs._decorate_url = mock.Mock(side_effect=lambda x: x)
-    fusion_http_fs._info = mock.AsyncMock(return_value={})
+    object.__setattr__(fusion_http_fs, "_async_startup", mock.AsyncMock())
+    object.__setattr__(fusion_http_fs, "_decorate_url", mock.Mock(side_effect=lambda x: x))
+    object.__setattr__(fusion_http_fs, "_info", mock.AsyncMock(return_value={}))
 
     fusion_file_mock = mock.Mock(spec=FusionFile)
     fusion_file_mock._async_fetch_range_with_headers = mock.AsyncMock(
