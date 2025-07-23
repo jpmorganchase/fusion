@@ -2181,9 +2181,32 @@ def test_fusion_init_logging_disabled(credentials: FusionCredentials) -> None:
     # Create the Fusion object with logging disabled
     Fusion(credentials=credentials, enable_logging=False)
 
-    # Should only have a StreamHandler (stdout)
-    assert any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
+    # No additional handlers should be added
+    assert not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
     assert all(not isinstance(handler, logging.FileHandler) for handler in logger.handlers)
+    assert any(isinstance(handler, logging.NullHandler) for handler in logger.handlers)
 
     # Clean up
+    logger.handlers.clear()
+
+
+def test_fusion_preserves_existing_handlers(credentials: FusionCredentials) -> None:
+    logger.handlers.clear()
+    custom_handler = logging.StreamHandler()
+    logger.addHandler(custom_handler)
+
+    Fusion(credentials=credentials, enable_logging=False)
+
+    assert logger.handlers == [custom_handler]
+    logger.handlers.clear()
+
+
+def test_fusion_adds_nullhandler_when_no_handlers(credentials: FusionCredentials) -> None:
+    logger.handlers.clear()
+
+    Fusion(credentials=credentials, enable_logging=False)
+
+    assert len(logger.handlers) == 1
+    assert isinstance(logger.handlers[0], logging.NullHandler)
+
     logger.handlers.clear()
