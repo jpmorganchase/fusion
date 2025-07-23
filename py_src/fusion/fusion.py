@@ -180,7 +180,7 @@ class Fusion:
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
         return "Fusion object \nAvailable methods:\n" + tabulate(
-            pd.DataFrame(  
+            pd.DataFrame(  # type: ignore
                 [
                     [
                         method_name
@@ -883,7 +883,7 @@ class Fusion:
             # sample data is limited to csv
             if dt_str == "sample":
                 dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
-            required_series = [(catalog, dataset, dt_str, dataset_format)] 
+            required_series = [(catalog, dataset, dt_str, dataset_format)] # type: ignore[list-item]
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
@@ -1467,7 +1467,7 @@ class Fusion:
         local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)
 
         data_map_df = pd.DataFrame(["", local_url_eqiv, file_name]).T
-        data_map_df.columns = ["path", "url", "file_name"] 
+        data_map_df.columns = ["path", "url", "file_name"]  # type: ignore[assignment]
 
         res = upload_files(
             fs_fusion,
