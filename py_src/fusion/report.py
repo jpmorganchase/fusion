@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field, fields
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
 
 import numpy as np
-import pandas as pd 
+import pandas as pd
 
 from .utils import (
     CamelCaseMeta,
@@ -18,10 +20,14 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     import requests
 
     from fusion import Fusion
 
+
+logger = logging.getLogger(__name__)
 @dataclass
 class Report(metaclass=CamelCaseMeta):
     """
@@ -197,7 +203,7 @@ class Report(metaclass=CamelCaseMeta):
             "Intelligent Solutions": "Intelligent Solutions",
             "User Tool": "User Tool"
         }
-        return mapping.get(app_type, None)
+        return mapping.get(app_type)
 
     @classmethod
     def map_tier_type(cls, tier_type: str) -> str:
@@ -206,7 +212,7 @@ class Report(metaclass=CamelCaseMeta):
             "Tier 1": "Tier 1",
             "Non Tier 1": "Non Tier 1"
         }
-        return tier_mapping.get(tier_type, None)
+        return tier_mapping.get(tier_type)
         
 
     @classmethod
@@ -264,7 +270,7 @@ class Report(metaclass=CamelCaseMeta):
                 report_obj.validate()
                 reports.append(report_obj)
             except ValueError as e:
-                print(f" Skipping invalid row: {e}")
+                logger.warning(f"Skipping invalid row: {e}")
 
 
         return reports
@@ -295,7 +301,7 @@ class Report(metaclass=CamelCaseMeta):
             return cls.from_dataframe(source, client=client)
 
         elif isinstance(source, list) and all(isinstance(item, dict) for item in source):
-            df = pd.DataFrame(source)
+            df = pd.DataFrame(source) # noqa
             return cls.from_dataframe(df, client=client)
 
         elif isinstance(source, str):
@@ -304,7 +310,7 @@ class Report(metaclass=CamelCaseMeta):
             elif source.strip().startswith("[{"):
                 import json
                 data = json.loads(source)
-                df = pd.DataFrame(data)
+                df = pd.DataFrame(data) # noqa
                 return cls.from_dataframe(df, client=client)
             else:
                 raise ValueError("Unsupported string input — must be .csv path or JSON array string")
@@ -379,7 +385,7 @@ class Report(metaclass=CamelCaseMeta):
         Returns:
             requests.Response | None: API response
         """
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms" # noqa: E501
         resp = client.session.post(url, json=mappings)
         requests_raise_for_status(resp)
 
@@ -412,17 +418,17 @@ Report.COLUMN_MAPPING = {
         }
 
 class Reports:
-    def __init__(self, reports: list[Report] | None = None):
+    def __init__(self, reports: list[Report] | None = None) -> None:
         self.reports = reports or []
         self._client: Fusion | None = None
 
     def __getitem__(self, index: int) -> Report:
         return self.reports[index]
 
-    def __iter__(self):
+    def __iter__(self)->Iterator[Report]:
         return iter(self.reports)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.reports)
 
     @property
@@ -455,7 +461,6 @@ class Reports:
     def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None) -> Reports:
         """Load Reports from DataFrame, list of dicts, .csv path, or JSON string."""
         import json
-        import os
 
         if isinstance(source, pd.DataFrame):
             return cls.from_dataframe(source, client=client)
@@ -464,7 +469,7 @@ class Reports:
             return cls.from_dataframe(pd.DataFrame(source), client=client)
 
         elif isinstance(source, str):
-            if source.lower().endswith(".csv") and os.path.exists(source):
+            if source.lower().endswith(".csv") and Path.exists(source):
                 return cls.from_csv(source, client=client)
             elif source.strip().startswith("[{"):
                 dict_list = json.loads(source)
@@ -475,8 +480,8 @@ class Reports:
         raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
 
 
-class ReportsWrapper(Reports):
-        def __init__(self, client: Fusion):
+class ReportsWrapper(Reports) :
+        def __init__(self, client: Fusion) -> None:
             super().__init__([])
             self.client = client
 

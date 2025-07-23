@@ -115,7 +115,7 @@ class ReportAttributes:
 
     def to_dict(self) -> dict[str, list[dict[str, Any]]]:
         return {"attributes": [attr.to_dict() for attr in self.attributes]}
-    1
+    
     def from_dict_list(self, data: list[dict[str, Any]]) -> ReportAttributes:
         attributes = [ReportAttribute(**attr_data) for attr_data in data]
         result = ReportAttributes(attributes=attributes)
@@ -134,7 +134,7 @@ class ReportAttributes:
 
     def from_csv(self, file_path: str) -> ReportAttributes:
         """Load ReportAttributes from a CSV file with custom column mappings and ignore irrelevant columns."""
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path) #noqa
 
         # Only keep relevant columns
         column_map = {
@@ -144,10 +144,10 @@ class ReportAttributes:
         }
 
         # Filter to only needed columns (drop all others)
-        df = df[[col for col in column_map if col in df.columns]]
+        df = df[[col for col in column_map if col in df.columns]] # noqa
 
         # Rename to match ReportAttribute fields
-        df = df.rename(columns=column_map)
+        df = df.rename(columns=column_map) # noqa
 
         # Add any missing required fields with default None
         for col in ["technicalDataType", "path"]:
@@ -155,15 +155,15 @@ class ReportAttributes:
                 df[col] = None
 
         # Replace NaN/missing values with None
-        df = df.where(pd.notna(df), None)
+        df = df.where(pd.notna(df), None) # noqa
 
         return self.from_dataframe(df)
 
 
 
-    def from_object(
+    def from_object( 
         self,
-        attributes_source: Union[
+        attributes_source: Union[ # noqa
             list[ReportAttribute], 
             list[dict[str, Any]], 
             pd.DataFrame, 
