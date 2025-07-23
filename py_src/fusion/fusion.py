@@ -1139,7 +1139,7 @@ class Fusion:
             if dataframe_type == "polars":
                 import polars as pl
 
-                data_df = pl.concat(dataframes, how="diagonal") 
+                data_df = pl.concat(dataframes, how="diagonal") # type: ignore
 
         return data_df
 
