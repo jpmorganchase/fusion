@@ -13,7 +13,6 @@ from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
-from fusion.report import Reports
 
 import pandas as pd
 import pyarrow as pa
