@@ -88,8 +88,9 @@ class Report(metaclass=CamelCaseMeta):
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
-            self.title = tidy_string(self.title) if self.title else None
-            self.description = tidy_string(self.description) if self.description else None
+            self.title = tidy_string(self.title or "")
+            self.description = tidy_string(self.description or "")
+
 
     def __getattr__(self, name: str) -> Any:
             snake_name = camel_to_snake(name)
@@ -196,7 +197,7 @@ class Report(metaclass=CamelCaseMeta):
 
         return report_dict
     @classmethod
-    def map_application_type(cls, app_type: str) -> str:
+    def map_application_type(cls, app_type: str) -> str | None:
         """Map application types to enum values."""
         mapping = {
             "Application (SEAL)": "Application (SEAL)",
@@ -206,7 +207,7 @@ class Report(metaclass=CamelCaseMeta):
         return mapping.get(app_type)
 
     @classmethod
-    def map_tier_type(cls, tier_type: str) -> str:
+    def map_tier_type(cls, tier_type: str) -> str | None:
         """Map tier types to enum values."""
         tier_mapping = {
             "Tier 1": "Tier 1",
@@ -227,7 +228,7 @@ class Report(metaclass=CamelCaseMeta):
             list[Report]: List of Report objects.
         """
         # Apply permanent column mapping
-        data = data.rename(columns=Report.COLUMN_MAPPING)
+        data = data.rename(columns=Report.COLUMN_MAPPING) # type: ignore[attr-defined]
         data = data.replace([np.nan,np.inf,-np.inf], None)  # Replace NaN, inf, -inf with None
 
         # Replace NaN with None
@@ -275,7 +276,7 @@ class Report(metaclass=CamelCaseMeta):
 
         return reports
 
-    @classmethod
+    @classmethod 
     def from_csv(cls, file_path: str, client: Fusion | None = None) -> list[Report]:
         """
         Create a list of Report objects from a CSV file, applying permanent column mapping.
@@ -298,20 +299,20 @@ class Report(metaclass=CamelCaseMeta):
     ) -> Reports:
         """Unified loader for Reports from CSV path, DataFrame, list of dicts, or JSON string."""
         if isinstance(source, pd.DataFrame):
-            return cls.from_dataframe(source, client=client)
+            return Reports(cls.from_dataframe(source, client=client))
 
         elif isinstance(source, list) and all(isinstance(item, dict) for item in source):
             df = pd.DataFrame(source) # noqa
-            return cls.from_dataframe(df, client=client)
+            return Reports(cls.from_dataframe(df, client=client))
 
         elif isinstance(source, str):
             if source.strip().endswith(".csv"):
-                return cls.from_csv(source, client=client)
+                return Reports(cls.from_csv(source, client=client))
             elif source.strip().startswith("[{"):
                 import json
                 data = json.loads(source)
                 df = pd.DataFrame(data) # noqa
-                return cls.from_dataframe(df, client=client)
+                return Reports(cls.from_dataframe(df, client=client))
             else:
                 raise ValueError("Unsupported string input — must be .csv path or JSON array string")
 
@@ -394,7 +395,7 @@ class Report(metaclass=CamelCaseMeta):
 
 
 
-Report.COLUMN_MAPPING = {
+Report.COLUMN_MAPPING = { # type: ignore[attr-defined]
             "Report/Process Name": "title",
             "Report/Process Description": "description",
             "Activity Type": "tier_type",
@@ -415,8 +416,7 @@ Report.COLUMN_MAPPING = {
             "CDO Office": "domain_name",  # Map to "name" inside "domain"
             "Application ID": "data_node_name",
             "Application Type": "data_node_type",
-        }
-
+        } 
 class Reports:
     def __init__(self, reports: list[Report] | None = None) -> None:
         self.reports = reports or []
@@ -469,8 +469,10 @@ class Reports:
             return cls.from_dataframe(pd.DataFrame(source), client=client)
 
         elif isinstance(source, str):
-            if source.lower().endswith(".csv") and Path.exists(source):
+
+            if source.lower().endswith(".csv") and Path(source).exists(): 
                 return cls.from_csv(source, client=client)
+
             elif source.strip().startswith("[{"):
                 dict_list = json.loads(source)
                 return cls.from_dataframe(pd.DataFrame(dict_list), client=client)
@@ -485,12 +487,12 @@ class ReportsWrapper(Reports) :
             super().__init__([])
             self.client = client
 
-        def from_csv(self, file_path: str) -> Reports:
+        def from_csv(self, file_path: str) -> Reports: # type: ignore[override]
             return Reports.from_csv(file_path, client=self.client)
 
-        def from_dataframe(self, df: pd.DataFrame) -> Reports:
+        def from_dataframe(self, df: pd.DataFrame) -> Reports: # type: ignore[override]
             return Reports.from_dataframe(df, client=self.client)
         
-        def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports:
+        def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports: # type: ignore[override]
            return Reports.from_object(source, client=self.client)
 
