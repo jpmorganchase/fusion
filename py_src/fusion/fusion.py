@@ -1382,9 +1382,7 @@ class Fusion:
                     dt_str = pd.Timestamp("today").date().strftime("%Y%m%d")
                 elif date_identifier.match(dt_str):
                     dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
-                else:
-                    raise ValueError(f"Invalid date format: {dt_str}. Expected YYYYMMDD or 'latest'.")
-        
+                
                 file_format = path.split(".")[-1]
                 file_name = [path.split("/")[-1]]
                 file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
