@@ -1759,6 +1759,93 @@ def test_download_multiple_format_error(requests_mock: requests_mock.Mocker, fus
         fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=None, catalog=catalog)
 
 
+def test_download_no_distributions_available(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    dt_str = "20200101"
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
+
+    expected_data = {
+        "catalog": {
+            "@id": "my_catalog/",
+            "description": "my catalog",
+            "title": "my catalog",
+            "identifier": "my_catalog",
+        },
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "category": ["category"],
+        "shortAbstract": "short abstract",
+        "description": "description",
+        "frequency": "Once",
+        "isInternalOnlyDataset": False,
+        "isThirdPartyData": True,
+        "isRestricted": False,
+        "isRawData": True,
+        "maintainer": "maintainer",
+        "source": "source",
+        "region": ["region"],
+        "publisher": "publisher",
+        "subCategory": ["subCategory"],
+        "tags": ["tag1", "tag2"],
+        "createdDate": "2020-05-05",
+        "modifiedDate": "2020-05-05",
+        "deliveryChannel": ["API"],
+        "language": "English",
+        "status": "Subscribed",
+        "type": "Source",
+        "containerType": "Snapshot-Full",
+        "snowflake": "snowflake",
+        "complexity": "complexity",
+        "isImmutable": False,
+        "isMnpi": False,
+        "isPii": False,
+        "isPci": False,
+        "isClient": False,
+        "isPublic": False,
+        "isInternal": False,
+        "isConfidential": False,
+        "isHighlyConfidential": False,
+        "isActive": False,
+        "@id": "TEST_DATASET/",
+    }
+
+    requests_mock.get(url, json=expected_data)
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+
+    expected_resp = {
+        "lastModified": "2025-03-18T09:04:22Z",
+        "checksum": "SHA-256=vFdIF:HSLDBV:VBLHD/xe8Mom9yqooZA=-1",
+        "metadata": {
+            "fields": [
+                "lastModified",
+                "size",
+                "checksum",
+                "catalog",
+                "dataset",
+                "seriesMember",
+                "distribution",
+                "storageProvider",
+                "version",
+            ]
+        },
+        "datasets": [],
+    }
+
+    requests_mock.get(url, json=expected_resp)
+
+    with pytest.raises(
+        FileFormatError,
+        match=re.escape(
+           f"No distributions found for dataset '{dataset}' in catalog '{catalog}'."
+        ),
+    ):
+        fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=None, catalog=catalog)
+
+
+
 def test_to_df(mocker: MockerFixture, tmp_path: Path, data_table_as_csv: str, fusion_obj: Fusion) -> None:
     catalog = "my_catalog"
     dataset = "my_dataset"
