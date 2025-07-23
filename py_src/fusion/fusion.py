@@ -760,7 +760,14 @@ class Fusion:
         valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
 
         # check that format is valid and if none, check if there is only one format available
-        available_formats = list(self.list_datasetmembers_distributions(dataset, catalog)["format"].unique())
+        distributions_df = self.list_datasetmembers_distributions(dataset, catalog)
+
+        if distributions_df.empty:
+            raise FileFormatError(
+                f"No distributions found for dataset '{dataset}' in catalog '{catalog}'."
+            )
+
+        available_formats = list(distributions_df["format"].unique())
         if dataset_format and dataset_format not in available_formats:
             raise FileFormatError(
                 f"Dataset format {dataset_format} is not available for {dataset} in catalog {catalog}. "
