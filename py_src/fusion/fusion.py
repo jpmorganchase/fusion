@@ -11,7 +11,7 @@ import warnings
 from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
 
 import pandas as pd
