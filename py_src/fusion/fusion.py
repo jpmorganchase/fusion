@@ -11,7 +11,7 @@ import warnings
 from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from zipfile import ZipFile
 
 import pandas as pd
@@ -180,7 +180,7 @@ class Fusion:
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
         return "Fusion object \nAvailable methods:\n" + tabulate(
-            pd.DataFrame(  # type: ignore
+            pd.DataFrame(  
                 [
                     [
                         method_name
@@ -883,7 +883,7 @@ class Fusion:
             # sample data is limited to csv
             if dt_str == "sample":
                 dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
-            required_series = [(catalog, dataset, dt_str, dataset_format)]  # type: ignore
+            required_series = [(catalog, dataset, dt_str, dataset_format)] 
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
@@ -1139,7 +1139,7 @@ class Fusion:
             if dataframe_type == "polars":
                 import polars as pl
 
-                data_df = pl.concat(dataframes, how="diagonal")  # type: ignore
+                data_df = pl.concat(dataframes, how="diagonal") 
 
         return data_df
 
@@ -1467,7 +1467,7 @@ class Fusion:
         local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)
 
         data_map_df = pd.DataFrame(["", local_url_eqiv, file_name]).T
-        data_map_df.columns = ["path", "url", "file_name"]  # type: ignore
+        data_map_df.columns = ["path", "url", "file_name"] 
 
         res = upload_files(
             fs_fusion,
@@ -2754,6 +2754,7 @@ class Fusion:
         sub_category: str,
         data_node_id: dict[str, str],
         regulatory_related: bool,
+        domain: dict[str, str],
         tier_type: str | None = None, 
         lob: str | None = None,
         alternative_id: dict[str, str] | None = None,
@@ -2762,7 +2763,6 @@ class Fusion:
         risk_area: str | None = None,
         risk_stripe: str | None = None,
         sap_code: str | None = None,
-        domain: dict[str, str | bool] | None = None,
         **kwargs: Any,
     ) -> Report:
         """
