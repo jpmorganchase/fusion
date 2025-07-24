@@ -4,6 +4,7 @@ import logging
 import re
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -11,15 +12,13 @@ import requests
 import requests_mock
 from opensearchpy import OpenSearch
 from pytest_mock import MockerFixture
-from unittest.mock import patch, MagicMock
-from fusion.report import Report
-
 
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute
 from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
+from fusion.report import Report
 from fusion.utils import _normalise_dt_param, distribution_to_url
 
 
@@ -2206,7 +2205,7 @@ def test_list_reports_all(fusion_obj: Fusion, requests_mock: requests_mock.Mocke
         ]
     }
     requests_mock.post(url, json=mock_data)
-    df = fusion_obj.list_reports()
+    df = fusion_obj.list_reports() #noqa
     assert isinstance(df, pd.DataFrame)
     assert "id" in df.columns
     assert df.iloc[0]["id"] == "rep1"
@@ -2221,7 +2220,7 @@ def test_list_reports_by_id(fusion_obj: Fusion, requests_mock: requests_mock.Moc
         "subCategory": "Equities"
     }
     requests_mock.get(url, json=mock_data)
-    df = fusion_obj.list_reports(report_id=report_id)
+    df = fusion_obj.list_reports(report_id=report_id) #noqa
     assert isinstance(df, pd.DataFrame)
     assert df.iloc[0]["id"] == "rep1"
 
@@ -2241,7 +2240,7 @@ def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock
         }
     ]
     requests_mock.get(url, json=mock_data)
-    df = fusion_obj.list_report_attributes(report_id=report_id)
+    df = fusion_obj.list_report_attributes(report_id=report_id) #noqa
     assert isinstance(df, pd.DataFrame)
     assert "id" in df.columns
     assert df.iloc[0]["id"] == "attr1"
