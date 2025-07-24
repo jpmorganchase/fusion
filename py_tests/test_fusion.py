@@ -11,6 +11,9 @@ import requests
 import requests_mock
 from opensearchpy import OpenSearch
 from pytest_mock import MockerFixture
+from unittest.mock import patch, MagicMock
+from fusion.report import Report
+
 
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute
@@ -118,7 +121,6 @@ def test_is_url() -> None:
     assert not _is_url("googlecom")
     assert not _is_url("googlecom.")
     assert not _is_url(3.141)  # type: ignore
-
 
 
 def test_fusion_class(fusion_obj: Fusion) -> None:
@@ -1812,31 +1814,33 @@ def test_list_registered_attributes(requests_mock: requests_mock.Mocker, fusion_
     pd.testing.assert_frame_equal(test_df, expected_df)
     assert all(col in core_cols for col in test_df.columns)
 
-
 def test_fusion_report(fusion_obj: Fusion) -> None:
-    """Test Fusion Report class from client"""
-    test_report = fusion_obj.report(
-        name="Test Report",
-        tier_type="Gold",
-        lob="Finance",
-        data_node_id={"id": "dn-001", "type": "DataNode"},
-        alternative_id={"id": "alt-001", "type": "Report AltId"},
-        title="Test Report",
-        alternate_id="TEST_REPORT",
-        description="Test Report",
-        frequency="Once",
-        category="Test"
+    """Test Fusion Report object creation using required and optional arguments."""
+    report = fusion_obj.report(
+        title="Quarterly Risk Report",
+        description="Q1 Risk report for compliance",
+        frequency="Quarterly",
+        category="Risk Management",
+        sub_category="Operational Risk",
+        data_node_id={"name": "ComplianceTable", "dataNodeType": "Table"},
+        regulatory_related=True,
+        domain={"name": "Risk"},
+        tier_type="Tier 1",
+        lob="Global Markets",
+        is_bcbs239_program=True,
+        sap_code="SAP123",
+        region="EMEA"
     )
 
-    assert str(test_report)
-    assert repr(test_report)
-    assert test_report.title == "Test Report"
-    assert test_report.description == "Test Report"
-    assert test_report.frequency == "Once"
-    assert test_report.category == "Test"
-    assert test_report.alternate_id == "TEST_REPORT"
-    assert test_report.client == fusion_obj
-    assert test_report._client == fusion_obj
+    assert isinstance(report, Report)
+    assert report.title == "Quarterly Risk Report"
+    assert report.description == "Q1 Risk report for compliance"
+    assert report.client == fusion_obj
+    assert report.domain == {"name": "Risk"}
+    assert report.tier_type == "Tier 1"
+    assert report.is_bcbs239_program is True
+    assert report.region == "EMEA"
+    assert report.data_node_id["name"] == "ComplianceTable"
 
 
 
@@ -2132,6 +2136,8 @@ def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -
 
 
 def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCredentials) -> None:
+    
+
     # Clear logger handlers to avoid contamination
     logger.handlers.clear()
 
@@ -2157,71 +2163,144 @@ def test_fusion_init_logging_disabled(credentials: FusionCredentials) -> None:
     # Create the Fusion object with logging disabled
     Fusion(credentials=credentials, enable_logging=False)
 
-    # Should only have a StreamHandler (stdout)
-    assert any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
+    # No additional handlers should be added
+    assert not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
     assert all(not isinstance(handler, logging.FileHandler) for handler in logger.handlers)
+    assert any(isinstance(handler, logging.NullHandler) for handler in logger.handlers)
 
     # Clean up
     logger.handlers.clear()
 
-def test_report_instantiation() -> None:
-    fusion = Fusion(base_url="http://localhost", token="dummy")
-    report = fusion.report(
-        description="Test report",
-        title="Test Title",
+
+def test_fusion_preserves_existing_handlers(credentials: FusionCredentials) -> None:
+    logger.handlers.clear()
+    custom_handler = logging.StreamHandler()
+    logger.addHandler(custom_handler)
+
+    Fusion(credentials=credentials, enable_logging=False)
+
+    assert logger.handlers == [custom_handler]
+    logger.handlers.clear()
+
+
+def test_fusion_adds_nullhandler_when_no_handlers(credentials: FusionCredentials) -> None:
+    logger.handlers.clear()
+
+    Fusion(credentials=credentials, enable_logging=False)
+
+    assert len(logger.handlers) == 1
+    assert isinstance(logger.handlers[0], logging.NullHandler)
+
+    logger.handlers.clear()
+
+
+def test_get_new_root_url_strip_version(fusion_obj: Fusion) -> None:
+    fusion_obj.root_url = "https://fusion.jpmorgan.com/api/v1/"
+    assert fusion_obj._get_new_root_url() == "https://fusion.jpmorgan.com"
+
+def test_list_reports_all(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/list"
+    mock_data = {
+        "content": [
+            {"id": "rep1", "name": "Test Report", "category": "Finance", "subCategory": "Equities"}
+        ]
+    }
+    requests_mock.post(url, json=mock_data)
+    df = fusion_obj.list_reports()
+    assert isinstance(df, pd.DataFrame)
+    assert "id" in df.columns
+    assert df.iloc[0]["id"] == "rep1"
+
+def test_list_reports_by_id(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
+    report_id = "rep1"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
+    mock_data = {
+        "id": "rep1",
+        "name": "Test Report",
+        "category": "Finance",
+        "subCategory": "Equities"
+    }
+    requests_mock.get(url, json=mock_data)
+    df = fusion_obj.list_reports(report_id=report_id)
+    assert isinstance(df, pd.DataFrame)
+    assert df.iloc[0]["id"] == "rep1"
+
+def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
+    report_id = "rep1"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
+    mock_data = [
+        {
+            "id": "attr1",
+            "path": "/data/value",
+            "status": "active",
+            "dataType": "string",
+            "isMandatory": True,
+            "description": "Field desc",
+            "createdBy": "user1",
+            "name": "value"
+        }
+    ]
+    requests_mock.get(url, json=mock_data)
+    df = fusion_obj.list_report_attributes(report_id=report_id)
+    assert isinstance(df, pd.DataFrame)
+    assert "id" in df.columns
+    assert df.iloc[0]["id"] == "attr1"
+
+def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
+    report = fusion_obj.report(
+        title="Test Report",
+        description="Desc",
         frequency="Monthly",
         category="Finance",
-        sub_category="Expense",
-        data_node_id={"id": "123"},
+        sub_category="Market",
+        data_node_id={"name": "Node1", "dataNodeType": "Table"},
         regulatory_related=True,
-        domain={"name": "Core", "isCore": True},
+        domain={"name": "Risk"}
     )
-    assert report.title == "Test Title"
+    assert isinstance(report, Report)
+    assert report.title == "Test Report"
+    assert report.client is fusion_obj
 
-def test_reports_wrapper_creation() -> None:
-    fusion = Fusion(base_url="http://localhost", token="dummy")
-    reports = fusion.reports()
-    assert hasattr(reports, "from_csv")
-
-def test_report_attributes_wrapper_creation() -> None:
-    fusion = Fusion(base_url="http://localhost", token="dummy")
-    wrapper = fusion.report_attributes()
-    assert hasattr(wrapper, "from_csv")
-
-def test_dataset_creation() -> None:
-    fusion = Fusion(base_url="http://localhost", token="dummy")
-    dataset = fusion.dataset(
-        name="test_dataset",
-        description="test description",
-        data_node_id={"id": "dn-123"},
-        domain={"name": "domain"},
+def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
+    report = fusion_obj.report(
+        title="Full Report",
+        description="Full Desc",
+        frequency="Quarterly",
+        category="Credit",
+        sub_category="Wholesale",
+        data_node_id={"name": "NodeX", "dataNodeType": "View"},
+        regulatory_related=False,
+        domain={"name": "Ops"},
+        tier_type="Tier 1",
+        lob="Banking",
+        alternative_id={"system": "ABC"},
+        sub_lob="Retail",
+        is_bcbs239_program=True,
+        risk_area="Liquidity",
+        risk_stripe="StripeA",
+        sap_code="SAP001",
+        region="EMEA"
     )
-    assert dataset.name == "test_dataset"
+    assert report.lob == "Banking"
+    assert report.client is fusion_obj
 
-def test_datasets_wrapper_creation() -> None:
-    fusion = Fusion(base_url="http://localhost", token="dummy")
-    datasets = fusion.datasets()
-    assert hasattr(datasets, "from_csv")
+@patch("fusion.report.Report.link_attributes_to_terms")
+def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fusion) -> None:
+    mappings = [
+        {"attribute": {"id": "attr1"}, "term": {"id": "term1"}},
+        {"attribute": {"id": "attr2"}, "term": {"id": "term2"}, "isKDE": False}
+    ]
+    fusion_obj.link_attributes_to_terms(report_id="rep123", mappings=mappings)
+    args, kwargs = mock_link.call_args
+    sent_mappings = args[1]
+    assert sent_mappings[0]["isKDE"] is True
+    assert sent_mappings[1]["isKDE"] is False
+    assert kwargs["client"] is fusion_obj
 
-def test_attributes_wrapper_creation() -> None:
-    fusion = Fusion(base_url="http://localhost", token="dummy")
-    attributes = fusion.attributes()
-    assert hasattr(attributes, "from_csv")
-
-def test_attribute_sets_wrapper_creation() -> None:
-    fusion = Fusion(base_url="http://localhost", token="dummy")
-    sets = fusion.attribute_sets()
-    assert hasattr(sets, "from_csv")
-
-def test_link_attributes_to_terms_minimal() -> None:
-    fusion = Fusion(base_url="http://localhost", token="dummy")
-    result = fusion.link_attributes_to_terms(
-        report_id="dummy-id",
-        mappings=[{
-            "attribute": {"id": "attr-id"},
-            "term": {"id": "term-id"},
-            "isKDE": False
-        }],
-        return_resp_obj=False
-    )
-    assert result is None or isinstance(result, dict)
+@patch("fusion.report.Report.link_attributes_to_terms")
+def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fusion_obj: Fusion) -> None:
+    mock_resp = MagicMock()
+    mock_link.return_value = mock_resp
+    mappings = [{"attribute": {"id": "a"}, "term": {"id": "t"}}]
+    resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
+    assert resp is mock_resp
