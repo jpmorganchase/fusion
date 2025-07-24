@@ -2163,3 +2163,65 @@ def test_fusion_init_logging_disabled(credentials: FusionCredentials) -> None:
 
     # Clean up
     logger.handlers.clear()
+
+def test_report_instantiation() -> None:
+    fusion = Fusion(base_url="http://localhost", token="dummy")
+    report = fusion.report(
+        description="Test report",
+        title="Test Title",
+        frequency="Monthly",
+        category="Finance",
+        sub_category="Expense",
+        data_node_id={"id": "123"},
+        regulatory_related=True,
+        domain={"name": "Core", "isCore": True},
+    )
+    assert report.title == "Test Title"
+
+def test_reports_wrapper_creation() -> None:
+    fusion = Fusion(base_url="http://localhost", token="dummy")
+    reports = fusion.reports()
+    assert hasattr(reports, "from_csv")
+
+def test_report_attributes_wrapper_creation() -> None:
+    fusion = Fusion(base_url="http://localhost", token="dummy")
+    wrapper = fusion.report_attributes()
+    assert hasattr(wrapper, "from_csv")
+
+def test_dataset_creation() -> None:
+    fusion = Fusion(base_url="http://localhost", token="dummy")
+    dataset = fusion.dataset(
+        name="test_dataset",
+        description="test description",
+        data_node_id={"id": "dn-123"},
+        domain={"name": "domain"},
+    )
+    assert dataset.name == "test_dataset"
+
+def test_datasets_wrapper_creation() -> None:
+    fusion = Fusion(base_url="http://localhost", token="dummy")
+    datasets = fusion.datasets()
+    assert hasattr(datasets, "from_csv")
+
+def test_attributes_wrapper_creation() -> None:
+    fusion = Fusion(base_url="http://localhost", token="dummy")
+    attributes = fusion.attributes()
+    assert hasattr(attributes, "from_csv")
+
+def test_attribute_sets_wrapper_creation() -> None:
+    fusion = Fusion(base_url="http://localhost", token="dummy")
+    sets = fusion.attribute_sets()
+    assert hasattr(sets, "from_csv")
+
+def test_link_attributes_to_terms_minimal() -> None:
+    fusion = Fusion(base_url="http://localhost", token="dummy")
+    result = fusion.link_attributes_to_terms(
+        report_id="dummy-id",
+        mappings=[{
+            "attribute": {"id": "attr-id"},
+            "term": {"id": "term-id"},
+            "isKDE": False
+        }],
+        return_resp_obj=False
+    )
+    assert result is None or isinstance(result, dict)
