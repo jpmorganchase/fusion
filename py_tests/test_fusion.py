@@ -3,7 +3,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -2286,8 +2286,8 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fusion) -> None:
     mappings = [
-        {"attribute": {"id": "attr1"}, "term": {"id": "term1"}},
-        {"attribute": {"id": "attr2"}, "term": {"id": "term2"}, "isKDE": False}
+        cast(Report.AttributeTermMapping, {"attribute": {"id": "attr1"}, "term": {"id": "term1"}}),
+        cast(Report.AttributeTermMapping, {"attribute": {"id": "attr2"}, "term": {"id": "term2"}, "isKDE": False}),
     ]
     fusion_obj.link_attributes_to_terms(report_id="rep123", mappings=mappings)
     args, kwargs = mock_link.call_args
@@ -2300,6 +2300,8 @@ def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fus
 def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fusion_obj: Fusion) -> None:
     mock_resp = MagicMock()
     mock_link.return_value = mock_resp
-    mappings = [{"attribute": {"id": "a"}, "term": {"id": "t"}}]
+    mappings = [
+    cast(Report.AttributeTermMapping, {"attribute": {"id": "a"}, "term": {"id": "t"}})
+    ]
     resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
     assert resp is mock_resp
