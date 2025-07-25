@@ -176,7 +176,7 @@ class Fusion:
         self.session = get_session(self.credentials, self.root_url)
         self.fs = fs if fs else get_default_fs()
         self.events: pd.DataFrame | None = None
-        
+  
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
         return "Fusion object \nAvailable methods:\n" + tabulate(
@@ -187,17 +187,14 @@ class Fusion:
                         for method_name in dir(Fusion)
                         if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
                     ]
-                    + [
-                        p for p in dir(Fusion)
-                        if isinstance(getattr(Fusion, p), property)
-                    ],
+                    + [p for p in dir(Fusion) if isinstance(getattr(Fusion, p), property)],
                     [
-                        (getattr(Fusion, method_name).__doc__ or "").split("\n")[0]
+                        getattr(Fusion, method_name).__doc__.split("\n")[0]
                         for method_name in dir(Fusion)
                         if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
                     ]
                     + [
-                        (getattr(Fusion, p).__doc__ or "").split("\n")[0]
+                        getattr(Fusion, p).__doc__.split("\n")[0]
                         for p in dir(Fusion)
                         if isinstance(getattr(Fusion, p), property)
                     ],
@@ -2216,7 +2213,7 @@ class Fusion:
         """
         attributes_obj = ReportAttributes(attributes=attributes or [])
         attributes_obj.client = self
-        return attributes_obj
+        return 
 
 
     def reports(self) -> ReportsWrapper:
