@@ -64,6 +64,8 @@ if TYPE_CHECKING:
     from .types import PyArrowFilterT
 
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.addHandler(logging.NullHandler())
 VERBOSE_LVL = 25
 
     
@@ -137,27 +139,28 @@ class Fusion:
         self.download_folder = download_folder
         Path(download_folder).mkdir(parents=True, exist_ok=True)
 
-        # Always log to stdout, conditionally to file
-        if logger.hasHandlers():
-            logger.handlers.clear()
-
         logging.addLevelName(VERBOSE_LVL, "VERBOSE")
+        logger.setLevel(log_level)
+        if not logger.handlers:
+            logger.addHandler(logging.NullHandler())
+
         formatter = logging.Formatter(
             "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
 
-        # Always add stdout handler
-        stdout_handler = logging.StreamHandler(sys.stdout)
-        stdout_handler.setFormatter(formatter)
-        logger.addHandler(stdout_handler)
-        logger.setLevel(log_level)
-
-        # Optionally add file handler
-        if enable_logging:
+        if enable_logging and not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
             file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
+
+        if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+            stdout_handler = logging.StreamHandler(sys.stdout)
+            stdout_handler.setFormatter(formatter)
+            logger.addHandler(stdout_handler)
+
+        if len(logger.handlers) > 1:
+            logger.handlers = [h for h in logger.handlers if not isinstance(h, logging.NullHandler)]
 
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
