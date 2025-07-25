@@ -11,3 +11,4 @@ from fusion.fusion import Fusion
 from ._fusion import *  # noqa: F403
 
 __all__ = ["Fusion", "FusionCredentials", "fsync", "rust_ok"]  # noqa: F405
+
