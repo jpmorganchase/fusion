@@ -66,7 +66,7 @@ class Report(metaclass=CamelCaseMeta):
     frequency: str
     category: str
     sub_category: str
-    domain: dict[str, str]  # Dictionary with "name" key populated from "CDO Office"
+    domain: dict[str, str] 
     regulatory_related: bool
 
     # Optional fields
@@ -133,7 +133,7 @@ class Report(metaclass=CamelCaseMeta):
         def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
             converted = {}
             for k, v in d.items():
-                # Special case: keep as-is if already matches the field name (e.g., isBCBS239Program)
+                
                 key = k if k == "isBCBS239Program" else camel_to_snake(k)
                 if isinstance(v, dict) and not isinstance(v, str):
                     converted[key] = convert_keys(v)
@@ -413,7 +413,7 @@ Report.COLUMN_MAPPING = { # type: ignore[attr-defined]
             "Country of Reporting Obligation": "country_of_reporting_obligation",
             "Regulatory Designated": "regulatory_related",
             "Primary Regulator": "primary_regulator",
-            "CDO Office": "domain_name",  # Map to "name" inside "domain"
+            "CDO Office": "domain_name",  
             "Application ID": "data_node_name",
             "Application Type": "data_node_type",
         } 
