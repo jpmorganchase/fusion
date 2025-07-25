@@ -25,6 +25,8 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.addHandler(logging.NullHandler())
 VERBOSE_LVL = 25
 DEFAULT_CHUNK_SIZE = 2**16
 
@@ -235,7 +237,7 @@ def _synchronize(  # noqa: PLR0913
     return res
 
 
-def fsync(  # noqa: PLR0913
+def fsync(  # noqa: PLR0912, PLR0913, PLR0915
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
     products: Optional[list[str]] = None,
@@ -271,19 +273,28 @@ def fsync(  # noqa: PLR0913
 
     """
 
-    if logger.hasHandlers():
-        logger.handlers.clear()
-    file_handler = logging.FileHandler(filename="{}/{}".format(log_path, "fusion_fsync.log"))
     logging.addLevelName(VERBOSE_LVL, "VERBOSE")
-    stdout_handler = logging.StreamHandler(sys.stdout)
+    logger.setLevel(log_level)
+    if not logger.handlers:
+        logger.addHandler(logging.NullHandler())
+
     formatter = logging.Formatter(
         "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    stdout_handler.setFormatter(formatter)
-    logger.addHandler(stdout_handler)
-    logger.addHandler(file_handler)
-    logger.setLevel(log_level)
+
+    if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+        file_handler = logging.FileHandler(filename="{}/{}".format(log_path, "fusion_fsync.log"))
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setFormatter(formatter)
+        logger.addHandler(stdout_handler)
+
+    if len(logger.handlers) > 1:
+        logger.handlers = [h for h in logger.handlers if not isinstance(h, logging.NullHandler)]
 
     catalog = catalog if catalog else "common"
     datasets = datasets if datasets else []
