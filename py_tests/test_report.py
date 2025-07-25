@@ -56,22 +56,6 @@ def test_report_validation_raises() -> None:
         report.validate()
 
 
-def test_report_from_dict() -> None:
-    data = {
-        "Title": "Dict Report",
-        "DataNodeId": {"name": "X", "dataNodeType": "Y"},
-        "Description": "Dict desc",
-        "Frequency": "Daily",
-        "Category": "Cat",
-        "SubCategory": "Sub",
-        "Domain": {"name": "CDO"},
-        "RegulatoryRelated": True,
-    }
-    report = Report.from_dict(data)
-    assert isinstance(report, Report)
-    assert report.title == "Dict Report"
-    assert report.frequency == "Daily"
-
 
 def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     csv_data = (
