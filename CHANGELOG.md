@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.15] - 2025-07-25
+* Added various BCBS related functions for Reports, Report Attributes and Linkage of terms to Report Attrributes
+* Includes fix for date format in bulk upload of file
+* Added fusions logging to the existing loggers if present; which will remove forced use of fusions loggers.
+
 ## [2.0.14] - 2025-07-14
 * Removed the need for list datasets and list catalog calls during file uploads
 * Bulk upload of files functionality enhanced to support file uploads from a folder path that contains subfolders
