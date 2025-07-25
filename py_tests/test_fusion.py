@@ -2305,3 +2305,4 @@ def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fus
     ]
     resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
     assert resp is mock_resp
+
