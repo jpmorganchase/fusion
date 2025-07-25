@@ -2216,7 +2216,7 @@ class Fusion:
         """
         attributes_obj = ReportAttributes(attributes=attributes or [])
         attributes_obj.client = self
-        return 
+        return attributes_obj
 
 
     def reports(self) -> ReportsWrapper:
