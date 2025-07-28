@@ -8,6 +8,7 @@ import logging
 import re
 import sys
 import warnings
+from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -24,7 +25,8 @@ from fusion.dataflow import InputDataFlow, OutputDataFlow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
-from fusion.report import Report
+from fusion.report import Report, ReportsWrapper
+from fusion.report_attributes import ReportAttribute, ReportAttributes
 
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError, CredentialError, FileFormatError
@@ -63,8 +65,12 @@ if TYPE_CHECKING:
     from .types import PyArrowFilterT
 
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.addHandler(logging.NullHandler())
 VERBOSE_LVL = 25
 
+    
+        
 
 class Fusion:
     """Core Fusion class for API access."""
@@ -133,27 +139,28 @@ class Fusion:
         self.download_folder = download_folder
         Path(download_folder).mkdir(parents=True, exist_ok=True)
 
-        # Always log to stdout, conditionally to file
-        if logger.hasHandlers():
-            logger.handlers.clear()
-
         logging.addLevelName(VERBOSE_LVL, "VERBOSE")
+        logger.setLevel(log_level)
+        if not logger.handlers:
+            logger.addHandler(logging.NullHandler())
+
         formatter = logging.Formatter(
             "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
         )
 
-        # Always add stdout handler
-        stdout_handler = logging.StreamHandler(sys.stdout)
-        stdout_handler.setFormatter(formatter)
-        logger.addHandler(stdout_handler)
-        logger.setLevel(log_level)
-
-        # Optionally add file handler
-        if enable_logging:
+        if enable_logging and not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
             file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
+
+        if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+            stdout_handler = logging.StreamHandler(sys.stdout)
+            stdout_handler.setFormatter(formatter)
+            logger.addHandler(stdout_handler)
+
+        if len(logger.handlers) > 1:
+            logger.handlers = [h for h in logger.handlers if not isinstance(h, logging.NullHandler)]
 
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
@@ -172,7 +179,7 @@ class Fusion:
         self.session = get_session(self.credentials, self.root_url)
         self.fs = fs if fs else get_default_fs()
         self.events: pd.DataFrame | None = None
-
+  
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
         return "Fusion object \nAvailable methods:\n" + tabulate(
@@ -198,6 +205,7 @@ class Fusion:
             ).T.set_index(0),
             tablefmt="psql",
         )
+
 
     @property
     def default_catalog(self) -> str:
@@ -248,6 +256,31 @@ class Fusion:
             asynchronous=as_async, client_kwargs={"root_url": self.root_url, "credentials": self.credentials}
         )
 
+    def _get_new_root_url(self) -> str:
+        """
+        Returns a modified version of the root URL to support the new API format.
+
+        This method temporarily strips trailing segments such as "/api/v1/" or "/v1/"
+        from the original `root_url` to align with an updated API base path format.
+
+        Returns:
+            str: The adjusted root URL without trailing version segments.
+
+        Deprecated:
+            This method is temporary and will be removed once all components have migrated
+            to the new API structure. Use `root_url` and apply formatting externally
+            as needed.
+        """
+        new_root_url = self.root_url
+
+        if new_root_url:
+            if new_root_url.endswith("/api/v1/"):
+                new_root_url = new_root_url[:-8]  # remove "/api/v1/"
+            elif new_root_url.endswith("/v1/"):
+                new_root_url = new_root_url[:-4]  # remove "/v1/"
+
+        return new_root_url
+
     def list_catalogs(self, output: bool = False) -> pd.DataFrame:
         """Lists the catalogs available to the API account.
 
@@ -282,7 +315,6 @@ class Fusion:
 
         if output:
             pass
-
         return cat_df
 
     def list_products(
@@ -346,7 +378,7 @@ class Fusion:
                 )
             ]
 
-        if max_results > -1:
+        if max_results > -1: 
             filtered_df = filtered_df[0:max_results]
 
         if output:
@@ -469,6 +501,74 @@ class Fusion:
             pass
 
         return ds_df
+            
+
+    def list_reports(
+        self,
+        report_id: str | None = None,
+        output: bool = False,
+        display_all_columns: bool = False,
+    ) -> pd.DataFrame:
+        """Retrieve a single report or all reports from the Fusion system."""
+        key_columns = [
+            "id", "name", "alternateId", "tierType", "frequency",
+            "category", "subCategory", "reportOwner", "lob", "description"
+        ]
+
+        if report_id:
+            url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
+            resp = self.session.get(url)
+            if resp.status_code == HTTPStatus.OK:
+                rep_df = pd.json_normalize(resp.json())
+                if not display_all_columns:
+                    rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
+                if output:
+                    pass
+                return rep_df
+            else:
+                resp.raise_for_status()
+        else:
+            url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/list"
+            resp = self.session.post(url)
+            if resp.status_code == HTTPStatus.OK:
+                data = resp.json()
+                rep_df = pd.json_normalize(data.get("content", data))
+                if not display_all_columns:
+                    rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
+                if output:
+                    pass
+                return rep_df
+            else:
+                resp.raise_for_status()
+        return pd.DataFrame(columns=key_columns)
+
+
+    def list_report_attributes(
+        self,
+        report_id: str,
+        output: bool = False,
+        display_all_columns: bool = False,
+    ) -> pd.DataFrame:
+        """Retrieve the attributes (report elements) of a specific report."""
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
+        resp = self.session.get(url)
+
+        if resp.status_code == HTTPStatus.OK:
+            rep_df = pd.json_normalize(resp.json())
+            if not display_all_columns:
+                key_columns = [
+                    "id", "path", "status", "dataType", "isMandatory",
+                    "description", "createdBy", "name"
+                ]
+                rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
+            if output:
+                pass
+            return rep_df
+        else:
+            resp.raise_for_status()
+        return pd.DataFrame(columns=["id", "path", "status", "dataType", "isMandatory", 
+                                     "description", "createdBy", "name"])
+
 
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
@@ -788,7 +888,7 @@ class Fusion:
             # sample data is limited to csv
             if dt_str == "sample":
                 dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
-            required_series = [(catalog, dataset, dt_str, dataset_format)]  # type: ignore
+            required_series = [(catalog, dataset, dt_str, dataset_format)] # type: ignore[list-item]
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
@@ -1044,7 +1144,7 @@ class Fusion:
             if dataframe_type == "polars":
                 import polars as pl
 
-                data_df = pl.concat(dataframes, how="diagonal")  # type: ignore
+                data_df = pl.concat(dataframes, how="diagonal") # type: ignore
 
         return data_df
 
@@ -1287,9 +1387,7 @@ class Fusion:
                     dt_str = pd.Timestamp("today").date().strftime("%Y%m%d")
                 elif date_identifier.match(dt_str):
                     dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
-                else:
-                    raise ValueError(f"Invalid date format: {dt_str}. Expected YYYYMMDD or 'latest'.")
-        
+                
                 file_format = path.split(".")[-1]
                 file_name = [path.split("/")[-1]]
                 file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
@@ -1374,7 +1472,7 @@ class Fusion:
         local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)
 
         data_map_df = pd.DataFrame(["", local_url_eqiv, file_name]).T
-        data_map_df.columns = ["path", "url", "file_name"]  # type: ignore
+        data_map_df.columns = ["path", "url", "file_name"]  # type: ignore[assignment]
 
         res = upload_files(
             fs_fusion,
@@ -2052,6 +2150,78 @@ class Fusion:
         attributes_obj = Attributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
+        
+    def report_attribute(
+        self,
+        title: str,
+        sourceIdentifier: str | None = None,
+        description: str | None = None,
+        technicalDataType: str | None = None,
+        path: str | None = None,
+    ) -> ReportAttribute:
+        """
+        Instantiate a ReportAttribute object with this client for metadata creation.
+
+        Args:
+            title (str): The display title of the attribute (required).
+            sourceIdentifier (str | None, optional): A unique identifier or reference ID from the source system.
+            description (str | None, optional): A longer description of the attribute.
+            technicalDataType (str | None, optional): The technical data type (e.g., string, int, boolean).
+            path (str | None, optional): The hierarchical path or logical grouping for the attribute.
+
+        Returns:
+            ReportAttribute: A single ReportAttribute instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.report_attribute(
+            ...     title="Customer ID",
+            ...     sourceIdentifier="cust_id_123",
+            ...     description="Unique customer identifier",
+            ...     technicalDataType="String",
+            ...     path="Customer.Details"
+            ... )
+        """
+        attribute_obj = ReportAttribute(
+            sourceIdentifier=sourceIdentifier,
+            title=title,
+            description=description,
+            technicalDataType=technicalDataType,
+            path=path,
+        )
+        attribute_obj.client = self
+        return attribute_obj
+
+
+    def report_attributes(
+        self,
+        attributes: list[ReportAttribute] | None = None,
+    ) -> ReportAttributes:
+        """
+        Instantiate a ReportAttributes collection with this client, allowing batch creation or manipulation.
+
+        Args:
+            attributes (list[ReportAttribute] | None, optional): A list of ReportAttribute objects to include.
+                Defaults to an empty list if not provided.
+
+        Returns:
+            ReportAttributes: A ReportAttributes collection object with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr1 = fusion.report_attribute(title="Code")
+            >>> attr2 = fusion.report_attribute(title="Label")
+            >>> attr_collection = fusion.report_attributes([attr1, attr2])
+            >>> attr_collection.create(report_id="abc-123")
+        """
+        attributes_obj = ReportAttributes(attributes=attributes or [])
+        attributes_obj.client = self
+        return attributes_obj
+
+
+    def reports(self) -> ReportsWrapper:
+        return ReportsWrapper(client=self)
+
 
     def delete_datasetmembers(
         self,
@@ -2165,148 +2335,6 @@ class Fusion:
             pass
 
         return ds_attr_df
-
-    def report(  # noqa: PLR0913
-        self,
-        identifier: str,
-        title: str = "",
-        category: str | list[str] | None = None,
-        description: str = "",
-        frequency: str = "Once",
-        is_internal_only_dataset: bool = False,
-        is_third_party_data: bool = True,
-        is_restricted: bool | None = None,
-        is_raw_data: bool = True,
-        maintainer: str | None = "J.P. Morgan Fusion",
-        source: str | list[str] | None = None,
-        region: str | list[str] | None = None,
-        publisher: str = "J.P. Morgan",
-        product: str | list[str] | None = None,
-        sub_category: str | list[str] | None = None,
-        tags: str | list[str] | None = None,
-        created_date: str | None = None,
-        modified_date: str | None = None,
-        delivery_channel: str | list[str] = "API",
-        language: str = "English",
-        status: str = "Available",
-        type_: str | None = "Report",
-        container_type: str | None = "Snapshot-Full",
-        snowflake: str | None = None,
-        complexity: str | None = None,
-        is_immutable: bool | None = None,
-        is_mnpi: bool | None = None,
-        is_pci: bool | None = None,
-        is_pii: bool | None = None,
-        is_client: bool | None = None,
-        is_public: bool | None = None,
-        is_internal: bool | None = None,
-        is_confidential: bool | None = None,
-        is_highly_confidential: bool | None = None,
-        is_active: bool | None = None,
-        owners: list[str] | None = None,
-        application_id: str | dict[str, str] | None = None,
-        report: dict[str, str] | None = None,
-        **kwargs: Any,
-    ) -> Report:
-        """Instantiate Report object with this client for metadata creation for managing regulatory reporting metadata.
-
-        Args:
-            identifier (str): Dataset identifier.
-            title (str, optional): Dataset title. If not provided, defaults to identifier.
-            category (str | list[str] | None, optional): A category or list of categories for the dataset.
-            Defaults to None.
-            description (str, optional): Dataset description. If not provided, defaults to identifier.
-            frequency (str, optional): The frequency of the dataset. Defaults to "Once".
-            is_internal_only_dataset (bool, optional): Flag for internal datasets. Defaults to False.
-            is_third_party_data (bool, optional): Flag for third party data. Defaults to True.
-            is_restricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
-            is_raw_data (bool, optional): Flag for raw datasets. Defaults to True.
-            maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
-            source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
-            region (str | list[str] | None, optional): Region. Defaults to None.
-            publisher (str, optional): Name of vendor that publishes the data. Defaults to "J.P. Morgan".
-            product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
-            sub_category (str | list[str] | None, optional): Sub-category. Defaults to None.
-            tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
-            created_date (str | None, optional): Created date. Defaults to None.
-            modified_date (str | None, optional): Modified date. Defaults to None.
-            delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
-            language (str, optional): Language. Defaults to "English".
-            status (str, optional): Status. Defaults to "Available".
-            type_ (str | None, optional): Dataset type. Defaults to "Source".
-            container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
-            snowflake (str | None, optional): Snowflake account connection. Defaults to None.
-            complexity (str | None, optional): Complexity. Defaults to None.
-            is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
-            is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
-            is_pci (bool | None, optional): is_pci. Defaults to None.
-            is_pii (bool | None, optional): is_pii. Defaults to None.
-            is_client (bool | None, optional): is_client. Defaults to None.
-            is_public (bool | None, optional): is_public. Defaults to None.
-            is_internal (bool | None, optional): is_internal. Defaults to None.
-            is_confidential (bool | None, optional): is_confidential. Defaults to None.
-            is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
-            is_active (bool | None, optional): is_active. Defaults to None.
-            owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
-            report (dict[str, str] | None, optional): The report metadata. Specifies the tier of the report.
-                Required for registered reports to the catalog.
-
-        Returns:
-            Dataset: Fusion Dataset class.
-
-        Examples:
-            >>> from fusion import Fusion
-            >>> fusion = Fusion()
-            >>> dataset = fusion.report(identifier="DATASET_1")
-
-        Note:
-            See the dataset module for more information on functionalities of report objects.
-
-        """
-        report_obj = Report(
-            identifier=identifier,
-            title=title,
-            category=category,
-            description=description,
-            frequency=frequency,
-            is_internal_only_dataset=is_internal_only_dataset,
-            is_third_party_data=is_third_party_data,
-            is_restricted=is_restricted,
-            is_raw_data=is_raw_data,
-            maintainer=maintainer,
-            source=source,
-            region=region,
-            publisher=publisher,
-            product=product,
-            sub_category=sub_category,
-            tags=tags,
-            created_date=created_date,
-            modified_date=modified_date,
-            delivery_channel=delivery_channel,
-            language=language,
-            status=status,
-            type_=type_,
-            container_type=container_type,
-            snowflake=snowflake,
-            complexity=complexity,
-            is_immutable=is_immutable,
-            is_mnpi=is_mnpi,
-            is_pci=is_pci,
-            is_pii=is_pii,
-            is_client=is_client,
-            is_public=is_public,
-            is_internal=is_internal,
-            is_confidential=is_confidential,
-            is_highly_confidential=is_highly_confidential,
-            is_active=is_active,
-            owners=owners,
-            application_id=application_id,
-            report=report,
-            **kwargs,
-        )
-        report_obj.client = self
-        return report_obj
 
     def input_dataflow(  # noqa: PLR0913
         self,
@@ -2691,13 +2719,13 @@ class Fusion:
     ) -> pd.DataFrame:
         """List the distributions of dataset members.
 
-        Args:
-            dataset (str): Dataset identifier.
-            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-            output (bool, optional): If True then print the dataframe. Defaults to False.
-
-        Returns:
-            pd.DataFrame: A dataframe with a row for each dataset member distribution.
+                Args:
+                    dataset (str): Dataset identifier.
+                    catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+                    output (bool, optional): If True then print the dataframe. Defaults to False.
+        F
+                Returns:
+                    pd.DataFrame: A dataframe with a row for each dataset member distribution.
 
         """
         catalog = self._use_catalog(catalog)
@@ -2720,3 +2748,112 @@ class Fusion:
 
         members_df = pd.DataFrame(rows, columns=["identifier", "format"])
         return members_df
+    
+    def report(  # noqa: PLR0913
+        self,
+        description: str,
+        title: str,
+        frequency: str,
+        category: str,
+        sub_category: str,
+        data_node_id: dict[str, str],
+        regulatory_related: bool,
+        domain: dict[str, str],
+        tier_type: str | None = None, 
+        lob: str | None = None,
+        alternative_id: dict[str, str] | None = None,
+        sub_lob: str | None = None,
+        is_bcbs239_program: bool | None = None,
+        risk_area: str | None = None,
+        risk_stripe: str | None = None,
+        sap_code: str | None = None,
+        **kwargs: Any,
+    ) -> Report:
+        """
+        Instantiate a Report object with the current Fusion client attached.
+
+        Args:
+            description (str): Description of the report.
+            title (str): Title of the report or process.
+            frequency (str): Reporting frequency (e.g., Monthly, Quarterly).
+            category (str): Main classification of the report.
+            sub_category (str): Sub-classification under the main category.
+            data_node_id (dict[str, str]): Associated data node details. Should include "name" and "dataNodeType".
+            regulatory_related (bool): Whether the report is regulatory-designated. This is a required field.
+            tier_type (str, optional): Tier classification (e.g., "Tier 1", "Non Tier 1").
+            lob (str, optional): Line of business.
+            alternative_id (dict[str, str], optional): Alternate identifiers for the report.
+            sub_lob (str, optional): Subdivision of the line of business.
+            is_bcbs239_program (bool, optional): Whether the report is part of the BCBS 239 program.
+            risk_area (str, optional): Risk area covered by the report.
+            risk_stripe (str, optional): Stripe or classification under the risk area.
+            sap_code (str, optional): SAP financial tracking code.
+            domain (dict[str, str | bool], optional): Domain details. Typically contains a "name" key.
+            **kwargs (Any): Additional optional fields such as:
+                - tier_designation (str)
+                - region (str)
+                - mnpi_indicator (bool)
+                - country_of_reporting_obligation (str)
+                - primary_regulator (str)
+
+        Returns:
+            Report: A Report object ready for API upload or further manipulation.
+        """
+        report_obj = Report(
+            title=title,
+            description=description,
+            frequency=frequency,
+            category=category,
+            sub_category=sub_category,
+            data_node_id=data_node_id,
+            regulatory_related=regulatory_related,
+            tier_type=tier_type,
+            lob=lob,
+            alternative_id=alternative_id,
+            sub_lob=sub_lob,
+            is_bcbs239_program=is_bcbs239_program,
+            risk_area=risk_area,
+            risk_stripe=risk_stripe,
+            sap_code=sap_code,
+            domain=domain,
+            **kwargs,
+        )
+        report_obj.client = self
+        return report_obj
+
+
+
+    def link_attributes_to_terms(
+        self,
+        report_id: str,
+        mappings: list[Report.AttributeTermMapping],
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """
+        Link one or more report attributes to business glossary terms.
+
+        Each mapping should follow this format:
+            {
+                "attribute": {"id": "attribute-id"},
+                "term": {"id": "term-id"},
+                "isKDE": True  # Optional; defaults to True if not provided
+            }
+
+        This method wraps `Report.link_attributes_to_terms` and automatically attaches the Fusion client.
+        """
+
+        processed_mappings = []
+        for mapping in mappings:
+            new_mapping = mapping.copy()
+            if "isKDE" not in new_mapping:
+                new_mapping["isKDE"] = True 
+            processed_mappings.append(new_mapping)
+
+        return Report.link_attributes_to_terms(
+            report_id=report_id,
+            mappings=processed_mappings,
+            client=self,
+            return_resp_obj=return_resp_obj
+        )
+
+    
