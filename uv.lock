@@ -3230,7 +3230,7 @@ wheels = [
 
 [[package]]
 name = "pyfusion"
-version = "2.0.15"
+version = "2.0.16-dev0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
