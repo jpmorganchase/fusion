@@ -1813,6 +1813,7 @@ def test_list_registered_attributes(requests_mock: requests_mock.Mocker, fusion_
     pd.testing.assert_frame_equal(test_df, expected_df)
     assert all(col in core_cols for col in test_df.columns)
 
+
 def test_fusion_report(fusion_obj: Fusion) -> None:
     """Test Fusion Report object creation using required and optional arguments."""
     report = fusion_obj.report(
@@ -1828,7 +1829,7 @@ def test_fusion_report(fusion_obj: Fusion) -> None:
         lob="Global Markets",
         is_bcbs239_program=True,
         sap_code="SAP123",
-        region="EMEA"
+        region="EMEA",
     )
 
     assert isinstance(report, Report)
@@ -1840,7 +1841,6 @@ def test_fusion_report(fusion_obj: Fusion) -> None:
     assert report.is_bcbs239_program is True
     assert report.region == "EMEA"
     assert report.data_node_id["name"] == "ComplianceTable"
-
 
 
 def test_fusion_input_dataflow(fusion_obj: Fusion) -> None:
@@ -2135,8 +2135,6 @@ def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -
 
 
 def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCredentials) -> None:
-    
-
     # Clear logger handlers to avoid contamination
     logger.handlers.clear()
 
@@ -2163,9 +2161,9 @@ def test_fusion_init_logging_disabled(credentials: FusionCredentials) -> None:
     Fusion(credentials=credentials, enable_logging=False)
 
     # No additional handlers should be added
-    assert not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
+    assert any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
     assert all(not isinstance(handler, logging.FileHandler) for handler in logger.handlers)
-    assert any(isinstance(handler, logging.NullHandler) for handler in logger.handlers)
+    assert not any(isinstance(handler, logging.NullHandler) for handler in logger.handlers)
 
     # Clean up
     logger.handlers.clear()
@@ -2182,13 +2180,13 @@ def test_fusion_preserves_existing_handlers(credentials: FusionCredentials) -> N
     logger.handlers.clear()
 
 
-def test_fusion_adds_nullhandler_when_no_handlers(credentials: FusionCredentials) -> None:
+def test_fusion_adds_streamhandler_when_no_handlers(credentials: FusionCredentials) -> None:
     logger.handlers.clear()
 
     Fusion(credentials=credentials, enable_logging=False)
 
     assert len(logger.handlers) == 1
-    assert isinstance(logger.handlers[0], logging.NullHandler)
+    assert isinstance(logger.handlers[0], logging.StreamHandler)
 
     logger.handlers.clear()
 
@@ -2197,32 +2195,26 @@ def test_get_new_root_url_strip_version(fusion_obj: Fusion) -> None:
     fusion_obj.root_url = "https://fusion.jpmorgan.com/api/v1/"
     assert fusion_obj._get_new_root_url() == "https://fusion.jpmorgan.com"
 
+
 def test_list_reports_all(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/list"
-    mock_data = {
-        "content": [
-            {"id": "rep1", "name": "Test Report", "category": "Finance", "subCategory": "Equities"}
-        ]
-    }
+    mock_data = {"content": [{"id": "rep1", "name": "Test Report", "category": "Finance", "subCategory": "Equities"}]}
     requests_mock.post(url, json=mock_data)
-    df = fusion_obj.list_reports() #noqa
+    df = fusion_obj.list_reports()  # noqa
     assert isinstance(df, pd.DataFrame)
     assert "id" in df.columns
     assert df.iloc[0]["id"] == "rep1"
 
+
 def test_list_reports_by_id(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     report_id = "rep1"
     url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
-    mock_data = {
-        "id": "rep1",
-        "name": "Test Report",
-        "category": "Finance",
-        "subCategory": "Equities"
-    }
+    mock_data = {"id": "rep1", "name": "Test Report", "category": "Finance", "subCategory": "Equities"}
     requests_mock.get(url, json=mock_data)
-    df = fusion_obj.list_reports(report_id=report_id) #noqa
+    df = fusion_obj.list_reports(report_id=report_id)  # noqa
     assert isinstance(df, pd.DataFrame)
     assert df.iloc[0]["id"] == "rep1"
+
 
 def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     report_id = "rep1"
@@ -2236,14 +2228,15 @@ def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock
             "isMandatory": True,
             "description": "Field desc",
             "createdBy": "user1",
-            "name": "value"
+            "name": "value",
         }
     ]
     requests_mock.get(url, json=mock_data)
-    df = fusion_obj.list_report_attributes(report_id=report_id) #noqa
+    df = fusion_obj.list_report_attributes(report_id=report_id)  # noqa
     assert isinstance(df, pd.DataFrame)
     assert "id" in df.columns
     assert df.iloc[0]["id"] == "attr1"
+
 
 def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
     report = fusion_obj.report(
@@ -2254,11 +2247,12 @@ def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
         sub_category="Market",
         data_node_id={"name": "Node1", "dataNodeType": "Table"},
         regulatory_related=True,
-        domain={"name": "Risk"}
+        domain={"name": "Risk"},
     )
     assert isinstance(report, Report)
     assert report.title == "Test Report"
     assert report.client is fusion_obj
+
 
 def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
     report = fusion_obj.report(
@@ -2278,10 +2272,11 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         risk_area="Liquidity",
         risk_stripe="StripeA",
         sap_code="SAP001",
-        region="EMEA"
+        region="EMEA",
     )
     assert report.lob == "Banking"
     assert report.client is fusion_obj
+
 
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fusion) -> None:
@@ -2296,13 +2291,11 @@ def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fus
     assert sent_mappings[1]["isKDE"] is False
     assert kwargs["client"] is fusion_obj
 
+
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fusion_obj: Fusion) -> None:
     mock_resp = MagicMock()
     mock_link.return_value = mock_resp
-    mappings = [
-    cast(Report.AttributeTermMapping, {"attribute": {"id": "a"}, "term": {"id": "t"}})
-    ]
+    mappings = [cast(Report.AttributeTermMapping, {"attribute": {"id": "a"}, "term": {"id": "t"}})]
     resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
     assert resp is mock_resp
-

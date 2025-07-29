@@ -503,13 +503,14 @@ def test_download(  # noqa: PLR0913
     else:
         assert result == (True, lpath, None)
 
+
 @patch.object(FusionHTTPFileSystem, "get", return_value=("mocked_return", "mocked_lpath", "mocked_extra"))
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
 @patch("fsspec.AbstractFileSystem", autospec=True)
 def test_download_mkdir_logs_exception(
     mock_fs_class: MagicMock,
-    mock_set_session: AsyncMock, # noqa: ARG001
-    mock_get: MagicMock, # noqa: ARG001
+    mock_set_session: AsyncMock,  # noqa: ARG001
+    mock_get: MagicMock,  # noqa: ARG001
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:

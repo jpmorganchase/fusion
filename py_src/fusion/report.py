@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
 @dataclass
 class Report(metaclass=CamelCaseMeta):
     """
@@ -48,7 +50,7 @@ class Report(metaclass=CamelCaseMeta):
         tier_type (str, optional): Report's tier classification.
         is_bcbs239_program (bool, optional): Flag indicating BCBS 239 program inclusion.
         risk_stripe (str, optional): Stripe under risk category.
-        risk_area (str, optional): The area of risk addressed.  
+        risk_area (str, optional): The area of risk addressed.
         sap_code (str, optional): Associated SAP cost code.
         tier_designation (str, optional): Tier designation (e.g., Tier 1, Non Tier 1).
         alternative_id (dict[str, str], optional): Alternate report identifiers.
@@ -66,7 +68,7 @@ class Report(metaclass=CamelCaseMeta):
     frequency: str
     category: str
     sub_category: str
-    domain: dict[str, str] 
+    domain: dict[str, str]
     regulatory_related: bool
 
     # Optional fields
@@ -84,24 +86,22 @@ class Report(metaclass=CamelCaseMeta):
     country_of_reporting_obligation: str | None = None
     primary_regulator: str | None = None
 
-
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
-            self.title = tidy_string(self.title or "")
-            self.description = tidy_string(self.description or "")
-
+        self.title = tidy_string(self.title or "")
+        self.description = tidy_string(self.description or "")
 
     def __getattr__(self, name: str) -> Any:
-            snake_name = camel_to_snake(name)
-            return self.__dict__.get(snake_name, None)
+        snake_name = camel_to_snake(name)
+        return self.__dict__.get(snake_name, None)
 
     def __setattr__(self, name: str, value: Any) -> None:
-            if name == "client":
-                object.__setattr__(self, name, value)
-            else:
-                snake_name = camel_to_snake(name)
-                self.__dict__[snake_name] = value
+        if name == "client":
+            object.__setattr__(self, name, value)
+        else:
+            snake_name = camel_to_snake(name)
+            self.__dict__[snake_name] = value
 
     @property
     def client(self) -> Fusion | None:
@@ -133,7 +133,6 @@ class Report(metaclass=CamelCaseMeta):
         def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
             converted = {}
             for k, v in d.items():
-                
                 key = k if k == "isBCBS239Program" else camel_to_snake(k)
                 if isinstance(v, dict) and not isinstance(v, str):
                     converted[key] = convert_keys(v)
@@ -159,16 +158,12 @@ class Report(metaclass=CamelCaseMeta):
 
         report.__post_init__()
         return report
-    
+
     def validate(self) -> None:
-        required_fields = [
-            "title", "data_node_id",
-            "category", "frequency", "description","sub_category", "domain"
-        ]
+        required_fields = ["title", "data_node_id", "category", "frequency", "description", "sub_category", "domain"]
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
         if missing:
             raise ValueError(f"Missing required fields in Report: {', '.join(missing)}")
-
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the Report instance to a dictionary.
@@ -196,28 +191,25 @@ class Report(metaclass=CamelCaseMeta):
                 report_dict[snake_to_camel(k)] = v
 
         return report_dict
+
     @classmethod
     def map_application_type(cls, app_type: str) -> str | None:
         """Map application types to enum values."""
         mapping = {
             "Application (SEAL)": "Application (SEAL)",
             "Intelligent Solutions": "Intelligent Solutions",
-            "User Tool": "User Tool"
+            "User Tool": "User Tool",
         }
         return mapping.get(app_type)
 
     @classmethod
     def map_tier_type(cls, tier_type: str) -> str | None:
         """Map tier types to enum values."""
-        tier_mapping = {
-            "Tier 1": "Tier 1",
-            "Non Tier 1": "Non Tier 1"
-        }
+        tier_mapping = {"Tier 1": "Tier 1", "Non Tier 1": "Non Tier 1"}
         return tier_mapping.get(tier_type)
-        
 
     @classmethod
-    def from_dataframe(cls, data: pd.DataFrame, client: Fusion | None = None)-> list[Report]:
+    def from_dataframe(cls, data: pd.DataFrame, client: Fusion | None = None) -> list[Report]:
         """
         Create a list of Report objects from a DataFrame, applying permanent column mapping.
 
@@ -228,8 +220,8 @@ class Report(metaclass=CamelCaseMeta):
             list[Report]: List of Report objects.
         """
         # Apply permanent column mapping
-        data = data.rename(columns=Report.COLUMN_MAPPING) # type: ignore[attr-defined]
-        data = data.replace([np.nan,np.inf,-np.inf], None)  # Replace NaN, inf, -inf with None
+        data = data.rename(columns=Report.COLUMN_MAPPING)  # type: ignore[attr-defined]
+        data = data.replace([np.nan, np.inf, -np.inf], None)  # Replace NaN, inf, -inf with None
 
         # Replace NaN with None
         data = data.where(data.notna(), None)
@@ -255,7 +247,6 @@ class Report(metaclass=CamelCaseMeta):
             reg_related = report_data.get("regulatory_related")
             report_data["regulatory_related"] = reg_related == "Yes" if reg_related else None
 
-
             # Map tier designation
             tier_val = report_data.get("tier_designation")
             report_data["tier_designation"] = cls.map_tier_type(tier_val) if tier_val else None
@@ -264,7 +255,7 @@ class Report(metaclass=CamelCaseMeta):
             valid_fields = {f.name for f in fields(cls)}
             report_data = {k: v for k, v in report_data.items() if k in valid_fields}
 
-            report_obj  = cls(**report_data)
+            report_obj = cls(**report_data)
             report_obj.client = client  # Attach the client if provided
 
             try:
@@ -273,10 +264,9 @@ class Report(metaclass=CamelCaseMeta):
             except ValueError as e:
                 logger.warning(f"Skipping invalid row: {e}")
 
-
         return reports
 
-    @classmethod 
+    @classmethod
     def from_csv(cls, file_path: str, client: Fusion | None = None) -> list[Report]:
         """
         Create a list of Report objects from a CSV file, applying permanent column mapping.
@@ -290,19 +280,15 @@ class Report(metaclass=CamelCaseMeta):
         """
         data = pd.read_csv(file_path)
         return cls.from_dataframe(data, client=client)
-    
+
     @classmethod
-    def from_object(
-        cls,
-        source: pd.DataFrame | list[dict[str, Any]] | str,
-        client: Fusion | None = None
-    ) -> Reports:
+    def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None) -> Reports:
         """Unified loader for Reports from CSV path, DataFrame, list of dicts, or JSON string."""
         if isinstance(source, pd.DataFrame):
             return Reports(cls.from_dataframe(source, client=client))
 
         elif isinstance(source, list) and all(isinstance(item, dict) for item in source):
-            df = pd.DataFrame(source) # noqa
+            df = pd.DataFrame(source)  # noqa
             return Reports(cls.from_dataframe(df, client=client))
 
         elif isinstance(source, str):
@@ -310,16 +296,14 @@ class Report(metaclass=CamelCaseMeta):
                 return Reports(cls.from_csv(source, client=client))
             elif source.strip().startswith("[{"):
                 import json
+
                 data = json.loads(source)
-                df = pd.DataFrame(data) # noqa
+                df = pd.DataFrame(data)  # noqa
                 return Reports(cls.from_dataframe(df, client=client))
             else:
                 raise ValueError("Unsupported string input — must be .csv path or JSON array string")
 
         raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
-
-
-
 
     def create(
         self,
@@ -358,7 +342,7 @@ class Report(metaclass=CamelCaseMeta):
         requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
-    
+
     class AttributeTermMapping(TypedDict):
         attribute: dict[str, str]
         term: dict[str, str]
@@ -386,37 +370,39 @@ class Report(metaclass=CamelCaseMeta):
         Returns:
             requests.Response | None: API response
         """
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms" # noqa: E501
+        url = (
+            f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"  # noqa: E501
+        )
         resp = client.session.post(url, json=mappings)
         requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
-    
 
 
+Report.COLUMN_MAPPING = {  # type: ignore[attr-defined]
+    "Report/Process Name": "title",
+    "Report/Process Description": "description",
+    "Activity Type": "tier_type",
+    "Frequency": "frequency",
+    "Category": "category",
+    "Report/Process Owner SID": "report_owner",
+    "Sub Category": "sub_category",
+    "LOB": "lob",
+    "Sub-LOB": "sub_lob",
+    "JPMSE BCBS Related": "is_bcbs239_program",
+    "Report Type": "risk_stripe",
+    "Tier Type": "tier_designation",
+    "Region": "region",
+    "MNPI Indicator": "mnpi_indicator",
+    "Country of Reporting Obligation": "country_of_reporting_obligation",
+    "Regulatory Designated": "regulatory_related",
+    "Primary Regulator": "primary_regulator",
+    "CDO Office": "domain_name",
+    "Application ID": "data_node_name",
+    "Application Type": "data_node_type",
+}
 
-Report.COLUMN_MAPPING = { # type: ignore[attr-defined]
-            "Report/Process Name": "title",
-            "Report/Process Description": "description",
-            "Activity Type": "tier_type",
-            "Frequency": "frequency",
-            "Category": "category",
-            "Report/Process Owner SID": "report_owner",
-            "Sub Category": "sub_category",
-            "LOB": "lob",
-            "Sub-LOB": "sub_lob",
-            "JPMSE BCBS Related": "is_bcbs239_program",
-            "Report Type": "risk_stripe",
-            "Tier Type": "tier_designation",
-            "Region": "region",
-            "MNPI Indicator": "mnpi_indicator",
-            "Country of Reporting Obligation": "country_of_reporting_obligation",
-            "Regulatory Designated": "regulatory_related",
-            "Primary Regulator": "primary_regulator",
-            "CDO Office": "domain_name",  
-            "Application ID": "data_node_name",
-            "Application Type": "data_node_type",
-        } 
+
 class Reports:
     def __init__(self, reports: list[Report] | None = None) -> None:
         self.reports = reports or []
@@ -425,7 +411,7 @@ class Reports:
     def __getitem__(self, index: int) -> Report:
         return self.reports[index]
 
-    def __iter__(self)->Iterator[Report]:
+    def __iter__(self) -> Iterator[Report]:
         return iter(self.reports)
 
     def __len__(self) -> int:
@@ -469,8 +455,7 @@ class Reports:
             return cls.from_dataframe(pd.DataFrame(source), client=client)
 
         elif isinstance(source, str):
-
-            if source.lower().endswith(".csv") and Path(source).exists(): 
+            if source.lower().endswith(".csv") and Path(source).exists():
                 return cls.from_csv(source, client=client)
 
             elif source.strip().startswith("[{"):
@@ -482,17 +467,16 @@ class Reports:
         raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
 
 
-class ReportsWrapper(Reports) :
-        def __init__(self, client: Fusion) -> None:
-            super().__init__([])
-            self.client = client
+class ReportsWrapper(Reports):
+    def __init__(self, client: Fusion) -> None:
+        super().__init__([])
+        self.client = client
 
-        def from_csv(self, file_path: str) -> Reports: # type: ignore[override]
-            return Reports.from_csv(file_path, client=self.client)
+    def from_csv(self, file_path: str) -> Reports:  # type: ignore[override]
+        return Reports.from_csv(file_path, client=self.client)
 
-        def from_dataframe(self, df: pd.DataFrame) -> Reports: # type: ignore[override]
-            return Reports.from_dataframe(df, client=self.client)
-        
-        def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports: # type: ignore[override]
-           return Reports.from_object(source, client=self.client)
+    def from_dataframe(self, df: pd.DataFrame) -> Reports:  # type: ignore[override]
+        return Reports.from_dataframe(df, client=self.client)
 
+    def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports:  # type: ignore[override]
+        return Reports.from_object(source, client=self.client)
