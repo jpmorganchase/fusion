@@ -844,6 +844,11 @@ def test_fsync_preserves_existing_handlers(
     fs_fusion = fsspec.filesystem("memory")
     fs_local = fsspec.filesystem("memory")
 
+    fs_original = fs_fusion.cat
+
+    product_json = {"resources": [{"identifier": "dataset_1"}, {"identifier": "dataset_2"}]}
+    fs_fusion.cat = MagicMock(return_value=json.dumps(product_json).encode())
+
     fsync(
         fs_fusion,
         fs_local,
@@ -861,6 +866,8 @@ def test_fsync_preserves_existing_handlers(
     )
 
     assert custom_handler in logger.handlers
+
+    fs_fusion.ca = fs_original
     logger.handlers.clear()
 
 
@@ -881,6 +888,11 @@ def test_fsync_adds_handlers_when_none(
     fs_fusion = fsspec.filesystem("memory")
     fs_local = fsspec.filesystem("memory")
 
+    fs_original = fs_fusion.cat
+
+    product_json = {"resources": [{"identifier": "dataset_1"}, {"identifier": "dataset_2"}]}
+    fs_fusion.cat = MagicMock(return_value=json.dumps(product_json).encode())
+
     fsync(
         fs_fusion,
         fs_local,
@@ -900,4 +912,6 @@ def test_fsync_adds_handlers_when_none(
     assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
     assert any(isinstance(h, logging.FileHandler) for h in logger.handlers)
     assert all(not isinstance(h, logging.NullHandler) for h in logger.handlers)
+
+    fs_fusion.ca = fs_original
     logger.handlers.clear()
