@@ -234,7 +234,7 @@ class Report(metaclass=CamelCaseMeta):
             # Handle nested fields like domain and data_node_id
             report_data["domain"] = {"name": report_data.pop("domain_name", None)}  # Populate "name" inside "domain"
             report_data["data_node_id"] = {
-                "name": report_data.pop("data_node_name", None),
+                "name": str(report_data.pop("data_node_name", "")) if report_data.get("data_node_name") is not None else None,
                 "dataNodeType": cls.map_application_type(report_data.pop("data_node_type", None)),
             }
             # Convert boolean fields
