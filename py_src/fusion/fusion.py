@@ -2157,8 +2157,7 @@ class Fusion:
         technicalDataType: str | None = None,
         path: str | None = None,
     ) -> ReportAttribute:
-        """
-        Instantiate a ReportAttribute object with this client for metadata creation.
+        """Instantiate a ReportAttribute object with this client for metadata creation.
 
         Args:
             title (str): The display title of the attribute (required).
@@ -2194,8 +2193,7 @@ class Fusion:
         self,
         attributes: list[ReportAttribute] | None = None,
     ) -> ReportAttributes:
-        """
-        Instantiate a ReportAttributes collection with this client, allowing batch creation or manipulation.
+        """Instantiate a ReportAttributes collection with this client, allowing batch creation or manipulation.
 
         Args:
             attributes (list[ReportAttribute] | None, optional): A list of ReportAttribute objects to include.
@@ -2216,7 +2214,28 @@ class Fusion:
         return attributes_obj
 
     def reports(self) -> ReportsWrapper:
+        """Instantiate a ReportsWrapper collection with this client, providing access to
+        report-related operations such as creation, retrieval, and bulk manipulation.
+
+        Returns:
+            ReportsWrapper: A ReportsWrapper collection object with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> reports = fusion.reports()
+            >>> new_report = reports.create(
+            ...     title="Monthly Risk Report",
+            ...     description="Summary of monthly risk metrics",
+            ...     frequency="Monthly",
+            ...     category="Risk",
+            ...     sub_category="Credit Risk",
+            ...     data_node_id={"id": "node123"},
+            ...     regulatory_related=True,
+            ...     domain={"id": "domain123"}
+            ... )
+        """
         return ReportsWrapper(client=self)
+
 
     def delete_datasetmembers(
         self,
@@ -2760,8 +2779,7 @@ class Fusion:
         sap_code: str | None = None,
         **kwargs: Any,
     ) -> Report:
-        """
-        Instantiate a Report object with the current Fusion client attached.
+        """Instantiate a Report object with the current Fusion client attached.
 
         Args:
             description (str): Description of the report.
