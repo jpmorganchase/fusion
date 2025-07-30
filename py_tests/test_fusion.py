@@ -2276,7 +2276,7 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
     )
     assert report.lob == "Banking"
     assert report.client is fusion_obj
-    
+
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fusion) -> None:
     mappings = [
@@ -2284,11 +2284,14 @@ def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fus
         {"attribute": {"id": "attr2"}, "term": {"id": "term2"}, "isKDE": False},
     ]
     fusion_obj.link_attributes_to_terms(report_id="rep123", mappings=mappings)
+
     args, kwargs = mock_link.call_args
-    sent_mappings = args[1]
+    sent_mappings = kwargs["mappings"] 
+
     assert sent_mappings[0]["isKDE"] is True
     assert sent_mappings[1]["isKDE"] is False
     assert kwargs["client"] is fusion_obj
+
 
 
 @patch("fusion.report.Report.link_attributes_to_terms")
@@ -2298,3 +2301,5 @@ def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fus
     mappings = [{"attribute": {"id": "a"}, "term": {"id": "t"}}]
     resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
     assert resp is mock_resp
+
+
