@@ -863,9 +863,7 @@ class Fusion:
         distributions_df = self.list_datasetmembers_distributions(dataset, catalog)
 
         if distributions_df.empty:
-            raise FileFormatError(
-                f"No distributions found for dataset '{dataset}' in catalog '{catalog}'."
-            )
+            raise FileFormatError(f"No distributions found for dataset '{dataset}' in catalog '{catalog}'.")
 
         available_formats = list(distributions_df["format"].unique())
         if dataset_format and dataset_format not in available_formats:

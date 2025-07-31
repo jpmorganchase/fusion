@@ -1840,12 +1840,9 @@ def test_download_no_distributions_available(requests_mock: requests_mock.Mocker
 
     with pytest.raises(
         FileFormatError,
-        match=re.escape(
-           f"No distributions found for dataset '{dataset}' in catalog '{catalog}'."
-        ),
+        match=re.escape(f"No distributions found for dataset '{dataset}' in catalog '{catalog}'."),
     ):
         fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=None, catalog=catalog)
-
 
 
 def test_to_df(mocker: MockerFixture, tmp_path: Path, data_table_as_csv: str, fusion_obj: Fusion) -> None:
@@ -2733,7 +2730,6 @@ def test_list_registered_attributes_paginated_fail(requests_mock: requests_mock.
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_registered_attributes(catalog=catalog)
-
 
 
 def test_fusion_report(fusion_obj: Fusion) -> None:
