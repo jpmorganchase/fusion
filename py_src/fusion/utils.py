@@ -688,11 +688,11 @@ def validate_file_names(paths: list[str]) -> list[bool]:
     validation = []
     file_seg_cnt = 3
     for i, f_n in enumerate(file_names):
-        tmp = f_n.split("__")        
+        tmp = f_n.split("__")
         if len(tmp) != file_seg_cnt or not tmp[0] or not tmp[1]:
             logger.warning(
-            f"The file in {paths[i]} has a non-compliant name and will not be processed. "
-            f"Please rename the file to dataset__catalog__yyyymmdd.format"
+                f"The file in {paths[i]} has a non-compliant name and will not be processed. "
+                f"Please rename the file to dataset__catalog__yyyymmdd.format"
             )
             validation.append(False)
         else:
@@ -929,6 +929,7 @@ def requests_raise_for_status(response: requests.Response) -> None:
     finally:
         response.raise_for_status()
 
+
 def validate_file_formats(fs_fusion: fsspec.AbstractFileSystem, path: str) -> None:
     """
     Validate file formats in the given folder and subfolders.
@@ -945,10 +946,7 @@ def validate_file_formats(fs_fusion: fsspec.AbstractFileSystem, path: str) -> No
         raise FileNotFoundError(f"The folder '{path}' does not exist.")
 
     all_files = [f for f in fs_fusion.find(path) if fs_fusion.info(f)["type"] == "file"]
-    raw_files = [
-        f for f in all_files
-        if f.split(".")[-1].lower() not in RECOGNIZED_FORMATS
-    ]
+    raw_files = [f for f in all_files if f.split(".")[-1].lower() not in RECOGNIZED_FORMATS]
 
     if len(raw_files) > 1:
         raise ValueError(
@@ -957,10 +955,9 @@ def validate_file_formats(fs_fusion: fsspec.AbstractFileSystem, path: str) -> No
             f"Only one raw file is allowed. Supported formats are:\n"
             f"{', '.join(RECOGNIZED_FORMATS)}"
         )
-    
-def file_name_to_url(
-    file_name: str, dataset: str, catalog: str, is_download: bool = False
-) -> str:
+
+
+def file_name_to_url(file_name: str, dataset: str, catalog: str, is_download: bool = False) -> str:
     """Construct a distribution URL using the constructed file name as the series member.
 
     Args:
@@ -975,16 +972,9 @@ def file_name_to_url(
     parts = file_name.rsplit(".", 1)
 
     datasetseries = parts[0]  # Use the full base name (excluding extension) as the date
-    ext = (
-        "raw"
-        if len(parts) == 1 or parts[1].lower() not in RECOGNIZED_FORMATS
-        else parts[1].lower()
-    )
+    ext = "raw" if len(parts) == 1 or parts[1].lower() not in RECOGNIZED_FORMATS else parts[1].lower()
 
-    return "/".join(
-        distribution_to_url("", dataset, datasetseries, ext, catalog, is_download).split("/")[1:]
-    )
-
+    return "/".join(distribution_to_url("", dataset, datasetseries, ext, catalog, is_download).split("/")[1:])
 
 
 def handle_paginated_request(session: Session, url: str, headers: dict[str, str] | None = None) -> dict[str, Any]:
