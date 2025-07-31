@@ -245,7 +245,7 @@ class Report(metaclass=CamelCaseMeta):
             report_data["data_node_id"] = {
                 "name": name_str,
                 "dataNodeType": cls.map_application_type(report_data.pop("data_node_type", None)),
-}
+            }
 
             # Convert boolean fields
             is_bcbs = report_data.get("is_bcbs239_program")
