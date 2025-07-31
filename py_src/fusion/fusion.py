@@ -2236,7 +2236,6 @@ class Fusion:
         """
         return ReportsWrapper(client=self)
 
-
     def delete_datasetmembers(
         self,
         dataset: str,
