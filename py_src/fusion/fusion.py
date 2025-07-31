@@ -69,8 +69,6 @@ if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 VERBOSE_LVL = 25
 
-    
-        
 
 class Fusion:
     """Core Fusion class for API access."""
@@ -179,7 +177,7 @@ class Fusion:
         self.session = get_session(self.credentials, self.root_url)
         self.fs = fs if fs else get_default_fs()
         self.events: pd.DataFrame | None = None
-  
+
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
         return "Fusion object \nAvailable methods:\n" + tabulate(
@@ -192,12 +190,12 @@ class Fusion:
                     ]
                     + [p for p in dir(Fusion) if isinstance(getattr(Fusion, p), property)],
                     [
-                        getattr(Fusion, method_name).__doc__.split("\n")[0]
+                        (getattr(Fusion, method_name).__doc__ or "").split("\n")[0]
                         for method_name in dir(Fusion)
                         if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
                     ]
                     + [
-                        getattr(Fusion, p).__doc__.split("\n")[0]
+                        (getattr(Fusion, p).__doc__ or "").split("\n")[0]
                         for p in dir(Fusion)
                         if isinstance(getattr(Fusion, p), property)
                     ],
@@ -205,7 +203,6 @@ class Fusion:
             ).T.set_index(0),
             tablefmt="psql",
         )
-
 
     @property
     def default_catalog(self) -> str:
@@ -378,7 +375,7 @@ class Fusion:
                 )
             ]
 
-        if max_results > -1: 
+        if max_results > -1:
             filtered_df = filtered_df[0:max_results]
 
         if output:
@@ -501,7 +498,6 @@ class Fusion:
             pass
 
         return ds_df
-            
 
     def list_reports(
         self,
@@ -511,8 +507,16 @@ class Fusion:
     ) -> pd.DataFrame:
         """Retrieve a single report or all reports from the Fusion system."""
         key_columns = [
-            "id", "name", "alternateId", "tierType", "frequency",
-            "category", "subCategory", "reportOwner", "lob", "description"
+            "id",
+            "name",
+            "alternateId",
+            "tierType",
+            "frequency",
+            "category",
+            "subCategory",
+            "reportOwner",
+            "lob",
+            "description",
         ]
 
         if report_id:
@@ -542,7 +546,6 @@ class Fusion:
                 resp.raise_for_status()
         return pd.DataFrame(columns=key_columns)
 
-
     def list_report_attributes(
         self,
         report_id: str,
@@ -556,19 +559,16 @@ class Fusion:
         if resp.status_code == HTTPStatus.OK:
             rep_df = pd.json_normalize(resp.json())
             if not display_all_columns:
-                key_columns = [
-                    "id", "path", "status", "dataType", "isMandatory",
-                    "description", "createdBy", "name"
-                ]
+                key_columns = ["id", "path", "status", "dataType", "isMandatory", "description", "createdBy", "name"]
                 rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
             if output:
                 pass
             return rep_df
         else:
             resp.raise_for_status()
-        return pd.DataFrame(columns=["id", "path", "status", "dataType", "isMandatory", 
-                                     "description", "createdBy", "name"])
-
+        return pd.DataFrame(
+            columns=["id", "path", "status", "dataType", "isMandatory", "description", "createdBy", "name"]
+        )
 
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
@@ -888,7 +888,7 @@ class Fusion:
             # sample data is limited to csv
             if dt_str == "sample":
                 dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
-            required_series = [(catalog, dataset, dt_str, dataset_format)] # type: ignore[list-item]
+            required_series = [(catalog, dataset, dt_str, dataset_format)]  # type: ignore[list-item]
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
@@ -1144,7 +1144,7 @@ class Fusion:
             if dataframe_type == "polars":
                 import polars as pl
 
-                data_df = pl.concat(dataframes, how="diagonal") # type: ignore
+                data_df = pl.concat(dataframes, how="diagonal")  # type: ignore
 
         return data_df
 
@@ -1313,7 +1313,7 @@ class Fusion:
             dt_str (str, optional): A file name. Can be any string but is usually a date.
                                     Defaults to 'latest' which will return the most recent.
                                     Relevant for a single file upload only. If not provided the dataset will
-                                    be implied from file's name. dt_str will be ignored when uploading 
+                                    be implied from file's name. dt_str will be ignored when uploading
                                     a directory.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             n_par (int, optional): Specify how many distributions to upload in parallel.
@@ -1337,13 +1337,15 @@ class Fusion:
 
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
-        
+
         fs_fusion = self.get_fusion_filesystem()
         if self.fs.info(path)["type"] == "directory":
             validate_file_formats(self.fs, path)
             if dt_str and dt_str != "latest":
-                logger.warning("`dt_str` is not considered when uploading a directory. "
-                                "File names in the directory are used as series members instead.")
+                logger.warning(
+                    "`dt_str` is not considered when uploading a directory. "
+                    "File names in the directory are used as series members instead."
+                )
 
             file_path_lst = [f for f in self.fs.find(path) if self.fs.info(f)["type"] == "file"]
 
@@ -1352,18 +1354,14 @@ class Fusion:
             # For example, if the base directory is 'data_folder' and a file is at 'data_folder/sub1/file.txt',
             # the resulting name will be 'data_folder__sub1__file.txt'.
             # This ensures that files in different subdirectories with the same base name do not conflict
-            # and helps preserve the folder structure in the filename.  
+            # and helps preserve the folder structure in the filename.
             file_name = [
-                base_path.name + "__" + "__".join(Path(f).resolve().relative_to(base_path).parts)
-                for f in file_path_lst
+                base_path.name + "__" + "__".join(Path(f).resolve().relative_to(base_path).parts) for f in file_path_lst
             ]
 
             if catalog and dataset:
                 # Construct URL mappings using the constructed file names as the series member
-                local_url_eqiv = [
-                    file_name_to_url(fname, dataset, catalog, is_download=False)
-                    for fname in file_name
-                ]
+                local_url_eqiv = [file_name_to_url(fname, dataset, catalog, is_download=False) for fname in file_name]
             else:
                 # No catalog/dataset: validate file names and infer raw
                 local_file_validation = validate_file_names(file_path_lst)
@@ -1387,7 +1385,7 @@ class Fusion:
                     dt_str = pd.Timestamp("today").date().strftime("%Y%m%d")
                 elif date_identifier.match(dt_str):
                     dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
-                
+
                 file_format = path.split(".")[-1]
                 file_name = [path.split("/")[-1]]
                 file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
@@ -2150,7 +2148,7 @@ class Fusion:
         attributes_obj = Attributes(attributes=attributes or [])
         attributes_obj.client = self
         return attributes_obj
-        
+
     def report_attribute(
         self,
         title: str,
@@ -2159,8 +2157,7 @@ class Fusion:
         technicalDataType: str | None = None,
         path: str | None = None,
     ) -> ReportAttribute:
-        """
-        Instantiate a ReportAttribute object with this client for metadata creation.
+        """Instantiate a ReportAttribute object with this client for metadata creation.
 
         Args:
             title (str): The display title of the attribute (required).
@@ -2192,13 +2189,11 @@ class Fusion:
         attribute_obj.client = self
         return attribute_obj
 
-
     def report_attributes(
         self,
         attributes: list[ReportAttribute] | None = None,
     ) -> ReportAttributes:
-        """
-        Instantiate a ReportAttributes collection with this client, allowing batch creation or manipulation.
+        """Instantiate a ReportAttributes collection with this client, allowing batch creation or manipulation.
 
         Args:
             attributes (list[ReportAttribute] | None, optional): A list of ReportAttribute objects to include.
@@ -2218,10 +2213,28 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
 
-
     def reports(self) -> ReportsWrapper:
-        return ReportsWrapper(client=self)
+        """Instantiate a ReportsWrapper collection with this client, providing access to
+        report-related operations such as creation, retrieval, and bulk manipulation.
 
+        Returns:
+            ReportsWrapper: A ReportsWrapper collection object with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> reports = fusion.reports()
+            >>> new_report = reports.create(
+            ...     title="Monthly Risk Report",
+            ...     description="Summary of monthly risk metrics",
+            ...     frequency="Monthly",
+            ...     category="Risk",
+            ...     sub_category="Credit Risk",
+            ...     data_node_id={"id": "node123"},
+            ...     regulatory_related=True,
+            ...     domain={"id": "domain123"}
+            ... )
+        """
+        return ReportsWrapper(client=self)
 
     def delete_datasetmembers(
         self,
@@ -2748,7 +2761,7 @@ class Fusion:
 
         members_df = pd.DataFrame(rows, columns=["identifier", "format"])
         return members_df
-    
+
     def report(  # noqa: PLR0913
         self,
         description: str,
@@ -2759,7 +2772,7 @@ class Fusion:
         data_node_id: dict[str, str],
         regulatory_related: bool,
         domain: dict[str, str],
-        tier_type: str | None = None, 
+        tier_type: str | None = None,
         lob: str | None = None,
         alternative_id: dict[str, str] | None = None,
         sub_lob: str | None = None,
@@ -2769,8 +2782,7 @@ class Fusion:
         sap_code: str | None = None,
         **kwargs: Any,
     ) -> Report:
-        """
-        Instantiate a Report object with the current Fusion client attached.
+        """Instantiate a Report object with the current Fusion client attached.
 
         Args:
             description (str): Description of the report.
@@ -2821,8 +2833,6 @@ class Fusion:
         report_obj.client = self
         return report_obj
 
-
-
     def link_attributes_to_terms(
         self,
         report_id: str,
@@ -2846,14 +2856,9 @@ class Fusion:
         for mapping in mappings:
             new_mapping = mapping.copy()
             if "isKDE" not in new_mapping:
-                new_mapping["isKDE"] = True 
+                new_mapping["isKDE"] = True
             processed_mappings.append(new_mapping)
 
         return Report.link_attributes_to_terms(
-            report_id=report_id,
-            mappings=processed_mappings,
-            client=self,
-            return_resp_obj=return_resp_obj
+            report_id=report_id, mappings=processed_mappings, client=self, return_resp_obj=return_resp_obj
         )
-
-    
