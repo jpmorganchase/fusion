@@ -824,8 +824,8 @@ class Fusion:
         replacing any character that is not a digit, letter, or underscore with an underscore. 
         This helps prevent issues when saving files with names that might contain special or 
         invalid characters."""
-        return re.sub(r"[^0-9a-zA-Z_]", "_", dt_str)
-    
+        return re.sub(r"[^0-9A-Za-z]", "", dt_str)
+
     @staticmethod
     def _extract_yyyymmdd(identifier: str) -> str:
         """Extract first 8 digits for date part from identifier."""
