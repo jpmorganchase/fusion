@@ -767,6 +767,14 @@ class Fusion:
                 status_code=404,
             )
 
+        def _extract_yyyymmdd_strict(identifier: str) -> str:
+            """ Extract first 8 digits for date part """
+            digits = "".join(filter(str.isdigit, identifier))
+            DIGITS_COUNT = 8
+            if len(digits) < DIGITS_COUNT:
+                raise ValueError(f"Identifier {identifier} does not contain a valid date part.")
+            return digits[:8]
+                
         if dt_str == "latest":
             dt_str = (
                 datasetseries_list[
@@ -781,17 +789,20 @@ class Fusion:
             if len(parsed_dates) == 1:
                 parsed_dates = (parsed_dates[0], parsed_dates[0])
 
+            datasetseries_list = datasetseries_list.copy()
+            datasetseries_list["date_part"] = datasetseries_list["identifier"].apply(_extract_yyyymmdd_strict)  
+
             if parsed_dates[0]:
                 datasetseries_list = datasetseries_list[
-                    pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
-                    >= pd.to_datetime(parsed_dates[0])
-                ].reset_index()
+                    pd.to_datetime(datasetseries_list["date_part"], format="%Y%m%d") >= \
+                    pd.to_datetime(parsed_dates[0][:8], format="%Y%m%d")
+                ].reset_index(drop=True)
 
             if parsed_dates[1]:
                 datasetseries_list = datasetseries_list[
-                    pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
-                    <= pd.to_datetime(parsed_dates[1])
-                ].reset_index()
+                    pd.to_datetime(datasetseries_list["date_part"], format="%Y%m%d") <= \
+                    pd.to_datetime(parsed_dates[1][:8], format="%Y%m%d")
+                ].reset_index(drop=True)
 
         if len(datasetseries_list) == 0:
             raise APIResponseError(  # pragma: no cover
@@ -806,6 +817,67 @@ class Fusion:
         tups = [(catalog, dataset, series, dataset_format) for series in required_series]
 
         return tups
+
+    @staticmethod
+    def _safe_filename_from_iso(dt_str: str) -> str:
+        """convert a string (typically a date or identifier) into a safe filename by 
+        replacing any character that is not a digit, letter, or underscore with an underscore. 
+        This helps prevent issues when saving files with names that might contain special or 
+        invalid characters."""
+        return re.sub(r"[^0-9a-zA-Z_]", "_", dt_str)
+    
+    @staticmethod
+    def _extract_yyyymmdd(identifier: str) -> str:
+        """Extract first 8 digits for date part from identifier."""
+        DIGITS_COUNT = 8
+        digits = "".join(filter(str.isdigit, identifier))
+        return digits[:DIGITS_COUNT] if len(digits) >= DIGITS_COUNT else digits
+    
+    @staticmethod
+    def _is_date_like(dt_str: str) -> bool:
+        """Check if the string is date-like, i.e., it contains a valid date format."""
+        try:
+            normalise_dt_param_str(dt_str)
+            return True
+        except ValueError:
+            return False
+    
+    def _get_required_series(
+        self,
+        dataset: str,
+        dt_str: str,
+        dataset_format: str,
+        catalog: str
+    ) -> list[tuple[str, str, str, str]]:
+        """Helper to resolve required_series for download."""
+        datasetseries_list = self.list_datasetmembers(dataset, catalog)
+        identifiers = datasetseries_list["identifier"].astype(str).to_numpy()
+        # Exact Match
+        if dt_str in identifiers:
+            return [(catalog, dataset, dt_str, dataset_format)]
+        # Match by date part if dt_str is a datetime stamp and not found as exact
+        elif re.match(r"^\d{8}T\d{4,6}$", dt_str) or re.match(r"^\d{8}$", dt_str):
+            date_part = dt_str[:8]
+            matched_identifiers = [ident for ident in identifiers if self._extract_yyyymmdd(ident) == date_part]
+            if matched_identifiers:
+                matched_identifiers.sort()
+                matched_identifier = matched_identifiers[-1]
+                return [(catalog, dataset, matched_identifier, dataset_format)]
+            else:
+                # Fallback to date/range logic
+                return self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
+        elif self._is_date_like(dt_str) or dt_str == "latest":
+            # fallback to date/range logic for other cases
+            return self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
+        elif dt_str == "sample":
+            # sample data limited to csv
+            dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
+            return [(catalog, dataset, dt_str, dataset_format)]
+        else:
+            raise ValueError(
+                f"{dt_str}. It is not a valid date, date range, or series member identifier for dataset '{dataset}'"
+                f" in catalog '{catalog}'. Please provide a valid date, date range, or series member identifier."
+            )
 
     def download(  # noqa: PLR0912, PLR0913
         self,
@@ -859,8 +931,6 @@ class Fusion:
                 status_code=401,
             )
 
-        valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
-
         # check that format is valid and if none, check if there is only one format available
         available_formats = list(self.list_datasetmembers_distributions(dataset, catalog)["format"].unique())
         if dataset_format and dataset_format not in available_formats:
@@ -877,13 +947,7 @@ class Fusion:
                     f"download. Available formats are {available_formats}."
                 )
 
-        if valid_date_range.match(dt_str) or dt_str == "latest":
-            required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
-        else:
-            # sample data is limited to csv
-            if dt_str == "sample":
-                dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
-            required_series = [(catalog, dataset, dt_str, dataset_format)] # type: ignore[list-item]
+        required_series = self._get_required_series(dataset, dt_str, dataset_format, catalog)
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
@@ -919,7 +983,7 @@ class Fusion:
                 "lpath": distribution_to_filename(
                     download_folders[i],
                     series[1],
-                    series[2],
+                    self._safe_filename_from_iso(series[2]),
                     series[3],
                     series[0],
                     partitioning=partitioning,

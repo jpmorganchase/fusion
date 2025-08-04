@@ -458,8 +458,7 @@ def read_parquet(
         return pl.from_arrow(tbl)
     else:
         raise ValueError(f"Unknown DataFrame type {dataframe_type}")
-
-
+    
 def _normalise_dt_param(dt: str | int | datetime | date) -> str:
     """Convert dates into a normalised string representation.
 
@@ -470,34 +469,53 @@ def _normalise_dt_param(dt: str | int | datetime | date) -> str:
         str: A normalized date string.
     """
     if isinstance(dt, (date, datetime)):
-        return dt.strftime("%Y-%m-%d")
-
+        if isinstance(dt, (date, datetime) and (dt.hour or dt.minute or dt.second)):
+            if dt.second:
+                return dt.strftime("%Y%m%d%H%M%S")
+            elif dt.minute or dt.hour:
+                return dt.strftime("%Y%m%d%H%M")
+        return dt.strftime("%Y-%m-%d")  
+            
     if isinstance(dt, int):
         dt = str(dt)
 
     if not isinstance(dt, str):
         raise ValueError(f"{dt} is not in a recognised data format")
 
-    matches = DT_YYYY_MM_DD_RE.match(dt)
-    if matches:
-        yr = matches.group(1)
-        mth = matches.group(2).zfill(2)
-        day = matches.group(3).zfill(2)
-        return f"{yr}-{mth}-{day}"
+    try:
+        dt_obj = parser.parse(dt, fuzzy=True)
+    except Exception as err:
+        raise ValueError(f"{dt} is not a valid date/datetime") from err
 
-    matches = DT_YYYYMMDD_RE.match(dt)
-
-    if matches:
-        return "-".join(matches.groups())
-
-    matches = DT_YYYYMMDDTHHMM_RE.match(dt)
-
-    if matches:
-        return "-".join(matches.groups())
-
-    raise ValueError(f"{dt} is not in a recognised data format")
+    if dt_obj.hour or dt_obj.minute or dt_obj.second:
+        if dt_obj.second:
+            return dt_obj.strftime("%Y%m%d%H%M%S")
+        elif dt_obj.minute or dt_obj.hour:
+            return dt_obj.strftime("%Y%m%d%H%M")
+    return dt_obj.strftime("%Y%m%d")
 
 
+MIN_VALID_YEAR = 1990
+MAX_VALID_YEAR = 2100
+MAX_DATE_SEG_CNT = 2
+
+@staticmethod
+def _split_at_colon_before_yyyy(dt_str: str) -> tuple[str, str | None]:
+    colon_indices = [m.start() for m in re.finditer(":", dt_str)]
+    for idx in colon_indices:
+        after = dt_str[idx+1:]
+        match = re.match(r"(\d{4})", after)
+        if match:
+            yyyy = int(match.group(1))
+            if MIN_VALID_YEAR <= yyyy <= MAX_VALID_YEAR:
+                return dt_str[:idx], dt_str[idx+1:]
+
+    parts = dt_str.split(":", 1)
+    if len(parts) == MAX_DATE_SEG_CNT:
+        return parts[0], parts[1]
+    else:
+        return dt_str, None
+    
 def normalise_dt_param_str(dt: str) -> tuple[str, ...]:
     """Convert a date parameter which may be a single date or a date range into a tuple.
 
@@ -507,7 +525,7 @@ def normalise_dt_param_str(dt: str) -> tuple[str, ...]:
     Returns:
         tuple: A tuple of dates.
     """
-    date_parts = dt.split(":")
+    date_parts = _split_at_colon_before_yyyy(dt)
     max_date_seg_cnt = 2
     if not date_parts or len(date_parts) > max_date_seg_cnt:
         raise ValueError(f"Unable to parse {dt} as either a date or an interval")
