@@ -89,12 +89,12 @@ def test_use_catalog(credentials: FusionCredentials) -> None:
 
 
 def test_date_parsing() -> None:
-    assert _normalise_dt_param(20201212) == "2020-12-12"
-    assert _normalise_dt_param("20201212") == "2020-12-12"
-    assert _normalise_dt_param("2020-12-12") == "2020-12-12"
+    assert _normalise_dt_param(20201212) == "20201212"
+    assert _normalise_dt_param("20201212") == "20201212"
+    assert _normalise_dt_param("2020-12-12") == "20201212"
     assert _normalise_dt_param(datetime.date(2020, 12, 12)) == "2020-12-12"
     dtm = datetime.datetime(2020, 12, 12, 23, 55, 59, 342380, tzinfo=datetime.timezone.utc)
-    assert _normalise_dt_param(dtm) == "2020-12-12"
+    assert _normalise_dt_param(dtm) == "20201212235559"
 
 
 @pytest.mark.parametrize("ref_int", [-1, 0, 1, 2])

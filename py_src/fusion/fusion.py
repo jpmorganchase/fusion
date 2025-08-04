@@ -768,13 +768,13 @@ class Fusion:
             )
 
         def _extract_yyyymmdd_strict(identifier: str) -> str:
-            """ Extract first 8 digits for date part """
+            """Extract first 8 digits for date part"""
             digits = "".join(filter(str.isdigit, identifier))
             DIGITS_COUNT = 8
             if len(digits) < DIGITS_COUNT:
                 raise ValueError(f"Identifier {identifier} does not contain a valid date part.")
             return digits[:8]
-                
+
         if dt_str == "latest":
             dt_str = (
                 datasetseries_list[
@@ -790,18 +790,18 @@ class Fusion:
                 parsed_dates = (parsed_dates[0], parsed_dates[0])
 
             datasetseries_list = datasetseries_list.copy()
-            datasetseries_list["date_part"] = datasetseries_list["identifier"].apply(_extract_yyyymmdd_strict)  
+            datasetseries_list["date_part"] = datasetseries_list["identifier"].apply(_extract_yyyymmdd_strict)
 
             if parsed_dates[0]:
                 datasetseries_list = datasetseries_list[
-                    pd.to_datetime(datasetseries_list["date_part"], format="%Y%m%d") >= \
-                    pd.to_datetime(parsed_dates[0][:8], format="%Y%m%d")
+                    pd.to_datetime(datasetseries_list["date_part"], format="%Y%m%d")
+                    >= pd.to_datetime(parsed_dates[0][:8], format="%Y%m%d")
                 ].reset_index(drop=True)
 
             if parsed_dates[1]:
                 datasetseries_list = datasetseries_list[
-                    pd.to_datetime(datasetseries_list["date_part"], format="%Y%m%d") <= \
-                    pd.to_datetime(parsed_dates[1][:8], format="%Y%m%d")
+                    pd.to_datetime(datasetseries_list["date_part"], format="%Y%m%d")
+                    <= pd.to_datetime(parsed_dates[1][:8], format="%Y%m%d")
                 ].reset_index(drop=True)
 
         if len(datasetseries_list) == 0:
@@ -820,9 +820,9 @@ class Fusion:
 
     @staticmethod
     def _safe_filename_from_iso(dt_str: str) -> str:
-        """convert a string (typically a date or identifier) into a safe filename by 
-        replacing any character that is not a digit, letter, or underscore with an underscore. 
-        This helps prevent issues when saving files with names that might contain special or 
+        """convert a string (typically a date or identifier) into a safe filename by
+        replacing any character that is not a digit, letter, or underscore with an underscore.
+        This helps prevent issues when saving files with names that might contain special or
         invalid characters."""
         return re.sub(r"[^0-9A-Za-z]", "", dt_str)
 
@@ -832,7 +832,7 @@ class Fusion:
         DIGITS_COUNT = 8
         digits = "".join(filter(str.isdigit, identifier))
         return digits[:DIGITS_COUNT] if len(digits) >= DIGITS_COUNT else digits
-    
+
     @staticmethod
     def _is_date_like(dt_str: str) -> bool:
         """Check if the string is date-like, i.e., it contains a valid date format."""
@@ -841,13 +841,9 @@ class Fusion:
             return True
         except ValueError:
             return False
-    
+
     def _get_required_series(
-        self,
-        dataset: str,
-        dt_str: str,
-        dataset_format: str,
-        catalog: str
+        self, dataset: str, dt_str: str, dataset_format: str, catalog: str
     ) -> list[tuple[str, str, str, str]]:
         """Helper to resolve required_series for download."""
         datasetseries_list = self.list_datasetmembers(dataset, catalog)
