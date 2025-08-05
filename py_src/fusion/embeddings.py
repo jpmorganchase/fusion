@@ -239,6 +239,9 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         ):
             return 200, {}, ""
 
+        if method.lower() == "delete":
+            url = url.replace("_doc", "embeddings")
+
         headers = headers or {}
 
         body = _modify_post_haystack(self.knowledge_base, body, method)
