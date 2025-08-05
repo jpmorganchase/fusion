@@ -75,9 +75,7 @@ class Fusion:
 
     @staticmethod
     def _call_for_dataframe(url: str, session: requests.Session) -> pd.DataFrame:
-        """
-        Calls an API endpoint and returns the data as a pandas dataframe, with pagination support.
-        Private function that calls an API endpoint and returns the data as a pandas dataframe.
+        """Private function that calls an API endpoint and returns the data as a pandas dataframe, with pagination support.
         Args:
             url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
             session (requests.Session): Specify a proxy if required to access the authentication server. Defaults to {}.
@@ -254,8 +252,7 @@ class Fusion:
         )
 
     def _get_new_root_url(self) -> str:
-        """
-        Returns a modified version of the root URL to support the new API format.
+        """Returns a modified version of the root URL to support the new API format.
 
         This method temporarily strips trailing segments such as "/api/v1/" or "/v1/"
         from the original `root_url` to align with an updated API base path format.
