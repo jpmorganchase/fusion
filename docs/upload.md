@@ -187,7 +187,7 @@ When a file is uploaded with `preserve_original_name` set to `True`, the file na
 
     With the original name of the file preserved.
 
-!!! note "If `preserve_original_file_name` is not set to `True`:
+!!! note "If `preserve_original_file_name` is not set to `True`:"
     The file name will use Fusion's file naming convention during download:
 
 ### Schema Validation

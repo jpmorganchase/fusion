@@ -201,7 +201,7 @@ Additionally, below you will find several common mistakes that users can make wh
 
 - **403**: Permission Denied. Please check that you have access to the dataset you are requesting. Keep in mind, you must be ``'Subscribed'`` to a dataset to download, as well as have the appropriate access to the catalog.
 - **404**: File not found. Please check that the identifiers and arguments are correct. The ``dataset_format`` argument must be an available distribution of the series member (details [here](#populating-the-dataset_format-argument)), the ``dt_str`` must be an existing series member within the dataset (details [here](#populating-the-dt_str-argument)), and the dataset must exist within the catalog.
-- **CredentialError**: There was an issue with your credentials (may also output as a ``PanicException``). Please check that your credentials file exists and is correct. See the [Getting Started](quickstart.md) page for credentials details.
+- **CredentialError**: There was an issue with your credentials. Please check that your credentials file exists and is correct. See the [Getting Started](quickstart.md) page for credentials details.
 
 
 ## Using the `to_df()` Method
