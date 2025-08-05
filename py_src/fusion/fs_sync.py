@@ -13,19 +13,20 @@ from typing import Optional
 
 import fsspec
 import pandas as pd
-from joblib import Parallel, delayed
+from rich.progress import Progress
 
 from .utils import (
     cpu_count,
     distribution_to_filename,
     is_dataset_raw,
-    joblib_progress,
     path_to_url,
     upload_files,
     validate_file_names,
 )
 
 logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger.addHandler(logging.NullHandler())
 VERBOSE_LVL = 25
 DEFAULT_CHUNK_SIZE = 2**16
 
@@ -39,22 +40,23 @@ def _download(
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
     df: pd.DataFrame,
-    n_par: int,
     show_progress: bool = True,
     local_path: str = "",
 ) -> list[tuple[bool, str, Optional[str]]]:
     if len(df) > 0:
+        res = [None] * len(df)
         if show_progress:
-            with joblib_progress("Downloading", total=len(df)):
-                res = Parallel(n_jobs=n_par)(
-                    delayed(fs_fusion.download)(fs_local, row["url"], local_path + row["path_fusion"])
-                    for i, row in df.iterrows()
-                )
+            with Progress() as p:
+                task = p.add_task("Downloading", total=len(df))
+                for i, (_, row) in enumerate(df.iterrows()):
+                    r = fs_fusion.download(fs_local, row["url"], local_path + row["path_fusion"])
+                    res[i] = r
+                    if r[0] is True:
+                        p.update(task, advance=1)
         else:
-            res = Parallel(n_jobs=n_par)(
-                delayed(fs_fusion.download)(fs_local, row["url"], local_path + row["path_fusion"])
-                for i, row in df.iterrows()
-            )
+            res = [
+                fs_fusion.download(fs_local, row["url"], local_path + row["path_fusion"]) for _, row in df.iterrows()
+            ]
     else:
         return []
 
@@ -65,19 +67,15 @@ def _upload(
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
     df: pd.DataFrame,
-    n_par: int,
     show_progress: bool = True,
     local_path: str = "",
 ) -> list[tuple[bool, str, Optional[str]]]:
     upload_df = df.rename(columns={"path_local": "path"})
     upload_df["path"] = [Path(local_path) / p for p in upload_df["path"]]
-    parallel = len(df) > 1
     res = upload_files(
         fs_fusion,
         fs_local,
         upload_df,
-        parallel=parallel,
-        n_par=n_par,
         multipart=True,
         show_progress=show_progress,
     )
@@ -160,7 +158,7 @@ def _get_local_state(
 
         local_files_temp = fs_local.find(local_dir)
         local_rel_path = [i[i.find(local_dir) :] for i in local_files_temp]
-        local_file_validation = validate_file_names(local_rel_path, fs_fusion)
+        local_file_validation = validate_file_names(local_rel_path)
         local_files += [f for flag, f in zip(local_file_validation, local_files_temp) if flag]
         local_files_rel += [
             Path(local_dir, relpath(loc_file, local_dir).replace("\\", "/").replace(local_path, ""))
@@ -215,7 +213,6 @@ def _synchronize(  # noqa: PLR0913
                 fs_fusion,
                 fs_local,
                 join_df,
-                n_par,
                 show_progress=show_progress,
                 local_path=local_path,
             )
@@ -232,7 +229,6 @@ def _synchronize(  # noqa: PLR0913
                 fs_fusion,
                 fs_local,
                 join_df,
-                n_par,
                 show_progress=show_progress,
                 local_path=local_path,
             )
@@ -241,7 +237,7 @@ def _synchronize(  # noqa: PLR0913
     return res
 
 
-def fsync(  # noqa: PLR0913
+def fsync(  # noqa: PLR0912, PLR0913, PLR0915
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
     products: Optional[list[str]] = None,
@@ -277,19 +273,28 @@ def fsync(  # noqa: PLR0913
 
     """
 
-    if logger.hasHandlers():
-        logger.handlers.clear()
-    file_handler = logging.FileHandler(filename="{}/{}".format(log_path, "fusion_fsync.log"))
     logging.addLevelName(VERBOSE_LVL, "VERBOSE")
-    stdout_handler = logging.StreamHandler(sys.stdout)
+    logger.setLevel(log_level)
+    if not logger.handlers:
+        logger.addHandler(logging.NullHandler())
+
     formatter = logging.Formatter(
         "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    stdout_handler.setFormatter(formatter)
-    logger.addHandler(stdout_handler)
-    logger.addHandler(file_handler)
-    logger.setLevel(log_level)
+
+    if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+        file_handler = logging.FileHandler(filename="{}/{}".format(log_path, "fusion_fsync.log"))
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setFormatter(formatter)
+        logger.addHandler(stdout_handler)
+
+    if len(logger.handlers) > 1:
+        logger.handlers = [h for h in logger.handlers if not isinstance(h, logging.NullHandler)]
 
     catalog = catalog if catalog else "common"
     datasets = datasets if datasets else []

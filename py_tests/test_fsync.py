@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import logging
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -20,6 +21,7 @@ from fusion.fs_sync import (
     _upload,
     _url_to_path,
     fsync,
+    logger,
 )
 from fusion.fusion_filesystem import FusionHTTPFileSystem
 
@@ -40,11 +42,9 @@ def test__url_to_path() -> None:
 
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
 @patch("fsspec.AbstractFileSystem", autospec=True)
-@patch("fusion.fs_sync.Parallel")
-@patch("fusion.fs_sync.delayed")
+@patch("fusion.fs_sync.Progress")
 def test_download(
-    mock_delayed: mock.Mock,
-    mock_parallel: mock.Mock,
+    mock_progress: MagicMock,
     mock_fs_class: mock.AsyncMock,
     mock_set_session: mock.AsyncMock,  # noqa: ARG001
     example_creds_dict: dict[str, Any],
@@ -71,26 +71,20 @@ def test_download(
         }
     )
 
-    # Mock the delayed function to return the function itself
-    mock_delayed.side_effect = lambda func, *args, **kwargs: func  # noqa: ARG005
+    expected_result = (True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)
+    # Mock the fs.download method
+    with patch.object(fs, "download", return_value=expected_result):
+        res = _download(fs, lfs, input_df)
+    # Set up mock progress bar behavior
+    mock_progress_instance = mock_progress.return_value.__enter__.return_value
+    mock_progress_instance.add_task.return_value = "fake_task"
 
-    # Mock the Parallel object to return a callable that returns the expected result
-    mock_parallel.return_value = lambda *args, **kwargs: [  # noqa: ARG005
-        (True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)
-    ]
-
-    res = _download(fs, lfs, input_df, n_par=16)
-
-    assert res == [(True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)]
+    assert res == [expected_result]
 
 
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
 @patch("fsspec.AbstractFileSystem", autospec=True)
-@patch("fusion.fs_sync.Parallel")
-@patch("fusion.fs_sync.delayed")
 def test_download_no_progress(
-    mock_delayed: mock.Mock,
-    mock_parallel: mock.Mock,
     mock_fs_class: mock.AsyncMock,
     mock_set_session: mock.AsyncMock,  # noqa: ARG001
     example_creds_dict: dict[str, Any],
@@ -117,17 +111,11 @@ def test_download_no_progress(
         }
     )
 
-    # Mock the delayed function to return the function itself
-    mock_delayed.side_effect = lambda func, *args, **kwargs: func  # noqa: ARG005
+    expected_result = (True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)
+    with patch.object(fs, "download", return_value=expected_result):
+        res = _download(fs, lfs, input_df, show_progress=False)
 
-    # Mock the Parallel object to return a callable that returns the expected result
-    mock_parallel.return_value = lambda *args, **kwargs: [  # noqa: ARG005
-        (True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)
-    ]
-
-    res = _download(fs, lfs, input_df, n_par=16, show_progress=False)
-
-    assert res == [(True, "catalog/dataset/20200101//dataset__catalog__20200101.csv", None)]
+    assert res == [expected_result]
 
 
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
@@ -159,7 +147,7 @@ def test_download_empty_df(
         }
     )
 
-    res = _download(fs, lfs, input_df, n_par=16)
+    res = _download(fs, lfs, input_df)
 
     assert res == []
 
@@ -193,7 +181,7 @@ def test_upload(
         }
     )
 
-    res = _upload(fs, lfs, input_df, n_par=16, show_progress=False)
+    res = _upload(fs, lfs, input_df, show_progress=False)
 
     assert res
 
@@ -834,3 +822,82 @@ def test_fsync_invalid_direction(
             log_level,
             log_path,
         )
+
+
+@patch("fusion.fs_sync._get_local_state")
+@patch("fusion.fs_sync._get_fusion_df")
+@patch("fusion.fs_sync._synchronize", side_effect=KeyboardInterrupt)
+@patch("builtins.input", return_value="exit")
+def test_fsync_preserves_existing_handlers(
+    mock_input: Any,  # noqa: ARG001
+    mock_sync: Any,  # noqa: ARG001
+    mock_get_fusion_df: Any,
+    mock_get_local_state: Any,
+) -> None:
+    logger.handlers.clear()
+    custom_handler = logging.StreamHandler()
+    logger.addHandler(custom_handler)
+
+    mock_get_local_state.return_value = pd.DataFrame({"a": [1]})
+    mock_get_fusion_df.return_value = pd.DataFrame({"a": [1]})
+
+    fs_fusion = fsspec.filesystem("memory")
+    fs_local = fsspec.filesystem("memory")
+
+    fsync(
+        fs_fusion,
+        fs_local,
+        products=["p"],
+        datasets=[],
+        catalog="c",
+        direction="upload",
+        flatten=False,
+        dataset_format=None,
+        n_par=1,
+        show_progress=False,
+        local_path="",
+        log_level=logging.ERROR,
+        log_path=".",
+    )
+
+    assert custom_handler in logger.handlers
+    logger.handlers.clear()
+
+
+@patch("fusion.fs_sync._get_local_state")
+@patch("fusion.fs_sync._get_fusion_df")
+@patch("fusion.fs_sync._synchronize", side_effect=KeyboardInterrupt)
+@patch("builtins.input", return_value="exit")
+def test_fsync_adds_handlers_when_none(
+    mock_input: Any,  # noqa: ARG001
+    mock_sync: Any,  # noqa: ARG001
+    mock_get_fusion_df: Any,
+    mock_get_local_state: Any,
+) -> None:
+    logger.handlers.clear()
+    mock_get_local_state.return_value = pd.DataFrame({"a": [1]})
+    mock_get_fusion_df.return_value = pd.DataFrame({"a": [1]})
+
+    fs_fusion = fsspec.filesystem("memory")
+    fs_local = fsspec.filesystem("memory")
+
+    fsync(
+        fs_fusion,
+        fs_local,
+        products=["p"],
+        datasets=[],
+        catalog="c",
+        direction="upload",
+        flatten=False,
+        dataset_format=None,
+        n_par=1,
+        show_progress=False,
+        local_path="",
+        log_level=logging.ERROR,
+        log_path=".",
+    )
+
+    assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
+    assert any(isinstance(h, logging.FileHandler) for h in logger.handlers)
+    assert all(not isinstance(h, logging.NullHandler) for h in logger.handlers)
+    logger.handlers.clear()

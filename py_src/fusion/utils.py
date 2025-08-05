@@ -26,7 +26,6 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
 from dateutil import parser
-from joblib import Parallel, delayed
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
 from rich.progress import (
@@ -90,6 +89,7 @@ RECOGNIZED_FORMATS = [
     "mov",
     "mkv",
     "gz",
+    "xml",
 ]
 
 re_str_1 = re.compile("(.)([A-Z][a-z]+)")
@@ -255,7 +255,6 @@ def parquet_to_table(
         schemas = [
             pq.ParquetDataset(
                 p,
-                use_legacy_dataset=False,
                 filters=filters,
                 filesystem=fs,
                 memory_map=True,
@@ -266,7 +265,6 @@ def parquet_to_table(
         schemas = [
             pq.ParquetDataset(
                 path,
-                use_legacy_dataset=False,
                 filters=filters,
                 filesystem=fs,
                 memory_map=True,
@@ -276,7 +274,6 @@ def parquet_to_table(
     schema = unify_schemas(schemas)
     return pq.ParquetDataset(
         path,
-        use_legacy_dataset=False,
         filters=filters,
         filesystem=fs,
         memory_map=True,
@@ -676,7 +673,7 @@ def get_session(
     return session
 
 
-def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) -> list[bool]:
+def validate_file_names(paths: list[str]) -> list[bool]:
     """Validate if the file name format adheres to the standard.
 
     Args:
@@ -688,37 +685,17 @@ def validate_file_names(paths: list[str], fs_fusion: fsspec.AbstractFileSystem) 
     """
     file_names = [i.split("/")[-1].split(".")[0] for i in paths]
     validation = []
-    all_datasets = {}
     file_seg_cnt = 3
     for i, f_n in enumerate(file_names):
-        tmp = f_n.split("__")
-        if len(tmp) == file_seg_cnt:
-            try:
-                val = tmp[1] in fs_fusion.ls(tmp[1])
-            except FileNotFoundError:
-                val = False
-            if not val:
-                validation.append(False)
-            else:
-                if tmp[1] not in all_datasets:
-                    all_datasets[tmp[1]] = [i.split("/")[-1] for i in fs_fusion.ls(f"{tmp[1]}/datasets")]
-
-                val = tmp[0] in all_datasets[tmp[1]]
-                validation.append(val)
-        else:
+        tmp = f_n.split("__")        
+        if len(tmp) != file_seg_cnt or not tmp[0] or not tmp[1]:
+            logger.warning(
+            f"The file in {paths[i]} has a non-compliant name and will not be processed. "
+            f"Please rename the file to dataset__catalog__yyyymmdd.format"
+            )
             validation.append(False)
-        if not validation[-1] and len(tmp) == file_seg_cnt:
-            logger.warning(
-                "You might not have access to the catalog %s or dataset %s. "
-                "Please check your permission on the platform.",
-                tmp[1],
-                tmp[0],
-            )
-        if not validation[-1] and len(tmp) != file_seg_cnt:
-            logger.warning(
-                f"The file in {paths[i]} has a non-compliant name and will not be processed. "
-                f"Please rename the file to dataset__catalog__yyyymmdd.format"
-            )
+        else:
+            validation.append(True)
 
     return validation
 
@@ -765,8 +742,6 @@ def upload_files(  # noqa: PLR0913
     fs_fusion: fsspec.AbstractFileSystem,
     fs_local: fsspec.AbstractFileSystem,
     loop: pd.DataFrame,
-    parallel: bool = True,
-    n_par: int = -1,
     multipart: bool = True,
     chunk_size: int = 5 * 2**20,
     show_progress: bool = True,
@@ -780,8 +755,6 @@ def upload_files(  # noqa: PLR0913
         fs_fusion: Fusion filesystem.
         fs_local: Local filesystem.
         loop (pd.DataFrame): DataFrame of files to iterate through.
-        parallel (bool): Is parallel mode enabled.
-        n_par (int): Number of subprocesses.
         multipart (bool): Is multipart upload.
         chunk_size (int): Maximum chunk size.
         show_progress (bool): Show progress bar
@@ -834,28 +807,17 @@ def upload_files(  # noqa: PLR0913
             )
             return (False, path, str(ex))
 
-    if parallel:
-        if show_progress:
-            with joblib_progress("Uploading", total=len(loop)):
-                res = Parallel(n_jobs=n_par, backend="threading")(
-                    delayed(_upload)(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()
-                )
-        else:
-            res = Parallel(n_jobs=n_par, backend="threading")(
-                delayed(_upload)(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()
-            )
+    res: list[tuple[bool, str, str | None] | None] = [None] * len(loop)
+    if show_progress:
+        with Progress() as p:
+            task = p.add_task("Uploading", total=len(loop))
+            for i, (_, row) in enumerate(loop.iterrows()):
+                r = _upload(row["url"], row["path"], row.get("file_name", None))
+                res[i] = r
+                if r[0] is True:
+                    p.update(task, advance=1)
     else:
-        res = [None] * len(loop)
-        if show_progress:
-            with Progress() as p:
-                task = p.add_task("Uploading", total=len(loop))
-                for i, (_, row) in enumerate(loop.iterrows()):
-                    r = _upload(row["url"], row["path"], row.get("file_name", None))
-                    res[i] = r
-                    if r[0] is True:
-                        p.update(task, advance=1)
-        else:
-            res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
+        res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
     return res  # type: ignore
 
@@ -959,12 +921,66 @@ def _is_json(data: str) -> bool:
 
 def requests_raise_for_status(response: requests.Response) -> None:
     """Send response text into raise for status."""
-    if response.status_code == requests.codes.not_found:  # noqa: PLR2004
+    real_reason = ""
+    try:
+        real_reason = response.text
+        response.reason = real_reason
+    finally:
         response.raise_for_status()
-    else:
-        real_reason = ""
-        try:
-            real_reason = response.text
-            response.reason = real_reason
-        finally:
-            response.raise_for_status()
+
+def validate_file_formats(fs_fusion: fsspec.AbstractFileSystem, path: str) -> None:
+    """
+    Validate file formats in the given folder and subfolders.
+    Raise an error if more than one raw (unrecognized) file is found.
+
+    Args:
+        fs (fsspec.AbstractFileSystem): Filesystem instance (local, S3, etc.)
+        folder_path (str): Root folder path to search
+
+    Raises:
+        ValueError: If more than one raw file is found.
+    """
+    if not fs_fusion.exists(path):
+        raise FileNotFoundError(f"The folder '{path}' does not exist.")
+
+    all_files = [f for f in fs_fusion.find(path) if fs_fusion.info(f)["type"] == "file"]
+    raw_files = [
+        f for f in all_files
+        if f.split(".")[-1].lower() not in RECOGNIZED_FORMATS
+    ]
+
+    if len(raw_files) > 1:
+        raise ValueError(
+            f"Multiple raw files detected in '{path}':\n"
+            f"{chr(10).join(raw_files)}\n\n"
+            f"Only one raw file is allowed. Supported formats are:\n"
+            f"{', '.join(RECOGNIZED_FORMATS)}"
+        )
+    
+def file_name_to_url(
+    file_name: str, dataset: str, catalog: str, is_download: bool = False
+) -> str:
+    """Construct a distribution URL using the constructed file name as the series member.
+
+    Args:
+        file_name (str): Flattened file name.
+        dataset (str): Dataset name.
+        catalog (str): Catalog name.
+        is_download (bool, optional): Whether the URL is for download. Defaults to False.
+
+    Returns:
+        str: Relative distribution URL string.
+    """
+    parts = file_name.rsplit(".", 1)
+
+    datasetseries = parts[0]  # Use the full base name (excluding extension) as the date
+    ext = (
+        "raw"
+        if len(parts) == 1 or parts[1].lower() not in RECOGNIZED_FORMATS
+        else parts[1].lower()
+    )
+
+    return "/".join(
+        distribution_to_url("", dataset, datasetseries, ext, catalog, is_download).split("/")[1:]
+    )
+

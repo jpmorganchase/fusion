@@ -22,6 +22,7 @@ from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wra
 from fsspec.utils import nullcontext
 
 from fusion._fusion import FusionCredentials
+from fusion.exceptions import APIResponseError
 
 from .utils import cpu_count, get_client, get_default_fs, get_session
 
@@ -74,17 +75,31 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         self.sync_session = get_session(self.credentials, kwargs["client_kwargs"].get("root_url"))
         super().__init__(*args, **kwargs)
 
+    def _raise_not_found_for_status(self, response: Any, url: str) -> None:
+        try:
+            super()._raise_not_found_for_status(response, url)
+        except Exception as ex:
+            status_code = getattr(response, "status", None)
+            message = f"Error when accessing {url}"
+            raise APIResponseError(ex, message=message, status_code=status_code) from ex
+
     async def _async_raise_not_found_for_status(self, response: Any, url: str) -> None:
         """Raises FileNotFoundError for 404s, otherwise uses raise_for_status."""
-        if response.status == requests.codes.not_found:  # noqa: PLR2004
-            self._raise_not_found_for_status(response, url)
-        else:
-            real_reason = ""
-            try:
-                real_reason = await response.text()
-                response.reason = real_reason
-            finally:
+
+        try:
+            if response.status == requests.codes.not_found:  # noqa: PLR2004
                 self._raise_not_found_for_status(response, url)
+            else:
+                real_reason = ""
+                try:
+                    real_reason = await response.text()
+                    response.reason = real_reason
+                finally:
+                    self._raise_not_found_for_status(response, url)
+        except Exception as ex:
+            status_code = getattr(response, "status", None)
+            message = f"Error when accessing {url}"
+            raise APIResponseError(ex, message=message, status_code=status_code) from ex
 
     def _check_session_open(self) -> bool:
         # Check that _session is active. Expects that if _session is populated with .set_session, result
@@ -555,15 +570,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     return True, lpath, None
         except Exception as ex:  # noqa: BLE001
             headers = {}
-            logger.info(f"Failed to get headers for {rpath}", ex)
+            logger.info(f"Failed to get headers for {rpath}", exc_info=ex)
 
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
 
-        if not lfs.exists(lpath):
+        if not lfs.exists(Path(lpath).parent):
             try:
-                lfs.mkdir(Path(lpath).parent, exist_ok=True, create_parents=True)
+                lfs.mkdir(Path(lpath).parent, create_parents=True)
             except Exception as ex:  # noqa: BLE001
-                logger.info(f"Path {lpath} exists already", ex)
+                logger.info(f"Path {Path(lpath).parent} exists already", exc_info=ex)
 
         is_local_fs = type(lfs).__name__ == "LocalFileSystem"
 

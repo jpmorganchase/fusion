@@ -1,5 +1,7 @@
 """Bespoke exceptions and errors."""
 
+from typing import Optional
+
 
 class APIResponseError(Exception):
     """APIResponseError exception wrapper to handle API response errors.
@@ -7,6 +9,18 @@ class APIResponseError(Exception):
     Args:
         Exception : Exception to wrap.
     """
+
+    def __init__(self, original_exception: Exception, message: str = "", status_code: Optional[int] = None) -> None:
+        self.original_exception = original_exception
+        self.status_code = status_code
+        if message:
+            full_message = f"APIResponseError: Status {status_code}, {message}, Error: {str(original_exception)}"
+        else:
+            full_message = f"APIResponseError: Status {status_code}, Error: {str(original_exception)}"
+        super().__init__(full_message)
+
+        # Optionally, copy original exception attributes
+        self.__dict__.update(getattr(original_exception, "__dict__", {}))
 
 
 class APIRequestError(Exception):
@@ -39,6 +53,17 @@ class CredentialError(Exception):
     Args:
         Exception : Exception to wrap.
     """
+
+    def __init__(self, original_exception: Exception, message: str = "", status_code: Optional[int] = None) -> None:
+        self.original_exception = original_exception
+        self.status_code = status_code
+        full_message = f"APIResponseError: Status {status_code}, Error: {str(original_exception)}"
+        if message:
+            full_message = f"{message} | {full_message}"
+        super().__init__(full_message)
+
+        # Optionally, copy original exception attributes
+        self.__dict__.update(getattr(original_exception, "__dict__", {}))
 
 
 class FileFormatError(Exception):

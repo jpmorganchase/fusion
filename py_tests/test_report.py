@@ -1,88 +1,110 @@
-"""Test file for report.py"""
+"""Test file for updated report.py and reports integration"""
+
+from pathlib import Path
 
 import pytest
-import requests
-import requests_mock
 
 from fusion.fusion import Fusion
-from fusion.report import Report
+from fusion.report import Report, Reports, ReportsWrapper
 
 
-def test_report_class_object_representation() -> None:
-    """Test the object representation of the Report class."""
-    report = Report(identifier="my_report", report={"key": "value"})
-    assert repr(report)
-
-
-def test_add_registered_attribute(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    """Test the add_registered_attribute method."""
-    catalog = "my_catalog"
-    report = "TEST_REPORT"
-    attribute_identifier = "my_attribute"
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{report}/attributes/{attribute_identifier}/registration"
-
-    requests_mock.post(url, json={"isCriticalDataElement": True})
-
-    report_obj = Report(identifier="TEST_REPORT")
-    report_obj.client = fusion_obj
-    resp = report_obj.add_registered_attribute(
-        attribute_identifier="my_attribute", is_key_data_element=True, catalog=catalog, return_resp_obj=True
+def test_report_basic_fields() -> None:
+    report = Report(
+        title="Quarterly Report",
+        data_node_id={"name": "Node1", "dataNodeType": "User Tool"},
+        description="Quarterly risk analysis",
+        frequency="Quarterly",
+        category="Risk",
+        sub_category="Ops",
+        domain={"name": "CDO"},
+        regulatory_related=True,
     )
-    assert isinstance(resp, requests.Response)
-    status_code = 200
-    assert resp.status_code == status_code
+    assert report.title == "Quarterly Report"
+    assert report.data_node_id["name"] == "Node1"
+    assert report.domain["name"] == "CDO"
 
 
-def test_create_report_no_tier(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    """Test creating a Report object without a tier."""
-    catalog = "my_catalog"
-    report = "REPORT"
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{report}"
+def test_report_to_dict() -> None:
+    report = Report(
+        title="Sample Report",
+        data_node_id={"name": "X", "dataNodeType": "Y"},
+        description="Some desc",
+        frequency="Monthly",
+        category="Cat",
+        sub_category="Sub",
+        domain={"name": "CDO"},
+        regulatory_related=False,
+    )
+    result = report.to_dict()
+    assert result["title"] == "Sample Report"
+    assert result["domain"]["name"] == "CDO"
+    assert result["regulatoryRelated"] is False
 
-    exp_data = {
-        "identifier": "REPORT",
-        "title": "Report",
-        "category": None,
-        "description": "Report",
-        "frequency": "Once",
-        "isInternalOnlyDataset": False,
-        "isThirdPartyData": True,
-        "isRestricted": None,
-        "isRawData": True,
-        "maintainer": "J.P. Morgan Fusion",
-        "source": None,
-        "region": None,
-        "publisher": "J.P. Morgan",
-        "product": None,
-        "subCategory": None,
-        "tags": None,
-        "createdDate": None,
-        "modifiedDate": None,
-        "deliveryChannel": ["API"],
-        "language": "English",
-        "status": "Available",
-        "type": "Report",
-        "containerType": "Snapshot-Full",
-        "snowflake": None,
-        "complexity": None,
-        "isImmutable": None,
-        "isMnpi": None,
-        "isPci": None,
-        "isPii": None,
-        "isClient": None,
-        "isPublic": None,
-        "isInternal": None,
-        "isConfidential": None,
-        "isHighlyConfidential": None,
-        "isActive": None,
-        "owners": None,
-        "applicationId": None,
-        "report": {"tier": ""},
+
+def test_report_validation_raises() -> None:
+    report = Report(
+        title="",
+        data_node_id={"name": "X", "dataNodeType": "Y"},
+        description="",
+        frequency="",
+        category="",
+        sub_category="",
+        domain={"name": ""},
+        regulatory_related=True,
+    )
+    with pytest.raises(ValueError, match="Missing required fields"):
+        report.validate()
+
+
+def test_report_from_dict() -> None:
+    data = {
+        "Title": "Dict Report",
+        "DataNodeId": {"name": "X", "dataNodeType": "Y"},
+        "Description": "Dict desc",
+        "Frequency": "Daily",
+        "Category": "Cat",
+        "SubCategory": "Sub",
+        "Domain": {"name": "CDO"},
+        "RegulatoryRelated": True,
     }
+    report = Report.from_dict(data)
+    assert isinstance(report, Report)
+    assert report.title == "Dict Report"
+    assert report.frequency == "Daily"
 
-    requests_mock.post(url, json=exp_data)
 
-    report_obj = Report(identifier="REPORT")
-    report_obj.client = fusion_obj
-    with pytest.raises(ValueError, match="Tier cannot be blank for reports."):
-        report_obj.create(catalog=catalog)
+def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
+    csv_data = (
+        "Report/Process Name,Report/Process Description,Frequency,Category,"
+        "Sub Category,CDO Office,Application ID,Application Type,Regulatory Designated\n"
+        "TestReport,Test description,Monthly,Risk,Ops,CDO,App1,User Tool,Yes"
+    )
+    file_path = tmp_path / "test_report.csv"
+    file_path.write_text(csv_data)
+
+    wrapper = ReportsWrapper(client=fusion_obj)
+    reports = wrapper.from_csv(str(file_path))
+    assert isinstance(reports, Reports)
+    assert len(reports) == 1
+    assert reports[0].title == "TestReport"
+
+
+def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
+    source = [
+        {
+            "Report/Process Name": "ObjReport",
+            "Report/Process Description": "Some desc",
+            "Frequency": "Monthly",
+            "Category": "Finance",
+            "Sub Category": "Analysis",
+            "CDO Office": "CDO",
+            "Application ID": "AppID",
+            "Application Type": "User Tool",
+            "Regulatory Designated": "No",
+        }
+    ]
+    wrapper = ReportsWrapper(client=fusion_obj)
+    reports = wrapper.from_object(source)
+    assert isinstance(reports, Reports)
+    assert reports[0].title == "ObjReport"
+    assert reports[0].regulatory_related is False
