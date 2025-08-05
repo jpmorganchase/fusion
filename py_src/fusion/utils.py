@@ -504,12 +504,12 @@ MAX_DATE_SEG_CNT = 2
 def _split_at_colon_before_yyyy(dt_str: str) -> tuple[str, str | None]:
     colon_indices = [m.start() for m in re.finditer(":", dt_str)]
     for idx in colon_indices:
-        after = dt_str[idx + 1 :]
-        match = re.match(r"(\d{4})", after)
+        after = dt_str[idx+1:]
+        match = re.match(r"\s*(\d{4})", after)
         if match:
             yyyy = int(match.group(1))
             if MIN_VALID_YEAR <= yyyy <= MAX_VALID_YEAR:
-                return dt_str[:idx], dt_str[idx + 1 :]
+                return dt_str[:idx], dt_str[idx+1:]
 
     parts = dt_str.split(":", 1)
     if len(parts) == MAX_DATE_SEG_CNT:
