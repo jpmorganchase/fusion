@@ -75,7 +75,8 @@ class Fusion:
 
     @staticmethod
     def _call_for_dataframe(url: str, session: requests.Session) -> pd.DataFrame:
-        """Private function that calls an API endpoint and returns the data as a pandas dataframe, with pagination support.
+        """Private function that calls an API endpoint and returns the data as a pandas dataframe, 
+        with pagination support.
         Args:
             url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
             session (requests.Session): Specify a proxy if required to access the authentication server. Defaults to {}.
