@@ -807,8 +807,9 @@ class Fusion:
 
         return tups
 
+    @staticmethod
     def _is_valid_date_range(dt_str: str) -> bool:
-        """Validate if dt_str is a valid date or date range using normalization logic.
+        """private function - Validate if dt_str is a valid date or date range using normalization logic.
         Accepts single date or range separated by ':'.
         """
         if dt_str == "latest" or dt_str == "sample":
@@ -818,6 +819,14 @@ class Fusion:
             return True
         except Exception:
             return False
+        
+    @staticmethod
+    def _safe_filename_from_iso(dt_str: str) -> str:
+        """private function - convert a string (typically a date or identifier) into a safe filename by
+        replacing any character that is not a digit, letter, or underscore with an underscore.
+        This helps prevent issues when saving files with names that might contain special or
+        invalid characters."""
+        return re.sub(r"[^0-9A-Za-z]", "", dt_str)    
 
     def download(  # noqa: PLR0912, PLR0913
         self,
@@ -895,6 +904,14 @@ class Fusion:
                 dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
             required_series = [(catalog, dataset, dt_str, dataset_format)] # type: ignore[list-item]
 
+        if not required_series:
+            raise APIResponseError(
+                ValueError(
+                    f"No data available for dataset {dataset} in catalog {catalog} for the given date/date range ({dt_str})."
+                ),
+                status_code=404,
+            )
+        
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
 
@@ -929,7 +946,7 @@ class Fusion:
                 "lpath": distribution_to_filename(
                     download_folders[i],
                     series[1],
-                    series[2],
+                    self._safe_filename_from_iso(series[2]),
                     series[3],
                     series[0],
                     partitioning=partitioning,
