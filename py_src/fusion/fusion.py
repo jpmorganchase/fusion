@@ -812,21 +812,13 @@ class Fusion:
         """private function - Validate if dt_str is a valid date or date range using normalization logic.
         Accepts single date or range separated by ':'.
         """
-        if dt_str in ("latest", "sample"):
+        if dt_str == "latest":
             return True
         try:
             _ = normalise_dt_param_str(dt_str)
             return True
         except ValueError:
             return False
-        
-    @staticmethod
-    def _safe_filename_from_iso(dt_str: str) -> str:
-        """private function - convert a string (typically a date or identifier) into a safe filename by
-        replacing any character that is not a digit, letter, or underscore with an underscore.
-        This helps prevent issues when saving files with names that might contain special or
-        invalid characters."""
-        return re.sub(r"[^0-9A-Za-z]", "", dt_str)    
 
     def download(  # noqa: PLR0912, PLR0913
         self,
@@ -902,7 +894,7 @@ class Fusion:
             # sample data is limited to csv
             if dt_str == "sample":
                 dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
-            required_series = [(catalog, dataset, dt_str, dataset_format)] # type: ignore[list-item]
+            required_series = [(catalog, dataset, dt_str, dataset_format)]  # type: ignore[list-item]
 
         if not required_series:
             raise APIResponseError(
@@ -912,7 +904,7 @@ class Fusion:
                 ),
                 status_code=404,
             )
-        
+
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
 
@@ -947,7 +939,7 @@ class Fusion:
                 "lpath": distribution_to_filename(
                     download_folders[i],
                     series[1],
-                    self._safe_filename_from_iso(series[2]),
+                    series[2],
                     series[3],
                     series[0],
                     partitioning=partitioning,
@@ -2772,7 +2764,7 @@ class Fusion:
 
         members_df = pd.DataFrame(data, columns=["identifier", "format"])
         return members_df
-    
+
     def report(  # noqa: PLR0913
         self,
         description: str,
@@ -2783,7 +2775,7 @@ class Fusion:
         data_node_id: dict[str, str],
         regulatory_related: bool,
         domain: dict[str, str],
-        tier_type: str | None = None, 
+        tier_type: str | None = None,
         lob: str | None = None,
         alternative_id: dict[str, str] | None = None,
         sub_lob: str | None = None,
