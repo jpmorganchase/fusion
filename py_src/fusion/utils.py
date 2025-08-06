@@ -484,12 +484,12 @@ def _normalise_dt_param(dt: str | int | datetime | date) -> str:
     for candidate in (dt, dt_clean):
         try:
             ts = pd.to_datetime(candidate, errors="raise")
-            if ts.time() != datetime.min.time():
-                return ts.strftime("%Y-%m-%dT%H:%M:%S")
-            else:
-                return ts.strftime("%Y-%m-%d")
-        except Exception:
+        except (ValueError, TypeError):
             continue
+        if ts.time() != datetime.min.time():
+            return ts.strftime("%Y-%m-%dT%H:%M:%S")
+        else:
+            return ts.strftime("%Y-%m-%d")
 
     raise ValueError(f"{dt} is not in a recognised data format")
 

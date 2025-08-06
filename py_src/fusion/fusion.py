@@ -812,12 +812,12 @@ class Fusion:
         """private function - Validate if dt_str is a valid date or date range using normalization logic.
         Accepts single date or range separated by ':'.
         """
-        if dt_str == "latest" or dt_str == "sample":
+        if dt_str in ("latest", "sample"):
             return True
         try:
             _ = normalise_dt_param_str(dt_str)
             return True
-        except Exception:
+        except ValueError:
             return False
         
     @staticmethod
@@ -907,7 +907,8 @@ class Fusion:
         if not required_series:
             raise APIResponseError(
                 ValueError(
-                    f"No data available for dataset {dataset} in catalog {catalog} for the given date/date range ({dt_str})."
+                    f"No data available for dataset {dataset} in catalog {catalog} "
+                    f"for the given date/date range ({dt_str})."
                 ),
                 status_code=404,
             )
