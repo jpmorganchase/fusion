@@ -1004,38 +1004,20 @@ class Fusion:
         force_download: bool = False,
         download_folder: str | None = None,
         dataframe_type: str = "pandas",
+        batch_size: int = 100_000,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """Gets distributions for a specified date or date range and returns the data as a dataframe.
 
         Args:
-            dataset (str): A dataset identifier
-            dt_str (str, optional): Either a single date or a range identified by a start or end date,
-                or both separated with a ":". Defaults to 'latest' which will return the most recent
-                instance of the dataset.
-            dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
-            catalog (str, optional): A catalog identifier. Defaults to 'common'.
-            n_par (int, optional): Specify how many distributions to download in parallel.
-                Defaults to all cpus available.
-            show_progress (bool, optional): Display a progress bar during data download Defaults to True.
-            columns (List, optional): A list of columns to return from a parquet file. Defaults to None
-            filters (List, optional): List[Tuple] or List[List[Tuple]] or None (default)
-                Rows which do not match the filter predicate will be removed from scanned data.
-                Partition keys embedded in a nested directory structure will be exploited to avoid
-                loading files at all if they contain no matching rows. If use_legacy_dataset is True,
-                filters can only reference partition keys and only a hive-style directory structure
-                is supported. When setting use_legacy_dataset to False, also within-file level filtering
-                and different partitioning schemes are supported.
-                More on https://arrow.apache.org/docs/python/generated/pyarrow.parquet.ParquetDataset.html
-            force_download (bool, optional): If True then will always download a file even
-                if it is already on disk. Defaults to False.
-            download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
-                Defaults to download_folder as set in __init__
-            dataframe_type (str, optional): Type
+            ...
+            batch_size (int, optional): Number of rows per batch to process at a time. Defaults to 100,000.
         Returns:
             class:`pandas.DataFrame`: a dataframe containing the requested data.
-                If multiple dataset instances are retrieved then these are concatenated first.
         """
+        import pyarrow.parquet as pq
+        import pyarrow.csv as pacsv
+
         catalog = self._use_catalog(catalog)
 
         # sample data is limited to csv
@@ -1069,77 +1051,93 @@ class Fusion:
 
         files = [res[1] for res in download_res]
 
-        pd_read_fn_map = {
-            "csv": read_csv,
-            "parquet": read_parquet,
-            "parq": read_parquet,
-            "json": read_json,
-            "raw": read_csv,
-        }
-
-        pd_read_default_kwargs: dict[str, dict[str, object]] = {
-            "csv": {
-                "columns": columns,
-                "filters": filters,
-                "fs": self.fs,
-                "dataframe_type": dataframe_type,
-            },
-            "parquet": {
-                "columns": columns,
-                "filters": filters,
-                "fs": self.fs,
-                "dataframe_type": dataframe_type,
-            },
-            "json": {
-                "columns": columns,
-                "filters": filters,
-                "fs": self.fs,
-                "dataframe_type": dataframe_type,
-            },
-            "raw": {
-                "columns": columns,
-                "filters": filters,
-                "fs": self.fs,
-                "dataframe_type": dataframe_type,
-            },
-        }
-
-        pd_read_default_kwargs["parq"] = pd_read_default_kwargs["parquet"]
-
-        pd_reader = pd_read_fn_map.get(dataset_format)
-        pd_read_kwargs = pd_read_default_kwargs.get(dataset_format, {})
-        if not pd_reader:
-            raise Exception(f"No pandas function to read file in format {dataset_format}")
-
-        pd_read_kwargs.update(kwargs)
-
-        if len(files) == 0:
-            raise APIResponseError(
-                Exception(
-                    f"No series members for dataset: {dataset} in date or date range: {dt_str} "
-                    f"and format: {dataset_format}"
-                ),
-                status_code=404,
-            )
+        # Efficient out-of-core reading for Parquet and CSV using PyArrow
         if dataset_format in ["parquet", "parq"]:
-            data_df = pd_reader(files, **pd_read_kwargs)  # type: ignore
-        elif dataset_format == "raw":
-            dataframes = (
-                pd.concat(
-                    [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()],  # type: ignore  # noqa: SIM115
-                    ignore_index=True,
-                )
-                for f in files
-            )
-            data_df = pd.concat(dataframes, ignore_index=True)
+            dfs = []
+            for file in files:
+                pq_file = pq.ParquetFile(file)
+                for batch in pq_file.iter_batches(batch_size=batch_size, columns=columns, filter=filters):
+                    dfs.append(pa.Table.from_batches([batch]).to_pandas())
+            data_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
+        elif dataset_format == "csv":
+            dfs = []
+            for file in files:
+                with self.fs.open(file, "rb") as f:
+                    reader = pacsv.open_csv(f)
+                    while True:
+                        batch = reader.read_next_batch(batch_size)
+                        if batch.num_rows == 0:
+                            break
+                        dfs.append(batch.to_pandas())
+            data_df = pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
         else:
-            dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)  # type: ignore
-            if dataframe_type == "pandas":
-                data_df = pd.concat(dataframes, ignore_index=True)
-            if dataframe_type == "polars":
-                import polars as pl
+            # Fallback to original logic for other formats
+            pd_read_fn_map = {
+                "csv": read_csv,
+                "parquet": read_parquet,
+                "parq": read_parquet,
+                "json": read_json,
+                "raw": read_csv,
+            }
+            pd_read_default_kwargs: dict[str, dict[str, object]] = {
+                "csv": {
+                    "columns": columns,
+                    "filters": filters,
+                    "fs": self.fs,
+                    "dataframe_type": dataframe_type,
+                },
+                "parquet": {
+                    "columns": columns,
+                    "filters": filters,
+                    "fs": self.fs,
+                    "dataframe_type": dataframe_type,
+                },
+                "json": {
+                    "columns": columns,
+                    "filters": filters,
+                    "fs": self.fs,
+                    "dataframe_type": dataframe_type,
+                },
+                "raw": {
+                    "columns": columns,
+                    "filters": filters,
+                    "fs": self.fs,
+                    "dataframe_type": dataframe_type,
+                },
+            }
+            pd_read_default_kwargs["parq"] = pd_read_default_kwargs["parquet"]
 
-                data_df = pl.concat(dataframes, how="diagonal") # type: ignore
+            pd_reader = pd_read_fn_map.get(dataset_format)
+            pd_read_kwargs = pd_read_default_kwargs.get(dataset_format, {})
+            if not pd_reader:
+                raise Exception(f"No pandas function to read file in format {dataset_format}")
+
+            pd_read_kwargs.update(kwargs)
+
+            if len(files) == 0:
+                raise APIResponseError(
+                    Exception(
+                        f"No series members for dataset: {dataset} in date or date range: {dt_str} "
+                        f"and format: {dataset_format}"
+                    ),
+                    status_code=404,
+                )
+            if dataset_format == "raw":
+                dataframes = (
+                    pd.concat(
+                        [pd_reader(ZipFile(f).open(p), **pd_read_kwargs) for p in ZipFile(f).namelist()],  # type: ignore  # noqa: SIM115
+                        ignore_index=True,
+                    )
+                    for f in files
+                )
+                data_df = pd.concat(dataframes, ignore_index=True)
+            else:
+                dataframes = (pd_reader(f, **pd_read_kwargs) for f in files)  # type: ignore
+                if dataframe_type == "pandas":
+                    data_df = pd.concat(dataframes, ignore_index=True)
+                if dataframe_type == "polars":
+                    import polars as pl
+                    data_df = pl.concat(dataframes, how="diagonal") # type: ignore
 
         return data_df
 
