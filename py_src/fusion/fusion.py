@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import datetime
 import json as js
 import logging
 import re
@@ -782,16 +783,12 @@ class Fusion:
                 parsed_dates = (parsed_dates[0], parsed_dates[0])
 
             if parsed_dates[0]:
-                datasetseries_list = datasetseries_list[
-                    pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
-                    >= pd.to_datetime(parsed_dates[0])
-                ].reset_index()
+                start_dt = pd.to_datetime(parsed_dates[0])
+                datasetseries_list = self._filter_datasetseries_by_date(datasetseries_list, start_dt, "ge")
 
             if parsed_dates[1]:
-                datasetseries_list = datasetseries_list[
-                    pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
-                    <= pd.to_datetime(parsed_dates[1])
-                ].reset_index()
+                end_dt = pd.to_datetime(parsed_dates[1])
+                datasetseries_list = self._filter_datasetseries_by_date(datasetseries_list, end_dt, "le")
 
         if len(datasetseries_list) == 0:
             raise APIResponseError(  # pragma: no cover
@@ -806,6 +803,32 @@ class Fusion:
         tups = [(catalog, dataset, series, dataset_format) for series in required_series]
 
         return tups
+
+    @staticmethod
+    def _filter_datasetseries_by_date(
+        datasetseries_list: pd.DataFrame,
+        date_value: datetime.datetime,
+        op: str,
+    ) -> pd.DataFrame:
+        """
+        Private function - Filter datasetseries_list by date or datetime using the given operator ('ge' or 'le').
+        'ge' means greater than or equal to, 'le' means less than or equal to.
+        """
+        if date_value.time() == datetime.time(0, 0):
+            series_dates = pd.Series(
+                [pd.to_datetime(i, errors="coerce").date() for i in datasetseries_list["identifier"]]
+            )
+            cmp_value = date_value.date()
+        else:
+            series_dates = pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
+            cmp_value = date_value
+
+        if op == "ge":
+            mask = series_dates >= cmp_value
+        if op == "le":
+            mask = series_dates <= cmp_value
+
+        return datasetseries_list[mask].reset_index(drop=True)
 
     @staticmethod
     def _is_valid_date_range(dt_str: str) -> bool:
