@@ -188,12 +188,23 @@ When a file is uploaded with `preserve_original_name` set to `True`, the file na
     With the original name of the file preserved.
 
 !!! note "If `preserve_original_file_name` is not set to `True`:"
-    The file name will use Fusion's file naming convention during download:
+    The file name will use Fusion's file naming convention, ```<download_folder>/<DATASET_ID>_<catalog_id>_<seriesmember_id>.<file_format>```, during download:
 
-    ```downloads\<DATASET_ID>_<catalog_id>_<seriesmember_id>.<file_format>```
+    ```python
+        fusion.download(
+            dataset="MY_DATASET",
+            dt_str="20250430",
+            dataset_format="csv",
+            catalog="my_catalog",
+            preserve_original_name=True
+        )
+    ```
+
+    ```downloads/MY_DATASET_my_catalog_20250430.csv```
+
 
 ### Schema Validation
-For datasets with defined schemas (i.e., the dataset `isRawData` flag is defined as `False` in the dataset metadata, see the Dataset module for additional information), the `upload()` method validates the uploaded file against the schema. This validation includes:
+For datasets with defined schemas (i.e., the dataset `isRawData` flag is defined as `False` in the dataset metadata, see the Dataset [module](api.md) for additional information), the `upload()` method validates the uploaded file against the schema. This validation includes:
 
 #### Column Headers
 The column names and their order must match the defined schema.

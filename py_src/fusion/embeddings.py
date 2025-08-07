@@ -198,7 +198,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
 
     @staticmethod
     def _remap_endpoints(url: str) -> str:
-        return url.replace("_bulk", "embeddings").replace("_search", "search")
+        return url.replace("_bulk", "embeddings").replace("_search", "search").replace("_doc", "embeddings")
 
     def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
         if url == "/_bulk":
@@ -238,9 +238,6 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             and "query" not in body.decode("utf-8")
         ):
             return 200, {}, ""
-
-        if method.lower() == "delete":
-            url = url.replace("_doc", "embeddings")
 
         headers = headers or {}
 
