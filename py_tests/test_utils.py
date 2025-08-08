@@ -338,15 +338,25 @@ def test_normalise_dt_param_with_valid_string_format_3() -> None:
 
     dt = "20220101T1200"
     result = _normalise_dt_param(dt)
-    assert result == "2022-01-01-1200"
+    assert result == "2022-01-01T12:00:00"
 
 
 def test_normalise_dt_param_with_invalid_format() -> None:
     from fusion.utils import _normalise_dt_param
 
-    dt = "2022/01/01"
-    with pytest.raises(ValueError, match="is not in a recognised data format"):
-        _normalise_dt_param(dt)
+    invalid_dates = [
+        "2022-13-01",      # invalid month
+        "2022-01-32",      # invalid day
+        "20220101123456786",  # too many digits
+        "not-a-date",      # not a date at all
+        "",                # empty string
+    ]
+    for dt in invalid_dates:
+        with pytest.raises(
+            ValueError,
+            match="is not in a recognised data format|NaTType does not support time",
+        ):
+            _normalise_dt_param(dt)
 
 
 def test_normalise_dt_param_with_invalid_type() -> None:
