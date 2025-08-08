@@ -828,7 +828,9 @@ class Fusion:
         if op == "le":
             mask = series_dates <= cmp_value
 
-        return datasetseries_list[mask].reset_index(drop=True)
+        result = datasetseries_list[mask].reset_index(drop=True)
+        assert isinstance(result, pd.DataFrame)
+        return result
 
     def download(  # noqa: PLR0912, PLR0913
         self,
