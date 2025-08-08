@@ -830,19 +830,6 @@ class Fusion:
 
         return datasetseries_list[mask].reset_index(drop=True)
 
-    @staticmethod
-    def _is_valid_date_range(dt_str: str) -> bool:
-        """private function - Validate if dt_str is a valid date or date range using normalization logic.
-        Accepts single date or range separated by ':'.
-        """
-        if dt_str == "latest":
-            return True
-        try:
-            _ = normalise_dt_param_str(dt_str)
-            return True
-        except ValueError:
-            return False
-
     def download(  # noqa: PLR0912, PLR0913
         self,
         dataset: str,
@@ -895,6 +882,8 @@ class Fusion:
                 status_code=401,
             )
 
+        valid_date_range = re.compile(r"^((\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?)?(:((\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?)?)?$")
+                           
         # check that format is valid and if none, check if there is only one format available
         available_formats = list(self.list_datasetmembers_distributions(dataset, catalog)["format"].unique())
         if dataset_format and dataset_format not in available_formats:
@@ -911,7 +900,7 @@ class Fusion:
                     f"download. Available formats are {available_formats}."
                 )
 
-        if self._is_valid_date_range(dt_str):
+        if valid_date_range.match(dt_str) or dt_str == "latest":
             required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
         else:
             # sample data is limited to csv
