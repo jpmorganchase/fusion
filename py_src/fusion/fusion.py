@@ -1121,6 +1121,39 @@ class Fusion:
                 ),
                 status_code=404,
             )
+
+        import os
+        LARGE_FILE_THRESHOLD = 500 * 1024 * 1024  # 500MB
+
+        # Polars lazy loading: auto for large files   
+        if dataframe_type == "polars":
+            import polars as pl
+            use_lazy = any(os.path.getsize(f) > LARGE_FILE_THRESHOLD for f in files)
+            if use_lazy:
+                if dataset_format in ["parquet", "parq"]:
+                    lazy_frames = [pl.scan_parquet(f) for f in files]
+                elif dataset_format == "csv":
+                    lazy_frames = [pl.scan_csv(f) for f in files]
+                elif dataset_format == "json":
+                    lazy_frames = [pl.scan_json(f) for f in files]
+                else:
+                    raise Exception(f"Polars lazy loading not supported for format {dataset_format}")
+                data_df = pl.concat(lazy_frames, how="diagonal").collect()
+                return data_df    
+
+        # Pandas: use chunked reading if any file is large and format is CSV
+        if dataframe_type == "pandas" and dataset_format == "csv":
+            import pandas as pd
+            use_chunked = any(os.path.getsize(f) > LARGE_FILE_THRESHOLD for f in files)
+            if use_chunked:
+                CHUNKSIZE = 100_000
+                chunk_list = []
+                for f in files:
+                    for chunk in pd.read_csv(f, chunksize=CHUNKSIZE, **{k: v for k, v in pd_read_kwargs.items() if k != "chunksize"}):
+                        chunk_list.append(chunk)
+                data_df = pd.concat(chunk_list, ignore_index=True)
+                return data_df
+
         if dataset_format in ["parquet", "parq"]:
             data_df = pd_reader(files, **pd_read_kwargs)  # type: ignore
         elif dataset_format == "raw":
@@ -1138,7 +1171,6 @@ class Fusion:
                 data_df = pd.concat(dataframes, ignore_index=True)
             if dataframe_type == "polars":
                 import polars as pl
-
                 data_df = pl.concat(dataframes, how="diagonal") # type: ignore
 
         return data_df
