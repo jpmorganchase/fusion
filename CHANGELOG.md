@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.16] - 2025-08-12
 * Support pagination design of APIs internally.
-* Handle the changes API retruning empty list for the dataset ditributions during download.
+* Handle the changes API returning empty list for the dataset distributions during download.
 
 ## [2.0.15] - 2025-07-25
 * Added various BCBS related functions for Reports, Report Attributes and Linkage of terms to Report Attrributes
