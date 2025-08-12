@@ -28,6 +28,7 @@ import requests
 from dateutil import parser
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
+from requests import Session
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -687,11 +688,11 @@ def validate_file_names(paths: list[str]) -> list[bool]:
     validation = []
     file_seg_cnt = 3
     for i, f_n in enumerate(file_names):
-        tmp = f_n.split("__")        
+        tmp = f_n.split("__")
         if len(tmp) != file_seg_cnt or not tmp[0] or not tmp[1]:
             logger.warning(
-            f"The file in {paths[i]} has a non-compliant name and will not be processed. "
-            f"Please rename the file to dataset__catalog__yyyymmdd.format"
+                f"The file in {paths[i]} has a non-compliant name and will not be processed. "
+                f"Please rename the file to dataset__catalog__yyyymmdd.format"
             )
             validation.append(False)
         else:
@@ -928,6 +929,7 @@ def requests_raise_for_status(response: requests.Response) -> None:
     finally:
         response.raise_for_status()
 
+
 def validate_file_formats(fs_fusion: fsspec.AbstractFileSystem, path: str) -> None:
     """
     Validate file formats in the given folder and subfolders.
@@ -944,10 +946,7 @@ def validate_file_formats(fs_fusion: fsspec.AbstractFileSystem, path: str) -> No
         raise FileNotFoundError(f"The folder '{path}' does not exist.")
 
     all_files = [f for f in fs_fusion.find(path) if fs_fusion.info(f)["type"] == "file"]
-    raw_files = [
-        f for f in all_files
-        if f.split(".")[-1].lower() not in RECOGNIZED_FORMATS
-    ]
+    raw_files = [f for f in all_files if f.split(".")[-1].lower() not in RECOGNIZED_FORMATS]
 
     if len(raw_files) > 1:
         raise ValueError(
@@ -956,10 +955,9 @@ def validate_file_formats(fs_fusion: fsspec.AbstractFileSystem, path: str) -> No
             f"Only one raw file is allowed. Supported formats are:\n"
             f"{', '.join(RECOGNIZED_FORMATS)}"
         )
-    
-def file_name_to_url(
-    file_name: str, dataset: str, catalog: str, is_download: bool = False
-) -> str:
+
+
+def file_name_to_url(file_name: str, dataset: str, catalog: str, is_download: bool = False) -> str:
     """Construct a distribution URL using the constructed file name as the series member.
 
     Args:
@@ -974,13 +972,53 @@ def file_name_to_url(
     parts = file_name.rsplit(".", 1)
 
     datasetseries = parts[0]  # Use the full base name (excluding extension) as the date
-    ext = (
-        "raw"
-        if len(parts) == 1 or parts[1].lower() not in RECOGNIZED_FORMATS
-        else parts[1].lower()
-    )
+    ext = "raw" if len(parts) == 1 or parts[1].lower() not in RECOGNIZED_FORMATS else parts[1].lower()
 
-    return "/".join(
-        distribution_to_url("", dataset, datasetseries, ext, catalog, is_download).split("/")[1:]
-    )
+    return "/".join(distribution_to_url("", dataset, datasetseries, ext, catalog, is_download).split("/")[1:])
 
+
+def handle_paginated_request(session: Session, url: str, headers: dict[str, str] | None = None) -> dict[str, Any]:
+    """
+    Fetches all pages from a paginated API endpoint using the x-jpmc-next-token header,
+    merges the results, and returns a single combined response dictionary.
+    """
+    all_responses: list[dict[str, Any]] = []
+    current_headers = headers.copy() if headers else {}
+
+    next_token = None
+
+    while True:
+        if next_token:
+            current_headers["x-jpmc-next-token"] = next_token
+
+        response = session.get(url, headers=current_headers)
+        response.raise_for_status()
+        response_data = response.json()
+        all_responses.append(response_data)
+
+        next_token = response.headers.get("x-jpmc-next-token")
+        if not next_token:
+            break
+
+    return _merge_responses(all_responses)
+
+
+def _merge_responses(responses: list[dict[str, Any]]) -> dict[str, Any]:
+    """
+    Merges all top-level list fields from a list of response dictionaries.
+    For each top-level key that is a list, concatenates the lists across all responses.
+    Non-list fields are taken from the first response.
+    """
+    if not responses:
+        return {}
+
+    merged = responses[0].copy()
+    # Find all top-level keys that are lists in the first response
+    list_keys = [k for k, v in merged.items() if isinstance(v, list)]
+
+    for key in list_keys:
+        for response in responses[1:]:
+            if key in response and isinstance(response[key], list):
+                merged[key].extend(response[key])
+
+    return merged
