@@ -1,109 +1,228 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+import logging
+from dataclasses import dataclass, field, fields
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypedDict
 
-from fusion.dataset import Dataset
-from fusion.utils import requests_raise_for_status
+import numpy as np
+import pandas as pd
+
+from .utils import (
+    CamelCaseMeta,
+    camel_to_snake,
+    make_bool,
+    requests_raise_for_status,
+    snake_to_camel,
+    tidy_string,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     import requests
+    from fusion import Fusion
 
-    from fusion.fusion import Fusion
-
+logger = logging.getLogger(__name__)
 
 @dataclass
-class DataFlow(Dataset):
-    """Dataflow class for maintaining data flow metadata.
+class Dataflow(metaclass=CamelCaseMeta):
+    providerNode: dict[str, str]
+    consumerNode: dict[str, str]
 
-    Attributes:
-        producer_application_id (dict[str, str] | None): The producer application ID (upstream application
-            producing the flow).
-        consumer_application_id (list[dict[str, str]] | dict[str, str] | None): The consumer application ID (downstream
-            application, consuming the flow).
-        flow_details (dict[str, str] | None): The flow details. Specifies input versus output flow.
-        type_ (str | None): The type of dataset. Defaults to "Flow".
+    description: str | None = None
+    alternativeId: dict[str, Any] | None = None
+    transportType: str | None = None
+    frequency: str | None = None
+    startTime: str | None = None
+    endTime: str | None = None
+    boundarySets: list[dict[str, Any]] = field(default_factory=list)
 
-    """
+    _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
-    producer_application_id: dict[str, str] | None = None
-    consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None
-    flow_details: dict[str, str] | None = None
-    type_: str | None = "Flow"
+    def __post_init__(self) -> None:
+        self.description = tidy_string(self.description or "")
 
-    def __post_init__(self: DataFlow) -> None:
-        """Format the Data Flow object."""
-        self.consumer_application_id = (
-            [self.consumer_application_id]
-            if isinstance(self.consumer_application_id, dict)
-            else self.consumer_application_id
-        )
-        super().__post_init__()
+    def __getattr__(self, name: str) -> Any:
+        snake_name = camel_to_snake(name)
+        return self.__dict__.get(snake_name, None)
 
-    def add_registered_attribute(
-        self: DataFlow,
-        attribute_identifier: str,
-        catalog: str | None = None,
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "client":
+            object.__setattr__(self, name, value)
+        else:
+            snake_name = camel_to_snake(name)
+            self.__dict__[snake_name] = value
+
+    @property
+    def client(self) -> Fusion | None:
+        return self._client
+
+    @client.setter
+    def client(self, client: Fusion | None) -> None:
+        self._client = client
+
+    def _use_client(self, client: Fusion | None) -> Fusion:
+        res = self._client if client is None else client
+        if res is None:
+            raise ValueError("A Fusion client object is required.")
+        return res
+
+    @classmethod
+    def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
+        def normalize_value(val: Any) -> Any:
+            if isinstance(val, str) and val.strip() == "":
+                return None
+            return val
+
+        def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
+            converted = {}
+            for k, v in d.items():
+                key = camel_to_snake(k)
+                if isinstance(v, dict):
+                    converted[key] = convert_keys(v)
+                elif isinstance(v, list):
+                    converted[key] = [convert_keys(i) if isinstance(i, dict) else i for i in v]
+                else:
+                    converted[key] = normalize_value(v)
+            return converted
+
+        converted_data = convert_keys(data)
+        valid_fields = {f.name for f in fields(cls)}
+        filtered_data = {k: v for k, v in converted_data.items() if k in valid_fields}
+
+        dataflow = cls.__new__(cls)
+        for field_obj in fields(cls):
+            setattr(dataflow, field_obj.name, filtered_data.get(field_obj.name, None))
+
+        dataflow.__post_init__()
+        return dataflow
+
+    def validate(self) -> None:
+        required_fields = ["provider_node", "consumer_node"]
+        missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
+        if missing:
+            raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")
+
+    def to_dict(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for k, v in self.__dict__.items():
+            if k.startswith("_"):
+                continue
+            out[snake_to_camel(k)] = v
+        return out
+
+    def create(
+        self,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Add a registered attribute to the Data Flow.
-
-        Args:
-            attribute_identifier (str): Attribute identifier.
-            catalog (str | None, optional): Catalog identifier. Defaults to 'common'.
-            client (Fusion, optional): A Fusion client object. Defaults to the instance's _client.
-                If instantiated from a Fusion object, then the client is set automatically.
-            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
-
-        Returns:
-            requests.Response | None: The response object from the API call if return_resp_obj is True, otherwise None.
-        """
         client = self._use_client(client)
-        catalog = client._use_catalog(catalog)
-        dataset = self.identifier
+        data = self.to_dict()
 
-        url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes/{attribute_identifier}/registration"
-
-        data = {
-            "isCriticalDataElement": False,
-        }
-
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows"
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
 
+    def put(self, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
+    """Replace a dataflow entirely using PUT."""
+    client = self._use_client(client)
+    if not hasattr(self, "id") or not self.id:
+        raise ValueError("Dataflow ID is required for update.")
 
-@dataclass
-class InputDataFlow(DataFlow):
-    """InputDataFlow class for maintaining input data flow metadata."""
-
-    flow_details: dict[str, str] | None = field(default_factory=lambda: {"flowDirection": "Input"})
-
-    def __repr__(self: InputDataFlow) -> str:
-        """Return an object representation of the InputDataFlow object.
-
-        Returns:
-            str: Object representation of the dataset.
-
-        """
-        attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
-        return f"InputDataFlow(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
+    url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows/{self.id}"
+    resp = client.session.put(url, json=self.to_dict())
+    requests_raise_for_status(resp)
+    return resp if return_resp_obj else None
 
 
-@dataclass
-class OutputDataFlow(DataFlow):
-    """OutputDataFlow class for maintaining output data flow metadata."""
 
-    flow_details: dict[str, str] | None = field(default_factory=lambda: {"flowDirection": "Output"})
+class Dataflows:
+    def __init__(self, dataflows: list[Dataflow] | None = None) -> None:
+        self.dataflows = dataflows or []
+        self._client: Fusion | None = None
 
-    def __repr__(self: OutputDataFlow) -> str:
-        """Return an object representation of the OutputDataFlow object.
+    def __getitem__(self, index: int) -> Dataflow:
+        return self.dataflows[index]
 
-        Returns:
-            str: Object representation of the dataset.
+    def __iter__(self) -> Iterator[Dataflow]:
+        return iter(self.dataflows)
 
-        """
-        attrs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
-        return f"OutputDataFlow(\n" + ",\n ".join(f"{k}={v!r}" for k, v in attrs.items()) + "\n)"
+    def __len__(self) -> int:
+        return len(self.dataflows)
+
+    @property
+    def client(self) -> Fusion | None:
+        return self._client
+
+    @client.setter
+    def client(self, client: Fusion | None) -> None:
+        self._client = client
+        for df in self.dataflows:
+            df.client = client
+
+    @classmethod
+    def from_csv(cls, file_path: str, client: Fusion | None = None) -> Dataflows:
+        df = pd.read_csv(file_path)
+        return cls.from_dataframe(df, client=client)
+
+    @classmethod
+    def from_dataframe(cls, df: pd.DataFrame, client: Fusion | None = None) -> Dataflows:
+        df = df.replace([np.nan, np.inf, -np.inf], None).where(df.notna(), None)
+        dataflow_objs = []
+
+        for _, row in df.iterrows():
+            try:
+                obj = Dataflow.from_dict(row.to_dict())
+                obj.client = client
+                obj.validate()
+                dataflow_objs.append(obj)
+            except ValueError as e:
+                logger.warning(f"Skipping invalid row: {e}")
+
+        result = cls(dataflow_objs)
+        result.client = client
+        return result
+
+    def create_all(self) -> None:
+        for df in self.dataflows:
+            df.create()
+
+    @classmethod
+    def from_object(
+        cls,
+        source: pd.DataFrame | list[dict[str, Any]] | str,
+        client: Fusion | None = None,
+    ) -> Dataflows:
+        import json
+
+        if isinstance(source, pd.DataFrame):
+            return cls.from_dataframe(source, client=client)
+        elif isinstance(source, list) and all(isinstance(item, dict) for item in source):
+            return cls.from_dataframe(pd.DataFrame(source), client=client)
+        elif isinstance(source, str):
+            if source.lower().endswith(".csv") and Path(source).exists():
+                return cls.from_csv(source, client=client)
+            elif source.strip().startswith("[{"):
+                dict_list = json.loads(source)
+                return cls.from_dataframe(pd.DataFrame(dict_list), client=client)
+            else:
+                raise ValueError("Unsupported string input — must be .csv path or JSON array string")
+
+        raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
+
+
+class DataflowsWrapper(Dataflows):
+    def __init__(self, client: Fusion) -> None:
+        super().__init__([])
+        self.client = client
+
+    def from_csv(self, file_path: str) -> Dataflows:  # type: ignore[override]
+        return Dataflows.from_csv(file_path, client=self.client)
+
+    def from_dataframe(self, df: pd.DataFrame) -> Dataflows:  # type: ignore[override]
+        return Dataflows.from_dataframe(df, client=self.client)
+
+    def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Dataflows:  # type: ignore[override]
+        return Dataflows.from_object(source, client=self.client)

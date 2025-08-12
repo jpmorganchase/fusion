@@ -2852,4 +2852,54 @@ class Fusion:
             return_resp_obj=return_resp_obj
         )
 
-    
+    def list_dataflow(
+        self,
+        dataflow_id: str,
+        return_resp_obj: bool = False
+    ) -> requests.Response | dict[str, Any]:
+        """Retrieve a single dataflow by ID."""
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/dataflows/{dataflow_id}"
+        resp = self.session.get(url)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else resp.json()
+
+
+    def delete_dataflow(
+        self,
+        dataflow_id: str,
+        return_resp_obj: bool = False
+    ) -> requests.Response | None:
+        """Delete a dataflow by ID."""
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/dataflows/{dataflow_id}"
+        resp = self.session.delete(url)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
+
+
+    def patch_dataflow(
+        self,
+        dataflow_id: str,
+        updates: dict[str, Any],
+        return_resp_obj: bool = False
+    ) -> requests.Response | dict[str, Any]:
+        """Partially update a dataflow by ID using PATCH."""
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/dataflows/{dataflow_id}"
+        resp = self.session.patch(url, json=updates)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else resp.json()
+
+
+    def put_dataflow(
+        self,
+        dataflow_id: str,
+        full_payload: dict[str, Any],
+        return_resp_obj: bool = False
+    ) -> requests.Response | dict[str, Any]:
+        """Replace a dataflow entirely using PUT."""
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/dataflows/{dataflow_id}"
+        resp = self.session.put(url, json=full_payload)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else resp.json()
+
+
+
