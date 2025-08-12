@@ -1,6 +1,6 @@
 # Downloading Data with the `Fusion` Class
 
-The `Fusion` class provides powerful methods to retrieve your data from the Fusion Data Management Platform. It allows you to download datasets, convert them into Pandas DataFrames, or retrieve them as in-memory bytes objects for flexible data handling. The primary methods for downloading and processing data are `download()`, `to_df()`, and `to_bytes()`.
+The `Fusion` class provides powerful methods to retrieve your data from the Fusion Data Management Platform. It allows you to download datasets, convert them into Pandas DataFrames, or retrieve them as in-memory bytes objects for flexible data handling. The primary methods for downloading and processing data are `download()`, `to_df()`, `to_table()`, and `to_bytes()`.
 
 ---
 
@@ -53,7 +53,7 @@ fusion.download(
 
 Given that this dataset, series member, format, and catalog combination exists, the data will be downloaded to the following file path:
 
-``'downloads/MY_DATASET_my_catalog_20250430.csv'``
+``'downloads/MY_DATASET__my_catalog__20250430.csv'``
 
 ### Download Folder
 
@@ -71,7 +71,7 @@ fusion.download(
 
 Given that this dataset, series member, format, and catalog combination exists, the data will be downloaded to the following file path:
 
-``'path/to/my/downloads/MY_DATASET_my_catalog_20250430.csv'``
+``'path/to/my/downloads/MY_DATASET__my_catalog__20250430.csv'``
 
 ### Preserving Original File Name
 
@@ -225,7 +225,7 @@ In order to retrieve a dataset as a Pandas DataFrame, the following information 
 
 
 ```python
-df = fusion_obj.to_df(
+df = fusion.to_df(
     dataset="FXO_SP",
     dt_str="2023-10-01",
     dataset_format="csv",
@@ -258,7 +258,7 @@ my_filters = [("instrument_name", "==", "AUDUSD | Spot")]
 By sending this filter condition into the ``filters`` argument, the user is filtering for rows in which the ``"instrument_name"`` column is equal to ``"AUDUSD | Spot"``:
 
 ```python
-df = fusion_obj.to_df(
+df = fusion.to_df(
     dataset="FXO_SP",
     dt_str="2023-10-01",
     dataset_format="csv",
@@ -292,7 +292,7 @@ The ``columns`` argument allows users to select the columns to be included in th
 
 For example:
 ```python
-df = fusion_obj.to_df(
+df = fusion.to_df(
     dataset="FXO_SP",
     dt_str="2023-10-01",
     dataset_format="csv",
@@ -309,6 +309,83 @@ The returned DataFrame will contain two columns: ``'instrument_name'`` and ``'fx
     - Consider filtering your data using the `filters` argument to reduce the size of the dataset being loaded.
     - For extremely large datasets, consider using alternative methods like `to_bytes()` or downloading the data directly using the `download()` method.
 
+
+## Using the `to_table()` Method
+
+### Overview
+The `to_table()` method retrieves a dataset and converts it into a PyArrow Table for efficient data processing and analysis. PyArrow Tables are particularly useful for handling large datasets and performing columnar operations, as they are optimized for memory usage and performance.
+
+#### Supported Distributions
+!!! info "Supported Distributions"
+    The `to_table()` method supports the same file types as `to_df()`: [`'csv'`, `'parquet'`, `'json'`, and `'raw'`], where raw is assumed to be zipped CSV files.
+
+### Syntax
+
+To retrieve a dataset as a PyArrow Table, the following information is required:
+
+- **dataset**: The dataset identifier.
+- **dt_str**: The specific series member of the dataset to retrieve. Refer to the [populating the `dt_str` argument guide](#populating-the-dt_str-argument) for more details. Defaults to `"latest"`.
+- **dataset_format**: The file format (e.g., `"parquet"`, `"csv"`). Defaults to `"parquet"`. Refer to the [populating the `dataset_format` guide](#populating-the-dataset_format-argument) for more details.
+- **catalog**: The catalog identifier. Defaults to `"common"`.
+
+```python
+table = fusion.to_table(
+    dataset="FXO_SP",
+    dt_str="2023-10-01",
+    dataset_format="parquet",
+    catalog="common"
+)
+```
+
+!!! info "Argument Definitions"
+    The `to_table()` method shares many of the same arguments and underlying logic as the `to_df()` method. For detailed explanations of these arguments, refer to the relevant sections in the `to_df()` documentation:
+
+    - [Populating the `download_folder` argument](#download-folder).
+    - [Populating the `dt_str` argument](#populating-the-dt_str-argument).
+    - [Populating the `dataset_format` argument](#populating-the-dataset_format-argument). Keep in mind the supported formats.
+
+!!! warning
+    Unlike `to_df()`, which loads the dataset into a Pandas DataFrame, `to_table()` loads the dataset into a PyArrow Table. PyArrow Tables are more memory-efficient but still require sufficient system memory to handle large datasets.
+
+### Filtering the Returned Table with `filters`
+
+The `filters` argument in `to_table()` works similarly to the `filters` argument in `to_df()`. It allows users to filter the data before it is returned in the PyArrow Table.
+
+For details on how to use the `filters` argument, refer to the [Filtering the Returned DataFrame with `filters`](#filtering-the-returned-dataframe-with-filters) section in the `to_df()` documentation. The same syntax and supported operations apply.
+
+### Selecting Columns for the Returned Table
+
+The `columns` argument in `to_table()` allows users to specify which columns to include in the returned PyArrow Table. This functionality is identical to the `columns` argument in `to_df()`.
+
+For more information, refer to the [Selecting Columns for the Returned DataFrame](#selecting-columns-for-the-returned-dataframe) section in the `to_df()` documentation.
+
+### Key Differences Between `to_df()` and `to_table()`
+
+- **Output Format**: While `to_df()` returns a Pandas DataFrame, `to_table()` returns a PyArrow Table.
+- **Performance**: PyArrow Tables are optimized for columnar operations and are more memory-efficient, making them suitable for larger datasets.
+- **Integration**: PyArrow Tables can be easily converted to other formats, such as Pandas DataFrames or Parquet files, for further processing.
+
+### Example Usage
+
+```python
+table = fusion.to_table(
+    dataset="FXO_SP",
+    dt_str="2023-10-01",
+    dataset_format="parquet",
+    catalog="common",
+    columns=["instrument_name", "fx_rate"],
+    filters=[("instrument_name", "==", "AUDUSD | Spot")],
+)
+```
+
+This example retrieves the dataset as a PyArrow Table, selecting only the `instrument_name` and `fx_rate` columns and filtering for rows where `instrument_name` equals `"AUDUSD | Spot"`.
+
+!!! Danger "Important Notes"
+    - Similar to `to_df()`, loading large datasets with `to_table()` may still encounter memory limitations, though PyArrow Tables are more efficient.
+    - Consider using the `filters` argument to reduce the size of the data being loaded.
+    - For extremely large datasets, consider alternative methods like `to_bytes()` or downloading the data directly using the `download()` method.
+
+
 ## Using the ``to_bytes()`` Method
 
 ### Overview
@@ -324,7 +401,7 @@ For retrieving data as a ``BytesIO`` object, the following details are required:
 - **catalog**: The catalog identifier. Defaults to ``"common"``.
 
 ```python
-data_bytes = fusion_obj.to_bytes(
+data_bytes = fusion.to_bytes(
     dataset="FXO_SP",
     series_member="2023-10-01",
     dataset_format="csv",

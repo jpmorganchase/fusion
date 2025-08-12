@@ -10,13 +10,18 @@ watch:
 nav:
   - Home: index.md
   - Getting Started: quickstart.md
-  - Modules: api.md
-  - Changelog: changelog.md
+  - Fusion Client: api.md
   - Download: download.md
   - Upload: upload.md
+  - Metadata Creation:
+      - Attributes: attributes.md
+      - Datasets: datasets.md
+      - Products: products.md
+  - Changelog: changelog.md
   - Examples:
         - Get Started: get_started.ipynb
         - Metadata Creation: metadata_creation.ipynb
+
 theme:
   name: material
   language: en

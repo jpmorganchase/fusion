@@ -18,7 +18,7 @@ In order to upload data to a dataset, the following information is required:
 
 - **path**: The path to the file you wish to upload.
 - **dataset**: The dataset identifier.
-- **dt_str**: A string (usually a date) representing the series member. Refer to the populating the ``dt_str`` argument [guide](#Formatting-the-dt_str-argument) for more details on how the ``dt_str`` argument is used during download. Must be in `YYYYMMDD` format for range-based downloads. Defaults to ``"latest"``.
+- **dt_str**: A string (usually a date) representing the series member. Refer to the populating the ``dt_str`` argument [guide](download.md#populating-the-dt_str-argument) for more details on how the ``dt_str`` argument is used during download. Must be in `YYYYMMDD` format for range-based downloads. Defaults to ``"latest"``.
 - **catalog**: The catalog identifier. Defaults to ``"common"``.
 
 
@@ -149,6 +149,7 @@ The `upload()` method automatically detects the file format based on the file ex
     - `mov`
     - `mkv`
     - `gz`
+    - `xml`
 
 !!! note "If the file format is not recognized, it defaults to `raw`."
 
@@ -188,7 +189,7 @@ When a file is uploaded with `preserve_original_name` set to `True`, the file na
     With the original name of the file preserved.
 
 !!! note "If `preserve_original_file_name` is not set to `True`:"
-    The file name will use Fusion's file naming convention, ```<download_folder>/<DATASET_ID>_<catalog_id>_<seriesmember_id>.<file_format>```, during download:
+    The file name will use Fusion's file naming convention, ```<download_folder>/<DATASET_ID>__<catalog_id>__<seriesmember_id>.<file_format>```, during download:
 
     ```python
         fusion.download(
@@ -200,16 +201,114 @@ When a file is uploaded with `preserve_original_name` set to `True`, the file na
         )
     ```
 
-    ```downloads/MY_DATASET_my_catalog_20250430.csv```
+    ```downloads/MY_DATASET__my_catalog__20250430.csv```
 
 
 ### Schema Validation
-For datasets with defined schemas (i.e., the dataset `isRawData` flag is defined as `False` in the dataset metadata, see the Dataset [module](api.md) for additional information), the `upload()` method validates the uploaded file against the schema. This validation includes:
+For datasets with defined schemas (i.e., the dataset `isRawData` flag is defined as `False` in the dataset metadata, see the Dataset [module](datasets.md) for additional information), the `upload()` method validates the uploaded file against the schema. This validation includes:
 
 #### Column Headers
 The column names and their order must match the defined schema.
 
+**Example:**
+If the schema defines the following column order:
+```plaintext
+["id", "name", "age", "email"]
+```
+
+But the uploaded file has the columns in this order:
+```plaintext
+["name", "id", "email", "age"]
+```
+
+The upload will fail with an error indicating that the column order does not match the schema.
+
+---
+
 #### Data Types
 The data types of the columns must match the schema.
 
-If the file does not conform to the schema, the upload will fail.
+**Example:**
+If the schema defines the following column data types:
+```plaintext
+id: integer
+name: string
+age: integer
+email: string
+```
+
+But the uploaded file contains data like this:
+```plaintext
+id,name,age,email
+1,John,twenty-five,john@example.com
+2,Jane,30,jane@example.com
+```
+
+The upload will fail because the value `"twenty-five"` in the `age` column is not an integer, as required by the schema.
+
+---
+
+If the file does not conform to the schema, the upload will fail with a detailed error message indicating the specific issue (e.g., mismatched column order or invalid data types).
+
+Learn more about defining dataset schemas from the [`attributes`](attributes.md) module.
+
+
+### Uploading a Directory
+
+The `upload()` method allows you to upload an entire directory of files to Fusion. This is particularly useful when you have multiple files organized in subdirectories that need to be uploaded as part of a dataset.
+
+#### Key Features
+- **Preserves Directory Structure**: The method flattens the directory structure into unique file names by appending subdirectory paths to the file names.
+- **Automatic File Validation**: The method validates file formats and names to ensure they meet Fusion's requirements.
+
+#### Syntax
+```python
+fusion.upload(
+    path="path/to/directory",
+    dataset="DATASET_ID",
+    catalog="CATALOG_ID",
+    n_par=4,
+    show_progress=True
+)
+```
+
+#### Arguments
+- **`path`**: The path to the directory containing the files to upload.
+- **`dataset`**: The dataset identifier to which the files will be uploaded. This is mandatory when uploading a directory.
+- **`catalog`**: The catalog identifier. Defaults to `"common"`.
+- **`n_par`**: The number of files to upload in parallel. Defaults to the number of available CPUs.
+- **`show_progress`**: Whether to display a progress bar during the upload. Defaults to `True`.
+
+#### Example
+Suppose you have the following directory structure:
+
+```
+data_folder/
+├── sub1/
+│   ├── file1.csv
+│   ├── file2.csv
+├── sub2/
+│   ├── file3.csv
+│   ├── file4.csv
+```
+
+You can upload the entire directory as follows:
+
+```python
+fusion.upload(
+    path="data_folder",
+    dataset="MY_DATASET",
+    catalog="my_catalog",
+    n_par=4,
+    show_progress=True
+)
+```
+
+During the upload, the directory structure will be flattened, and the file names will be transformed to ensure uniqueness. For example:
+
+- `data_folder/sub1/file1.csv` → `data_folder__sub1__file1.csv`
+- `data_folder/sub2/file3.csv` → `data_folder__sub2__file3.csv`
+
+#### Notes
+- **File Validation**: The method automatically validates file formats and names. Files with unsupported formats or invalid names will be skipped.
+- **`dt_str` Argument Ignored**: When uploading a directory, the `dt_str` argument is ignored. The series member identifiers are derived from the file names.
