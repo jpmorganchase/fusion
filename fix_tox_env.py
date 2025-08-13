@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-py_versions = ["3.9", "3.10", "3.11", "3.12"]
+py_versions = ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
 
 def fetch_toolchains() -> None:
