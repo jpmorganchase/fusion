@@ -305,7 +305,7 @@ class Report(metaclass=CamelCaseMeta):
             if source.strip().endswith(".csv"):
                 return Reports(cls.from_csv(source, client=client))
             elif source.strip().startswith("[{"):
-                import json
+                import json  # noqa: PLC0415
 
                 data = json.loads(source)
                 df = pd.DataFrame(data)  # noqa
@@ -456,7 +456,7 @@ class Reports:
     @classmethod
     def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None) -> Reports:
         """Load Reports from DataFrame, list of dicts, .csv path, or JSON string."""
-        import json
+        import json  # noqa: PLC0415
 
         if isinstance(source, pd.DataFrame):
             return cls.from_dataframe(source, client=client)

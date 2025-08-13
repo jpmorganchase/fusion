@@ -10,7 +10,7 @@ import fsspec
 import pytest
 from aiohttp import ClientResponse
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 from fusion.fusion_filesystem import FusionFile, FusionHTTPFileSystem
 
@@ -18,7 +18,7 @@ from fusion.fusion_filesystem import FusionFile, FusionHTTPFileSystem
 @pytest.fixture
 def http_fs_instance(credentials_examples: Path) -> FusionHTTPFileSystem:
     """Fixture to create a new instance for each test."""
-    creds = FusionCredentials.from_file(credentials_examples)
+    creds = FusionCredentials.from_file(str(credentials_examples))
     return FusionHTTPFileSystem(credentials=creds)
 
 
@@ -28,20 +28,20 @@ def test_filesystem(
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
     assert FusionHTTPFileSystem(creds)
 
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict_https_pxy, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
     assert FusionHTTPFileSystem(creds)
 
     kwargs = {"client_kwargs": {"credentials": creds}}
 
     assert FusionHTTPFileSystem(None, **kwargs)
 
-    kwargs = {"client_kwargs": {"credentials": 3.14}}  # type: ignore
+    kwargs = {"client_kwargs": {"credentials": 3.14}}  # type: ignore[dict-item]
     with pytest.raises(ValueError, match="Credentials not provided"):
         FusionHTTPFileSystem(None, **kwargs)
 
@@ -188,7 +188,7 @@ def test_stream_single_file(mock_session_class: MagicMock, example_creds_dict: d
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     # Create a mock response object with the necessary context manager methods
     mock_response = MagicMock()
@@ -242,7 +242,7 @@ def test_stream_single_file_exception(
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     # Create an instance of FusionHTTPFileSystem
     http_fs_instance = FusionHTTPFileSystem(credentials=creds)
@@ -274,7 +274,7 @@ async def test_download_single_file_async(
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:  # noqa: ASYNC101, ASYNC230
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     # Create an instance of FusionHTTPFileSystem
     http_fs_instance = FusionHTTPFileSystem(credentials=creds)
@@ -327,7 +327,7 @@ async def test_fetch_range_exception(
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:  # noqa: ASYNC101, ASYNC230
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     # Create an instance of FusionHTTPFileSystem
     http_fs_instance = FusionHTTPFileSystem(credentials=creds)
@@ -369,7 +369,7 @@ async def test_fetch_range_success(
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:  # noqa: ASYNC101, ASYNC230
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     # Create an instance of FusionHTTPFileSystem
     http_fs_instance = FusionHTTPFileSystem(credentials=creds)
@@ -410,7 +410,7 @@ def test_get(  # noqa: PLR0913
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     # Arrange
     fs = FusionHTTPFileSystem(credentials=creds)
@@ -468,7 +468,7 @@ def test_download(  # noqa: PLR0913
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     # Arrange
     fs = FusionHTTPFileSystem(credentials=creds)
@@ -525,7 +525,7 @@ def test_download_mkdir_logs_exception(
     credentials_file = tmp_path / "creds.json"
     with credentials_file.open("w") as f:
         json.dump(creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     # Arrange
     fs = FusionHTTPFileSystem(credentials=creds)

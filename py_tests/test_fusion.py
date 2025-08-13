@@ -13,8 +13,8 @@ import requests_mock
 from opensearchpy import OpenSearch
 from pytest_mock import MockerFixture
 
-from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
@@ -22,14 +22,8 @@ from fusion.report import Report
 from fusion.utils import _normalise_dt_param, distribution_to_url
 
 
-def test_rust_ok() -> None:
-    from fusion import rust_ok
-
-    assert rust_ok()
-
-
 def test__get_canonical_root_url() -> None:
-    from fusion.utils import _get_canonical_root_url
+    from fusion.utils import _get_canonical_root_url  # noqa: PLC0415
 
     some_url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
     root_url = "https://fusion.jpmorgan.com"
@@ -40,7 +34,7 @@ def test_fusion_credentials(example_creds_dict: dict[str, Any], tmp_path: Path) 
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    assert FusionCredentials.from_file(credentials_file)
+    assert FusionCredentials.from_file(str(credentials_file))
 
 
 def test_fusion_init(credentials: FusionCredentials) -> None:
@@ -60,7 +54,7 @@ def test_fusion_init_cred_value_error(example_creds_dict: dict[str, Any]) -> Non
     with pytest.raises(
         ValueError, match="credentials must be a path to a credentials file or FusionCredentials object"
     ) as error_info:
-        Fusion(credentials=example_creds_dict)  # type: ignore
+        Fusion(credentials=example_creds_dict)  # type: ignore[arg-type]
     assert str(error_info.value) == "credentials must be a path to a credentials file or FusionCredentials object"
 
 
@@ -68,7 +62,7 @@ def test_fusion_credentials_no_pxy(example_creds_dict_no_pxy: dict[str, Any], tm
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict_no_pxy, f)
-    assert FusionCredentials.from_file(credentials_file)
+    assert FusionCredentials.from_file(str(credentials_file))
 
 
 def test_fusion_credentials_empty_pxy(example_creds_dict_empty_pxy: dict[str, Any], tmp_path: Path) -> None:
@@ -76,7 +70,7 @@ def test_fusion_credentials_empty_pxy(example_creds_dict_empty_pxy: dict[str, An
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict_empty_pxy, f)
 
-    assert FusionCredentials.from_file(credentials_file)
+    assert FusionCredentials.from_file(str(credentials_file))
 
 
 def test_use_catalog(credentials: FusionCredentials) -> None:
@@ -100,7 +94,7 @@ def test_date_parsing() -> None:
 @pytest.mark.parametrize("ref_int", [-1, 0, 1, 2])
 @pytest.mark.parametrize("pluraliser", [None, "s", "es"])
 def test_res_plural(ref_int: int, pluraliser: str) -> None:
-    from fusion.authentication import _res_plural
+    from fusion.authentication import _res_plural  # noqa: PLC0415
 
     res = _res_plural(ref_int, pluraliser)
     if abs(ref_int) == 1:
@@ -110,7 +104,7 @@ def test_res_plural(ref_int: int, pluraliser: str) -> None:
 
 
 def test_is_url() -> None:
-    from fusion.authentication import _is_url
+    from fusion.authentication import _is_url  # noqa: PLC0415
 
     assert _is_url("https://www.google.com")
     assert _is_url("http://www.google.com/some/path?qp1=1&qp2=2")
@@ -1190,7 +1184,7 @@ def test_datasetmember_resources_fail(requests_mock: requests_mock.Mocker, fusio
     # Mock the response with an error status code
     requests_mock.get(url, status_code=500)
 
-    import pytest
+    import pytest  # noqa: PLC0415
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.datasetmember_resources(dataset, series, new_catalog)

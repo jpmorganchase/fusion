@@ -19,8 +19,8 @@ import pyarrow as pa
 from rich.progress import Progress
 from tabulate import tabulate
 
-from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute, Attributes
+from fusion.credentials import FusionCredentials
 from fusion.dataflow import InputDataFlow, OutputDataFlow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
@@ -75,7 +75,7 @@ class Fusion:
 
     @staticmethod
     def _call_for_dataframe(url: str, session: requests.Session) -> pd.DataFrame:
-        """Private function that calls an API endpoint and returns the data as a pandas dataframe, 
+        """Private function that calls an API endpoint and returns the data as a pandas dataframe,
         with pagination support.
         Args:
             url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
@@ -163,7 +163,7 @@ class Fusion:
             self.credentials = credentials
         elif isinstance(credentials, str):
             try:
-                self.credentials = FusionCredentials.from_file(Path(credentials))
+                self.credentials = FusionCredentials.from_file(credentials)
             except CredentialError as e:
                 if hasattr(e, "status_code"):
                     message = "Failed to load credentials. Please check the credentials file."
@@ -884,7 +884,7 @@ class Fusion:
             # sample data is limited to csv
             if dt_str == "sample":
                 dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
-            required_series = [(catalog, dataset, dt_str, dataset_format)]  # type: ignore[list-item]
+            required_series = [(catalog, dataset, dt_str, dataset_format)]
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
@@ -1138,7 +1138,7 @@ class Fusion:
             if dataframe_type == "pandas":
                 data_df = pd.concat(dataframes, ignore_index=True)
             if dataframe_type == "polars":
-                import polars as pl
+                import polars as pl  # noqa: PLC0415
 
                 data_df = pl.concat(dataframes, how="diagonal")  # type: ignore
 
@@ -1466,7 +1466,7 @@ class Fusion:
         local_url_eqiv = path_to_url(f"{dataset}__{catalog}__{series_member}.{distribution}", is_raw)
 
         data_map_df = pd.DataFrame(["", local_url_eqiv, file_name]).T
-        data_map_df.columns = ["path", "url", "file_name"]  # type: ignore[assignment]
+        data_map_df.columns = ["path", "url", "file_name"]  # type: ignore[list-item]
 
         res = upload_files(
             fs_fusion,
@@ -1506,13 +1506,13 @@ class Fusion:
         catalog = self._use_catalog(catalog)
         url = self.root_url if url is None else url
 
-        import asyncio
-        import json
-        import threading
+        import asyncio  # noqa: PLC0415
+        import json  # noqa: PLC0415
+        import threading  # noqa: PLC0415
 
-        from aiohttp_sse_client import client as sse_client
+        from aiohttp_sse_client import client as sse_client  # noqa: PLC0415
 
-        from .utils import get_client
+        from .utils import get_client  # noqa: PLC0415
 
         kwargs: dict[str, Any] = {}
         if last_event_id:
@@ -1591,7 +1591,7 @@ class Fusion:
         url = self.root_url if url is None else url
 
         if not in_background:
-            from sseclient import SSEClient
+            from sseclient import SSEClient  # noqa: PLC0415
 
             _ = self.catalog_resources()  # refresh token
             interrupted = False
@@ -2684,9 +2684,9 @@ class Fusion:
             OpenSearch: Fusion Embeddings Search client.
 
         """
-        from opensearchpy import OpenSearch
+        from opensearchpy import OpenSearch  # noqa: PLC0415
 
-        from fusion.embeddings import FusionEmbeddingsConnection
+        from fusion.embeddings import FusionEmbeddingsConnection  # noqa: PLC0415
 
         catalog = self._use_catalog(catalog)
         return OpenSearch(
@@ -2708,9 +2708,9 @@ class Fusion:
             OpenSearch: Fusion Embeddings Search client.
 
         """
-        from opensearchpy import AsyncOpenSearch
+        from opensearchpy import AsyncOpenSearch  # noqa: PLC0415
 
-        from fusion.embeddings import FusionAsyncHttpConnection
+        from fusion.embeddings import FusionAsyncHttpConnection  # noqa: PLC0415
 
         catalog = self._use_catalog(catalog)
         return AsyncOpenSearch(

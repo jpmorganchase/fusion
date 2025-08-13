@@ -166,13 +166,13 @@ class ReportAttributes:
         """
         Load ReportAttributes from various sources: list, DataFrame, .csv path, or JSON string.
         """
-        import json
+        import json  # noqa: PLC0415
 
         if isinstance(attributes_source, list):
             if all(isinstance(attr, ReportAttribute) for attr in attributes_source):
-                attributes_obj = ReportAttributes(attributes=cast(list[ReportAttribute], attributes_source))
+                attributes_obj = ReportAttributes(attributes=cast("list[ReportAttribute]", attributes_source))
             elif all(isinstance(attr, dict) for attr in attributes_source):
-                attributes_obj = self.from_dict_list(cast(list[dict[str, Any]], attributes_source))
+                attributes_obj = self.from_dict_list(cast("list[dict[str, Any]]", attributes_source))
             else:
                 raise TypeError("List must contain either ReportAttribute instances or dicts.")
         elif isinstance(attributes_source, pd.DataFrame):

@@ -22,7 +22,7 @@ from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 
 from .utils import _merge_responses, cpu_count, get_client, get_default_fs, get_session
@@ -55,7 +55,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             if isinstance(credentials, FusionCredentials):
                 self.credentials = credentials
             elif isinstance(credentials, str):
-                self.credentials = FusionCredentials.from_file(Path(credentials))
+                self.credentials = FusionCredentials.from_file(credentials)
             kwargs["client_kwargs"] = {
                 "credentials": self.credentials,
                 "root_url": "https://fusion.jpmorgan.com/api/v1/",
@@ -213,7 +213,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
                 next_token = self._extract_token_from_response(r)
                 if next_token:
-                    all_resources = out.get("resources", [])  # type: ignore
+                    all_resources = out.get("resources", [])
 
                     while next_token:
                         headers = kw.get("headers", {}).copy()
@@ -230,7 +230,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                         if not next_token:
                             break
 
-                    out["resources"] = all_resources  # type: ignore
+                    out["resources"] = all_resources
 
         if not is_file:
             out = [urljoin(clean_url + "/", x["identifier"]) for x in out["resources"]]  # type: ignore

@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.fusion import Fusion
 
 

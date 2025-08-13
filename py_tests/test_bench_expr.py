@@ -7,11 +7,6 @@ from typing import Any
 
 import pytest
 
-try:
-    from fusion._fusion import RustTestClass  # type: ignore
-except ImportError:
-    print("Ensure to build rust lib with --features experiments flag")  # noqa: T201
-
 
 class TestPy:
     def __init__(
@@ -99,95 +94,3 @@ def empty_file(tmp_path: Path) -> Path:
     with Path(in_file).open("w") as f:
         json.dump({}, f)
     return in_file
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="class__init__")
-def test_rs_py_cl(benchmark: Any) -> None:
-    benchmark.pedantic(TestPy, args=(1, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS)
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="class__init__")
-def test_rs_py_cl_ts(benchmark: Any) -> None:
-    benchmark.pedantic(TestPy, args=(1234, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS)
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="class__init__")
-def test_rs_rs_cls(benchmark: Any) -> None:
-    benchmark.pedantic(RustTestClass, args=(1, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS)
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="factory")
-def test_rs_py_fac(benchmark: Any) -> None:
-    benchmark.pedantic(TestPy.factory, args=(1, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS)
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="factory")
-def test_rs_rs_fac(benchmark: Any) -> None:
-    benchmark.pedantic(RustTestClass.factory, args=(1, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS)
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="class_w_file")
-def test_rs_py_fac_wf(benchmark: Any, example_file: Path) -> None:
-    benchmark.pedantic(
-        TestPy.factory_with_file, args=(example_file, 1, 2, "s1", "s2", "s3", "s4"), iterations=ITERS, rounds=ROUNDS
-    )
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="class_w_file")
-def test_rs_rs_fac_wf(benchmark: Any, example_file: Path) -> None:
-    benchmark.pedantic(
-        RustTestClass.factory_with_file,
-        args=(example_file, 1, 2, "s1", "s2", "s3", "s4"),
-        iterations=ITERS,
-        rounds=ROUNDS,
-    )
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="deser")
-def test_rs_py_fac_dsr(benchmark: Any, example_file: Path) -> None:
-    benchmark.pedantic(TestPy.factory_with_deser, args=(example_file,), iterations=ITERS, rounds=ROUNDS)
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="deser")
-def test_rs_rs_fac_dsr(benchmark: Any, example_file: Path) -> None:
-    benchmark.pedantic(RustTestClass.factory_with_file_serde, args=(example_file,), iterations=ITERS, rounds=ROUNDS)
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="factory_env")
-def test_rs_py_fac_env(benchmark: Any, empty_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("TEST_I64_1_VAR", "101")
-    monkeypatch.setenv("TEST_I64_2_VAR", "102")
-    monkeypatch.setenv("TEST_STR_1_VAR", "env_name_1")
-    monkeypatch.setenv("TEST_STR_2_VAR", "env_name_2")
-    monkeypatch.setenv("TEST_STR_3_VAR", "env_name_3")
-    monkeypatch.setenv("TEST_STR_4_VAR", "env_name_4")
-
-    benchmark.pedantic(TestPy.factory_with_deser, args=(empty_file,), iterations=ITERS, rounds=ROUNDS)
-
-
-@pytest.mark.experiments
-@pytest.mark.benchmark(group="factory_env")
-def test_rs_rs_fac_env(benchmark: Any, empty_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("TEST_I64_1_VAR", "101")
-    monkeypatch.setenv("TEST_I64_2_VAR", "102")
-    monkeypatch.setenv("TEST_STR_1_VAR", "env_name_1")
-    monkeypatch.setenv("TEST_STR_2_VAR", "env_name_2")
-    monkeypatch.setenv("TEST_STR_3_VAR", "env_name_3")
-    monkeypatch.setenv("TEST_STR_4_VAR", "env_name_4")
-
-    benchmark.pedantic(
-        RustTestClass.factory_with_file_serde,
-        args=(empty_file,),
-        iterations=ITERS,
-        rounds=ROUNDS,
-    )

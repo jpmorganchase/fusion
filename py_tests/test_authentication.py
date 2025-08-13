@@ -11,7 +11,6 @@ import fsspec
 import pytest
 from requests.adapters import HTTPAdapter
 
-from fusion._fusion import FusionCredentials
 from fusion._legacy.authentication import (
     try_get_client_id,
     try_get_client_secret,
@@ -19,6 +18,7 @@ from fusion._legacy.authentication import (
 from fusion.authentication import (
     FusionOAuthAdapter,
 )
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError, CredentialError
 from fusion.utils import (
     get_default_fs,
@@ -62,7 +62,7 @@ def test_from_file_relative_path_walkup_exists(tmp_path: Path, good_json: str) -
 
     with change_dir(dir_down_path):
         # Call the from_file method with a relative path
-        credentials = FusionCredentials.from_file(file_path=Path("client_credentials.json"))
+        credentials = FusionCredentials.from_file(file_path="client_credentials.json")
 
         # Verify that the credentials object is created correctly
         assert isinstance(credentials, FusionCredentials)
@@ -74,7 +74,7 @@ def test_from_file_file_not_found(tmp_path: Path) -> None:
     # Call the from_file method with a non-existent file
     missing_creds_file = tmp_path / "client_credentials.json"
     with pytest.raises(FileNotFoundError):
-        FusionCredentials.from_file(file_path=missing_creds_file)
+        FusionCredentials.from_file(file_path=str(missing_creds_file))
 
 
 def test_from_file_empty_file(tmp_path: Path) -> None:
@@ -84,7 +84,7 @@ def test_from_file_empty_file(tmp_path: Path) -> None:
 
     # Call the from_file method with an empty file
     with pytest.raises(CredentialError):
-        FusionCredentials.from_file(file_path=credentials_file)
+        FusionCredentials.from_file(file_path=str(credentials_file))
 
 
 def test_from_file_invalid_json(tmp_path: Path) -> None:
@@ -94,7 +94,7 @@ def test_from_file_invalid_json(tmp_path: Path) -> None:
 
     # Call the from_file method with invalid JSON
     with pytest.raises(CredentialError):
-        FusionCredentials.from_file(file_path=credentials_file)
+        FusionCredentials.from_file(file_path=str(credentials_file))
 
 
 class MockResponse:
@@ -161,7 +161,7 @@ def test_from_object_with_json_file(tmp_path: Path) -> None:
     with Path(credentials_file).open("w") as file:
         json.dump(credentials, file)
 
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     assert isinstance(creds, FusionCredentials)
     assert creds.client_id == "my_client_id"
@@ -218,7 +218,7 @@ def test_client_from_env_vars(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -
     creds_file = tmp_path / "creds.json"
     creds_file.write_text(json.dumps(creds_dict))
 
-    creds = FusionCredentials.from_file(creds_file)
+    creds = FusionCredentials.from_file(str(creds_file))
 
     assert creds.client_id == client_id
     assert creds.client_secret == client_secret

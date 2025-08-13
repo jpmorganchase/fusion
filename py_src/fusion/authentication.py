@@ -9,7 +9,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ class FusionOAuthAdapter(HTTPAdapter):
         if proxies:
             self.proxies = proxies
         else:
-            self.proxies = self.credentials.proxies
+            self.proxies = getattr(self.credentials, "proxies", {})
         self.token = None
         self.number_token_refreshes = 0
         self.refresh_within_seconds = refresh_within_seconds

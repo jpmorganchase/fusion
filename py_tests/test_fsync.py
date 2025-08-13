@@ -11,7 +11,7 @@ import fsspec
 import pandas as pd
 import pytest
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.fs_sync import (
     _download,
     _generate_sha256_token,
@@ -54,7 +54,7 @@ def test_download(
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     fs = FusionHTTPFileSystem(credentials=creds)
     lfs = mock_fs_class.return_value
@@ -94,7 +94,7 @@ def test_download_no_progress(
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     fs = FusionHTTPFileSystem(credentials=creds)
     lfs = mock_fs_class.return_value
@@ -130,7 +130,7 @@ def test_download_empty_df(
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     fs = FusionHTTPFileSystem(credentials=creds)
     lfs = mock_fs_class.return_value
@@ -164,7 +164,7 @@ def test_upload(
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
 
     fs = FusionHTTPFileSystem(credentials=creds)
     lfs = mock_fs_class.return_value

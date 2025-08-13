@@ -45,7 +45,7 @@ from .authentication import FusionAiohttpSession, FusionOAuthAdapter
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from fusion._fusion import FusionCredentials
+    from fusion.credentials import FusionCredentials
 
     from .types import PyArrowFilterT
 
@@ -312,7 +312,7 @@ def read_csv(  # noqa: PLR0912
                 if dataframe_type == "pandas":
                     res = res.to_pandas()
                 elif dataframe_type == "polars":
-                    import polars as pl
+                    import polars as pl  # noqa: PLC0415
 
                     res = pl.from_arrow(res)
                 else:
@@ -338,7 +338,7 @@ def read_csv(  # noqa: PLR0912
                     if dataframe_type == "pandas":
                         res = pd.read_csv(f, usecols=columns, index_col=False)
                     elif dataframe_type == "polars":
-                        import polars as pl
+                        import polars as pl  # noqa: PLC0415
 
                         res = pl.read_csv(f, columns=columns)
                     else:
@@ -391,7 +391,7 @@ def read_json(
             if dataframe_type == "pandas":
                 res = res.to_pandas()
             elif dataframe_type == "polars":
-                import polars as pl
+                import polars as pl  # noqa: PLC0415
 
                 res = pl.from_arrow(res)
             else:
@@ -417,7 +417,7 @@ def read_json(
                 if dataframe_type == "pandas":
                     res = pd.read_json(f)
                 elif dataframe_type == "polars":
-                    import polars as pl
+                    import polars as pl  # noqa: PLC0415
 
                     res = pl.read_json(f)
                 else:
@@ -454,7 +454,7 @@ def read_parquet(
     if dataframe_type == "pandas":
         return tbl.to_pandas()
     if dataframe_type == "polars":
-        import polars as pl
+        import polars as pl  # noqa: PLC0415
 
         return pl.from_arrow(tbl)
     else:
@@ -886,7 +886,7 @@ def make_list(obj: Any) -> list[str]:
         for i, _ in enumerate(lst):
             lst[i] = lst[i].strip()
     else:
-        lst = [cast(str, obj)]
+        lst = [cast("str", obj)]
 
     return lst
 
