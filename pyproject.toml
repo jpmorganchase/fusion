@@ -1,8 +1,10 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "pyfusion"
 version = "2.0.15"
-
-homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
 authors = [
     { name = "FusionDevs", email = "fusion_developers@jpmorgan.com" }
@@ -12,9 +14,7 @@ license = "Apache-2.0"
 classifiers = [
     'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',
-    'License :: OSI Approved :: Apache Software License',
     'Natural Language :: English',
-    'Programming Language :: Rust',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
@@ -35,16 +35,13 @@ dependencies = [
     "aiohttp >= 3.7.1",
     "rich >= 11.0.0",
     "certifi",
+    "jwt>=1.4.0",
 ]
 
-[build-system]
-requires = ["maturin>=1.6,<2.0"]
-build-backend = "maturin"
-
-[tool.maturin]
-python-source = "py_src"
-module-name = "fusion._fusion"
-features = ["pyo3/extension-module"]
+[project.urls]
+Homepage = "https://github.com/jpmorganchase/fusion"
+Repository = "https://github.com/jpmorganchase/fusion"
+Issues = "https://github.com/jpmorganchase/fusion/issues"
 
 [project.optional-dependencies]
 all = [
@@ -95,7 +92,6 @@ dev-dependencies = [
     "cffi>=1.16.0; sys_platform=='darwin'",
     "freezegun>=1.4.1",
     "ipython",
-    "maturin>=1.6,<2.0",
     "moto[s3]>=5.0.5",
     "mypy",
     "patchelf>=0.17.2.1; sys_platform=='linux'",
@@ -140,10 +136,10 @@ generate-hashes = true
 [tool.hatch.metadata]
 allow-direct-references = true
 
-[tool.hatch.build.targets.wheel]
-packages = [
-    "fusion"
-]
+[tool.setuptools.packages.find]
+where = ["py_src"]
+include = ["fusion*"]
+exclude = ["py_tests*", "py_integ*"]
 
 [tool.ruff]
 line-length = 120
@@ -226,7 +222,6 @@ disallow_untyped_defs = true
 html.show_contexts = true
 html.skip_covered = false
 
-
 [tool.coverage.run]
 parallel = true
 
@@ -269,9 +264,6 @@ values = [
     'dev',
     'release'
 ]
-
-[[tool.bumpversion.files]]
-filename = "Cargo.toml"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"

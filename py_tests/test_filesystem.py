@@ -41,7 +41,7 @@ def test_filesystem(
 
     assert FusionHTTPFileSystem(None, **kwargs)
 
-    kwargs = {"client_kwargs": {"credentials": 3.14}}  # type: ignore
+    kwargs = {"client_kwargs": {"credentials": 3.14}}
     with pytest.raises(ValueError, match="Credentials not provided"):
         FusionHTTPFileSystem(None, **kwargs)
 
@@ -503,13 +503,14 @@ def test_download(  # noqa: PLR0913
     else:
         assert result == (True, lpath, None)
 
+
 @patch.object(FusionHTTPFileSystem, "get", return_value=("mocked_return", "mocked_lpath", "mocked_extra"))
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
 @patch("fsspec.AbstractFileSystem", autospec=True)
 def test_download_mkdir_logs_exception(
     mock_fs_class: MagicMock,
-    mock_set_session: AsyncMock, # noqa: ARG001
-    mock_get: MagicMock, # noqa: ARG001
+    mock_set_session: AsyncMock,  # noqa: ARG001
+    mock_get: MagicMock,  # noqa: ARG001
     tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
 ) -> None:

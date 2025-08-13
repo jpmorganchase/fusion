@@ -61,7 +61,7 @@ class Attribute(metaclass=CamelCaseMeta):
 
     identifier: str
     index: int
-    data_type: Types = cast(Types, Types.String)
+    data_type: Types = Types.String
     title: str = ""
     description: str = ""
     is_dataset_key: bool = False
@@ -187,8 +187,8 @@ class Attribute(metaclass=CamelCaseMeta):
         series = series.rename(lambda x: x.replace(" ", "").replace("_", "").lower()).replace(
             to_replace=np.nan, value=None
         )
-        data_type = series.get("datatype", cast(Types, Types.String))
-        data_type = series.get("type", cast(Types, Types.String)) if data_type is None else data_type
+        data_type = series.get("datatype", Types.String)
+        data_type = series.get("type", Types.String) if data_type is None else data_type
         source = series.get("source", None)
         source = source.strip() if isinstance(source, str) else source
 
@@ -744,9 +744,9 @@ class Attributes:
         """
         if isinstance(attributes_source, list):
             if all(isinstance(attr, Attribute) for attr in attributes_source):
-                attributes = Attributes(cast(list[Attribute], attributes_source))
+                attributes = Attributes(cast("list[Attribute]", attributes_source))
             elif all(isinstance(attr, dict) for attr in attributes_source):
-                attributes = Attributes._from_dict_list(cast(list[dict[str, Any]], attributes_source))
+                attributes = Attributes._from_dict_list(cast("list[dict[str, Any]]", attributes_source))
         elif isinstance(attributes_source, pd.DataFrame):
             attributes = Attributes._from_dataframe(attributes_source)
         else:

@@ -80,7 +80,7 @@ class FusionOAuthAdapter(HTTPAdapter):
         if proxies:
             self.proxies = proxies
         else:
-            self.proxies = self.credentials.proxies
+            self.proxies = getattr(self.credentials, "proxies", {})
         self.token = None
         self.number_token_refreshes = 0
         self.refresh_within_seconds = refresh_within_seconds

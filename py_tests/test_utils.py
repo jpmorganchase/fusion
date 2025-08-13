@@ -219,9 +219,9 @@ def test_cpu_count_with_default_behavior(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_read_parquet_with_pandas_dataframe_type(sample_parquet_path: Path) -> None:
-    import pandas as pd
+    import pandas as pd  # noqa: PLC0415
 
-    from fusion.utils import read_parquet
+    from fusion.utils import read_parquet  # noqa: PLC0415
 
     # Test with default parameters
     dataframe = read_parquet(sample_parquet_path)
@@ -248,9 +248,9 @@ def test_read_parquet_with_pandas_dataframe_type(sample_parquet_path: Path) -> N
 
 
 def test_read_parquet_with_polars_dataframe_type(sample_parquet_path: Path) -> None:
-    import polars as pl
+    import polars as pl  # noqa: PLC0415
 
-    from fusion.utils import read_parquet
+    from fusion.utils import read_parquet  # noqa: PLC0415
 
     # Test with default parameters
     dataframe = read_parquet(sample_parquet_path, dataframe_type="polars")
@@ -282,7 +282,7 @@ def test_read_parquet_with_polars_dataframe_type(sample_parquet_path: Path) -> N
 
 
 def test_read_parquet_with_unknown_dataframe_type(sample_parquet_path: Path) -> None:
-    from fusion.utils import read_parquet
+    from fusion.utils import read_parquet  # noqa: PLC0415
 
     # Test with unknown dataframe type
     with pytest.raises(ValueError, match="Unknown DataFrame type"):
@@ -290,9 +290,9 @@ def test_read_parquet_with_unknown_dataframe_type(sample_parquet_path: Path) -> 
 
 
 def test_normalise_dt_param_with_datetime() -> None:
-    import datetime
+    import datetime  # noqa: PLC0415
 
-    from fusion.utils import _normalise_dt_param
+    from fusion.utils import _normalise_dt_param  # noqa: PLC0415
 
     dt = datetime.datetime(2022, 1, 1, tzinfo=datetime.timezone.utc)
     result = _normalise_dt_param(dt)
@@ -300,9 +300,9 @@ def test_normalise_dt_param_with_datetime() -> None:
 
 
 def test_normalise_dt_param_with_date() -> None:
-    import datetime
+    import datetime  # noqa: PLC0415
 
-    from fusion.utils import _normalise_dt_param
+    from fusion.utils import _normalise_dt_param  # noqa: PLC0415
 
     dt = datetime.date(2022, 1, 1)
     result = _normalise_dt_param(dt)
@@ -310,7 +310,7 @@ def test_normalise_dt_param_with_date() -> None:
 
 
 def test_normalise_dt_param_with_integer() -> None:
-    from fusion.utils import _normalise_dt_param
+    from fusion.utils import _normalise_dt_param  # noqa: PLC0415
 
     dt = 20220101
     result = _normalise_dt_param(dt)
@@ -318,7 +318,7 @@ def test_normalise_dt_param_with_integer() -> None:
 
 
 def test_normalise_dt_param_with_valid_string_format_1() -> None:
-    from fusion.utils import _normalise_dt_param
+    from fusion.utils import _normalise_dt_param  # noqa: PLC0415
 
     dt = "2022-01-01"
     result = _normalise_dt_param(dt)
@@ -326,7 +326,7 @@ def test_normalise_dt_param_with_valid_string_format_1() -> None:
 
 
 def test_normalise_dt_param_with_valid_string_format_2() -> None:
-    from fusion.utils import _normalise_dt_param
+    from fusion.utils import _normalise_dt_param  # noqa: PLC0415
 
     dt = "20220101"
     result = _normalise_dt_param(dt)
@@ -334,7 +334,7 @@ def test_normalise_dt_param_with_valid_string_format_2() -> None:
 
 
 def test_normalise_dt_param_with_valid_string_format_3() -> None:
-    from fusion.utils import _normalise_dt_param
+    from fusion.utils import _normalise_dt_param  # noqa: PLC0415
 
     dt = "20220101T1200"
     result = _normalise_dt_param(dt)
@@ -342,7 +342,7 @@ def test_normalise_dt_param_with_valid_string_format_3() -> None:
 
 
 def test_normalise_dt_param_with_invalid_format() -> None:
-    from fusion.utils import _normalise_dt_param
+    from fusion.utils import _normalise_dt_param  # noqa: PLC0415
 
     dt = "2022/01/01"
     with pytest.raises(ValueError, match="is not in a recognised data format"):
@@ -350,7 +350,7 @@ def test_normalise_dt_param_with_invalid_format() -> None:
 
 
 def test_normalise_dt_param_with_invalid_type() -> None:
-    from fusion.utils import _normalise_dt_param
+    from fusion.utils import _normalise_dt_param  # noqa: PLC0415
 
     dt = 32.23
     with pytest.raises(ValueError, match="is not in a recognised data format"):
@@ -480,7 +480,7 @@ def fs_local() -> MagicMock:
 
 @pytest.fixture
 def loop() -> pd.DataFrame:
-    import pandas as pd
+    import pandas as pd  # noqa: PLC0415
 
     data = {"url": ["url1", "url2"], "path": ["path1", "path2"]}
     return pd.DataFrame(data)
@@ -521,7 +521,7 @@ def test_filename_to_distribution() -> None:
 
 
 def test_distribution_to_url() -> None:
-    from fusion.utils import distribution_to_url
+    from fusion.utils import distribution_to_url  # noqa: PLC0415
 
     root_url = "https://api.fusion.jpmc.com/"
     catalog = "my_catalog"
@@ -555,7 +555,7 @@ def test_distribution_to_url() -> None:
 
 
 def test_distribution_to_filename() -> None:
-    from fusion.utils import distribution_to_filename
+    from fusion.utils import distribution_to_filename  # noqa: PLC0415
 
     root_dir = "/tmp"
     catalog = "my_catalog"
@@ -637,6 +637,7 @@ def test_validate_incorrect_format_file_names() -> None:
     expected = [False]
     assert validate_file_names(paths) == expected
 
+
 def test_validate_error_paths() -> None:
     paths = ["path/to/catalog1__20230101.csv"]
     expected = [False]
@@ -647,6 +648,7 @@ def test_empty_input_list() -> None:
     paths: list[str] = []
     expected: list[bool] = []
     assert validate_file_names(paths) == expected
+
 
 def test_get_session(mocker: MockerFixture, credentials: FusionCredentials, fusion_obj: Fusion) -> None:
     session = get_session(credentials, fusion_obj.root_url)
@@ -798,7 +800,7 @@ def test_make_list_from_nonstring() -> None:
     assert isinstance(obj_to_list, list)
     exp_len = 1
     assert len(obj_to_list) == exp_len
-    assert obj_to_list[0] == cast(str, any_obj)
+    assert obj_to_list[0] == cast("str", any_obj)
 
 
 def test_make_bool_string() -> None:
@@ -883,16 +885,19 @@ def test_snake_to_camel() -> None:
     exp_output = "thisIsSnake"
     assert output_ == exp_output
 
-def test_folder_does_not_exist(mock_fs_fusion: MagicMock)  -> None:
+
+def test_folder_does_not_exist(mock_fs_fusion: MagicMock) -> None:
     mock_fs_fusion.exists.return_value = False
     with pytest.raises(FileNotFoundError, match="does not exist"):
         validate_file_formats(mock_fs_fusion, "/nonexistent")
+
 
 def test_single_raw_file(mock_fs_fusion: MagicMock) -> None:
     mock_fs_fusion.makedirs("/test")
     mock_fs_fusion.touch("/test/file1.raw")
     # Should not raise
     validate_file_formats(mock_fs_fusion, "/test")
+
 
 def test_only_supported_files(mock_fs_fusion: MagicMock) -> None:
     mock_fs_fusion.makedirs("/data")
@@ -902,17 +907,15 @@ def test_only_supported_files(mock_fs_fusion: MagicMock) -> None:
     # Should not raise
     validate_file_formats(mock_fs_fusion, "/data")
 
+
 def test_multiple_raw_files(mock_fs_fusion: MagicMock) -> None:
     mock_fs_fusion.exists.return_value = True
-    mock_fs_fusion.find.return_value = [
-        "/mixed/file1.unknown",
-        "/mixed/file2.custom",
-        "/mixed/readme.txt"
-    ]
+    mock_fs_fusion.find.return_value = ["/mixed/file1.unknown", "/mixed/file2.custom", "/mixed/readme.txt"]
     mock_fs_fusion.info.side_effect = lambda _: {"type": "file"}
 
     with pytest.raises(ValueError, match="Multiple raw files detected"):
         validate_file_formats(mock_fs_fusion, "/mixed")
+
 
 @pytest.mark.parametrize(
     (
@@ -940,9 +943,8 @@ def test_file_name_to_url(
     expected_ext: str,
     expected_series: str,
 ) -> None:
-
     def mock_distribution_to_url(
-        root_url: str, # noqa: ARG001
+        root_url: str,  # noqa: ARG001
         dataset_arg: str,
         series: str,
         ext: str,
@@ -956,4 +958,3 @@ def test_file_name_to_url(
     result = file_name_to_url(file_name, dataset, catalog, is_download)
     expected_url = f"mock/{catalog}/{dataset}/{expected_series}.{expected_ext}?dl={is_download}"
     assert result == expected_url
-

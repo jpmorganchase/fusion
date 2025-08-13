@@ -9,7 +9,7 @@ import pytest
 
 @pytest.mark.benchmark(group="credentials")
 def test_rust_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
-    from fusion._fusion import FusionCredentials
+    from fusion.credentials import FusionCredentials  # noqa: PLC0415
 
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
@@ -24,7 +24,7 @@ def test_rust_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path
 
 
 def test_rust_creds_plain(benchmark: Any, example_creds_dict: dict[str, Any]) -> None:
-    from fusion._fusion import FusionCredentials
+    from fusion.credentials import FusionCredentials  # noqa: PLC0415
 
     benchmark.pedantic(
         FusionCredentials.__init__,
@@ -42,7 +42,7 @@ def test_rust_creds_plain(benchmark: Any, example_creds_dict: dict[str, Any]) ->
 
 @pytest.mark.benchmark(group="credentials")
 def test_py_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path: Path) -> None:
-    from fusion._legacy.authentication import FusionCredentials
+    from fusion._legacy.authentication import FusionCredentials  # noqa: PLC0415
 
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
@@ -54,13 +54,6 @@ def test_py_creds(benchmark: Any, example_creds_dict: dict[str, Any], tmp_path: 
         iterations=10,
         rounds=500,
     )
-
-
-@pytest.mark.benchmark(group="dummy")
-def test_rust_ok(benchmark: Any) -> None:
-    from fusion._fusion import rust_ok
-
-    benchmark.pedantic(rust_ok, iterations=200, rounds=10_000)
 
 
 def py_rust_ok_equiv() -> bool:

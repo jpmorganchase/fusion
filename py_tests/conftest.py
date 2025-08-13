@@ -10,8 +10,8 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from fusion._fusion import FusionCredentials
 from fusion.authentication import FusionOAuthAdapter
+from fusion.credentials import FusionCredentials
 from fusion.fusion import Fusion
 
 PathLike = Union[str, Path]
@@ -150,7 +150,7 @@ def credentials(example_creds_dict: dict[str, Any], tmp_path: Path) -> FusionCre
     credentials_file = tmp_path / "client_credentials.json"
     with Path(credentials_file).open("w") as f:
         json.dump(example_creds_dict, f)
-    creds = FusionCredentials.from_file(credentials_file)
+    creds = FusionCredentials.from_file(str(credentials_file))
     creds.put_bearer_token("my_token", 1800)
     return creds
 
