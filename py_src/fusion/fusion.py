@@ -2858,3 +2858,42 @@ class Fusion:
         return Report.link_attributes_to_terms(
             report_id=report_id, mappings=processed_mappings, client=self, return_resp_obj=return_resp_obj
         )
+
+    def list_distribution_files(
+    self,
+    dataset: str,
+    datasetseries: str,
+    file_format: str,
+    catalog: str | None = None,
+    output: bool = False,
+) -> pd.DataFrame:
+        """
+        List the available files for a specific dataset distribution.
+
+        Builds the files endpoint URL for the given dataset, dataset series,
+        file format, and catalog. Sends a GET request and returns the complete
+        file metadata as a pandas DataFrame.
+
+        Args:
+            dataset (str): A dataset identifier.
+            datasetseries (str): The dataset series identifier.
+            file_format (str): Format of the distribution files (e.g., "parquet", "csv").
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True, prints the DataFrame. Defaults to False.
+
+        Returns:
+            pandas.DataFrame: A DataFrame containing metadata for each available file
+            in the distribution.
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = (
+            f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+            f"{datasetseries}/distributions/{file_format}/files/"
+        )
+        files_df = Fusion._call_for_dataframe(url, self.session)
+
+        if output:
+            pass
+
+        return files_df

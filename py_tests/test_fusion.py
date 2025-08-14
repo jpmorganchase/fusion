@@ -3358,3 +3358,49 @@ def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fus
     resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
 
     assert resp is mock_resp
+
+def test_list_distribution_files(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
+    mock_data = {
+        "resources": [
+            {
+                "description": "Sample file 1",
+                "fileExtension": ".parquet",
+                "identifier": "file1",
+                "title": "File 1",
+                "@id": "file1"
+            },
+            {
+                "description": "Sample file 2",
+                "fileExtension": ".parquet",
+                "identifier": "file2",
+                "title": "File 2",
+                "@id": "file2"
+            }
+        ]
+    }
+
+    catalog = "common"
+    dataset = "test_dataset"
+    datasetseries = "test_series"
+    file_format = "parquet"
+
+    url = (
+        f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+        f"{datasetseries}/distributions/{file_format}/files/"
+    )
+
+    requests_mock.get(url, json=mock_data)
+  
+    distribution_files_df = fusion_obj.list_distribution_files(
+        dataset=dataset,
+        datasetseries=datasetseries,
+        file_format=file_format,
+        catalog=catalog
+    )
+
+    # Assertions
+    assert isinstance(distribution_files_df, pd.DataFrame)
+    EXPECTED_FILE_COUNT = 2
+    assert len(distribution_files_df) == EXPECTED_FILE_COUNT
+    assert set(distribution_files_df.columns) >= {"description", "fileExtension", "identifier", "title", "@id"}
+    assert distribution_files_df["@id"].tolist() == ["file1", "file2"]
