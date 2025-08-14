@@ -892,20 +892,7 @@ class Fusion:
         )
 
         # check that format is valid and if none, check if there is only one format available
-        available_formats = list(self.list_datasetmembers_distributions(dataset, catalog)["format"].unique())
-        if dataset_format and dataset_format not in available_formats:
-            raise FileFormatError(
-                f"Dataset format {dataset_format} is not available for {dataset} in catalog {catalog}. "
-                f"Available formats are {available_formats}."
-            )
-        if dataset_format is None:
-            if len(available_formats) == 1:
-                dataset_format = available_formats[0]
-            else:
-                raise FileFormatError(
-                    f"Multiple formats found for {dataset} in catalog {catalog}. Dataset format is required to"
-                    f"download. Available formats are {available_formats}."
-                )
+        dataset_format = self._validate_format(dataset, catalog, dataset_format)
 
         if valid_date_range.match(dt_str) or dt_str == "latest":
             required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
@@ -913,6 +900,16 @@ class Fusion:
             # sample data is limited to csv
             if dt_str == "sample":
                 dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
+            # Check if dt_str exists as a series member
+            dataset_members_df = self.list_datasetmembers(dataset, catalog)
+            if dt_str not in dataset_members_df["identifier"].to_numpy():
+                raise APIResponseError(
+                    ValueError(
+                        f"datasetseries '{dt_str}' not found for dataset '{dataset}' in catalog '{catalog}'"
+                        f"for the given date/date range ({dt_str})."
+                    ),
+                    status_code=404,
+                )
             required_series = [(catalog, dataset, dt_str, dataset_format)]  # type: ignore[list-item]
 
         if not required_series:
@@ -990,8 +987,30 @@ class Fusion:
                     warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
         return res if return_paths else None
 
+    def _validate_format(
+        self,
+        dataset: str,
+        catalog: str,
+        dataset_format: str | None,
+    ) -> str:
+        available_formats = list(self.list_datasetmembers_distributions(dataset, catalog)["format"].unique())
+        if dataset_format and dataset_format not in available_formats:
+            raise FileFormatError(
+                f"Dataset format {dataset_format} is not available for {dataset} in catalog {catalog}. "
+                f"Available formats are {available_formats}."
+            )
+        if dataset_format is None:
+            if len(available_formats) == 1:
+                return available_formats[0]  # type: ignore[return-value]
+            else:
+                raise FileFormatError(
+                    f"Multiple formats found for {dataset} in catalog {catalog}. Dataset format is required to"
+                    f"download. Available formats are {available_formats}."
+                )
+        return dataset_format
+
     async def _async_stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
-        """Return async stream of a file fro mthe given url.
+        """Return async stream of a file from the given url.
 
         Args:
             url (str): File url. Appends Fusion.root_url if http prefix not present.
