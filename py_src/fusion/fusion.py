@@ -1001,7 +1001,7 @@ class Fusion:
             )
         if dataset_format is None:
             if len(available_formats) == 1:
-                return available_formats[0]  # type: ignore[return-value]
+                return str(available_formats[0])
             else:
                 raise FileFormatError(
                     f"Multiple formats found for {dataset} in catalog {catalog}. Dataset format is required to"
