@@ -1,6 +1,6 @@
 # Downloading Data with the `Fusion` Class
 
-The `Fusion` class provides powerful methods to retrieve your data from the Fusion Data Management Platform. It allows you to download datasets, convert them into Pandas DataFrames, or retrieve them as in-memory bytes objects for flexible data handling. The primary methods for downloading and processing data are `download()`, `to_df()`, `to_table()`, and `to_bytes()`.
+The `Fusion` class provides powerful methods to retrieve your data from the Fusion Data Management Platform. It allows you to download datasets, convert them into Pandas DataFrames, or retrieve them as in-memory bytes objects for flexible data handling. The primary methods for downloading and processing data are `download()`, `to_df()`, `to_table()`, and `to_bytes()`. We will also demonstrate how to download using `fsync()`.
 
 ---
 
@@ -412,3 +412,60 @@ data_bytes = fusion.to_bytes(
 !!! note
     The ``to_bytes()`` method is ideal for scenarios where you need to process data without saving it to disk.
     The returned ``BytesIO`` object can be used directly with libraries that support in-memory file-like objects.
+
+## Downloading with the `fsync()` Module
+
+### Overview
+The `fsync()` module provides advanced synchronization between your local filesystem and the Fusion Data Management Platform. When downloading, it creates a local folder structure that mirrors the Fusion file system, making it easy to organize and manage your data.
+
+### How It Works
+- The `fsync()` function can synchronize files in either direction: **download** (Fusion → local) or **upload** (local → Fusion).
+- When downloading, it will create directories and files locally that match the structure in Fusion, including catalog, dataset, and series member folders.
+- The function uses checksums to ensure only new or changed files are downloaded, and supports parallel downloads and progress tracking.
+
+### Example Usage
+
+```python
+from fusion import Fusion
+from fusion.fs_sync import fsync
+import fsspec
+
+client = Fusion()
+fs_fusion = client.get_fusion_file_system()
+fs_local = fsspec.filesystem('file')
+
+fsync(
+    fs_fusion=fs_fusion,
+    fs_local=fs_local,
+    datasets=["<your_dataset_id>"],
+    dataset_format="<your_dataset_format>",
+    catalog="<your_catalog_id>",
+    direction="download"
+)
+```
+
+### Resulting Directory Structure
+After running the above code, your local directory will look like:
+
+```<catalog_id>/<dataset_id>/<seriesmember_id>/<DATASET_ID>__<catalog_id>__<seriesmember_id>.<fileext>```
+
+
+If your dataset has **many series members**, `fsync()` will synchronize **all available series members**. For example, if you download dataset `MY_DATASET` from catalog `my_catalog` and it contains multiple series members (`20250430`, `20250501`, `20250502`, etc.), your directory will look like:
+
+```my_catalog/MY_DATASET/20250430/MY_DATASET__my_catalog__20250430.csv```
+```my_catalog/MY_DATASET/20250430/MY_DATASET__my_catalog__20250501.csv```
+```my_catalog/MY_DATASET/20250430/MY_DATASET__my_catalog__20250502.csv```
+
+!!! tip 
+    Use ```show_progress=True``` to monitor download progress.
+    The folder structure makes it easy to locate and manage specific dataset versions.
+    You can also use `fsync()` for uploads by setting ```direction="upload"```.
+
+!!! note
+    The `fsync()` module is ideal for bulk synchronization and for maintaining a local mirror of your Fusion datasets.
+
+Refer to the `fsync()` module [page](fsync.md) for more details.
+
+
+
+
