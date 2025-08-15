@@ -3359,7 +3359,7 @@ def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fus
 
     assert resp is mock_resp
 
-def test_list_distribution_files(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
+def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     mock_data = {
         "resources": [
             {
@@ -3381,26 +3381,50 @@ def test_list_distribution_files(fusion_obj: Fusion, requests_mock: requests_moc
 
     catalog = "common"
     dataset = "test_dataset"
-    datasetseries = "test_series"
+    series = "test_series"
     file_format = "parquet"
 
     url = (
         f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-        f"{datasetseries}/distributions/{file_format}/files/"
+        f"{series}/distributions/{file_format}/files"
     )
 
     requests_mock.get(url, json=mock_data)
-  
-    distribution_files_df = fusion_obj.list_distribution_files(
-        dataset=dataset,
-        datasetseries=datasetseries,
-        file_format=file_format,
-        catalog=catalog
-    )
 
-    # Assertions
-    assert isinstance(distribution_files_df, pd.DataFrame)
-    EXPECTED_FILE_COUNT = 2
-    assert len(distribution_files_df) == EXPECTED_FILE_COUNT
-    assert set(distribution_files_df.columns) >= {"description", "fileExtension", "identifier", "title", "@id"}
-    assert distribution_files_df["@id"].tolist() == ["file1", "file2"]
+    # Case 1: Default (max_results = -1) → return all rows
+    df_all = fusion_obj.list_distribution_files(
+        dataset=dataset,
+        series=series,
+        file_format=file_format,
+        catalog=catalog,
+        max_results=-1
+    )
+    assert isinstance(df_all, pd.DataFrame)
+    TOTAL_FILES = 2
+    assert len(df_all) == TOTAL_FILES
+    assert set(df_all.columns) >= {"description", "fileExtension", "identifier", "title", "@id"}
+    assert df_all["@id"].tolist() == ["file1", "file2"]
+
+    # Case 2: Limit to max_results = 1
+    MAX_RESULTS=1
+    df_limited = fusion_obj.list_distribution_files(
+        dataset=dataset,
+        series=series,
+        file_format=file_format,
+        catalog=catalog,
+        max_results=MAX_RESULTS
+    )
+    
+    assert len(df_limited) == MAX_RESULTS
+    assert df_limited["@id"].tolist() == ["file1"]
+
+    # Case 3: Limit higher than available rows → returns all
+    df_over_limit = fusion_obj.list_distribution_files(
+        dataset=dataset,
+        series=series,
+        file_format=file_format,
+        catalog=catalog,
+        max_results=10
+    )
+    assert len(df_over_limit) == TOTAL_FILES
+    assert df_over_limit["@id"].tolist() == ["file1", "file2"]

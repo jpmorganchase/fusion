@@ -2731,8 +2731,7 @@ class Fusion:
                 Args:
                     dataset (str): Dataset identifier.
                     catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-                    output (bool, optional): If True then print the dataframe. Defaults to False.
-        F
+        
                 Returns:
                     pd.DataFrame: A dataframe with a row for each dataset member distribution.
 
@@ -2860,26 +2859,24 @@ class Fusion:
         )
 
     def list_distribution_files(
-    self,
-    dataset: str,
-    datasetseries: str,
-    file_format: str,
-    catalog: str | None = None,
-    output: bool = False,
-) -> pd.DataFrame:
-        """
-        List the available files for a specific dataset distribution.
-
-        Builds the files endpoint URL for the given dataset, dataset series,
-        file format, and catalog. Sends a GET request and returns the complete
-        file metadata as a pandas DataFrame.
+        self,
+        dataset: str,
+        series: str,
+        file_format: str | None = "parquet",
+        catalog: str | None = None,
+        output: bool = False,
+        max_results: int = -1,
+    ) -> pd.DataFrame:
+        """ List the available files for a specific dataset distribution.
 
         Args:
             dataset (str): A dataset identifier.
-            datasetseries (str): The dataset series identifier.
-            file_format (str): Format of the distribution files (e.g., "parquet", "csv").
+            series (str): The dataset series identifier.
+            file_format (str): Format of the distribution files (e.g., "parquet", "csv"). Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
             output (bool, optional): If True, prints the DataFrame. Defaults to False.
+            max_results (int, optional): Limit the number of rows returned in the DataFrame.
+                Defaults to -1 which returns all results.
 
         Returns:
             pandas.DataFrame: A DataFrame containing metadata for each available file
@@ -2889,9 +2886,12 @@ class Fusion:
 
         url = (
             f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-            f"{datasetseries}/distributions/{file_format}/files/"
+            f"{series}/distributions/{file_format}/files"
         )
         files_df = Fusion._call_for_dataframe(url, self.session)
+
+        if max_results > -1:
+            files_df = files_df.iloc[:max_results]
 
         if output:
             pass
