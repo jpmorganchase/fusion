@@ -88,7 +88,15 @@ class Fusion:
         """
         response = session.get(url)
         response.raise_for_status()
-        table = response.json()["resources"]
+        json_data = response.json()
+
+        # Check if 'resources' key exists and is not empty
+        if "resources" not in json_data or not json_data["resources"]:
+            raise APIResponseError(
+                ValueError("No Data Found"),
+            )
+        
+        table = json_data["resources"]
         ret_df = pd.DataFrame(table).reset_index(drop=True)
         return ret_df
 
