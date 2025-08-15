@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version < '3.10'",
@@ -3230,7 +3231,7 @@ wheels = [
 
 [[package]]
 name = "pyfusion"
-version = "2.0.16"
+version = "2.0.17.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -3377,6 +3378,7 @@ requires-dist = [
     { name = "sseclient", marker = "extra == 'events'" },
     { name = "tabulate", specifier = ">=0.8" },
 ]
+provides-extras = ["all", "doc", "aws", "gcs", "azr", "polars", "events", "embeddings"]
 
 [package.metadata.requires-dev]
 dev = [

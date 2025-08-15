@@ -1,4 +1,4 @@
-"""Fusion Product class and functions."""
+"""Fusion Attributes class and functions."""
 
 from __future__ import annotations
 
