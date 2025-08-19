@@ -27,6 +27,7 @@ from fusion.fusion_types import Types
 from fusion.product import Product
 from fusion.report import Report, ReportsWrapper
 from fusion.report_attributes import ReportAttribute, ReportAttributes
+from fusion.dataflow import Dataflow
 
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError, CredentialError, FileFormatError
@@ -260,7 +261,7 @@ class Fusion:
         """
         Returns a modified version of the root URL to support the new API format.
 
-        This method temporarily strips trailing segments such as "/api/v1/" or "/v1/"
+        This method temporarily strips trailing segments such as "/api/v1/" or "/v1/"   
         from the original `root_url` to align with an updated API base path format.
 
         Returns:
@@ -2816,6 +2817,52 @@ class Fusion:
         )
         report_obj.client = self
         return report_obj
+
+    def dataflow(  # noqa: PLR0913
+        self,
+        provider_node: dict[str, str],
+        consumer_node: dict[str, str],
+        description: str | None = None,
+        alternative_id: dict[str, Any] | None = None,
+        transport_type: str | None = None,
+        frequency: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        boundary_sets: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> Dataflow:
+        """
+        Instantiate a Dataflow object with the current Fusion client attached.
+
+        Args:
+            provider_node (dict[str, str]): Source node details. Should include "name" and "dataNodeType".
+            consumer_node (dict[str, str]): Destination node details. Should include "name" and "dataNodeType".
+            description (str, optional): Description of the dataflow.
+            alternative_id (dict[str, Any], optional): Alternate identifiers for the dataflow.
+            transport_type (str, optional): Transport mechanism (e.g., "Batch", "Streaming").
+            frequency (str, optional): How often the flow occurs (e.g., "Daily").
+            start_time (str, optional): When the flow starts (ISO timestamp).
+            end_time (str, optional): When the flow ends (ISO timestamp).
+            boundary_sets (list[dict[str, Any]], optional): List of boundary set details.
+            **kwargs (Any): Additional optional fields.
+
+        Returns:
+            Dataflow: A Dataflow object ready for API upload or further manipulation.
+        """
+        df_obj = Dataflow(
+            providerNode=provider_node,
+            consumerNode=consumer_node,
+            description=description,
+            alternativeId=alternative_id,
+            transportType=transport_type,
+            frequency=frequency,
+            startTime=start_time,
+            endTime=end_time,
+            boundarySets=boundary_sets or [],
+            **kwargs,
+        )
+        df_obj.client = self
+        return df_obj
 
 
 

@@ -119,22 +119,23 @@ class Dataflow(metaclass=CamelCaseMeta):
         client = self._use_client(client)
         data = self.to_dict()
 
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows"
+        url = f"https://ifusion.test.aws.jpmchase.net/api/corelineage-service/v1/dataflows"
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
 
     def put(self, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
-    """Replace a dataflow entirely using PUT."""
-    client = self._use_client(client)
-    if not hasattr(self, "id") or not self.id:
-        raise ValueError("Dataflow ID is required for update.")
+        """Replace a dataflow entirely using PUT."""
+        client = self._use_client(client)
+        if not hasattr(self, "id") or not self.id:
+            raise ValueError("Dataflow ID is required for update.")
 
-    url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows/{self.id}"
-    resp = client.session.put(url, json=self.to_dict())
-    requests_raise_for_status(resp)
-    return resp if return_resp_obj else None
+        url = f"https://ifusion.test.aws.jpmchase.net/api/corelineage-service/v1/dataflows/{self.id}"
+        
+        resp = client.session.put(url, json=self.to_dict())
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
 
 
 
