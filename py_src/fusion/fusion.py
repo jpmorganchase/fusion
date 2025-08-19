@@ -2828,7 +2828,7 @@ class Fusion:
         start_time: str | None = None,
         end_time: str | None = None,
         boundary_sets: list[dict[str, Any]] | None = None,
-        data_assets: list[dict[str, Any]] = field(default_factory=list),
+        data_assets: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> Dataflow:
         """
