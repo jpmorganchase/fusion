@@ -36,6 +36,7 @@ class Dataflow(metaclass=CamelCaseMeta):
     startTime: str | None = None
     endTime: str | None = None
     boundarySets: list[dict[str, Any]] = field(default_factory=list)
+    dataAssets: list[dict[str, Any]] = field(default_factory=list)
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 

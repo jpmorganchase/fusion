@@ -2829,6 +2829,7 @@ class Fusion:
         start_time: str | None = None,
         end_time: str | None = None,
         boundary_sets: list[dict[str, Any]] | None = None,
+        data_assets: list[dict[str, Any]] = field(default_factory=list),
         **kwargs: Any,
     ) -> Dataflow:
         """
@@ -2859,6 +2860,7 @@ class Fusion:
             startTime=start_time,
             endTime=end_time,
             boundarySets=boundary_sets or [],
+            dataAssets=data_assets or [],
             **kwargs,
         )
         df_obj.client = self
