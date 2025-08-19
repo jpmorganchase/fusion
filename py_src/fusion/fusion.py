@@ -93,7 +93,7 @@ class Fusion:
         # Check if 'resources' key exists and is not empty
         if "resources" not in json_data or not json_data["resources"]:
             raise APIResponseError(
-                ValueError("No Data Found"),
+                ValueError("No data found"),
             )
         
         table = json_data["resources"]
