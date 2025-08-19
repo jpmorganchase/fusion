@@ -120,7 +120,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         client = self._use_client(client)
         data = self.to_dict()
 
-        url = f"https://ifusion.test.aws.jpmchase.net/api/corelineage-service/v1/dataflows"
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows"
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
 
@@ -132,7 +132,8 @@ class Dataflow(metaclass=CamelCaseMeta):
         if not hasattr(self, "id") or not self.id:
             raise ValueError("Dataflow ID is required for update.")
 
-        url = f"https://ifusion.test.aws.jpmchase.net/api/corelineage-service/v1/dataflows/{self.id}"
+
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows/{self.id}"
         
         resp = client.session.put(url, json=self.to_dict())
         requests_raise_for_status(resp)
