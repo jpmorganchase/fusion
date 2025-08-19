@@ -21,7 +21,6 @@ from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute, Attributes
-from fusion.dataflow import InputDataFlow, OutputDataFlow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
