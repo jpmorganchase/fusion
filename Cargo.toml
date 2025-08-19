@@ -1,6 +1,6 @@
 [package]
 name = "pyfusion"
-version = "2.0.17-dev0"
+version = "2.0.17"
 edition = "2021"
 
 
