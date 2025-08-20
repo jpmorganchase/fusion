@@ -25,12 +25,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 @dataclass
-class Dataflow(metaclass=CamelCaseMeta):
-    id: str | None = None  
+class Dataflow(metaclass=CamelCaseMeta): 
     providerNode: dict[str, str]
     consumerNode: dict[str, str]
 
     description: str | None = None
+    id: str | None = None 
     alternativeId: dict[str, Any] | None = None
     transportType: str | None = None
     frequency: str | None = None
