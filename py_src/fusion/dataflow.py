@@ -165,19 +165,46 @@ class Dataflow(metaclass=CamelCaseMeta):
         return resp if return_resp_obj else None
 
 
-
-    def put(self, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
-        """Replace a dataflow entirely using PUT."""
+    def update(
+        self,
+        id: str | None = None,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Full replace (PUT) this Dataflow at the given ID (or self.id if present)."""
         client = self._use_client(client)
-        if not hasattr(self, "id") or not self.id:
-            raise ValueError("Dataflow ID is required for update.")
+        target_id = id or self.id
+        if not target_id:
+            raise ValueError("Dataflow ID is required for update (pass id= or call create() first).")
 
-
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows/{self.id}"
-        
-        resp = client.session.put(url, json=self.to_dict())
+        payload = self.to_dict(drop_none=True, exclude={"id"})
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
+        resp: requests.Response = client.session.put(url, json=payload)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
+    def update_fields(
+        self,
+        changes: dict[str, Any],
+        id: str | None = None,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Partial update (PATCH) of fields at the given ID (or self.id if present).
+
+        `changes` can use snake_case keys; they are sent to the API as camelCase.
+        """
+        client = self._use_client(client)
+        target_id = id or self.id
+        if not target_id:
+            raise ValueError("Dataflow ID is required for update_fields (pass id= or call create() first).")
+
+        patch_body = {snake_to_camel(k): v for k, v in changes.items()}
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
+        resp: requests.Response = client.session.patch(url, json=patch_body)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
+
 
 
 
