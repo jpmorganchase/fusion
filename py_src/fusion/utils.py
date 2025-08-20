@@ -572,6 +572,7 @@ def distribution_to_url(
     file_format: str,
     catalog: str = "common",
     is_download: bool = False,
+    filename: str | None = None,
 ) -> str:
     """Returns the API URL to download a dataset distribution.
 
@@ -594,7 +595,7 @@ def distribution_to_url(
     if is_download:
         return (
             f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-            f"{datasetseries}/distributions/{file_format}/operationType/download"
+            f"{datasetseries}/distributions/{file_format}/files/operationType/download?file={filename}"
         )
     return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
 

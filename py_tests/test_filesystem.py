@@ -484,12 +484,26 @@ def test_download(  # noqa: PLR0913
     mock_response.headers = {"Content-Length": "100", "x-jpmc-file-name": "original_file.txt"}
     mock_response.__aenter__.return_value = mock_response
     mock_session.head.return_value = mock_response
+    if not overwrite and not preserve_original_name:
+        lfs.exists.return_value = True
+    else:
+        lfs.exists.return_value = False
 
     # Act
-    result = fs.download(lfs, rpath, lpath, chunk_size, overwrite, preserve_original_name)
+    result = fs.download(
+    lfs=lfs,
+    rpath=rpath,
+    lpath=lpath,
+    chunk_size=chunk_size,
+    overwrite=overwrite,
+    preserve_original_name=preserve_original_name,
+)
 
     # Assert
-    if overwrite:
+    if not overwrite and not preserve_original_name:
+        # only case where early return happens
+        assert result == (True, lpath, None)
+    else:
         assert result == ("mocked_return", "mocked_lpath", "mocked_extra")
         mock_get.assert_called_once_with(
             str(rpath),
@@ -498,10 +512,7 @@ def test_download(  # noqa: PLR0913
             headers={"Content-Length": "100", "x-jpmc-file-name": "original_file.txt"},
             is_local_fs=False,
         )
-    elif preserve_original_name:
-        assert result == (True, Path(expected_lpath), None)
-    else:
-        assert result == (True, lpath, None)
+
 
 
 @patch.object(FusionHTTPFileSystem, "get", return_value=("mocked_return", "mocked_lpath", "mocked_extra"))

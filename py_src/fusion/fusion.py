@@ -803,7 +803,7 @@ class Fusion:
 
         return tups
 
-    def download(  # noqa: PLR0912, PLR0913
+    def download(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         dataset: str,
         dt_str: str = "latest",
@@ -816,6 +816,7 @@ class Fusion:
         return_paths: bool = False,
         partitioning: str | None = None,
         preserve_original_name: bool = False,
+        filename: str | list[str] = "ALL",
     ) -> list[tuple[bool, str, str | None]] | None:
         """Downloads the requested distributions of a dataset to disk.
 
@@ -848,8 +849,7 @@ class Fusion:
         dataset_resp = self.session.get(f"{self.root_url}catalogs/{catalog}/datasets/{dataset}")
         requests_raise_for_status(dataset_resp)
 
-        access_status = dataset_resp.json().get("status")
-        if access_status != "Subscribed":
+        if dataset_resp.json().get("status") != "Subscribed":
             raise APIResponseError(
                 ValueError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access."),
                 status_code=401,
@@ -906,30 +906,45 @@ class Fusion:
                 self.fs.mkdir(d, create_parents=True)
 
         n_par = cpu_count(n_par)
-        download_spec = [
+        # handle filenames
+        filenames: list[str]
+        if filename == "ALL":
+            df_files = self.list_distribution_files(dataset, dt_str, dataset_format, catalog)
+            filenames = [fid.rstrip("/") for fid in df_files["@id"].tolist()]
+        elif isinstance(filename, str):
+            filenames = [filename.rstrip("/")]
+        else:
+            filenames = [f.rstrip("/") for f in filename]
+
+        download_spec = []
+        download_spec.extend(
+            [
             {
                 "lfs": self.fs,
                 "rpath": distribution_to_url(
-                    self.root_url,
-                    series[1],
-                    series[2],
-                    series[3],
-                    series[0],
-                    is_download=True,
+                self.root_url,
+                series[1],
+                series[2],
+                series[3],
+                series[0],
+                is_download=True,
+                filename=fname,
                 ),
                 "lpath": distribution_to_filename(
-                    download_folders[i],
-                    series[1],
-                    series[2],
-                    series[3],
-                    series[0],
-                    partitioning=partitioning,
+                download_folders[i],
+                series[1],
+                series[2],
+                series[3],
+                series[0],
+                partitioning=partitioning,
                 ),
                 "overwrite": force_download,
                 "preserve_original_name": preserve_original_name,
             }
+            for fname in filenames
+            ]
             for i, series in enumerate(required_series)
-        ]
+        )
 
         logger.log(
             VERBOSE_LVL,
