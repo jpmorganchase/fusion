@@ -1485,7 +1485,7 @@ async def test_close_method(mock_session_class: AsyncMock) -> None:
     mock_session = AsyncMock()
     mock_session_class.return_value = mock_session
 
-    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+    conn = FusionAsyncHttpConnection(host="localhost", credentials=MagicMock(spec=FusionCredentials))
     conn.session = mock_session  # Set the mocked session
 
     await conn.close()

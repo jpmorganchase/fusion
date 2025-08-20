@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from fusion import Fusion
 
+
 @dataclass
 class ReportAttribute(metaclass=CamelCaseMeta):
     title: str
@@ -102,10 +103,10 @@ class ReportAttributes:
 
     def remove_attribute(self, name: str) -> bool:
         for attr in self.attributes:
-            if attr.name == name:
+            if attr.title == name:
                 self.attributes.remove(attr)
                 return True
-        return False    
+        return False
 
     def get_attribute(self, name: str) -> ReportAttribute | None:
         for attr in self.attributes:
@@ -115,26 +116,23 @@ class ReportAttributes:
 
     def to_dict(self) -> dict[str, list[dict[str, Any]]]:
         return {"attributes": [attr.to_dict() for attr in self.attributes]}
-    
+
     def from_dict_list(self, data: list[dict[str, Any]]) -> ReportAttributes:
         attributes = [ReportAttribute(**attr_data) for attr_data in data]
         result = ReportAttributes(attributes=attributes)
-        result.client = self._client  
+        result.client = self._client
         return result
-
 
     def from_dataframe(self, data: pd.DataFrame) -> ReportAttributes:
         data = data.where(data.notna(), None)
         attributes = [ReportAttribute(**series.dropna().to_dict()) for _, series in data.iterrows()]
         result = ReportAttributes(attributes=attributes)
-        result.client = self._client  
+        result.client = self._client
         return result
-
-
 
     def from_csv(self, file_path: str) -> ReportAttributes:
         """Load ReportAttributes from a CSV file with custom column mappings and ignore irrelevant columns."""
-        df = pd.read_csv(file_path) #noqa
+        df = pd.read_csv(file_path)  # noqa
 
         # Only keep relevant columns
         column_map = {
@@ -144,10 +142,10 @@ class ReportAttributes:
         }
 
         # Filter to only needed columns (drop all others)
-        df = df[[col for col in column_map if col in df.columns]] # noqa
+        df = df[[col for col in column_map if col in df.columns]]  # noqa
 
         # Rename to match ReportAttribute fields
-        df = df.rename(columns=column_map) # noqa
+        df = df.rename(columns=column_map)  # noqa
 
         # Add any missing required fields with default None
         for col in ["technicalDataType", "path"]:
@@ -155,19 +153,14 @@ class ReportAttributes:
                 df[col] = None
 
         # Replace NaN/missing values with None
-        df = df.where(pd.notna(df), None) # noqa
+        df = df.where(pd.notna(df), None)  # noqa
 
         return self.from_dataframe(df)
 
-
-
-    def from_object( 
+    def from_object(
         self,
-        attributes_source: Union[ # noqa
-            list[ReportAttribute], 
-            list[dict[str, Any]], 
-            pd.DataFrame, 
-            str
+        attributes_source: Union[  # noqa
+            list[ReportAttribute], list[dict[str, Any]], pd.DataFrame, str
         ],
     ) -> ReportAttributes:
         """
@@ -179,11 +172,11 @@ class ReportAttributes:
             if all(isinstance(attr, ReportAttribute) for attr in attributes_source):
                 attributes_obj = ReportAttributes(attributes=cast(list[ReportAttribute], attributes_source))
             elif all(isinstance(attr, dict) for attr in attributes_source):
-                attributes_obj = self.from_dict_list(cast(list[dict[str, Any]], attributes_source))  
+                attributes_obj = self.from_dict_list(cast(list[dict[str, Any]], attributes_source))
             else:
                 raise TypeError("List must contain either ReportAttribute instances or dicts.")
         elif isinstance(attributes_source, pd.DataFrame):
-            attributes_obj = self.from_dataframe(attributes_source) 
+            attributes_obj = self.from_dataframe(attributes_source)
         elif isinstance(attributes_source, str):
             if attributes_source.strip().endswith(".csv"):
                 attributes_obj = self.from_csv(attributes_source)
@@ -195,15 +188,12 @@ class ReportAttributes:
         else:
             raise TypeError("Unsupported type for attributes_source.")
 
-        attributes_obj.client = self._client  
+        attributes_obj.client = self._client
         return attributes_obj
-
-
 
     def to_dataframe(self) -> pd.DataFrame:
         data = [attr.to_dict() for attr in self.attributes]
         return pd.DataFrame(data)
-
 
     def create(
         self,
@@ -225,7 +215,7 @@ class ReportAttributes:
         client = self._use_client(client)
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
-    
+
         payload = [attr.to_dict() for attr in self.attributes]
 
         resp = client.session.post(url, json=payload)
