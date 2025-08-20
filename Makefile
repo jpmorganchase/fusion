@@ -3,9 +3,9 @@
 BRANCH_NAME := $(shell git rev-parse --abbrev-ref HEAD)
 REPO := jpmorganchase/fusion
 WORKFLOW_FILE := dev.yml
-PYTHON_VERSIONS := 3.9 3.10 3.11 3.12
-LD_LIBRARY_PATHS := $(HOME)/.rye/py/cpython@3.8.18/lib:$(HOME)/.rye/py/cpython@3.9.18/lib:$(HOME)/.rye/py/cpython@3.10.14/lib:$(HOME)/.rye/py/cpython@3.11.9/lib:$(HOME)/.rye/py/cpython@3.12.3/lib
-RUSTFLAGS := -L $(HOME)/.rye/py/cpython@3.8.18/lib -L $(HOME)/.rye/py/cpython@3.9.18/lib -L $(HOME)/.rye/py/cpython@3.10.14/lib -L $(HOME)/.rye/py/cpython@3.11.9/lib -L $(HOME)/.rye/py/cpython@3.12.3/lib
+PYTHON_VERSIONS := 3.9 3.10 3.11 3.12 3.13
+LD_LIBRARY_PATHS := $(HOME)/.rye/py/cpython@3.8.18/lib:$(HOME)/.rye/py/cpython@3.9.18/lib:$(HOME)/.rye/py/cpython@3.10.14/lib:$(HOME)/.rye/py/cpython@3.11.9/lib:$(HOME)/.rye/py/cpython@3.12.3/lib:$(HOME)/.rye/py/cpython@3.13.0/lib
+RUSTFLAGS := -L $(HOME)/.rye/py/cpython@3.8.18/lib -L $(HOME)/.rye/py/cpython@3.9.18/lib -L $(HOME)/.rye/py/cpython@3.10.14/lib -L $(HOME)/.rye/py/cpython@3.11.9/lib -L $(HOME)/.rye/py/cpython@3.12.3/lib -L $(HOME)/.rye/py/cpython@3.13.0/lib
 
 cross-perf:
 	@for version in $(PYTHON_VERSIONS); do \
