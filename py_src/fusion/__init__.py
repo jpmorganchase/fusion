@@ -8,6 +8,4 @@ from fusion.credentials import FusionCredentials
 from fusion.fs_sync import fsync
 from fusion.fusion import Fusion
 
-from ._fusion import *  # noqa: F403
-
 __all__ = ["Fusion", "FusionCredentials", "fsync"]
