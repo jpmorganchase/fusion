@@ -171,17 +171,22 @@ class Dataflow(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Full replace (PUT) this Dataflow at the given ID (or self.id if present)."""
+        """Full replace (PUT) excluding provider/consumer nodes from the payload."""
         client = self._use_client(client)
         target_id = id or self.id
         if not target_id:
             raise ValueError("Dataflow ID is required for update (pass id= or call create() first).")
 
-        payload = self.to_dict(drop_none=True, exclude={"id"})
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
+        payload = self.to_dict(
+            drop_none=True,
+            exclude={"id", "provider_node", "consumer_node"},  # <- crucial
+        )
+
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows/{target_id}"
         resp: requests.Response = client.session.put(url, json=payload)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
 
     def update_fields(
         self,
@@ -190,20 +195,29 @@ class Dataflow(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Partial update (PATCH) of fields at the given ID (or self.id if present).
-
-        `changes` can use snake_case keys; they are sent to the API as camelCase.
-        """
+        """Partial update (PATCH). Provider/consumer nodes cannot be changed here."""
         client = self._use_client(client)
         target_id = id or self.id
         if not target_id:
             raise ValueError("Dataflow ID is required for update_fields (pass id= or call create() first).")
 
-        patch_body = {snake_to_camel(k): v for k, v in changes.items()}
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
+        # Normalize keys to snake to check constraints, then back to camel for API.
+        forbidden = {"provider_node", "consumer_node"}
+        normalized = {camel_to_snake(k): v for k, v in changes.items()}
+
+        used = forbidden.intersection(normalized.keys())
+        if used:
+            raise ValueError(
+                f"Cannot update {sorted(used)} via PATCH; provider/consumer nodes are immutable for updates."
+            )
+
+        patch_body = {snake_to_camel(k): v for k, v in normalized.items()}
+
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows/{target_id}"
         resp: requests.Response = client.session.patch(url, json=patch_body)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
 
 
 
