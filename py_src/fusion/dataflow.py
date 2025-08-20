@@ -105,13 +105,23 @@ class Dataflow(metaclass=CamelCaseMeta):
         if missing:
             raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(
+        self,
+        *,
+        drop_none: bool = True,
+        exclude: set[str] | None = None,
+    ) -> dict[str, Any]:
         out: dict[str, Any] = {}
         for k, v in self.__dict__.items():
             if k.startswith("_"):
                 continue
+            if exclude and k in exclude:
+                continue
+            if drop_none and v is None:
+                continue
             out[snake_to_camel(k)] = v
         return out
+
 
     def create(
         self,
@@ -119,21 +129,15 @@ class Dataflow(metaclass=CamelCaseMeta):
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
         client = self._use_client(client)
-        data = self.to_dict()
 
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows"
-        resp: requests.Response = client.session.post(url, json=data)
+        # exclude id (and drop all None fields)
+        payload = self.to_dict(drop_none=True, exclude={"id"})
+
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows"
+        resp: requests.Response = client.session.post(url, json=payload)
         requests_raise_for_status(resp)
-
-        # optional: capture id from response if present
-        try:
-            new_id = resp.json().get("id")
-            if new_id:
-                self.id = new_id
-        except Exception:
-            pass
-
         return resp if return_resp_obj else None
+
 
 
     def delete(
@@ -149,7 +153,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         if not target_id:
             raise ValueError("Dataflow ID is required for delete (pass id= or set self.id).")
 
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows/{target_id}"
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
         resp: requests.Response = client.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
