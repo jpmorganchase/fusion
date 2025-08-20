@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Dataflow(metaclass=CamelCaseMeta):
+    id: str | None = None  
     providerNode: dict[str, str]
     consumerNode: dict[str, str]
 
@@ -124,7 +125,36 @@ class Dataflow(metaclass=CamelCaseMeta):
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
 
+        # optional: capture id from response if present
+        try:
+            new_id = resp.json().get("id")
+            if new_id:
+                self.id = new_id
+        except Exception:
+            pass
+
         return resp if return_resp_obj else None
+
+
+    def delete(
+        self,
+        id: str | None = None,                     # ← allow passing an id directly
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Delete a dataflow by ID. If id is not provided, uses self.id."""
+        client = self._use_client(client)
+
+        target_id = id or getattr(self, "id", None)
+        if not target_id:
+            raise ValueError("Dataflow ID is required for delete (pass id= or set self.id).")
+
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows/{target_id}"
+        resp: requests.Response = client.session.delete(url)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
+
+
 
     def put(self, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
         """Replace a dataflow entirely using PUT."""
