@@ -228,13 +228,10 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
         run: |
           ls -l $HOME
-          ls -l $HOME/.cargo/bin
           ls -l dist
 
           for pkg in dist/*; do
             echo "Installing $pkg"
-            $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
-            VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
             .integ/bin/python3 -m fusion --help
           done
       env:
@@ -335,13 +332,10 @@ jobs:
             curl -LsSf https://astral.sh/uv/install.sh | sh
           run: |
             ls -l $HOME
-            ls -l $HOME/.cargo/bin
             ls -l dist
   
             for pkg in dist/*; do
               echo "Installing $pkg"
-              $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
-              VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
               .integ/bin/python3 -m fusion --help
             done
         env:
@@ -421,8 +415,6 @@ jobs:
           ls -l dist
           for pkg in dist/*; do
             echo "Installing $pkg"
-            $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
-            VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
             .integ/bin/python3 -m fusion --help
           done
 

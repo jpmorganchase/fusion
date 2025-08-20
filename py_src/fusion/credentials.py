@@ -15,7 +15,6 @@ from . import __version__
 from .exceptions import CredentialError
 
 logger = logging.getLogger(__name__)
-# Constants analogous to Rust defaults
 DEFAULT_GRANT_TYPE = "client_credentials"
 DEFAULT_AUTH_URL = "https://authe.jpmorgan.com/as/token.oauth2"
 VERSION = __version__
@@ -38,7 +37,6 @@ class ProxyType:
 def find_cfg_file(file_path: str) -> str:
     # Attempts to find the config file starting from file_path or its parents
     # until it finds "config/client_credentials.json"
-    # This attempts a similar search logic as the Rust code.
     file_path = os.path.abspath(file_path)  # noqa: PTH100
 
     if os.path.isfile(file_path):  # noqa: PTH113
