@@ -9,12 +9,20 @@ watch:
 
 nav:
   - Home: index.md
-  - Installation: installation.md
-  - Usage: usage.md
-  - Modules: api.md
+  - Getting Started: quickstart.md
+  - Fusion Client: api.md
+  - Download: download.md
+  - Upload: upload.md
+  - Metadata Creation:
+      - Attributes: attributes.md
+      - Datasets: datasets.md
+      - Products: products.md
+  - fsync: fsync.md
   - Changelog: changelog.md
-  - Get Started: get_started.ipynb
-  - Metadata Creation: metadata_creation.ipynb
+  - Examples:
+        - Get Started: get_started.ipynb
+        - Metadata Creation: metadata_creation.ipynb
+
 theme:
   name: material
   language: en
@@ -32,7 +40,7 @@ theme:
         icon: material/toggle-switch
         name: Switch to light mode
   features:
-    - navigation.indexes
+    - navigation.tabs
     - navigation.instant
     - navigation.tabs.sticky
     - navigation.tracking
