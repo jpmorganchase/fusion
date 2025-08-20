@@ -130,14 +130,20 @@ class Dataflow(metaclass=CamelCaseMeta):
     ) -> requests.Response | None:
         client = self._use_client(client)
 
-        # exclude id (and drop all None fields)
         payload = self.to_dict(drop_none=True, exclude={"id"})
-
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows"
         resp: requests.Response = client.session.post(url, json=payload)
         requests_raise_for_status(resp)
-        return resp if return_resp_obj else None
 
+        # Capture server-assigned id if present
+        try:
+            data = resp.json()
+            if isinstance(data, dict) and "id" in data:
+                self.id = data["id"]
+        except Exception:
+            pass  # some endpoints return no body
+
+        return resp if return_resp_obj else None
 
 
     def delete(
