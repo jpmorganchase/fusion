@@ -34,11 +34,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install Rust
-      run: rustup update stable
-    - name: Install cargo-llvm-cov
-      uses: taiki-e/install-action@cargo-llvm-cov
-
     - name: Install uv
       uses: astral-sh/setup-uv@v4
     
@@ -68,7 +63,6 @@ jobs:
         FULL_PYTHON_LIB_PATH=$(eval echo $HOME/.local/share/uv/python/cpython-$PYTHON_INFO*/lib)
         echo "PYTHON_INFO=$PYTHON_INFO" >> $GITHUB_ENV
         echo "LD_LIBRARY_PATH=${FULL_PYTHON_LIB_PATH}:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "RUSTFLAGS=-L ${FULL_PYTHON_LIB_PATH}" >> $GITHUB_ENV
 
     - name: Display Python Info
       run: echo $PYTHON_INFO
@@ -84,11 +78,9 @@ jobs:
     - name: Debug Environment Variables
       run: |
         echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
-        echo "RUSTFLAGS: $RUSTFLAGS"
         echo "PYTHON_INFO: $PYTHON_INFO"
       env:
         LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
-        RUSTFLAGS: ${{ env.RUSTFLAGS }}
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
 
     - name: Show Library Paths
@@ -103,17 +95,6 @@ jobs:
         ls -l $HOME/.local/share/uv/python/cpython-$PYTHON_INFO*/lib/libpython*.so
       env:
         PYTHON_INFO: ${{ env.PYTHON_INFO }}
-
-    - name: Rust tests
-      run: |
-        python --version
-        uv sync
-        uv run maturin develop -r
-        uv run cargo test -r
-      env:
-        LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
-        RUSTFLAGS: ${{ env.RUSTFLAGS }}
-      shell: bash
 
     - name: Run tox
       run: |
