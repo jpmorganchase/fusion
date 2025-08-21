@@ -17,6 +17,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     import requests
+
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 class Dataflow(metaclass=CamelCaseMeta):
     """Represents a single Dataflow object with CRUD operations and Dataset-style loaders."""
 
-    # Required (API identity/wiring)
+    # Required
     providerNode: dict[str, str]
     consumerNode: dict[str, str]
 
@@ -42,10 +43,6 @@ class Dataflow(metaclass=CamelCaseMeta):
     dataAssets: list[dict[str, Any]] = field(default_factory=list)
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
-
-    # -----------------------
-    # Lifecycle & attributes
-    # -----------------------
 
     def __post_init__(self) -> None:
         """Normalize description immediately after initialization."""
@@ -80,16 +77,10 @@ class Dataflow(metaclass=CamelCaseMeta):
             raise ValueError("A Fusion client object is required.")
         return res
 
-    # -----------------------
-    # Converters / loaders (Dataset-style)
-    # -----------------------
-
     @classmethod
-    def from_dict(cls: type["Dataflow"], data: dict[str, Any]) -> "Dataflow":
-        """Create a Dataflow object from a dictionary (public constructor).
+    def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
+        """Create a Dataflow object from a dictionary."""
 
-        Accepts camelCase or snake_case keys.
-        """
         def normalize_value(val: Any) -> Any:
             if isinstance(val, str) and val.strip() == "":
                 return None
@@ -102,7 +93,7 @@ class Dataflow(metaclass=CamelCaseMeta):
                 if isinstance(v, dict):
                     converted[key] = convert_keys(v)
                 elif isinstance(v, list):
-                    converted[key] = [convert_keys(i) if isinstance(i, dict) else i for i in v]
+                    converted[key] = [convert_keys(i) if isinstance(i, dict) else i for i in v]  # type: ignore[assignment]
                 else:
                     converted[key] = normalize_value(v)
             return converted
@@ -119,35 +110,32 @@ class Dataflow(metaclass=CamelCaseMeta):
         return obj
 
     @classmethod
-    def _from_series(cls: type["Dataflow"], series: pd.Series) -> "Dataflow":
-        """Instantiate a single Dataflow from a pandas Series (one row)."""
+    def _from_series(cls: type[Dataflow], series: pd.Series) -> Dataflow:
+        """Instantiate a single Dataflow from a pandas Series."""
         return cls.from_dict(series.to_dict())
 
     @classmethod
-    def _from_dict(cls: type["Dataflow"], data: dict[str, Any]) -> "Dataflow":
-        """Instantiate a single Dataflow from a dict (alias to from_dict)."""
+    def _from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
+        """Instantiate a single Dataflow from a dict ."""
         return cls.from_dict(data)
 
     @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, client: Fusion | None = None) -> list["Dataflow"]:
+    def from_dataframe(cls, frame: pd.DataFrame, client: Fusion | None = None) -> list[Dataflow]:
         """Instantiate multiple Dataflow objects from a DataFrame (row-wise)."""
-        df = df.replace([np.nan, np.inf, -np.inf], None).where(df.notna(), None)
+        frame = frame.replace([np.nan, np.inf, -np.inf], None).where(frame.notna(), None)
         results: list[Dataflow] = []
-        for _, row in df.iterrows():
+        for _, row in frame.iterrows():
             try:
                 obj = cls._from_series(row)
                 obj.client = client
                 obj.validate()
                 results.append(obj)
-            except ValueError as e:
+            except ValueError as e:  # noqa: PERF203
                 logger.warning("Skipping invalid row: %s", e)
         return results
 
-    def from_object(
-        self,
-        dataflow_source: "Dataflow" | dict[str, Any] | str | pd.Series,
-    ) -> "Dataflow":
-        """Instantiate a single Dataflow from a Dataflow/dict/JSON-object/Series and bind this client's session."""
+    def from_object(self, dataflow_source: Dataflow | dict[str, Any] | str | pd.Series) -> Dataflow:
+        """Instantiate a single Dataflow from a Dataflow/dict/JSON-object/Series."""
         import json
 
         if isinstance(dataflow_source, Dataflow):
@@ -168,20 +156,12 @@ class Dataflow(metaclass=CamelCaseMeta):
         obj.client = self._client
         return obj
 
-    # -----------------------
-    # Validation
-    # -----------------------
-
     def validate(self) -> None:
         """Validate that required fields exist."""
         required_fields = ["provider_node", "consumer_node"]
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
         if missing:
             raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")
-
-    # -----------------------
-    # Serialization
-    # -----------------------
 
     def to_dict(
         self,
@@ -205,7 +185,11 @@ class Dataflow(metaclass=CamelCaseMeta):
     # CRUD
     # -----------------------
 
-    def create(self, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
+    def create(
+        self,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Create the dataflow via API and set its server-assigned ID."""
         client = self._use_client(client)
 
@@ -218,29 +202,39 @@ class Dataflow(metaclass=CamelCaseMeta):
             data = resp.json()
             if isinstance(data, dict) and "id" in data:
                 self.id = data["id"]
-        except Exception:
+        except (ValueError, TypeError):
             pass
 
         return resp if return_resp_obj else None
 
-    def delete(self, id: str | None = None, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
+    def delete(
+        self,
+        dataflow_id: str | None = None,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Delete a dataflow by ID."""
         client = self._use_client(client)
-        target_id = id or getattr(self, "id", None)
+        target_id = dataflow_id or getattr(self, "id", None)
         if not target_id:
-            raise ValueError("Dataflow ID is required for delete (pass id= or set self.id).")
+            raise ValueError("Dataflow ID is required for delete (pass dataflow_id= or set self.id).")
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
         resp: requests.Response = client.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
-    def update(self, id: str | None = None, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
+    def update(
+        self,
+        dataflow_id: str | None = None,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Full replace (PUT) excluding provider/consumer nodes from the payload."""
         client = self._use_client(client)
-        target_id = id or self.id
+        target_id = dataflow_id or self.id
         if not target_id:
-            raise ValueError("Dataflow ID is required for update (pass id= or call create() first).")
+            raise ValueError("Dataflow ID is required for update (pass dataflow_id= or call create() first).")
 
         payload = self.to_dict(
             drop_none=True,
@@ -252,12 +246,18 @@ class Dataflow(metaclass=CamelCaseMeta):
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
-    def update_fields(self, changes: dict[str, Any], id: str | None = None, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
+    def update_fields(
+        self,
+        changes: dict[str, Any],
+        dataflow_id: str | None = None,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
         """Partial update (PATCH)."""
         client = self._use_client(client)
-        target_id = id or self.id
+        target_id = dataflow_id or self.id
         if not target_id:
-            raise ValueError("Dataflow ID is required for update_fields (pass id= or call create() first).")
+            raise ValueError("Dataflow ID is required for update_fields (pass dataflow_id= or call create() first).")
 
         forbidden = {"provider_node", "consumer_node"}
         normalized = {camel_to_snake(k): v for k, v in changes.items()}
