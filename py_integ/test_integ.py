@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fusion import Fusion
+import pytest
 
 
 @dataclass
@@ -120,6 +121,7 @@ def gen_generic_dl() -> None:
     print(print_res)
 
 
+@pytest.mark.skip(reason="Disabled integration test until MDL API changes are in prod")
 def test_generic_dl(client: Fusion) -> None:
     for test_nm, params in download_hashes.items():
         res_params = params.client_dl_params
