@@ -810,8 +810,7 @@ class Fusion:
         date_value: datetime.datetime,
         op: str,
     ) -> pd.DataFrame:
-        """
-        Private function - Filter datasetseries_list by date or datetime using the given operator ('ge' or 'le').
+        """Private function - Filter datasetseries_list by date or datetime using the given operator ('ge' or 'le').
         'ge' means greater than or equal to, 'le' means less than or equal to.
         """
         if date_value.time() == datetime.time(0, 0):
@@ -885,10 +884,12 @@ class Fusion:
             )
 
         valid_date_range = re.compile(
-            r"^((\d{4}([- ]?\d{2}){2}|\d{8})"
-            r"([T ]\d{2}([- ]?\d{2}){1,2})?)?"
-            r"(:((\d{4}([- ]?\d{2}){2}|\d{8})"
-            r"([T ]\d{2}([- ]?\d{2}){1,2})?)?)?$"
+            r"^("
+            r"(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?"
+            r"(:(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?)?"
+            r"|"
+            r"(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?"
+            r")$"
         )
 
         # check that format is valid and if none, check if there is only one format available
