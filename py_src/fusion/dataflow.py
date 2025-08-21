@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -11,7 +11,6 @@ import pandas as pd
 from .utils import (
     CamelCaseMeta,
     camel_to_snake,
-    make_bool,
     requests_raise_for_status,
     snake_to_camel,
     tidy_string,
@@ -19,18 +18,23 @@ from .utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
     import requests
+
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
-class Dataflow(metaclass=CamelCaseMeta): 
+class Dataflow(metaclass=CamelCaseMeta):
+    # Required (API identity/wiring)
     providerNode: dict[str, str]
     consumerNode: dict[str, str]
 
+    # Optional fields
     description: str | None = None
-    id: str | None = None 
+    id: str | None = None
     alternativeId: dict[str, Any] | None = None
     transportType: str | None = None
     frequency: str | None = None
@@ -41,8 +45,51 @@ class Dataflow(metaclass=CamelCaseMeta):
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
+    # ---- Allowed values (exact spellings as provided) ----
+    ALLOWED_TRANSPORT_TYPES = {
+        "SYNCHRONOUS MESSAGING",
+        "FILE TRANSFER",
+        "API",
+        "ASYCHRONOUS MESSAGING",  # note: spelling as requested
+    }
+    ALLOWED_FREQUENCIES = {
+        "BI-WEEKLY",
+        "WEEKLY",
+        "SEMI-ANNUALY",  # note: spelling as requested
+        "QUARTERLY",
+        "ANNUALLY",
+        "DAILY",
+        "ADHOC"
+        "INTRA-DAY",
+        "MONTHLY",
+        "TWICE-WEEKLY",
+        "BI-MONTHLY", 
+    }
+    # ------------------------------------------------------
+
     def __post_init__(self) -> None:
+        # tidy description
         self.description = tidy_string(self.description or "")
+
+        # normalize + validate transportType
+        if self.transport_type is not None:
+            tt = tidy_string(self.transport_type).upper()
+            if tt not in self.ALLOWED_TRANSPORT_TYPES:
+                raise ValueError(
+                    f"Invalid transportType '{self.transport_type}'. "
+                    f"Allowed: {sorted(self.ALLOWED_TRANSPORT_TYPES)}"
+                )
+            self.transport_type = tt
+
+        # normalize + validate frequency
+        if self.frequency is not None:
+            fq = tidy_string(self.frequency).upper()
+            if fq not in self.ALLOWED_FREQUENCIES:
+                raise ValueError(
+                    f"Invalid frequency '{self.frequency}'. "
+                    f"Allowed: {sorted(self.ALLOWED_FREQUENCIES)}"
+                )
+            self.frequency = fq
 
     def __getattr__(self, name: str) -> Any:
         snake_name = camel_to_snake(name)
@@ -105,6 +152,20 @@ class Dataflow(metaclass=CamelCaseMeta):
         if missing:
             raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")
 
+        # re-validate enums in case fields were changed post-init
+        if self.transport_type is not None:
+            if str(self.transport_type).upper() not in self.ALLOWED_TRANSPORT_TYPES:
+                raise ValueError(
+                    f"Invalid transportType '{self.transport_type}'. "
+                    f"Allowed: {sorted(self.ALLOWED_TRANSPORT_TYPES)}"
+                )
+        if self.frequency is not None:
+            if str(self.frequency).upper() not in self.ALLOWED_FREQUENCIES:
+                raise ValueError(
+                    f"Invalid frequency '{self.frequency}'. "
+                    f"Allowed: {sorted(self.ALLOWED_FREQUENCIES)}"
+                )
+
     def to_dict(
         self,
         *,
@@ -121,7 +182,6 @@ class Dataflow(metaclass=CamelCaseMeta):
                 continue
             out[snake_to_camel(k)] = v
         return out
-
 
     def create(
         self,
@@ -145,10 +205,9 @@ class Dataflow(metaclass=CamelCaseMeta):
 
         return resp if return_resp_obj else None
 
-
     def delete(
         self,
-        id: str | None = None,                     # ← allow passing an id directly
+        id: str | None = None,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
@@ -164,7 +223,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
-
     def update(
         self,
         id: str | None = None,
@@ -179,14 +237,13 @@ class Dataflow(metaclass=CamelCaseMeta):
 
         payload = self.to_dict(
             drop_none=True,
-            exclude={"id", "provider_node", "consumer_node"},  # <- crucial
+            exclude={"id", "provider_node", "consumer_node"},
         )
 
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows/{target_id}"
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
         resp: requests.Response = client.session.put(url, json=payload)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
-
 
     def update_fields(
         self,
@@ -211,15 +268,31 @@ class Dataflow(metaclass=CamelCaseMeta):
                 f"Cannot update {sorted(used)} via PATCH; provider/consumer nodes are immutable for updates."
             )
 
+        # Optional normalization of enums on patch:
+        if "transport_type" in normalized and normalized["transport_type"] is not None:
+            tt = tidy_string(str(normalized["transport_type"])).upper()
+            if tt not in self.ALLOWED_TRANSPORT_TYPES:
+                raise ValueError(
+                    f"Invalid transportType '{normalized['transport_type']}'. "
+                    f"Allowed: {sorted(self.ALLOWED_TRANSPORT_TYPES)}"
+                )
+            normalized["transport_type"] = tt
+
+        if "frequency" in normalized and normalized["frequency"] is not None:
+            fq = tidy_string(str(normalized["frequency"])).upper()
+            if fq not in self.ALLOWED_FREQUENCIES:
+                raise ValueError(
+                    f"Invalid frequency '{normalized['frequency']}'. "
+                    f"Allowed: {sorted(self.ALLOWED_FREQUENCIES)}"
+                )
+            normalized["frequency"] = fq
+
         patch_body = {snake_to_camel(k): v for k, v in normalized.items()}
 
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/dataflows/{target_id}"
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
         resp: requests.Response = client.session.patch(url, json=patch_body)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
-
-
-
 
 
 class Dataflows:
