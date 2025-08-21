@@ -909,9 +909,9 @@ def test_fsync_adds_handlers_when_none(
         log_path=".",
     )
 
-    assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
-    assert any(isinstance(h, logging.FileHandler) for h in logger.handlers)
-    assert all(not isinstance(h, logging.NullHandler) for h in logger.handlers)
+    assert any(type(handler) is logging.StreamHandler for handler in logger.handlers)
+    assert any(type(handler) is logging.FileHandler for handler in logger.handlers)
+    assert all(type(handler) is not logging.NullHandler for handler in logger.handlers)
 
     fs_fusion.ca = fs_original
     logger.handlers.clear()
