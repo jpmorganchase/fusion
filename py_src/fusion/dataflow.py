@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Dataflow(metaclass=CamelCaseMeta):
-    """Represents a single Dataflow object with CRUD operations and loaders."""
+    """Represents a single Dataflow object with CRUD operations and Dataset-style loaders."""
 
     # Required (API identity/wiring)
     providerNode: dict[str, str]
@@ -82,18 +82,14 @@ class Dataflow(metaclass=CamelCaseMeta):
         return res
 
     # -----------------------
-    # Converters / loaders
+    # Converters / loaders (Dataset-style)
     # -----------------------
 
     @classmethod
-    def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
-        """Create a Dataflow object from a dictionary.
+    def from_dict(cls: type["Dataflow"], data: dict[str, Any]) -> "Dataflow":
+        """Create a Dataflow object from a dictionary (public constructor).
 
-        Args:
-            data: A dictionary with camelCase or snake_case keys.
-
-        Returns:
-            Dataflow: A populated Dataflow instance.
+        Accepts camelCase or snake_case keys.
         """
         def normalize_value(val: Any) -> Any:
             if isinstance(val, str) and val.strip() == "":
@@ -116,94 +112,81 @@ class Dataflow(metaclass=CamelCaseMeta):
         valid_fields = {f.name for f in fields(cls)}
         filtered_data = {k: v for k, v in converted_data.items() if k in valid_fields}
 
-        dataflow = cls.__new__(cls)
+        obj = cls.__new__(cls)
         for field_obj in fields(cls):
-            setattr(dataflow, field_obj.name, filtered_data.get(field_obj.name, None))
+            setattr(obj, field_obj.name, filtered_data.get(field_obj.name, None))
 
-        dataflow.__post_init__()
-        return dataflow
-
-    @classmethod
-    def from_dataframe(
-        cls,
-        df: pd.DataFrame,
-        client: Fusion | None = None,
-    ) -> list[Dataflow]:
-        """Build a list of Dataflow objects from a DataFrame.
-
-        Replaces NaN/±inf with None, row-wise builds `Dataflow` via `from_dict`,
-        validates each, and skips invalid rows with a warning.
-
-        Args:
-            df: Source DataFrame.
-            client: Optional Fusion client to attach to each instance.
-
-        Returns:
-            list[Dataflow]: Valid Dataflow objects.
-        """
-        df = df.replace([np.nan, np.inf, -np.inf], None).where(df.notna(), None)
-        results: list[Dataflow] = []
-        for _, row in df.iterrows():
-            try:
-                obj = cls.from_dict(row.to_dict())
-                obj.client = client
-                obj.validate()
-                results.append(obj)
-            except ValueError as e:
-                logger.warning("Skipping invalid row: %s", e)
-        return results
+        obj.__post_init__()
+        return obj
 
     @classmethod
-    def from_csv(
-        cls,
-        file_path: str,
-        client: Fusion | None = None,
-    ) -> list[Dataflow]:
-        """Load Dataflows from a CSV file into a list of Dataflow objects.
+    def _from_series(cls: type["Dataflow"], series: pd.Series) -> "Dataflow":
+        """Instantiate a single Dataflow from a pandas Series (one row)."""
+        # Keep the same normalization path via from_dict
+        return cls.from_dict(series.to_dict())
+
+    @classmethod
+    def _from_dict(cls: type["Dataflow"], data: dict[str, Any]) -> "Dataflow":
+        """Instantiate a single Dataflow from a dict (alias to from_dict)."""
+        return cls.from_dict(data)
+
+    @classmethod
+    def _from_csv(cls: type["Dataflow"], file_path: str, row: int | None = None) -> "Dataflow":
+        """Instantiate a single Dataflow from a CSV file (select one row).
 
         Args:
-            file_path: Path to a CSV file.
-            client: Optional Fusion client to attach.
+            file_path: Path to CSV.
+            row: Optional 0-based row index to select (defaults to 0).
 
         Returns:
-            list[Dataflow]
+            Dataflow
         """
         df = pd.read_csv(file_path)
-        return cls.from_dataframe(df, client=client)
+        idx = 0 if row is None else row
+        if not (0 <= idx < len(df)):
+            raise IndexError(f"Row index {idx} is out of range for CSV with {len(df)} rows.")
+        # Replace NaN/±inf like your bulk path did
+        s = df.replace([np.nan, np.inf, -np.inf], None).iloc[idx]
+        return cls._from_series(s)
 
-    @classmethod
     def from_object(
-        cls,
-        source: pd.DataFrame | list[dict[str, Any]] | str,
-        client: Fusion | None = None,
-    ) -> list[Dataflow]:
-        """Load Dataflows from DataFrame, list[dict], JSON string, or CSV path.
+        self,
+        dataflow_source: "Dataflow" | dict[str, Any] | str | pd.Series,
+        *,
+        row: int | None = None,
+    ) -> "Dataflow":
+        """Instantiate a single Dataflow from a Dataflow/dict/JSON-object/CSV row/Series and bind this client's session.
 
-        Args:
-            source: DataFrame, list of dicts, JSON array string, or *.csv path.
-            client: Optional Fusion client to attach.
+        Mirrors Dataset.from_object:
+          - If `dataflow_source` is a dict → build one Dataflow.
+          - If JSON string and looks like a single object ('{...}') → parse that object.
+          - If CSV path → pick one row (default first, or row=n).
+          - If pandas Series → convert that row.
+          - If Dataflow instance → rebind the client and return it.
 
         Returns:
-            list[Dataflow]
-
-        Raises:
-            ValueError: Unsupported string input.
-            TypeError: Unsupported source type.
+            Dataflow: Single Dataflow with `client` attached to `self._client`.
         """
         import json
 
-        if isinstance(source, pd.DataFrame):
-            return cls.from_dataframe(source, client=client)
-        if isinstance(source, list) and all(isinstance(item, dict) for item in source):
-            return cls.from_dataframe(pd.DataFrame(source), client=client)
-        if isinstance(source, str):
-            if source.lower().endswith(".csv") and Path(source).exists():
-                return cls.from_csv(source, client=client)
-            if source.strip().startswith("[{"):
-                dict_list = json.loads(source)
-                return cls.from_dataframe(pd.DataFrame(dict_list), client=client)
-            raise ValueError("Unsupported string input — must be .csv path or JSON array string")
-        raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
+        if isinstance(dataflow_source, Dataflow):
+            obj = dataflow_source
+        elif isinstance(dataflow_source, dict):
+            obj = self._from_dict(dataflow_source)
+        elif isinstance(dataflow_source, pd.Series):
+            obj = self._from_series(dataflow_source)
+        elif isinstance(dataflow_source, str):
+            s = dataflow_source.strip()
+            if s.startswith("{"):  # JSON object string
+                obj = self._from_dict(json.loads(s))
+            else:
+                # Treat as CSV path and select a single row
+                obj = self._from_csv(dataflow_source, row=row)
+        else:
+            raise TypeError(f"Could not resolve the object provided: {type(dataflow_source).__name__}")
+
+        obj.client = self._client
+        return obj
 
     # -----------------------
     # Validation
@@ -259,15 +242,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Create the dataflow via API and set its server-assigned ID.
-
-        Args:
-            client: Fusion client instance.
-            return_resp_obj: If True, return the response object.
-
-        Returns:
-            requests.Response | None
-        """
+        """Create the dataflow via API and set its server-assigned ID."""
         client = self._use_client(client)
 
         payload = self.to_dict(drop_none=True, exclude={"id"})
@@ -293,13 +268,7 @@ class Dataflow(metaclass=CamelCaseMeta):
     ) -> requests.Response | None:
         """Delete a dataflow by ID.
 
-        Args:
-            id: Optional explicit ID. If not given, uses self.id.
-            client: Fusion client instance.
-            return_resp_obj: If True, return the response object.
-
-        Returns:
-            requests.Response | None
+        If `id` is not provided, uses `self.id`.
         """
         client = self._use_client(client)
         target_id = id or getattr(self, "id", None)
@@ -319,13 +288,7 @@ class Dataflow(metaclass=CamelCaseMeta):
     ) -> requests.Response | None:
         """Full replace (PUT) excluding provider/consumer nodes from the payload.
 
-        Args:
-            id: Optional explicit ID. If not given, uses self.id.
-            client: Fusion client instance.
-            return_resp_obj: If True, return the response object.
-
-        Returns:
-            requests.Response | None
+        If `id` is not provided, uses `self.id`.
         """
         client = self._use_client(client)
         target_id = id or self.id
@@ -351,17 +314,8 @@ class Dataflow(metaclass=CamelCaseMeta):
     ) -> requests.Response | None:
         """Partial update (PATCH).
 
-        Args:
-            changes: Dict of fields to update (snake_case or camelCase keys).
-            id: Optional explicit ID. If not given, uses self.id.
-            client: Fusion client instance.
-            return_resp_obj: If True, return the response object.
-
-        Raises:
-            ValueError: If forbidden fields are updated.
-
-        Returns:
-            requests.Response | None
+        Provider/consumer nodes cannot be changed here.
+        If `id` is not provided, uses `self.id`.
         """
         client = self._use_client(client)
         target_id = id or self.id
