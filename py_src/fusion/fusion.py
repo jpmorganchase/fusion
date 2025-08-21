@@ -853,6 +853,8 @@ class Fusion:
                 or both separated with a ":". Defaults to 'latest' which will return the most recent
                 instance of the dataset. If more than one series member exists on the latest date, the
                 series member identifiers will be sorted alphabetically and the last one will be downloaded.
+                dt_str supports these single/range formats - YYYYMMDD, YYYY-MM-DD, YYYYMMDDTHHMM,
+                YYYYMMDDTHHMMSS, YYYY-MM-DDTHH-MM-SS, YYYY-MM-DDTHH-MM
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
                 If set to None, the function will download if only one format is available, else it will raise an error.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
