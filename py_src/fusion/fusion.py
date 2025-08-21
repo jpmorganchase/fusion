@@ -916,35 +916,32 @@ class Fusion:
         else:
             filenames = [f.rstrip("/") for f in filename]
 
-        download_spec = []
-        download_spec.extend(
-            [
+        download_spec: list[dict[str, Any]] = [
             {
                 "lfs": self.fs,
                 "rpath": distribution_to_url(
-                self.root_url,
-                series[1],
-                series[2],
-                series[3],
-                series[0],
-                is_download=True,
-                filename=fname,
+                    self.root_url,
+                    series[1],
+                    series[2],
+                    series[3],
+                    series[0],
+                    is_download=True,
+                    filename=fname,
                 ),
                 "lpath": distribution_to_filename(
-                download_folders[i],
-                series[1],
-                series[2],
-                series[3],
-                series[0],
-                partitioning=partitioning,
+                    download_folders[i],
+                    series[1],
+                    series[2],
+                    series[3],
+                    series[0],
+                    partitioning=partitioning,
                 ),
                 "overwrite": force_download,
                 "preserve_original_name": preserve_original_name,
             }
-            for fname in filenames
-            ]
             for i, series in enumerate(required_series)
-        )
+            for fname in filenames
+        ]
 
         logger.log(
             VERBOSE_LVL,
