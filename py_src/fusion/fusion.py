@@ -21,7 +21,7 @@ from tabulate import tabulate
 
 from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute, Attributes
-from fusion.dataflow import Dataflow, DataflowsWrapper
+from fusion.dataflow import Dataflow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
@@ -2562,10 +2562,6 @@ class Fusion:
         )
         df_obj.client = self
         return df_obj
-
-    def dataflows(self) -> DataflowsWrapper:
-    """Get a client-bound Dataflows wrapper for loading/creating dataflows."""
-    return DataflowsWrapper(client=self)
 
     def link_attributes_to_terms(
         self,

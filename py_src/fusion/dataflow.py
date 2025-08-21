@@ -17,10 +17,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     import requests
-
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -28,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Dataflow(metaclass=CamelCaseMeta):
-    """Represents a single Dataflow object with CRUD operations."""
+    """Represents a single Dataflow object with CRUD operations and loaders."""
 
     # Required (API identity/wiring)
     providerNode: dict[str, str]
@@ -46,6 +43,10 @@ class Dataflow(metaclass=CamelCaseMeta):
     dataAssets: list[dict[str, Any]] = field(default_factory=list)
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
+
+    # -----------------------
+    # Lifecycle & attributes
+    # -----------------------
 
     def __post_init__(self) -> None:
         """Normalize description immediately after initialization."""
@@ -79,6 +80,10 @@ class Dataflow(metaclass=CamelCaseMeta):
         if res is None:
             raise ValueError("A Fusion client object is required.")
         return res
+
+    # -----------------------
+    # Converters / loaders
+    # -----------------------
 
     @classmethod
     def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
@@ -118,6 +123,92 @@ class Dataflow(metaclass=CamelCaseMeta):
         dataflow.__post_init__()
         return dataflow
 
+    @classmethod
+    def from_dataframe(
+        cls,
+        df: pd.DataFrame,
+        client: Fusion | None = None,
+    ) -> list[Dataflow]:
+        """Build a list of Dataflow objects from a DataFrame.
+
+        Replaces NaN/±inf with None, row-wise builds `Dataflow` via `from_dict`,
+        validates each, and skips invalid rows with a warning.
+
+        Args:
+            df: Source DataFrame.
+            client: Optional Fusion client to attach to each instance.
+
+        Returns:
+            list[Dataflow]: Valid Dataflow objects.
+        """
+        df = df.replace([np.nan, np.inf, -np.inf], None).where(df.notna(), None)
+        results: list[Dataflow] = []
+        for _, row in df.iterrows():
+            try:
+                obj = cls.from_dict(row.to_dict())
+                obj.client = client
+                obj.validate()
+                results.append(obj)
+            except ValueError as e:
+                logger.warning("Skipping invalid row: %s", e)
+        return results
+
+    @classmethod
+    def from_csv(
+        cls,
+        file_path: str,
+        client: Fusion | None = None,
+    ) -> list[Dataflow]:
+        """Load Dataflows from a CSV file into a list of Dataflow objects.
+
+        Args:
+            file_path: Path to a CSV file.
+            client: Optional Fusion client to attach.
+
+        Returns:
+            list[Dataflow]
+        """
+        df = pd.read_csv(file_path)
+        return cls.from_dataframe(df, client=client)
+
+    @classmethod
+    def from_object(
+        cls,
+        source: pd.DataFrame | list[dict[str, Any]] | str,
+        client: Fusion | None = None,
+    ) -> list[Dataflow]:
+        """Load Dataflows from DataFrame, list[dict], JSON string, or CSV path.
+
+        Args:
+            source: DataFrame, list of dicts, JSON array string, or *.csv path.
+            client: Optional Fusion client to attach.
+
+        Returns:
+            list[Dataflow]
+
+        Raises:
+            ValueError: Unsupported string input.
+            TypeError: Unsupported source type.
+        """
+        import json
+
+        if isinstance(source, pd.DataFrame):
+            return cls.from_dataframe(source, client=client)
+        if isinstance(source, list) and all(isinstance(item, dict) for item in source):
+            return cls.from_dataframe(pd.DataFrame(source), client=client)
+        if isinstance(source, str):
+            if source.lower().endswith(".csv") and Path(source).exists():
+                return cls.from_csv(source, client=client)
+            if source.strip().startswith("[{"):
+                dict_list = json.loads(source)
+                return cls.from_dataframe(pd.DataFrame(dict_list), client=client)
+            raise ValueError("Unsupported string input — must be .csv path or JSON array string")
+        raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
+
+    # -----------------------
+    # Validation
+    # -----------------------
+
     def validate(self) -> None:
         """Validate that required fields exist.
 
@@ -129,6 +220,10 @@ class Dataflow(metaclass=CamelCaseMeta):
         if missing:
             raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")
 
+    # -----------------------
+    # Serialization
+    # -----------------------
+
     def to_dict(
         self,
         *,
@@ -139,10 +234,10 @@ class Dataflow(metaclass=CamelCaseMeta):
 
         Args:
             drop_none: Exclude None values if True.
-            exclude: Fields to exclude from output.
+            exclude: Fields to exclude from output (snake_case names).
 
         Returns:
-            dict: Serialized Dataflow representation.
+            dict: Serialized Dataflow representation with camelCase keys.
         """
         out: dict[str, Any] = {}
         for k, v in self.__dict__.items():
@@ -154,6 +249,10 @@ class Dataflow(metaclass=CamelCaseMeta):
                 continue
             out[snake_to_camel(k)] = v
         return out
+
+    # -----------------------
+    # CRUD
+    # -----------------------
 
     def create(
         self,
@@ -181,6 +280,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             if isinstance(data, dict) and "id" in data:
                 self.id = data["id"]
         except Exception:
+            # Some endpoints return no body.
             pass
 
         return resp if return_resp_obj else None
@@ -252,7 +352,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         """Partial update (PATCH).
 
         Args:
-            changes: Dict of fields to update.
+            changes: Dict of fields to update (snake_case or camelCase keys).
             id: Optional explicit ID. If not given, uses self.id.
             client: Fusion client instance.
             return_resp_obj: If True, return the response object.
@@ -283,108 +383,3 @@ class Dataflow(metaclass=CamelCaseMeta):
         resp: requests.Response = client.session.patch(url, json=patch_body)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
-
-
-class Dataflows:
-    """Represents a collection of Dataflow objects."""
-
-    def __init__(self, dataflows: list[Dataflow] | None = None) -> None:
-        self.dataflows = dataflows or []
-        self._client: Fusion | None = None
-
-    def __getitem__(self, index: int) -> Dataflow:
-        return self.dataflows[index]
-
-    def __iter__(self) -> Iterator[Dataflow]:
-        return iter(self.dataflows)
-
-    def __len__(self) -> int:
-        return len(self.dataflows)
-
-    @property
-    def client(self) -> Fusion | None:
-        """Fusion client bound to this collection."""
-        return self._client
-
-    @client.setter
-    def client(self, client: Fusion | None) -> None:
-        self._client = client
-        for df in self.dataflows:
-            df.client = client
-
-    @classmethod
-    def from_csv(cls, file_path: str, client: Fusion | None = None) -> Dataflows:
-        """Load Dataflows from a CSV file."""
-        df = pd.read_csv(file_path)
-        return cls.from_dataframe(df, client=client)
-
-    @classmethod
-    def from_dataframe(cls, df: pd.DataFrame, client: Fusion | None = None) -> Dataflows:
-        """Load Dataflows from a pandas DataFrame."""
-        df = df.replace([np.nan, np.inf, -np.inf], None).where(df.notna(), None)
-        dataflow_objs = []
-
-        for _, row in df.iterrows():
-            try:
-                obj = Dataflow.from_dict(row.to_dict())
-                obj.client = client
-                obj.validate()
-                dataflow_objs.append(obj)
-            except ValueError as e:
-                logger.warning(f"Skipping invalid row: {e}")
-
-        result = cls(dataflow_objs)
-        result.client = client
-        return result
-
-    def create_all(self) -> None:
-        """Create all Dataflows in this collection via API."""
-        for df in self.dataflows:
-            df.create()
-
-    @classmethod
-    def from_object(
-        cls,
-        source: pd.DataFrame | list[dict[str, Any]] | str,
-        client: Fusion | None = None,
-    ) -> Dataflows:
-        """Load Dataflows from DataFrame, list of dicts, or CSV/JSON string."""
-        import json
-
-        if isinstance(source, pd.DataFrame):
-            return cls.from_dataframe(source, client=client)
-        elif isinstance(source, list) and all(isinstance(item, dict) for item in source):
-            return cls.from_dataframe(pd.DataFrame(source), client=client)
-        elif isinstance(source, str):
-            if source.lower().endswith(".csv") and Path(source).exists():
-                return cls.from_csv(source, client=client)
-            elif source.strip().startswith("[{"):
-                dict_list = json.loads(source)
-                return cls.from_dataframe(pd.DataFrame(dict_list), client=client)
-            else:
-                raise ValueError("Unsupported string input — must be .csv path or JSON array string")
-
-        raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
-
-class DataflowsWrapper(Dataflows):
-    """Client-bound `Dataflows` facade with convenience constructors."""
-
-    def __init__(self, client: Fusion) -> None:
-        super().__init__([])
-        self.client = client
-
-    def from_csv(self, file_path: str) -> Dataflows:  # type: ignore[override]
-        """Proxy `Dataflows.from_csv`, auto-attaching this wrapper's client."""
-        return Dataflows.from_csv(file_path, client=self.client)
-
-    def from_dataframe(self, df: pd.DataFrame) -> Dataflows:  # type: ignore[override]
-        """Proxy `Dataflows.from_dataframe`, auto-attaching this wrapper's client."""
-        return Dataflows.from_dataframe(df, client=self.client)
-
-    def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Dataflows:  # type: ignore[override]
-        """Proxy `Dataflows.from_object`, auto-attaching this wrapper's client."""
-        return Dataflows.from_object(source, client=self.client)
-
-
-
-
