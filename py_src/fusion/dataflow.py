@@ -366,5 +366,25 @@ class Dataflows:
 
         raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
 
+class DataflowsWrapper(Dataflows):
+    """Client-bound `Dataflows` facade with convenience constructors."""
+
+    def __init__(self, client: Fusion) -> None:
+        super().__init__([])
+        self.client = client
+
+    def from_csv(self, file_path: str) -> Dataflows:  # type: ignore[override]
+        """Proxy `Dataflows.from_csv`, auto-attaching this wrapper's client."""
+        return Dataflows.from_csv(file_path, client=self.client)
+
+    def from_dataframe(self, df: pd.DataFrame) -> Dataflows:  # type: ignore[override]
+        """Proxy `Dataflows.from_dataframe`, auto-attaching this wrapper's client."""
+        return Dataflows.from_dataframe(df, client=self.client)
+
+    def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Dataflows:  # type: ignore[override]
+        """Proxy `Dataflows.from_object`, auto-attaching this wrapper's client."""
+        return Dataflows.from_object(source, client=self.client)
+
+
 
 
