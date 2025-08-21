@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field, fields
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -122,7 +121,6 @@ class Dataflow(metaclass=CamelCaseMeta):
     @classmethod
     def _from_series(cls: type["Dataflow"], series: pd.Series) -> "Dataflow":
         """Instantiate a single Dataflow from a pandas Series (one row)."""
-        # Keep the same normalization path via from_dict
         return cls.from_dict(series.to_dict())
 
     @classmethod
@@ -131,42 +129,25 @@ class Dataflow(metaclass=CamelCaseMeta):
         return cls.from_dict(data)
 
     @classmethod
-    def _from_csv(cls: type["Dataflow"], file_path: str, row: int | None = None) -> "Dataflow":
-        """Instantiate a single Dataflow from a CSV file (select one row).
-
-        Args:
-            file_path: Path to CSV.
-            row: Optional 0-based row index to select (defaults to 0).
-
-        Returns:
-            Dataflow
-        """
-        df = pd.read_csv(file_path)
-        idx = 0 if row is None else row
-        if not (0 <= idx < len(df)):
-            raise IndexError(f"Row index {idx} is out of range for CSV with {len(df)} rows.")
-        # Replace NaN/±inf like your bulk path did
-        s = df.replace([np.nan, np.inf, -np.inf], None).iloc[idx]
-        return cls._from_series(s)
+    def from_dataframe(cls, df: pd.DataFrame, client: Fusion | None = None) -> list["Dataflow"]:
+        """Instantiate multiple Dataflow objects from a DataFrame (row-wise)."""
+        df = df.replace([np.nan, np.inf, -np.inf], None).where(df.notna(), None)
+        results: list[Dataflow] = []
+        for _, row in df.iterrows():
+            try:
+                obj = cls._from_series(row)
+                obj.client = client
+                obj.validate()
+                results.append(obj)
+            except ValueError as e:
+                logger.warning("Skipping invalid row: %s", e)
+        return results
 
     def from_object(
         self,
         dataflow_source: "Dataflow" | dict[str, Any] | str | pd.Series,
-        *,
-        row: int | None = None,
     ) -> "Dataflow":
-        """Instantiate a single Dataflow from a Dataflow/dict/JSON-object/CSV row/Series and bind this client's session.
-
-        Mirrors Dataset.from_object:
-          - If `dataflow_source` is a dict → build one Dataflow.
-          - If JSON string and looks like a single object ('{...}') → parse that object.
-          - If CSV path → pick one row (default first, or row=n).
-          - If pandas Series → convert that row.
-          - If Dataflow instance → rebind the client and return it.
-
-        Returns:
-            Dataflow: Single Dataflow with `client` attached to `self._client`.
-        """
+        """Instantiate a single Dataflow from a Dataflow/dict/JSON-object/Series and bind this client's session."""
         import json
 
         if isinstance(dataflow_source, Dataflow):
@@ -180,8 +161,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             if s.startswith("{"):  # JSON object string
                 obj = self._from_dict(json.loads(s))
             else:
-                # Treat as CSV path and select a single row
-                obj = self._from_csv(dataflow_source, row=row)
+                raise ValueError("Unsupported string input — must be JSON object string")
         else:
             raise TypeError(f"Could not resolve the object provided: {type(dataflow_source).__name__}")
 
@@ -193,11 +173,7 @@ class Dataflow(metaclass=CamelCaseMeta):
     # -----------------------
 
     def validate(self) -> None:
-        """Validate that required fields exist.
-
-        Raises:
-            ValueError: If required fields are missing.
-        """
+        """Validate that required fields exist."""
         required_fields = ["provider_node", "consumer_node"]
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
         if missing:
@@ -213,15 +189,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         drop_none: bool = True,
         exclude: set[str] | None = None,
     ) -> dict[str, Any]:
-        """Convert Dataflow object into a JSON-serializable dictionary.
-
-        Args:
-            drop_none: Exclude None values if True.
-            exclude: Fields to exclude from output (snake_case names).
-
-        Returns:
-            dict: Serialized Dataflow representation with camelCase keys.
-        """
+        """Convert Dataflow object into a JSON-serializable dictionary."""
         out: dict[str, Any] = {}
         for k, v in self.__dict__.items():
             if k.startswith("_"):
@@ -237,11 +205,7 @@ class Dataflow(metaclass=CamelCaseMeta):
     # CRUD
     # -----------------------
 
-    def create(
-        self,
-        client: Fusion | None = None,
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
+    def create(self, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
         """Create the dataflow via API and set its server-assigned ID."""
         client = self._use_client(client)
 
@@ -255,21 +219,12 @@ class Dataflow(metaclass=CamelCaseMeta):
             if isinstance(data, dict) and "id" in data:
                 self.id = data["id"]
         except Exception:
-            # Some endpoints return no body.
             pass
 
         return resp if return_resp_obj else None
 
-    def delete(
-        self,
-        id: str | None = None,
-        client: Fusion | None = None,
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        """Delete a dataflow by ID.
-
-        If `id` is not provided, uses `self.id`.
-        """
+    def delete(self, id: str | None = None, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
+        """Delete a dataflow by ID."""
         client = self._use_client(client)
         target_id = id or getattr(self, "id", None)
         if not target_id:
@@ -280,16 +235,8 @@ class Dataflow(metaclass=CamelCaseMeta):
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
-    def update(
-        self,
-        id: str | None = None,
-        client: Fusion | None = None,
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        """Full replace (PUT) excluding provider/consumer nodes from the payload.
-
-        If `id` is not provided, uses `self.id`.
-        """
+    def update(self, id: str | None = None, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
+        """Full replace (PUT) excluding provider/consumer nodes from the payload."""
         client = self._use_client(client)
         target_id = id or self.id
         if not target_id:
@@ -305,18 +252,8 @@ class Dataflow(metaclass=CamelCaseMeta):
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
-    def update_fields(
-        self,
-        changes: dict[str, Any],
-        id: str | None = None,
-        client: Fusion | None = None,
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        """Partial update (PATCH).
-
-        Provider/consumer nodes cannot be changed here.
-        If `id` is not provided, uses `self.id`.
-        """
+    def update_fields(self, changes: dict[str, Any], id: str | None = None, client: Fusion | None = None, return_resp_obj: bool = False) -> requests.Response | None:
+        """Partial update (PATCH)."""
         client = self._use_client(client)
         target_id = id or self.id
         if not target_id:
