@@ -3347,8 +3347,9 @@ def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -
     Fusion(credentials=credentials, enable_logging=True)
 
     # Check that StreamHandler and FileHandler were added
-    assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
-    assert any(isinstance(h, logging.FileHandler) for h in logger.handlers)
+    assert any(type(handler) is logging.StreamHandler for handler in logger.handlers)
+    assert any(type(handler) is logging.FileHandler for handler in logger.handlers)
+    assert not any(type(handler) is logging.NullHandler for handler in logger.handlers)
 
     # Confirm log file exists
     log_file = Path("fusion_sdk.log")
@@ -3366,8 +3367,9 @@ def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCrede
     Fusion(credentials=credentials, enable_logging=True)
 
     # Ensure the logger is configured with both handlers
-    assert any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
-    assert any(isinstance(handler, logging.FileHandler) for handler in logger.handlers)
+    assert any(type(handler) is logging.StreamHandler for handler in logger.handlers)
+    assert any(type(handler) is logging.FileHandler for handler in logger.handlers)
+    assert not any(type(handler) is logging.NullHandler for handler in logger.handlers)
 
     # Verify the log file exists
     log_file = Path("fusion_sdk.log")
@@ -3385,9 +3387,9 @@ def test_fusion_init_logging_disabled(credentials: FusionCredentials) -> None:
     Fusion(credentials=credentials, enable_logging=False)
 
     # No additional handlers should be added
-    assert any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
-    assert all(not isinstance(handler, logging.FileHandler) for handler in logger.handlers)
-    assert not any(isinstance(handler, logging.NullHandler) for handler in logger.handlers)
+    assert any(type(handler) is logging.StreamHandler for handler in logger.handlers)
+    assert all(type(handler) is not logging.FileHandler for handler in logger.handlers)
+    assert not any(type(handler) is logging.NullHandler for handler in logger.handlers)
 
     # Clean up
     logger.handlers.clear()
@@ -3410,7 +3412,7 @@ def test_fusion_adds_streamhandler_when_no_handlers(credentials: FusionCredentia
     Fusion(credentials=credentials, enable_logging=False)
 
     assert len(logger.handlers) == 1
-    assert isinstance(logger.handlers[0], logging.StreamHandler)
+    assert type(logger.handlers[0]) is logging.StreamHandler
 
     logger.handlers.clear()
 

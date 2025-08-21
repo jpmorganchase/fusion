@@ -151,18 +151,18 @@ class Fusion:
             datefmt="%Y-%m-%d %H:%M:%S",
         )
 
-        if enable_logging and not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+        if enable_logging and not any(type(h) is logging.FileHandler for h in logger.handlers):
             file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
 
-        if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        if not any(type(h) is logging.StreamHandler for h in logger.handlers):
             stdout_handler = logging.StreamHandler(sys.stdout)
             stdout_handler.setFormatter(formatter)
             logger.addHandler(stdout_handler)
 
         if len(logger.handlers) > 1:
-            logger.handlers = [h for h in logger.handlers if not isinstance(h, logging.NullHandler)]
+            logger.handlers = [h for h in logger.handlers if type(h) is not logging.NullHandler]
 
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
@@ -2900,17 +2900,15 @@ class Fusion:
         mappings: list[Report.AttributeTermMapping],
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """
-        Link one or more report attributes to business glossary terms.
+        """Link attributes to business terms for a report.
 
-        Each mapping should follow this format:
-            {
-                "attribute": {"id": "attribute-id"},
-                "term": {"id": "term-id"},
-                "isKDE": True  # Optional; defaults to True if not provided
-            }
+        Args:
+            report_id (str): ID of the report to link terms to.
+            mappings (list): List of attribute-to-term mappings.
+            return_resp_obj (bool): Whether to return the raw response object.
 
-        This method wraps `Report.link_attributes_to_terms` and automatically attaches the Fusion client.
+        Returns:
+            requests.Response | None: API response
         """
 
         processed_mappings = []
