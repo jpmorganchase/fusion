@@ -146,18 +146,18 @@ class Fusion:
             datefmt="%Y-%m-%d %H:%M:%S",
         )
 
-        if enable_logging and not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+        if enable_logging and not any(type(h) is logging.FileHandler for h in logger.handlers):
             file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
 
-        if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        if not any(type(h) is logging.StreamHandler for h in logger.handlers):
             stdout_handler = logging.StreamHandler(sys.stdout)
             stdout_handler.setFormatter(formatter)
             logger.addHandler(stdout_handler)
 
         if len(logger.handlers) > 1:
-            logger.handlers = [h for h in logger.handlers if not isinstance(h, logging.NullHandler)]
+            logger.handlers = [h for h in logger.handlers if type(h) is not logging.NullHandler]
 
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
