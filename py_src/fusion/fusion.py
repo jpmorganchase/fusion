@@ -2835,17 +2835,15 @@ class Fusion:
         mappings: list[Report.AttributeTermMapping],
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """
-        Link one or more report attributes to business glossary terms.
+        """Link attributes to business terms for a report.
 
-        Each mapping should follow this format:
-            {
-                "attribute": {"id": "attribute-id"},
-                "term": {"id": "term-id"},
-                "isKDE": True  # Optional; defaults to True if not provided
-            }
+        Args:
+            report_id (str): ID of the report to link terms to.
+            mappings (list): List of attribute-to-term mappings.
+            return_resp_obj (bool): Whether to return the raw response object.
 
-        This method wraps `Report.link_attributes_to_terms` and automatically attaches the Fusion client.
+        Returns:
+            requests.Response | None: API response
         """
 
         processed_mappings = []
