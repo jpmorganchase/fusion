@@ -1,10 +1,10 @@
 """Test file for updated dataflow.py and Dataflow integration"""
 
-import pytest
 import pandas as pd
+import pytest
 
-from fusion.fusion import Fusion
 from fusion.dataflow import Dataflow
+from fusion.fusion import Fusion
 
 
 def test_dataflow_basic_fields() -> None:
@@ -97,7 +97,8 @@ def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
     )
     flows = Dataflow.from_dataframe(frame, client=fusion_obj)
     assert isinstance(flows, list)
-    assert len(flows) == 2
+    testnum = 2
+    assert len(flows) == testnum
     assert all(isinstance(f, Dataflow) for f in flows)
     assert flows[0].description == "Row1"
     assert flows[1].frequency == "WEEKLY"
