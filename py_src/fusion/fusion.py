@@ -180,8 +180,8 @@ class Fusion:
 
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
-        return "Fusion object \nAvailable methods:\n" + tabulate(  # type: ignore[no-any-return]
-            pd.DataFrame(  
+        return "Fusion object \nAvailable methods:\n" + tabulate( 
+            pd.DataFrame(  # type: ignore[arg-type]di
                 [
                     [
                         method_name
@@ -2584,13 +2584,30 @@ class Fusion:
                 new_mapping["isKDE"] = True
             processed_mappings.append(new_mapping)
 
-        return Report.link_attributes_to_terms(
+        return Report.link_attributes_to_terms( 
             report_id=report_id, mappings=processed_mappings, client=self, return_resp_obj=return_resp_obj
         )
 
-    def list_dataflow(self, dataflow_id: str, return_resp_obj: bool = False) -> requests.Response | dict[str, Any]:
-        """Retrieve a single dataflow by ID."""
-        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{dataflow_id}"
+
+    def list_dataflows(
+        self,
+        dataflow_id: str,
+        output: bool = False,
+    ) -> pd.DataFrame:
+        """Retrieve a single dataflow from the Fusion system, full list retirveral
+         is not enabled for now (id is required)."""
+
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/dataflows/{dataflow_id}"
         resp = self.session.get(url)
-        requests_raise_for_status(resp)
-        return resp if return_resp_obj else resp.json()
+
+        if resp.status_code == HTTPStatus.OK:
+            list_df = pd.json_normalize(resp.json())
+            if output:
+                pass  # placeholder for any print/log handling
+            return list_df
+        else:
+            resp.raise_for_status()
+
+        # fallback empty frame if something unexpected happens
+        return pd.DataFrame()
+
