@@ -853,8 +853,13 @@ class Fusion:
                 or both separated with a ":". Defaults to 'latest' which will return the most recent
                 instance of the dataset. If more than one series member exists on the latest date, the
                 series member identifiers will be sorted alphabetically and the last one will be downloaded.
-                dt_str supports these single/range formats - YYYYMMDD, YYYY-MM-DD, YYYYMMDDTHHMM,
-                YYYYMMDDTHHMMSS, YYYY-MM-DDTHH-MM-SS, YYYY-MM-DDTHH-MM
+                dt_str supports below range formats:
+                YYYYMMDD:YYYYMMDD, 
+                YYYY-MM-DD:YYYY-MM-DD, 
+                YYYYMMDDTHHMM:YYYYMMDDTHHMM,
+                YYYYMMDDTHHMMSS:YYYYMMDDTHHMMSS, 
+                YYYY-MM-DDTHH-MM-SS:YYYY-MM-DDTHH-MM-SS, 
+                YYYY-MM-DDTHH-MM:YYYY-MM-DDTHH-MM
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
                 If set to None, the function will download if only one format is available, else it will raise an error.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
@@ -868,6 +873,14 @@ class Fusion:
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
             partitioning (str, optional): Partitioning specification.
             preserve_original_name (bool, optional): Preserve the original name of the file. Defaults to False.
+
+        Examples of dt_str valid range formats:
+            dt_str="20220101:20220131"
+            dt_str="2022-01-01:2022-01-31"
+            dt_str="20220101T0000:20220131T2359"
+            dt_str="2022-01-01T00-00:2022-01-31T23-59"
+            dt_str="20220101T000000:20220131T235959"
+            dt_str="2022-01-01T00-00-00:2022-01-31T23-59-59"
 
         Returns:
 
