@@ -110,7 +110,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         return obj
 
     @classmethod
-    def _from_series(cls: type[Dataflow], series: pd.Series) -> Dataflow:
+    def _from_series(cls: type[Dataflow], series: pd.Series) -> Dataflow: # type: ignore[type-arg]
         """Instantiate a single Dataflow from a pandas Series."""
         return cls.from_dict(series.to_dict())
 
@@ -134,7 +134,7 @@ class Dataflow(metaclass=CamelCaseMeta):
                 logger.warning("Skipping invalid row: %s", e)
         return results
 
-    def from_object(self, dataflow_source: Dataflow | dict[str, Any] | str | pd.Series) -> Dataflow:
+    def from_object(self, dataflow_source: Dataflow | dict[str, Any] | str | pd.Series) -> Dataflow: # type: ignore[type-arg]
         """Instantiate a single Dataflow from a Dataflow/dict/JSON-object/Series."""
         import json
 

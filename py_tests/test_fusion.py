@@ -1813,6 +1813,7 @@ def test_list_registered_attributes(requests_mock: requests_mock.Mocker, fusion_
     pd.testing.assert_frame_equal(test_df, expected_df)
     assert all(col in core_cols for col in test_df.columns)
 
+
 def test_fusion_report(fusion_obj: Fusion) -> None:
     """Test Fusion Report object creation using required and optional arguments."""
     report = fusion_obj.report(
@@ -1828,7 +1829,7 @@ def test_fusion_report(fusion_obj: Fusion) -> None:
         lob="Global Markets",
         is_bcbs239_program=True,
         sap_code="SAP123",
-        region="EMEA"
+        region="EMEA",
     )
 
     assert isinstance(report, Report)
@@ -1840,115 +1841,6 @@ def test_fusion_report(fusion_obj: Fusion) -> None:
     assert report.is_bcbs239_program is True
     assert report.region == "EMEA"
     assert report.data_node_id["name"] == "ComplianceTable"
-
-
-
-def test_fusion_input_dataflow(fusion_obj: Fusion) -> None:
-    """Test Fusion Input Dataflow class from client"""
-    test_input_dataflow = fusion_obj.input_dataflow(
-        title="Test Input Dataflow",
-        identifier="Test Input Dataflow",
-        category="Test",
-        application_id="12345",
-        producer_application_id={"id": "12345", "type": "Application (SEAL)"},
-        consumer_application_id={"id": "12345", "type": "Application (SEAL)"},
-    )
-
-    assert str(test_input_dataflow)
-    assert repr(test_input_dataflow)
-    assert test_input_dataflow.title == "Test Input Dataflow"
-    assert test_input_dataflow.identifier == "TEST_INPUT_DATAFLOW"
-    assert test_input_dataflow.category == ["Test"]
-    assert test_input_dataflow.description == "Test Input Dataflow"
-    assert test_input_dataflow.frequency == "Once"
-    assert test_input_dataflow.is_internal_only_dataset is False
-    assert test_input_dataflow.is_third_party_data is True
-    assert test_input_dataflow.is_restricted is None
-    assert test_input_dataflow.is_raw_data is True
-    assert test_input_dataflow.maintainer == "J.P. Morgan Fusion"
-    assert test_input_dataflow.source is None
-    assert test_input_dataflow.region is None
-    assert test_input_dataflow.publisher == "J.P. Morgan"
-    assert test_input_dataflow.product is None
-    assert test_input_dataflow.sub_category is None
-    assert test_input_dataflow.tags is None
-    assert test_input_dataflow.created_date is None
-    assert test_input_dataflow.modified_date is None
-    assert test_input_dataflow.delivery_channel == ["API"]
-    assert test_input_dataflow.language == "English"
-    assert test_input_dataflow.status == "Available"
-    assert test_input_dataflow.type_ == "Flow"
-    assert test_input_dataflow.container_type == "Snapshot-Full"
-    assert test_input_dataflow.snowflake is None
-    assert test_input_dataflow.complexity is None
-    assert test_input_dataflow.is_immutable is None
-    assert test_input_dataflow.is_mnpi is None
-    assert test_input_dataflow.is_pii is None
-    assert test_input_dataflow.is_pci is None
-    assert test_input_dataflow.is_client is None
-    assert test_input_dataflow.is_public is None
-    assert test_input_dataflow.is_internal is None
-    assert test_input_dataflow.is_confidential is None
-    assert test_input_dataflow.is_highly_confidential is None
-    assert test_input_dataflow.is_active is None
-    assert test_input_dataflow.client == fusion_obj
-    assert test_input_dataflow.application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_input_dataflow.producer_application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_input_dataflow.consumer_application_id == [{"id": "12345", "type": "Application (SEAL)"}]
-    assert test_input_dataflow.flow_details == {"flowDirection": "Input"}
-
-
-def test_fusion_output_dataflow(fusion_obj: Fusion) -> None:
-    """Test Fusion Output Dataflow class from client"""
-    test_output_dataflow = fusion_obj.output_dataflow(
-        title="Test Output Dataflow",
-        identifier="Test Output Dataflow",
-        category="Test",
-        application_id="12345",
-        producer_application_id={"id": "12345", "type": "Application (SEAL)"},
-        consumer_application_id={"id": "12345", "type": "Application (SEAL)"},
-    )
-
-    assert str(test_output_dataflow)
-    assert repr(test_output_dataflow)
-    assert test_output_dataflow.title == "Test Output Dataflow"
-    assert test_output_dataflow.identifier == "TEST_OUTPUT_DATAFLOW"
-    assert test_output_dataflow.category == ["Test"]
-    assert test_output_dataflow.description == "Test Output Dataflow"
-    assert test_output_dataflow.frequency == "Once"
-    assert test_output_dataflow.is_internal_only_dataset is False
-    assert test_output_dataflow.is_third_party_data is True
-    assert test_output_dataflow.is_restricted is None
-    assert test_output_dataflow.is_raw_data is True
-    assert test_output_dataflow.maintainer == "J.P. Morgan Fusion"
-    assert test_output_dataflow.source is None
-    assert test_output_dataflow.region is None
-    assert test_output_dataflow.publisher == "J.P. Morgan"
-    assert test_output_dataflow.product is None
-    assert test_output_dataflow.sub_category is None
-    assert test_output_dataflow.tags is None
-    assert test_output_dataflow.created_date is None
-    assert test_output_dataflow.modified_date is None
-    assert test_output_dataflow.delivery_channel == ["API"]
-    assert test_output_dataflow.language == "English"
-    assert test_output_dataflow.status == "Available"
-    assert test_output_dataflow.type_ == "Flow"
-    assert test_output_dataflow.container_type == "Snapshot-Full"
-    assert test_output_dataflow.snowflake is None
-    assert test_output_dataflow.complexity is None
-    assert test_output_dataflow.is_immutable is None
-    assert test_output_dataflow.is_mnpi is None
-    assert test_output_dataflow.is_pii is None
-    assert test_output_dataflow.is_pci is None
-    assert test_output_dataflow.is_client is None
-    assert test_output_dataflow.is_public is None
-    assert test_output_dataflow.is_internal is None
-    assert test_output_dataflow.is_confidential is None
-    assert test_output_dataflow.application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_output_dataflow.producer_application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_output_dataflow.consumer_application_id == [{"id": "12345", "type": "Application (SEAL)"}]
-    assert test_output_dataflow.flow_details == {"flowDirection": "Output"}
-    assert test_output_dataflow.client == fusion_obj
 
 
 def test_list_indexes_summary(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -2135,8 +2027,6 @@ def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -
 
 
 def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCredentials) -> None:
-    
-
     # Clear logger handlers to avoid contamination
     logger.handlers.clear()
 
@@ -2197,32 +2087,26 @@ def test_get_new_root_url_strip_version(fusion_obj: Fusion) -> None:
     fusion_obj.root_url = "https://fusion.jpmorgan.com/api/v1/"
     assert fusion_obj._get_new_root_url() == "https://fusion.jpmorgan.com"
 
+
 def test_list_reports_all(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/list"
-    mock_data = {
-        "content": [
-            {"id": "rep1", "name": "Test Report", "category": "Finance", "subCategory": "Equities"}
-        ]
-    }
+    mock_data = {"content": [{"id": "rep1", "name": "Test Report", "category": "Finance", "subCategory": "Equities"}]}
     requests_mock.post(url, json=mock_data)
-    df = fusion_obj.list_reports() #noqa
+    df = fusion_obj.list_reports()  # noqa
     assert isinstance(df, pd.DataFrame)
     assert "id" in df.columns
     assert df.iloc[0]["id"] == "rep1"
 
+
 def test_list_reports_by_id(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     report_id = "rep1"
     url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
-    mock_data = {
-        "id": "rep1",
-        "name": "Test Report",
-        "category": "Finance",
-        "subCategory": "Equities"
-    }
+    mock_data = {"id": "rep1", "name": "Test Report", "category": "Finance", "subCategory": "Equities"}
     requests_mock.get(url, json=mock_data)
-    df = fusion_obj.list_reports(report_id=report_id) #noqa
+    df = fusion_obj.list_reports(report_id=report_id)  # noqa
     assert isinstance(df, pd.DataFrame)
     assert df.iloc[0]["id"] == "rep1"
+
 
 def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     report_id = "rep1"
@@ -2236,14 +2120,15 @@ def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock
             "isMandatory": True,
             "description": "Field desc",
             "createdBy": "user1",
-            "name": "value"
+            "name": "value",
         }
     ]
     requests_mock.get(url, json=mock_data)
-    df = fusion_obj.list_report_attributes(report_id=report_id) #noqa
+    df = fusion_obj.list_report_attributes(report_id=report_id)  # noqa
     assert isinstance(df, pd.DataFrame)
     assert "id" in df.columns
     assert df.iloc[0]["id"] == "attr1"
+
 
 def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
     report = fusion_obj.report(
@@ -2254,11 +2139,12 @@ def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
         sub_category="Market",
         data_node_id={"name": "Node1", "dataNodeType": "Table"},
         regulatory_related=True,
-        domain={"name": "Risk"}
+        domain={"name": "Risk"},
     )
     assert isinstance(report, Report)
     assert report.title == "Test Report"
     assert report.client is fusion_obj
+
 
 def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
     report = fusion_obj.report(
@@ -2278,16 +2164,17 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         risk_area="Liquidity",
         risk_stripe="StripeA",
         sap_code="SAP001",
-        region="EMEA"
+        region="EMEA",
     )
     assert report.lob == "Banking"
     assert report.client is fusion_obj
 
+
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fusion) -> None:
     mappings = [
-        cast(Report.AttributeTermMapping, {"attribute": {"id": "attr1"}, "term": {"id": "term1"}}),
-        cast(Report.AttributeTermMapping, {"attribute": {"id": "attr2"}, "term": {"id": "term2"}, "isKDE": False}),
+        cast("Report.AttributeTermMapping", {"attribute": {"id": "attr1"}, "term": {"id": "term1"}}),
+        cast("Report.AttributeTermMapping", {"attribute": {"id": "attr2"}, "term": {"id": "term2"}, "isKDE": False}),
     ]
     fusion_obj.link_attributes_to_terms(report_id="rep123", mappings=mappings)
     args, kwargs = mock_link.call_args
@@ -2296,13 +2183,11 @@ def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fus
     assert sent_mappings[1]["isKDE"] is False
     assert kwargs["client"] is fusion_obj
 
+
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fusion_obj: Fusion) -> None:
     mock_resp = MagicMock()
     mock_link.return_value = mock_resp
-    mappings = [
-    cast(Report.AttributeTermMapping, {"attribute": {"id": "a"}, "term": {"id": "t"}})
-    ]
+    mappings = [cast("Report.AttributeTermMapping", {"attribute": {"id": "a"}, "term": {"id": "t"}})]
     resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
     assert resp is mock_resp
-

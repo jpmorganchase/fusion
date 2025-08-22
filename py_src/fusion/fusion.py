@@ -181,7 +181,7 @@ class Fusion:
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
         return "Fusion object \nAvailable methods:\n" + tabulate(  # type: ignore[no-any-return]
-            pd.DataFrame(  # type: ignore
+            pd.DataFrame(  
                 [
                     [
                         method_name
