@@ -249,14 +249,14 @@ class Dataflow(metaclass=CamelCaseMeta):
     self,
     client: Fusion | None = None,
     return_resp_obj: bool = False,
-) -> requests.Response | None:
-    """Delete this dataflow using self.id."""
-    client = self._use_client(client)
-    if not self.id:
-        raise ValueError("Dataflow ID is required on the object (set self.id before delete()).")
+    ) -> requests.Response | None:
+        """Delete this dataflow using self.id."""
+        client = self._use_client(client)
+        if not self.id:
+            raise ValueError("Dataflow ID is required on the object (set self.id before delete()).")
 
-    url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{self.id}"
-    resp: requests.Response = client.session.delete(url)
-    requests_raise_for_status(resp)
-    return resp if return_resp_obj else None
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{self.id}"
+        resp: requests.Response = client.session.delete(url)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
 
