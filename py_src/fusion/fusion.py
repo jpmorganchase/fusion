@@ -2512,8 +2512,8 @@ class Fusion:
 
     def dataflow(  # noqa: PLR0913
         self,
-        provider_node: dict[str, str],
-        consumer_node: dict[str, str],
+        provider_node: dict[str, str] | None = None,
+        consumer_node: dict[str, str] | None = None,
         description: str | None = None,
         alternative_id: dict[str, Any] | None = None,
         transport_type: str | None = None,
@@ -2522,14 +2522,21 @@ class Fusion:
         end_time: str | None = None,
         boundary_sets: list[dict[str, Any]] | None = None,
         data_assets: list[dict[str, Any]] | None = None,
+        id: str | None = None,
         **kwargs: Any,
     ) -> Dataflow:
         """
         Instantiate a Dataflow object with the current Fusion client attached.
 
+        This supports two modes of use:
+        1. Standard instantiation with provider/consumer nodes and optional metadata.
+        2. ID-only instantiation (for delete/update by ID without needing full details).
+
         Args:
-            provider_node (dict[str, str]): Source node details. Should include "name" and "dataNodeType".
-            consumer_node (dict[str, str]): Destination node details. Should include "name" and "dataNodeType".
+            provider_node (dict[str, str] | None, optional): Source node details, should include
+                "name" and "dataNodeType". Not required if only `id` is provided.
+            consumer_node (dict[str, str] | None, optional): Destination node details, should include
+                "name" and "dataNodeType". Not required if only `id` is provided.
             description (str, optional): Description of the dataflow.
             alternative_id (dict[str, Any], optional): Alternate identifiers for the dataflow.
             transport_type (str, optional): Transport mechanism (e.g., "Batch", "Streaming").
@@ -2537,24 +2544,38 @@ class Fusion:
             start_time (str, optional): When the flow starts (ISO timestamp).
             end_time (str, optional): When the flow ends (ISO timestamp).
             boundary_sets (list[dict[str, Any]], optional): List of boundary set details.
+            data_assets (list[dict[str, Any]], optional): List of related data assets.
+            id (str, optional): Server-assigned ID for direct operations like delete or update.
             **kwargs (Any): Additional optional fields.
 
         Returns:
-            Dataflow: A Dataflow object ready for API upload or further manipulation.
+            Dataflow: A Dataflow object ready for API upload, deletion, or manipulation.
         """
-        df_obj = Dataflow(
-            providerNode=provider_node,
-            consumerNode=consumer_node,
-            description=description,
-            alternativeId=alternative_id,
-            transportType=transport_type,
-            frequency=frequency,
-            startTime=start_time,
-            endTime=end_time,
-            boundarySets=boundary_sets or [],
-            dataAssets=data_assets or [],
-            **kwargs,
-        )
+        if id and not provider_node and not consumer_node:
+            # ID-only path (dummy nodes to satisfy dataclass constructor)
+            df_obj = Dataflow(
+                providerNode={"name": "__TMP__", "dataNodeType": "TMP"},
+                consumerNode={"name": "__TMP__", "dataNodeType": "TMP"},
+                id=id,
+                **kwargs,
+            )
+        else:
+            # Full constructor path
+            df_obj = Dataflow(
+                providerNode=provider_node or {"name": "", "dataNodeType": ""},
+                consumerNode=consumer_node or {"name": "", "dataNodeType": ""},
+                description=description,
+                alternativeId=alternative_id,
+                transportType=transport_type,
+                frequency=frequency,
+                startTime=start_time,
+                endTime=end_time,
+                boundarySets=boundary_sets or [],
+                dataAssets=data_assets or [],
+                id=id,
+                **kwargs,
+            )
+
         df_obj.client = self
         return df_obj
 
