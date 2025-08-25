@@ -902,6 +902,7 @@ def test_async_fusion_embeddings_connection_remap_url(
 
     assert remapped == expected
 
+
 @patch("fusion.embeddings.FusionCredentials.from_file")
 def test_fusion_embeddings_connection_remap_url_doc(
     mock_from_file: MagicMock,

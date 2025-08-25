@@ -2,7 +2,6 @@
 name = "pyfusion"
 version = "2.0.17"
 
-homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
 authors = [
     { name = "FusionDevs", email = "fusion_developers@jpmorgan.com" }
@@ -12,9 +11,7 @@ license = "Apache-2.0"
 classifiers = [
     'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',
-    'License :: OSI Approved :: Apache Software License',
     'Natural Language :: English',
-    'Programming Language :: Rust',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
@@ -39,13 +36,18 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["maturin>=1.6,<2.0"]
-build-backend = "maturin"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
-[tool.maturin]
-python-source = "py_src"
-module-name = "fusion._fusion"
-features = ["pyo3/extension-module"]
+[tool.setuptools.packages.find]
+where = ["py_src"]
+include = ["fusion*"]
+exclude = ["py_tests*", "py_integ*"]
+
+[project.urls]
+Homepage = "https://github.com/jpmorganchase/fusion"
+Repository = "https://github.com/jpmorganchase/fusion"
+Issues = "https://github.com/jpmorganchase/fusion/issues"
 
 [project.optional-dependencies]
 all = [
@@ -270,9 +272,6 @@ values = [
     'dev',
     'release'
 ]
-
-[[tool.bumpversion.files]]
-filename = "Cargo.toml"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
