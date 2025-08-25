@@ -181,16 +181,12 @@ class Dataflow(metaclass=CamelCaseMeta):
             out[snake_to_camel(k)] = v
         return out
 
-    # -----------------------
-    # CRUD
-    # -----------------------
-
     def create(
         self,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Create the dataflow via API and set its server-assigned ID."""
+        """Create the dataflow via API. """
         client = self._use_client(client)
 
         payload = self.to_dict(drop_none=True, exclude={"id"})
@@ -198,70 +194,44 @@ class Dataflow(metaclass=CamelCaseMeta):
         resp: requests.Response = client.session.post(url, json=payload)
         requests_raise_for_status(resp)
 
-        try:
-            data = resp.json()
-            if isinstance(data, dict) and "id" in data:
-                self.id = data["id"]
-        except (ValueError, TypeError):
-            pass
 
         return resp if return_resp_obj else None
 
-    def delete(
-        self,
-        dataflow_id: str | None = None,
-        client: Fusion | None = None,
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        """Delete a dataflow by ID."""
-        client = self._use_client(client)
-        target_id = dataflow_id or getattr(self, "id", None)
-        if not target_id:
-            raise ValueError("Dataflow ID is required for delete (pass dataflow_id= or set self.id).")
-
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
-        resp: requests.Response = client.session.delete(url)
-        requests_raise_for_status(resp)
-        return resp if return_resp_obj else None
 
     def update(
         self,
-        dataflow_id: str | None = None,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Full replace (PUT) excluding provider/consumer nodes from the payload."""
+        """Full replace (PUT) using self.id, excluding provider/consumer nodes from the payload."""
         client = self._use_client(client)
-        target_id = dataflow_id or self.id
-        if not target_id:
-            raise ValueError("Dataflow ID is required for update (pass dataflow_id= or call create() first).")
+        if not self.id:
+            raise ValueError("Dataflow ID is required on the object (set self.id before update()).")
 
         payload = self.to_dict(
             drop_none=True,
             exclude={"id", "provider_node", "consumer_node"},
         )
 
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{self.id}"
         resp: requests.Response = client.session.put(url, json=payload)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
+
     def update_fields(
         self,
         changes: dict[str, Any],
-        dataflow_id: str | None = None,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Partial update (PATCH)."""
+        """Partial update (PATCH) using self.id. Provider/consumer nodes are not allowed."""
         client = self._use_client(client)
-        target_id = dataflow_id or self.id
-        if not target_id:
-            raise ValueError("Dataflow ID is required for update_fields (pass dataflow_id= or call create() first).")
+        if not self.id:
+            raise ValueError("Dataflow ID is required on the object (set self.id before update_fields()).")
 
         forbidden = {"provider_node", "consumer_node"}
         normalized = {camel_to_snake(k): v for k, v in changes.items()}
-
         used = forbidden.intersection(normalized.keys())
         if used:
             raise ValueError(
@@ -270,7 +240,23 @@ class Dataflow(metaclass=CamelCaseMeta):
 
         patch_body = {snake_to_camel(k): v for k, v in normalized.items()}
 
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{target_id}"
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{self.id}"
         resp: requests.Response = client.session.patch(url, json=patch_body)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
+    def delete(
+    self,
+    client: Fusion | None = None,
+    return_resp_obj: bool = False,
+) -> requests.Response | None:
+    """Delete this dataflow using self.id."""
+    client = self._use_client(client)
+    if not self.id:
+        raise ValueError("Dataflow ID is required on the object (set self.id before delete()).")
+
+    url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{self.id}"
+    resp: requests.Response = client.session.delete(url)
+    requests_raise_for_status(resp)
+    return resp if return_resp_obj else None
+

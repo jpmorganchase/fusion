@@ -2525,8 +2525,7 @@ class Fusion:
         id: str | None = None,
         **kwargs: Any,
     ) -> Dataflow:
-        """
-        Instantiate a Dataflow object with the current Fusion client attached.
+        """Instantiate a Dataflow object with the current Fusion client attached.
 
         This supports two modes of use:
         1. Standard instantiation with provider/consumer nodes and optional metadata.
@@ -2612,19 +2611,18 @@ class Fusion:
 
     def list_dataflows(
         self,
-        dataflow_id: str,
+        id_contains: str,
         output: bool = False,
     ) -> pd.DataFrame:
-        """Retrieve a single dataflow from the Fusion system, full list retirveral
-         is not enabled for now (id is required)."""
+        """Retrieve a single dataflow from the Fusion system."""
 
-        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/dataflows/{dataflow_id}"
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/dataflows/{id_contains}"
         resp = self.session.get(url)
 
         if resp.status_code == HTTPStatus.OK:
             list_df = pd.json_normalize(resp.json())
             if output:
-                pass  # placeholder for any print/log handling
+                pass  
             return list_df
         else:
             resp.raise_for_status()
