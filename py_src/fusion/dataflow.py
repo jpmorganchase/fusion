@@ -162,7 +162,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
         if missing:
             raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")
-
+            
     def to_dict(
         self,
         *,
@@ -176,10 +176,14 @@ class Dataflow(metaclass=CamelCaseMeta):
                 continue
             if exclude and k in exclude:
                 continue
-            if drop_none and v is None:
+            # Treat empty strings like None when dropping Nones
+            if drop_none and (
+                v is None or (isinstance(v, str) and v.strip() == "")
+            ):
                 continue
             out[snake_to_camel(k)] = v
         return out
+
 
     def create(
         self,
