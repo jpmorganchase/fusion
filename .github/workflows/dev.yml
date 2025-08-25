@@ -1,663 +1,85 @@
-
 name: Build and Test
 
-# Controls when the action will run.
 on:
-  # Triggers the workflow on push or pull request events but only for the master branch
   push:
     branches: [ master, main ]
   pull_request:
     branches: [ master, main ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Set an environment variables for the workflow
 env:
   UV_HTTP_TIMEOUT: 300
   PIP_DISABLE_PIP_VERSION_CHECK: 1
 
-# Define the jobs that run in the workflow
 jobs:
-  # Define the tests job that runs on ubuntu-latest across multiple python versions
-  sdist-n-tests:
+  tests:
     strategy:
       fail-fast: true
       matrix:
         python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-    name: sdist and tests
+    name: Tests on Python ${{ matrix.python-versions }}
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v4
 
-    - name: Install Rust
-      run: rustup update stable
-    - name: Install cargo-llvm-cov
-      uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Set up Python ${{ matrix.python-versions }}
+        run: uv python install ${{ matrix.python-versions }}
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v4
-    
-    - name: Set up Python ${{ matrix.python-versions }}
-      run: uv python install ${{ matrix.python-versions }}
+      - name: Install project (dev + extras)
+        run: uv sync --all-extras --dev
 
-    - name: Install the project
-      run: uv sync --all-extras --dev
-
-    # required for tox testing on mike
-    - name: Setup doc deploy git user 
-      run: |
+      - name: Setup git for documentation
+        run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-      shell: bash
 
-    - name: Get Python Info
-      id: get-python-info
-      run: |
-        uv run python -c "import platform; print(f'{platform.python_version()}')" > python_info.txt
-        ls -l $(readlink $(uv run which python))
-
-    - name: Set python native lib path
-      id: set-env-var
-      run: |
-        PYTHON_INFO=$(cat python_info.txt)
-        FULL_PYTHON_LIB_PATH=$(eval echo $HOME/.local/share/uv/python/cpython-$PYTHON_INFO*/lib)
-        echo "PYTHON_INFO=$PYTHON_INFO" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=${FULL_PYTHON_LIB_PATH}:\$LD_LIBRARY_PATH" >> $GITHUB_ENV
-        echo "RUSTFLAGS=-L ${FULL_PYTHON_LIB_PATH}" >> $GITHUB_ENV
-
-    - name: Display Python Info
-      run: echo $PYTHON_INFO
-      env:
-        PYTHON_INFO: ${{ env.PYTHON_INFO }}
-
-    - name: List Directory
-      run: |
-        ls -l /usr/bin/python
-      env:
-        PYTHON_INFO: ${{ env.PYTHON_INFO }}
-
-    - name: Debug Environment Variables
-      run: |
-        echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
-        echo "RUSTFLAGS: $RUSTFLAGS"
-        echo "PYTHON_INFO: $PYTHON_INFO"
-      env:
-        LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
-        RUSTFLAGS: ${{ env.RUSTFLAGS }}
-        PYTHON_INFO: ${{ env.PYTHON_INFO }}
-
-    - name: Show Library Paths
-      run: |
-        echo "Library paths:"
-        ldconfig -v 2>/dev/null | grep -v ^$'\t'
-      env:
-        LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
-
-    - name: Check Python Library
-      run: |
-        ls -l $HOME/.local/share/uv/python/cpython-$PYTHON_INFO*/lib/libpython*.so
-      env:
-        PYTHON_INFO: ${{ env.PYTHON_INFO }}
-
-    - name: Rust tests
-      run: |
-        python --version
-        uv sync
-        uv run maturin develop -r
-        uv run cargo test -r
-      env:
-        LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
-        RUSTFLAGS: ${{ env.RUSTFLAGS }}
-      shell: bash
-
-    - name: Run tox
-      run: |
-        uv python pin ${{ matrix.python-versions }}
-        uv run tox -e lint,doc
-
-    # Build and upload the sdist, wheels will be done on arch specific images
-    - name: Build sdist
-      run: uv build --sdist 
-      shell: bash
-
-    - name: Integration test artifact
-      run: |
-        ls -l dist
-        rm -rf .venv
-        for pkg in dist/*; do
-          uv venv
-          uv pip install $pkg pytest pytest-random-order --force-reinstall
-          .venv/bin/pytest -v py_integ -s
-        done
-      env:
-        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-      shell: bash
-
-    - name: Upload sdist
-      if: matrix.python-versions == '3.9'
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts-sdist-${{ matrix.python-versions }}
-        path: dist/*.tar.gz
-  
-  # Define the manylinux maturin builds, across multiple python versions, these will run in appropriate arch images
-  linux-x86:
-    #needs: tests
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        platform:
-          - target: "x86_64-unknown-linux-gnu"
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-  
-    - uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-versions }}
-    - run: pip install uv
-
-    - name: Build Wheels - manylinux
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.platform.target }}
-        manylinux: auto
-        args: --locked --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
-        sccache: 'true'
-        before-script-linux: |
-          yum update
-          yum install -y openssl-devel
-        docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib64 -e OPENSSL_INCLUDE_DIR=/usr/lib64/openssl
-
-    - name: Integration test artifact
-      run: |
-        for pkg in dist/*; do
-          uv venv .integ
-          VIRTUAL_ENV=.integ uv pip install $pkg pytest pytest-random-order --force-reinstall
-          .integ/bin/pytest -v py_integ -s
-        done
-      env:
-        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-      shell: bash
-
-    - name: Upload Wheels
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
-        path: dist
-
-  linux-arm-aarch64:
-    #needs: tests
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        platform:
-          - target: "aarch64-unknown-linux-gnu"
-            arch: aarch64
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-  
-    - uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-versions }}
-    - run: pip install uv
-
-    - name: Build Wheels
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.platform.target }}
-        manylinux: "2_28"
-        args: --locked --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
-        sccache: 'true'
-        docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu -e OPENSSL_INCLUDE_DIR=/usr/include/openssl
-        before-script-linux: |
-          apt update
-          apt install -y libssl-dev
-
-  
-    - uses: uraimo/run-on-arch-action@v2
-      if: matrix.target == 'aarch64-unknown-linux-gnu'
-      name: Integration test artifact
-      with:
-        arch: ${{ matrix.platform.arch }}
-        distro: 'ubuntu22.04'
-        githubToken: ${{ github.token }}
-        install: |
-          apt-get update
-          apt-get install -y software-properties-common build-essential
-          add-apt-repository -y ppa:deadsnakes/ppa
-          apt-get update
-          apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv python${{ matrix.python-versions }}-dev
-          curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Run tox (lint + docs + py)
         run: |
-          ls -l $HOME
-          ls -l $HOME/.cargo/bin
-          ls -l dist
+          uv python pin ${{ matrix.python-versions }}
+          uv run tox -e lint,doc,py
 
-          for pkg in dist/*; do
-            echo "Installing $pkg"
-            $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
-            VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
-            .integ/bin/python3 -m fusion --help
-          done
-      env:
-        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-
-    - name: Upload Wheels
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
-        path: dist
-
-
-  linux-arm-armv7:
-      #needs: tests
-      runs-on: ubuntu-latest
-      strategy:
-        fail-fast: false
-        matrix:
-          python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-          platform:
-            - target: "armv7-unknown-linux-gnueabihf"
-              arch: armv7
-      steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-    
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-versions }}
-      - run: pip install uv
-
-      - name: Build Wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          manylinux: "auto"
-          args: --locked --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
-          sccache: 'true'
-          docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu -e OPENSSL_INCLUDE_DIR=/usr/include/openssl
-          before-script-linux: |
-            apt update
-            apt install -y libssl-dev
-
-      - name: Upload Wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
-          path: dist
-
-  linux-powerpc:
+  build-and-integ:
+    needs: tests
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        platform:
-          - target: powerpc64le-unknown-linux-gnu
-            arch: ppc64le
-          - target: powerpc64-unknown-linux-gnu
-            arch: ppc64
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-    
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-versions }}
-      - run: pip install uv
-  
-      - name: Build Wheels
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.platform.target }}
-          manylinux: "auto"
-          args: --locked --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
-          sccache: 'true'
-          before-script-linux: |
-            apt update
-            apt install -y libssl-dev
-          docker-options: -e OPENSSL_DIR=/usr -e OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu -e OPENSSL_INCLUDE_DIR=/usr/include/openssl
+    name: Build + Integration Tests (Python 3.9)
 
-      - uses: uraimo/run-on-arch-action@v2
-        if: false
-        name: Integration test artifact
-        with:
-          arch: ${{ matrix.platform.arch }}
-          distro: 'ubuntu22.04'
-          githubToken: ${{ github.token }}
-          install: |
-            apt-get update
-            apt-get install -y software-properties-common build-essential
-            add-apt-repository -y ppa:deadsnakes/ppa
-            apt-get update
-            apt-get install -y --no-install-recommends curl python${{ matrix.python-versions }} python${{ matrix.python-versions }}-venv python${{ matrix.python-versions }}-dev
-            curl -LsSf https://astral.sh/uv/install.sh | sh
-          run: |
-            ls -l $HOME
-            ls -l $HOME/.cargo/bin
-            ls -l dist
-  
-            for pkg in dist/*; do
-              echo "Installing $pkg"
-              $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
-              VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
-              .integ/bin/python3 -m fusion --help
-            done
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python 3.9
+        run: uv python install 3.9
+
+      - name: Install project (dev + extras)
+        run: uv sync --all-extras --dev
+
+      - name: Build sdist & wheel
+        run: uv build --sdist --wheel
+
+      - name: Integration test artifacts (install wheel)
+        run: |
+          ls -l dist
+          rm -rf .venv
+          for pkg in dist/*.whl; do
+            echo "Testing wheel: $pkg"
+            uv venv
+            uv pip install "$pkg" pytest pytest-random-order --force-reinstall
+            .venv/bin/pytest -v py_integ -s
+          done
         env:
           FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
           FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-  
-      - name: Upload Wheels
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts-manylinux-${{ matrix.platform.target }}-${{ matrix.python-versions }}
-          path: dist
-              
-
-  # Define the musllinux maturin builds, across multiple python versions, these will run in appropriate arch images
-  linux-musllinux:
-    #needs: tests
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        target: [
-          "x86_64-unknown-linux-musl",
-        ]
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - uses: actions/setup-python@v5
-      env:
-        PIP_DISABLE_PIP_VERSION_CHECK: 1      
-      with:
-        python-version: ${{ matrix.python-versions }}
-
-    - name: Install uv
-      run: |
-        pip install uv
-      shell: bash 
-
-    - name: Sync dependencies using uv
-      run: |
-        uv sync -p ${{ matrix.python-versions }}
-        
-    - name: Build Wheels - musllinux
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.target }}
-        manylinux: musllinux_1_1
-        args: --locked --release -j $(nproc) -i python${{ matrix.python-versions }} --out dist
-        sccache: 'false'
-        before-script-linux: |
-          apt update
-          apt install -y libssl-dev
-
-    - name: list dist files
-      run: |
-        ls -l dist
-  
-    - name: Clear and list dist files
-      run: |
-        rm -f dist/*linux_x86_64.whl
-        ls -l dist
-
-
-    - name: Integration test artifact
-      if: false
-      uses: addnab/docker-run-action@v3
-      with:
-        image: alpine:3.12
-        options: -v ${{ github.workspace }}:/io -w /io -e FUSION_CLIENT_ID=${{ secrets.FUSION_CLIENT_ID }} -e FUSION_CLIENT_SECRET=${{ secrets.FUSION_CLIENT_SECRET }} 
-        run: |
-          apk update
-          apk add python3 curl
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          ls -l dist
-          for pkg in dist/*; do
-            echo "Installing $pkg"
-            $HOME/.cargo/bin/uv venv .integ -p ${{ matrix.python-versions}}
-            VIRTUAL_ENV=.integ $HOME/.cargo/bin/uv pip install $pkg pytest pytest-random-order --force-reinstall
-            .integ/bin/python3 -m fusion --help
-          done
-
-    - name: Upload Wheels
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts-musllinux-${{ matrix.target }}-${{ matrix.python-versions }}
-        path: dist
-
-  # Define the windows maturin builds, across multiple python versions, these will run on windows-latest
-  windows:
-    #needs: tests
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        target: ["x64"]
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@v4
-  
-    - name: Set up Python ${{ matrix.python-versions }}
-      run: uv python install ${{ matrix.python-versions }}
-
-    - name: Install the project
-      run: uv sync --all-extras --dev
-
-    - name: Build wheels
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.target }}
-        args: --locked --release -j 10 -i ${{ matrix.python-versions }} --out dist
-        sccache: 'false'
-
-    - name: list dist files
-      run: ls -l dist
-
-    - name: Integration test artifact
-      if: true
-      run: |
-        Get-ChildItem dist -Filter *.whl | ForEach-Object {
-          uv venv .integ --seed
-          .\.integ\Scripts\pip.exe install $_.FullName pytest pytest-random-order --force-reinstall
-          .\.integ\Scripts\pytest.exe -v py_integ -s
-        }
-      env:
-        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-      shell: pwsh
-
-    - name: Upload Wheels
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts-win-${{ matrix.target }}-${{ matrix.python-versions }}
-        path: dist
-
-  # Define the macos x86 64 maturin builds, across multiple python versions, these will run on macos-13
-  macos-x86_64:
-    #needs: tests
-    runs-on: macos-13
-    strategy:
-      matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        target: ["x86_64"]
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - uses: actions/setup-python@v5
-      env:
-        PIP_DISABLE_PIP_VERSION_CHECK: 1
-      with:
-        python-version: ${{ matrix.python-versions }}
-
-    - name: Install uv
-      run: |
-        pip install uv
-      shell: bash
-
-    # - name: Setup rye
-    #   run: |
-    #     rye config --set-bool behavior.use-uv=true
-    #     rye --version
-    #   shell: bash
-
-    - name: Sync dependencies using uv
-      run: |
-        uv sync -p ${{ matrix.python-versions }}
-
-    - name: Build wheels
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.target }}
-        args: --locked --release -j 10 -i ${{ matrix.python-versions }} --out dist
-        sccache: 'false'
-        manylinux: auto
-
-    - name: list dist files
-      run: ls -l dist
-
-    - name: Integration test artifact
-      if: true
-      run: |
-        ls -l dist
-        for pkg in dist/*; do
-          uv venv .integ --seed
-          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
-          .integ/bin/pytest -v py_integ -s
-        done
-      env:
-        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-      shell: bash
-
-
-    - name: Upload Wheels
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts-macos-${{ matrix.target }}-${{ matrix.python-versions }}
-        path: dist
-
-  # Define the macos aarch64 maturin builds, across multiple python versions, these will run on macos-14
-  macos-aarch64:
-    #needs: tests
-    runs-on: macos-14
-    strategy:
-      matrix:
-        python-versions: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        target: ["aarch64"]
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    - uses: actions/setup-python@v5
-      env:
-        PIP_DISABLE_PIP_VERSION_CHECK: 1
-      with:
-        python-version: ${{ matrix.python-versions }}
-
-    - name: Set up uv
-      run: |
-        pip install uv
-      shell: bash
-    
-    - name: Sync dependencies using uv
-      run: |
-        uv sync -p ${{ matrix.python-versions }}
-
-    - name: Build wheels
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.target }}
-        args: --locked --release -j 10 -i ${{ matrix.python-versions }} --out dist
-        sccache: 'false'
-        manylinux: auto
-
-    - name: list dist files
-      run: ls -l dist
-
-    - name: Integration test artifact
-      if: true
-      run: |
-        ls -l dist
-        for pkg in dist/*; do
-          uv venv .integ --seed
-          .integ/bin/pip install $pkg pytest pytest-random-order --force-reinstall
-          .integ/bin/pytest -v py_integ -s
-        done
-      env:
-        FUSION_CLIENT_ID: ${{ secrets.FUSION_CLIENT_ID }}
-        FUSION_CLIENT_SECRET: ${{ secrets.FUSION_CLIENT_SECRET }}
-      shell: bash
-
-
-    - name: Upload Wheels
-      uses: actions/upload-artifact@v4
-      with:
-        name: artifacts-macos-${{ matrix.target }}-${{ matrix.python-versions }}
-        path: dist
-
-
-  # Define the artifact check job that runs on ubuntu-latest
-  artifact-check:
-    needs: [sdist-n-tests, linux-x86, linux-arm-aarch64, linux-arm-armv7, linux-powerpc, linux-musllinux, windows, macos-x86_64, macos-aarch64]
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/download-artifact@v4
-      with:
-        pattern: artifacts-*
-        path: dist
-        merge-multiple: true
-
-    - name: list dist files
-      run: ls -l dist
-
-    - uses: actions/setup-python@v5
-      env:
-        PIP_DISABLE_PIP_VERSION_CHECK: 1
-      with:
-        python-version: "3.10"
-    - name: Install auditwheel-symbols
-      run: pip install auditwheel==6.2.0
-
-    - name: Check wheels      
-      run: |
-        for wheel in dist/*manylinux*.whl; do
-          echo "Processing $wheel"
-          auditwheel show "$wheel"
-        done
-      shell: bash
+          name: artifacts
+          path: |
+            dist/*.tar.gz
+            dist/*.whl

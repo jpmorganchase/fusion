@@ -11,7 +11,6 @@ import fsspec
 import pytest
 from requests.adapters import HTTPAdapter
 
-from fusion._fusion import FusionCredentials
 from fusion._legacy.authentication import (
     try_get_client_id,
     try_get_client_secret,
@@ -19,6 +18,7 @@ from fusion._legacy.authentication import (
 from fusion.authentication import (
     FusionOAuthAdapter,
 )
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError, CredentialError
 from fusion.utils import (
     get_default_fs,

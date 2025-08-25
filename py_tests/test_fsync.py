@@ -11,7 +11,7 @@ import fsspec
 import pandas as pd
 import pytest
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.fs_sync import (
     _download,
     _generate_sha256_token,

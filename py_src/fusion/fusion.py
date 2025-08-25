@@ -19,8 +19,8 @@ import pyarrow as pa
 from rich.progress import Progress
 from tabulate import tabulate
 
-from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute, Attributes
+from fusion.credentials import FusionCredentials
 from fusion.dataflow import InputDataFlow, OutputDataFlow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
@@ -75,7 +75,7 @@ class Fusion:
 
     @staticmethod
     def _call_for_dataframe(url: str, session: requests.Session) -> pd.DataFrame:
-        """Private function that calls an API endpoint and returns the data as a pandas dataframe, 
+        """Private function that calls an API endpoint and returns the data as a pandas dataframe,
         with pagination support.
         Args:
             url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.

@@ -10,7 +10,7 @@ import fsspec
 import pytest
 from aiohttp import ClientResponse
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 from fusion.fusion_filesystem import FusionFile, FusionHTTPFileSystem
 
@@ -41,7 +41,7 @@ def test_filesystem(
 
     assert FusionHTTPFileSystem(None, **kwargs)
 
-    kwargs = {"client_kwargs": {"credentials": 3.14}}  # type: ignore
+    kwargs = {"client_kwargs": {"credentials": 3.14}}  # type: ignore[dict-item]
     with pytest.raises(ValueError, match="Credentials not provided"):
         FusionHTTPFileSystem(None, **kwargs)
 

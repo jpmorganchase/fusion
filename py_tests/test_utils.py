@@ -15,8 +15,8 @@ import pytest
 import requests
 from pytest_mock import MockerFixture
 
-from fusion._fusion import FusionCredentials
 from fusion.authentication import FusionOAuthAdapter
+from fusion.credentials import FusionCredentials
 from fusion.fusion import Fusion
 from fusion.utils import (
     PathLikeT,
