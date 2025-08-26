@@ -115,6 +115,37 @@ class Dataflow(metaclass=CamelCaseMeta):
         return cls.from_dict(series.to_dict())
 
     @classmethod
+    def _from_csv(cls: type[Dataflow], file_path: str, row: int | None = None) -> Dataflow:
+        """Instantiate a Dataflow object from a CSV file.
+
+        Args:
+            file_path (str): Path to the CSV file.
+            row (int | None, optional): Row index to pick (defaults to 0).
+
+        Returns:
+            Dataflow: A single Dataflow instance.
+        """
+        import json
+        df = pd.read_csv(file_path)
+
+        idx = 0 if row is None else row
+        if not (0 <= idx < len(df)):
+            raise IndexError(f"Row index {idx} out of range for CSV with {len(df)} rows")
+
+        series = df.iloc[idx].copy()
+
+        # Parse JSON string columns into dicts
+        for col in ["providerNode", "consumerNode"]:
+            if col in series and isinstance(series[col], str):
+                try:
+                    series[col] = json.loads(series[col])
+                except Exception:
+                    raise ValueError(f"Column {col} must contain a JSON object string")
+
+        return cls._from_series(series)
+
+
+    @classmethod
     def _from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
         """Instantiate a single Dataflow from a dict ."""
         return cls.from_dict(data)
@@ -134,8 +165,17 @@ class Dataflow(metaclass=CamelCaseMeta):
                 logger.warning("Skipping invalid row: %s", e)
         return results
 
-    def from_object(self, dataflow_source: Dataflow | dict[str, Any] | str | pd.Series) -> Dataflow: # type: ignore[type-arg]
-        """Instantiate a single Dataflow from a Dataflow/dict/JSON-object/Series."""
+    def from_object(self, dataflow_source: Dataflow | dict[str, Any] | str | pd.Series) -> Dataflow:  # type: ignore[type-arg]
+        """Instantiate a single Dataflow from a Dataflow, dict, JSON-object string, CSV path, or pandas Series.
+
+        - Dataflow: returned as-is (client re-bound).
+        - dict: converted via _from_dict.
+        - pandas Series: converted via _from_series.
+        - str:
+            * If it looks like a JSON object (starts with '{'), parse and build via _from_dict.
+            * If it ends with '.csv', read the CSV and take the first row via _from_csv.
+            (Use _from_csv(file_path, row=0) semantics.)
+        """
         import json
 
         if isinstance(dataflow_source, Dataflow):
@@ -146,15 +186,18 @@ class Dataflow(metaclass=CamelCaseMeta):
             obj = self._from_series(dataflow_source)
         elif isinstance(dataflow_source, str):
             s = dataflow_source.strip()
-            if s.startswith("{"):  # JSON object string
+            if s.startswith("{"):
                 obj = self._from_dict(json.loads(s))
+            elif s.lower().endswith(".csv"):
+                obj = self._from_csv(s)  # defaults to the first row
             else:
-                raise ValueError("Unsupported string input — must be JSON object string")
+                raise ValueError("Unsupported string input — must be JSON object string or a .csv file path")
         else:
             raise TypeError(f"Could not resolve the object provided: {type(dataflow_source).__name__}")
 
         obj.client = self._client
         return obj
+
 
     def validate(self) -> None:
         """Validate that required fields exist."""
