@@ -2522,7 +2522,7 @@ class Fusion:
         end_time: str | None = None,
         boundary_sets: list[dict[str, Any]] | None = None,
         data_assets: list[dict[str, Any]] | None = None,
-        id: str | None = None,
+        id: str | None = None,   # noqa: A002
         **kwargs: Any,
     ) -> Dataflow:
         """Instantiate a Dataflow object with the current Fusion client attached.
