@@ -2236,16 +2236,16 @@ def test_list_dataflows_success(requests_mock: requests_mock.Mocker, fusion_obj:
     }
     requests_mock.get(url, json=server_json, status_code=200)
 
-    df = fusion_obj.list_dataflows(flow_id)
-    assert isinstance(df, pd.DataFrame)
-    assert len(df) == 1
-    assert df.loc[0, "id"] == flow_id
-    assert df.loc[0, "description"] == "sample flow"
+    test_df = fusion_obj.list_dataflows(flow_id)
+    assert isinstance(test_df, pd.DataFrame)
+    assert len(test_df) == 1
+    assert test_df.loc[0, "id"] == flow_id
+    assert test_df.loc[0, "description"] == "sample flow"
     # provider/consumer should be present as nested dicts flattened by json_normalize
-    assert "providerNode.name" in df.columns
-    assert "consumerNode.name" in df.columns
-    assert df.loc[0, "providerNode.name"] == "A"
-    assert df.loc[0, "consumerNode.name"] == "B"
+    assert "providerNode.name" in test_df.columns
+    assert "consumerNode.name" in test_df.columns
+    assert test_df.loc[0, "providerNode.name"] == "A"
+    assert test_df.loc[0, "consumerNode.name"] == "B"
 
 
 def test_list_dataflows_http_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:

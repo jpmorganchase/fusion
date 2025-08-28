@@ -17,6 +17,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     import requests
+
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -69,10 +70,12 @@ class Dataflow(metaclass=CamelCaseMeta):
             Defaults to ``None``.
 
         startTime (str | None, optional):
-            Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). Defaults to ``None``.
+            Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``).
+             Defaults to ``None``.
 
         endTime (str | None, optional):
-            Scheduled end time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). Defaults to ``None``.
+            Scheduled end time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``).
+             Defaults to ``None``.
 
         dataAssets (list[dict[str, Any]], optional):
             List of data asset objects involved in the data flow (up to API-defined limits). Defaults to empty list.
@@ -151,10 +154,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         if res is None:
             raise ValueError("A Fusion client object is required.")
         return res
-
-    # -----------------------
-    # Converters / loaders
-    # -----------------------
 
     @classmethod
     def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
@@ -325,9 +324,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         obj.client = self._client
         return obj
 
-    # -----------------------
-    # Validation / serialization
-    # -----------------------
 
     def validate(self) -> None:
         """Validate that required fields exist.
@@ -369,9 +365,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             out[snake_to_camel(k)] = v
         return out
 
-    # -----------------------
-    # CRUD
-    # -----------------------
 
     def create(
         self,

@@ -1,7 +1,6 @@
 """Test file for updated dataflow.py and Dataflow integration"""
 
 import pandas as pd
-import pytest
 
 from fusion.dataflow import Dataflow
 from fusion.fusion import Fusion
