@@ -523,6 +523,7 @@ def distribution_to_filename(
     file_format: str,
     catalog: str = "common",
     partitioning: str | None = None,
+    file_name: str | None = None,
 ) -> str:
     """Returns a filename representing a dataset distribution.
 
@@ -533,12 +534,23 @@ def distribution_to_filename(
         file_format (str): The file type, e.g. CSV or Parquet
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
         partitioning (str, optional): Partitioning specification.
+        file_name (str, optional): Explicit filename override.
 
     Returns:
         str: FQ distro file name
     """
     if datasetseries[-1] == "/" or datasetseries[-1] == "\\":
         datasetseries = datasetseries[0:-1]
+
+    if file_name and file_name != file_format:
+        # Use explicit filename directly
+        final_name = file_name
+    else:
+        # Build default filename
+        if partitioning == "hive":
+            final_name = f"{dataset}.{file_format}"
+        else:
+            final_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
 
     if partitioning == "hive":
         file_name = f"{dataset}.{file_format}"
@@ -548,7 +560,7 @@ def distribution_to_filename(
     sep = "/"
     if "\\" in root_folder:
         sep = "\\"
-    return f"{root_folder}{sep}{file_name}"
+    return f"{root_folder}{sep}{final_name}"
 
 
 def _filename_to_distribution(file_name: str) -> tuple[str, str, str, str]:
@@ -583,6 +595,7 @@ def distribution_to_url(
         file_format (str): The file type, e.g. CSV or Parquet
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
         is_download (bool, optional): Is url for download
+        file_name (str, optional): Explicit filename to download.
 
     Returns:
         str: A URL for the API distribution endpoint.

@@ -935,6 +935,7 @@ class Fusion:
                     series[3],
                     series[0],
                     partitioning=partitioning,
+                    filename=fname,
                 ),
                 "overwrite": force_download,
                 "preserve_original_name": preserve_original_name,

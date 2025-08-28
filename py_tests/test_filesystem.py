@@ -343,7 +343,7 @@ async def test_fetch_range_exception(
 async def test_fetch_range_success(
     mock_client_session: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path
 ) -> None:
-    url = "http://example.com/data"
+    url = "http://example.com/data?file=file"
     output_file = MagicMock(spec=io.IOBase)
     output_file.path = "./output_file_path/file.txt"
     output_file.seek = MagicMock()
@@ -382,7 +382,7 @@ async def test_fetch_range_success(
     output_file.seek.assert_called_once_with(0)
     output_file.write.assert_called_once_with(b"some data")
     mock_response.raise_for_status.assert_not_called()
-    mock_session.get.assert_called_once_with(url + f"?downloadRange=bytes={start}-{end - 1}", **http_fs_instance.kwargs)
+    mock_session.get.assert_called_once_with(url + f"&downloadRange=bytes={start}-{end - 1}", **http_fs_instance.kwargs)
 
 
 @pytest.mark.parametrize(

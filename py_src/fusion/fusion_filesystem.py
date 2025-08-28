@@ -547,7 +547,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
 
         async def fetch() -> None:
-            async with session.get(url + f"?downloadRange=bytes={start}-{end - 1}", **self.kwargs) as response:
+            async with session.get(url + f"&downloadRange=bytes={start}-{end - 1}", **self.kwargs) as response:
                 if response.status in [200, 206]:
                     chunk = await response.read()
                     output_file.seek(start)
@@ -689,12 +689,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         self,
         lfs: fsspec.AbstractFileSystem,
         rpath: str | Path,
-        lpath: str | Path,
-        filename: str | None = None,
-        file_format: str | None = None,
+        lpath: str | Path,        
         chunk_size: int = 5 * 2**20,
         overwrite: bool = True,
-        preserve_original_name: bool = False,
+        preserve_original_name: bool = False,        
         **kwargs: Any,
     ) -> Any:
         """Download file(s) from remote to local.
@@ -702,9 +700,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         Args:
             lfs (fsspec.AbstractFileSystem): Local filesystem.
             rpath (Union[str, Path]): Remote path.
-            lpath (Union[str, Path]): Local path.
-            filename (str, optional): Filename to use when saving. If None, lpath is used.
-            file_format (str, optional): File format (e.g., 'parquet'). Used to decide if filename should be reset.
+            lpath (Union[str, Path]): Local path.            
             chunk_size (int, optional): Chunk size. Defaults to 5 * 2**20.
             overwrite (bool, optional): True if previously downloaded files should be overwritten. Defaults to True.
             preserve_original_name (bool, optional): True if the original name should be preserved. Defaults to False.
@@ -723,11 +719,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 return r.headers
 
         try:
-            headers = sync(self.loop, get_headers)
-            if filename and file_format and filename != file_format:
-                lpath = Path(lpath).parent.joinpath(filename)
-                if not overwrite and lfs.exists(lpath):
-                    return True, lpath, None
+            headers = sync(self.loop, get_headers)            
+            if not overwrite and lfs.exists(lpath):
+                 return True, lpath, None
         except Exception as ex:  # noqa: BLE001
             headers = {}
             logger.info(f"Failed to get headers for {rpath}", exc_info=ex)
