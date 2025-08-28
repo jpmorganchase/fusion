@@ -1,4 +1,4 @@
-"""Test file for updated dataflow.py and Dataflow integration"""
+"""Test file for Dataflow integration"""
 
 import pandas as pd
 

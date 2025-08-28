@@ -140,7 +140,7 @@ fn find_cfg_file(file_path: &Path) -> PyResult<PathBuf> {
 fn fusion_url_to_auth_url(url: String) -> PyResult<Option<(String, String, String)>> {
     debug!("Trying to form fusion auth url from: {}", url);
     let url_parsed = Url::parse(&url).map_err(|e| {
-        CredentialError::new_err(format!("Could not parse URL: {:?} (Error Code: 400)", e))
+        CredentialError::new_err(format!("Could not parse URL: {e:?} (Error Code: 400)"))
     })?;
 
     let path = url_parsed.path();
@@ -184,9 +184,7 @@ fn fusion_url_to_auth_url(url: String) -> PyResult<Option<(String, String, Strin
         "{}://{}{}{}",
         url_parsed.scheme(),
         url_parsed.host_str().unwrap_or_default(),
-        url_parsed
-            .port()
-            .map_or(String::new(), |p| format!(":{}", p)),
+        url_parsed.port().map_or(String::new(), |p| format!(":{p}")),
         new_path
     );
     debug!("Fusion token URL: {}", fusion_tk_url);
@@ -295,8 +293,7 @@ fn build_client(proxies: &Option<HashMap<String, String>>) -> PyResult<reqwest::
         .build()
         .map_err(|err| {
             CredentialError::new_err(format!(
-                "Error creating HTTP client: {} (Error Code: 500)",
-                err
+                "Error creating HTTP client: {err} (Error Code: 500)"
             ))
         })
 }
@@ -697,18 +694,18 @@ impl FusionCredentials {
                 .map_err(|e| {
                     let status_code = e.status().map_or(500, |s| s.as_u16() as i32);
                     CredentialError::new_err((
-                        format!("Could not post request: {:?}", e),
+                        format!("Could not post request: {e:?}"),
                         status_code,
                     ))
                 })?;
 
             let res_text = res.text().await.map_err(|e| {
-                CredentialError::new_err((format!("Could not get response text: {:?}", e), 500))
+                CredentialError::new_err((format!("Could not get response text: {e:?}"), 500))
             })?;
 
             let res_json = json::parse(&res_text).map_err(|e| {
                 CredentialError::new_err((
-                    format!("Could not parse text to json: {:?}", e),
+                    format!("Could not parse text to json: {e:?}"),
                     500, // parsing failure, so internal error
                 ))
             })?;
@@ -774,22 +771,20 @@ impl FusionCredentials {
             let res_maybe = req.send().await.map_err(|e| {
                 let status_code = e.status().map_or(500, |s| s.as_u16() as i32);
                 CredentialError::new_err(format!(
-                    "Could not post request: {:?} (Error Code: {})",
-                    e, status_code
+                    "Could not post request: {e:?} (Error Code: {status_code})"
                 ))
             })?;
 
             let res = res_maybe.error_for_status().map_err(|e| {
                 let status_code = e.status().map_or(500, |s| s.as_u16() as i32);
-                CredentialError::new_err((format!("Error from endpoint: {:?}", e), status_code))
+                CredentialError::new_err((format!("Error from endpoint: {e:?}"), status_code))
             })?;
 
             match res.text().await {
                 Ok(text) => {
                     let res_json = json::parse(&text).map_err(|e| {
                         CredentialError::new_err(format!(
-                            "Could not parse response to json: {:?} (Error Code: 500)",
-                            e
+                            "Could not parse response to json: {e:?} (Error Code: 500)"
                         ))
                     })?;
                     Ok(res_json)
@@ -797,7 +792,7 @@ impl FusionCredentials {
                 Err(e) => {
                     let status_code = e.status().map_or(500, |s| s.as_u16() as i32);
                     Err(CredentialError::new_err((
-                        format!("Could not get response text: {:?}", e),
+                        format!("Could not get response text: {e:?}"),
                         status_code,
                     )))
                 }
@@ -852,7 +847,7 @@ impl FusionCredentials {
 
         let (fusion_tk_url, catalog_name, dataset_name) = fusion_tk_url_info.unwrap();
 
-        let token_key = format!("{}_{}", catalog_name, dataset_name);
+        let token_key = format!("{catalog_name}_{dataset_name}");
 
         // Check if the token exists and if it's expired
         let token_entry = self.fusion_token.entry(token_key.clone());
@@ -911,8 +906,7 @@ impl FusionCredentials {
                 file.read_to_string(&mut contents)
                     .map_err(|_| PyFileNotFoundError::new_err("Could not read file contents"))?;
                 return Err(CredentialError::new_err(format!(
-                    "Invalid JSON: {}\nContents:\n{}\nError Code: 400",
-                    err, contents
+                    "Invalid JSON: {err}\nContents:\n{contents}\nError Code: 400"
                 )));
             }
         };
