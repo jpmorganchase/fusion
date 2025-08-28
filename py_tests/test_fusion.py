@@ -2191,3 +2191,70 @@ def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fus
     mappings = [cast("Report.AttributeTermMapping", {"attribute": {"id": "a"}, "term": {"id": "t"}})]
     resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
     assert resp is mock_resp
+
+
+
+def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
+    """ID-only path: no nodes provided; object still binds client and carries id."""
+    flow = fusion_obj.dataflow(id="abc-123")
+    assert flow.id == "abc-123"
+    # placeholders are created internally just to satisfy the dataclass constructor
+    assert isinstance(flow.providerNode, dict)
+    assert isinstance(flow.consumerNode, dict)
+    assert flow.client == fusion_obj
+
+
+def test_fusion_dataflow_full(fusion_obj: Fusion) -> None:
+    """Full constructor path: provider/consumer plus optional fields."""
+    provider = {"name": "CRM_DB", "dataNodeType": "Database"}
+    consumer = {"name": "DWH", "dataNodeType": "Database"}
+    flow = fusion_obj.dataflow(
+        provider_node=provider,
+        consumer_node=consumer,
+        description="CRM → DWH nightly load",
+        frequency="Daily",
+        transport_type="Batch",
+    )
+    assert flow.providerNode == provider
+    assert flow.consumerNode == consumer
+    assert flow.description == "CRM → DWH nightly load"
+    assert flow.frequency == "Daily"
+    assert flow.transportType == "Batch"
+    assert flow.client == fusion_obj
+
+
+def test_list_dataflows_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_dataflows returns a normalized dataframe when the API responds 200."""
+    flow_id = "abc-123"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{flow_id}"
+    server_json = {
+        "id": flow_id,
+        "description": "sample flow",
+        "providerNode": {"name": "A", "dataNodeType": "DB"},
+        "consumerNode": {"name": "B", "dataNodeType": "DB"},
+        "frequency": "Daily",
+    }
+    requests_mock.get(url, json=server_json, status_code=200)
+
+    df = fusion_obj.list_dataflows(flow_id)
+    assert isinstance(df, pd.DataFrame)
+    assert len(df) == 1
+    assert df.loc[0, "id"] == flow_id
+    assert df.loc[0, "description"] == "sample flow"
+    # provider/consumer should be present as nested dicts flattened by json_normalize
+    assert "providerNode.name" in df.columns
+    assert "consumerNode.name" in df.columns
+    assert df.loc[0, "providerNode.name"] == "A"
+    assert df.loc[0, "consumerNode.name"] == "B"
+
+
+def test_list_dataflows_http_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_dataflows raises for non-200 responses."""
+    flow_id = "does-not-exist"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{flow_id}"
+    requests_mock.get(url, status_code=404)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        # method should bubble up the HTTP error via raise_for_status()
+        fusion_obj.list_dataflows(flow_id)
+

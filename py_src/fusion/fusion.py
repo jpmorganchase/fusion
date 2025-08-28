@@ -2616,7 +2616,7 @@ class Fusion:
     ) -> pd.DataFrame:
         """Retrieve a single dataflow from the Fusion system."""
 
-        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/dataflows/{id_contains}"
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{id_contains}"
         resp = self.session.get(url)
 
         if resp.status_code == HTTPStatus.OK:

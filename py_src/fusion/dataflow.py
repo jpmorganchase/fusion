@@ -17,7 +17,6 @@ from .utils import (
 
 if TYPE_CHECKING:
     import requests
-
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,62 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Dataflow(metaclass=CamelCaseMeta):
-    """Represents a single Dataflow object with CRUD operations and Dataset-style loaders."""
+    """Fusion Dataflow class for managing dataflow metadata in the Fusion system.
+
+    Attributes:
+        providerNode (dict[str, str]):
+            Defines the provider/source node of the data flow.
+            Required when creating a data flow.
+            Expected keys:
+              - ``name`` (str): Provider node name.
+              - ``dataNodeType`` (str): Provider node type.
+
+        consumerNode (dict[str, str]):
+            Defines the consumer/target node of the data flow.
+            Required when creating a data flow and must be distinct from the provider node.
+            Expected keys:
+              - ``name`` (str): Consumer node name.
+              - ``dataNodeType`` (str): Consumer node type.
+
+        description (str | None, optional):
+            Purpose/summary of the data flow. If this field is present, it must not be blank.
+            (API range reference: length 1..65535). Defaults to ``None``.
+
+        id (str | None, optional):
+            Server-assigned unique identifier of the data flow. Must be set on the object for
+            ``update()``, ``update_fields()``, and ``delete()``. Defaults to ``None``.
+
+        alternativeId (dict[str, Any] | None, optional):
+            Alternative/secondary identifier object for the data flow. Based on the API schema,
+            this may include:
+              - ``value`` (str): Up to 255 characters.
+              - ``domain`` (str): A domain string.
+              - ``isSor`` (bool): Whether this is a System-of-Record id.
+            Defaults to ``None``.
+
+        transportType (str | None, optional):
+            Transport type of the data flow. API allows values like
+            ``"SYNCHRONOUS MESSAGING"``, ``"FILE TRANSFER"``, ``"API"``, ``"ASYNCHRONOUS MESSAGING"``.
+            Defaults to ``None``.
+
+        frequency (str | None, optional):
+            Frequency of the data flow. API allows values such as
+            ``"BI-WEEKLY"``, ``"WEEKLY"``, ``"SEMI-ANNUALLY"``, ``"QUARTERLY"``, ``"ANNUALLY"``,
+            ``"DAILY"``, ``"ADHOC"``, ``"INTRA-DAY"``, ``"MONTHLY"``, ``"TWICE-WEEKLY"``, ``"BI-MONTHLY"``.
+            Defaults to ``None``.
+
+        startTime (str | None, optional):
+            Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). Defaults to ``None``.
+
+        endTime (str | None, optional):
+            Scheduled end time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). Defaults to ``None``.
+
+        dataAssets (list[dict[str, Any]], optional):
+            List of data asset objects involved in the data flow (up to API-defined limits). Defaults to empty list.
+
+        boundarySets (list[dict[str, Any]], optional):
+            Boundary set objects for the data flow; items are stored as provided. Defaults to empty list.
+    """
 
     # Required
     providerNode: dict[str, str]
@@ -33,7 +87,7 @@ class Dataflow(metaclass=CamelCaseMeta):
 
     # Optional fields
     description: str | None = None
-    id: str | None = None   
+    id: str | None = None
     alternativeId: dict[str, Any] | None = None
     transportType: str | None = None
     frequency: str | None = None
@@ -68,7 +122,7 @@ class Dataflow(metaclass=CamelCaseMeta):
 
     @client.setter
     def client(self, client: Fusion | None) -> None:
-        """Set the client for the Dataflow. Set automatically, if the Dataflow is instantiated from a Fusion object.
+        """Set the client for the Dataflow. Set automatically if instantiated from a Fusion object.
 
         Args:
             client (Any): Fusion client object.
@@ -97,6 +151,10 @@ class Dataflow(metaclass=CamelCaseMeta):
         if res is None:
             raise ValueError("A Fusion client object is required.")
         return res
+
+    # -----------------------
+    # Converters / loaders
+    # -----------------------
 
     @classmethod
     def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
@@ -130,7 +188,7 @@ class Dataflow(metaclass=CamelCaseMeta):
                 if isinstance(v, dict):
                     converted[key] = convert_keys(v)
                 elif isinstance(v, list):
-                    converted[key] = [ 
+                    converted[key] = [
                         convert_keys(i) if isinstance(i, dict) else i for i in v
                     ]
                 else:
@@ -166,47 +224,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             >>> Dataflow._from_series(row)
         """
         return cls.from_dict(series.to_dict())
-
-    @classmethod
-    def _from_csv(cls: type[Dataflow], file_path: str, row: int | None = None) -> Dataflow:
-        """Instantiate a Dataflow object from a CSV file.
-
-        The CSV is assumed to contain either:
-          1) JSON object strings in columns `providerNode` and `consumerNode`, or
-          2) already-parsed dict-like objects in those columns (e.g., produced by pandas read with converters).
-
-        Args:
-            file_path (str): Path to the CSV file.
-            row (int | None, optional): Row index to pick (defaults to 0).
-
-        Returns:
-            Dataflow: A single Dataflow instance.
-
-        Raises:
-            IndexError: If the requested row is out of bounds.
-            ValueError: If provider/consumer columns are present but not valid JSON strings.
-
-        Examples:
-            >>> flow = Dataflow._from_csv("flows.csv")  # first row
-            >>> flow2 = Dataflow._from_csv("flows.csv", row=3)  # 4th row
-        """
-        import json
-
-        df_csv = pd.read_csv(file_path)
-        idx = 0 if row is None else row
-        if not (0 <= idx < len(df_csv)):
-            raise IndexError(f"Row index {idx} out of range for CSV with {len(df_csv)} rows")
-
-        series = df_csv.iloc[idx].copy()
-
-        for col in ["providerNode", "consumerNode"]:
-            if col in series and isinstance(series[col], str):
-                try:
-                    series[col] = json.loads(series[col])
-                except Exception as exc:  # noqa: BLE001
-                    raise ValueError(f"Column {col} must contain a JSON object string") from exc
-
-        return cls._from_series(series)
 
     @classmethod
     def _from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
@@ -250,14 +267,9 @@ class Dataflow(metaclass=CamelCaseMeta):
         return results
 
     def from_object(self, dataflow_source: Dataflow | dict[str, Any] | str | pd.Series) -> Dataflow:  # type: ignore[type-arg]
-        """Instantiate a single Dataflow from a Dataflow, dict, JSON-object string, CSV path, or pandas Series.
+        """Instantiate a single Dataflow from a Dataflow, dict, JSON-object string, or pandas Series.
 
-        - Dataflow: returned as-is (client re-bound).
-        - dict: converted via _from_dict.
-        - pandas Series: converted via _from_series.
-        - str:
-            * If it looks like a JSON object (starts with '{'), parse and build via _from_dict.
-            * If it ends with '.csv', read the CSV and take the first row via _from_csv (row=0).
+        Note: CSV input is not supported here.
 
         Args:
             dataflow_source (Dataflow | dict[str, Any] | str | pd.Series): Source to construct a Dataflow from.
@@ -266,7 +278,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             Dataflow: The constructed Dataflow with this instance's client bound.
 
         Raises:
-            ValueError: If a string source is neither a JSON object string nor a .csv path.
+            ValueError: If a string source is not a JSON object string.
             TypeError: If the source type is unsupported.
 
         Examples:
@@ -292,9 +304,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             From JSON:
             >>> flow = handle.from_object('{"providerNode":{"name":"A","dataNodeType":"DB"},'
             ...                           '"consumerNode":{"name":"B","dataNodeType":"DB"}}')
-
-            From CSV (first row):
-            >>> flow = handle.from_object("flows.csv")
         """
         import json
 
@@ -308,15 +317,17 @@ class Dataflow(metaclass=CamelCaseMeta):
             s = dataflow_source.strip()
             if s.startswith("{"):
                 obj = self._from_dict(json.loads(s))
-            elif s.lower().endswith(".csv"):
-                obj = self._from_csv(s)  # defaults to the first row
             else:
-                raise ValueError("Unsupported string input — must be JSON object string or a .csv file path")
+                raise ValueError("Unsupported string input — must be a JSON object string")
         else:
             raise TypeError(f"Could not resolve the object provided: {type(dataflow_source).__name__}")
 
         obj.client = self._client
         return obj
+
+    # -----------------------
+    # Validation / serialization
+    # -----------------------
 
     def validate(self) -> None:
         """Validate that required fields exist.
@@ -357,6 +368,10 @@ class Dataflow(metaclass=CamelCaseMeta):
                 continue
             out[snake_to_camel(k)] = v
         return out
+
+    # -----------------------
+    # CRUD
+    # -----------------------
 
     def create(
         self,

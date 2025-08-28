@@ -35,14 +35,6 @@ def test_dataflow_to_dict() -> None:
     assert result["frequency"] == "WEEKLY"
 
 
-def test_dataflow_validation_raises() -> None:
-    flow = Dataflow(
-        providerNode={"name": "", "dataNodeType": "Database"},
-        consumerNode={"name": "", "dataNodeType": "Database"},
-    )
-    with pytest.raises(ValueError, match="Missing required fields"):
-        flow.validate()
-
 
 def test_dataflow_from_dict() -> None:
     data = {
