@@ -20,7 +20,7 @@ from opensearchpy.exceptions import (
     TransportError,
 )
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.embeddings import (
     FusionAsyncHttpConnection,
     FusionEmbeddingsConnection,
@@ -901,6 +901,7 @@ def test_async_fusion_embeddings_connection_remap_url(
     expected = "https://example.com/api/v1/myindex/_test/mock/embeddings/search"
 
     assert remapped == expected
+
 
 @patch("fusion.embeddings.FusionCredentials.from_file")
 def test_fusion_embeddings_connection_remap_url_doc(
