@@ -544,7 +544,7 @@ def distribution_to_filename(
 
     if file_name and file_name != file_format:
         # Use explicit filename directly
-        final_name = file_name
+        final_name = f"{file_name}.{file_format}"
     elif partitioning == "hive":        
         final_name = f"{dataset}.{file_format}"
     else:        
