@@ -564,7 +564,7 @@ def test_distribution_to_url() -> None:
             file_format,
             catalog,
             is_download=True,
-            filename="file",
+            file_name="file",
         )
         assert result == exp_res
 

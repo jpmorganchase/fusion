@@ -816,7 +816,7 @@ class Fusion:
         return_paths: bool = False,
         partitioning: str | None = None,
         preserve_original_name: bool = False,
-        filename: str | list[str] = "ALL",
+        file_name: str | list[str] | None = None,
     ) -> list[tuple[bool, str, str | None]] | None:
         """Downloads the requested distributions of a dataset to disk.
 
@@ -833,12 +833,16 @@ class Fusion:
                 Defaults to all cpus available.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             force_download (bool, optional): If True then will always download a file even
-                if it is already on disk. Defaults to True.
+                if it is already on disk. Defaults to False.
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
             partitioning (str, optional): Partitioning specification.
             preserve_original_name (bool, optional): Preserve the original name of the file. Defaults to False.
+            file_name (str | list[str] | None, optional): Specific file(s) to fetch.
+                This can be a single file name or a list of file names.
+                The file name should match exactly the name of the file in the distribution with out format.
+                If not provided, fetch all available distribution files.
 
         Returns:
 
@@ -908,13 +912,13 @@ class Fusion:
         n_par = cpu_count(n_par)
         # handle filenames
         filenames: list[str]
-        if filename == "ALL":
+        if not file_name:
             df_files = self.list_distribution_files(dataset, dt_str, dataset_format, catalog)
             filenames = [fid.rstrip("/") for fid in df_files["@id"].tolist()]
-        elif isinstance(filename, str):
-            filenames = [filename.rstrip("/")]
+        elif isinstance(file_name, str):
+            filenames = [file_name.rstrip("/")]
         else:
-            filenames = [f.rstrip("/") for f in filename]
+            filenames = [f.rstrip("/") for f in file_name]
 
         download_spec: list[dict[str, Any]] = [
             {
@@ -926,7 +930,7 @@ class Fusion:
                     series[3],
                     series[0],
                     is_download=True,
-                    filename=fname,
+                    file_name=fname,
                 ),
                 "lpath": distribution_to_filename(
                     download_folders[i],
@@ -935,7 +939,7 @@ class Fusion:
                     series[3],
                     series[0],
                     partitioning=partitioning,
-                    filename=fname,
+                    file_name=fname,
                 ),
                 "overwrite": force_download,
                 "preserve_original_name": preserve_original_name,
@@ -1018,6 +1022,7 @@ class Fusion:
         force_download: bool = False,
         download_folder: str | None = None,
         dataframe_type: str = "pandas",
+        file_name: str | list[str] | None = None,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """Gets distributions for a specified date or date range and returns the data as a dataframe.
@@ -1046,6 +1051,10 @@ class Fusion:
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
             dataframe_type (str, optional): Type
+            file_name (str | list[str] | None, optional): Specific file(s) to fetch.
+                This can be a single file name or a list of file names.
+                The file name should match exactly the name of the file in the distribution with out format.
+                If not provided, fetch all available distribution files.
         Returns:
             class:`pandas.DataFrame`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
@@ -1069,6 +1078,7 @@ class Fusion:
             force_download,
             download_folder,
             return_paths=True,
+            file_name=file_name,
         )
 
         if not download_res:
@@ -1163,7 +1173,8 @@ class Fusion:
         series_member: str,
         dataset_format: str = "parquet",
         catalog: str | None = None,
-    ) -> BytesIO:
+        file_name: str | list[str] | None = None,
+    ) -> BytesIO | list[BytesIO]:
         """Returns an instance of dataset (the distribution) as a bytes object.
 
         Args:
@@ -1171,19 +1182,42 @@ class Fusion:
             series_member (str,): A dataset series member identifier
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            file_name (str | list[str] | None, optional): Specific file(s) to fetch.
+                This can be a single file name or a list of file names.
+                The file name should match exactly the name of the file in the distribution with out format.
+                If not provided, fetch all available distribution files.
+
+        Returns:
+            BytesIO | list[BytesIO]: A single BytesIO if one file, or a list of BytesIO for multiple files.
         """
 
         catalog = self._use_catalog(catalog)
 
-        url = distribution_to_url(
-            self.root_url,
-            dataset,
-            series_member,
-            dataset_format,
-            catalog,
-        )
+        # Get list of files if not provided
+        if not file_name:
+            df_files = self.list_distribution_files(dataset, series_member, dataset_format, catalog)
+            filenames = [fid.rstrip("/") for fid in df_files["@id"].tolist()]
+        elif isinstance(file_name, str):
+            filenames = [file_name]
+        else:  # already a list[str]
+            filenames = file_name
 
-        return Fusion._call_for_bytes_object(url, self.session)
+        # Fetch each file as BytesIO
+        results = []
+        for fname in filenames:
+            url = distribution_to_url(
+                self.root_url,
+                dataset,
+                series_member,
+                dataset_format,
+                catalog,
+                is_download=True,
+                file_name=fname,
+            )
+            results.append(Fusion._call_for_bytes_object(url, self.session))
+
+        # Return single BytesIO if only one file, else list
+        return results[0] if len(results) == 1 else results
 
     def to_table(  # noqa: PLR0913
         self,
@@ -1197,6 +1231,7 @@ class Fusion:
         filters: PyArrowFilterT | None = None,
         force_download: bool = False,
         download_folder: str | None = None,
+        file_name: str | list[str] | None = None,
         **kwargs: Any,
     ) -> pa.Table:
         """Gets distributions for a specified date or date range and returns the data as an arrow table.
@@ -1224,6 +1259,10 @@ class Fusion:
                 if it is already on disk. Defaults to False.
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
+            file_name (str | list[str] | None, optional): Specific file(s) to fetch.
+                This can be a single file name or a list of file names.
+                The file name should match exactly the name of the file in the distribution with out format.
+                If not provided, fetch all available distribution files.
         Returns:
             class:`pyarrow.Table`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
@@ -1242,6 +1281,7 @@ class Fusion:
             force_download,
             download_folder,
             return_paths=True,
+            file_name=file_name,
         )
 
         if not download_res:

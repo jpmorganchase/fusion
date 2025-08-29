@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import re
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -1352,19 +1353,129 @@ def test__resolve_distro_tuples(mocker: MockerFixture, fusion_obj: Fusion) -> No
         assert res == [exp_tuples[-1]]
 
 
-def test_to_bytes(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_to_bytes_multiple_files(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
     file_format = "csv"
-    url = distribution_to_url(fusion_obj.root_url, catalog, dataset, datasetseries, file_format)
-    expected_data = b"some binary data"
-    requests_mock.get(url, content=expected_data)
+    mock_data = {
+        "resources": [
+            {
+                "description": "Sample file 1",
+                "fileExtension": ".parquet",
+                "identifier": "file1",
+                "title": "File 1",
+                "@id": "file1"
+            },
+            {
+                "description": "Sample file 2",
+                "fileExtension": ".parquet",
+                "identifier": "file2",
+                "title": "File 2",
+                "@id": "file2"
+            }
+        ]
+    }  
 
-    data = fusion_obj.to_bytes(catalog, dataset, datasetseries, file_format)
+    distri_files_url = (
+        f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+        f"{datasetseries}/distributions/{file_format}/files"
+    )
+
+    requests_mock.get(distri_files_url, json=mock_data)
+    file1_url = distribution_to_url(
+    fusion_obj.root_url,
+    dataset,
+    datasetseries,
+    file_format,
+    catalog,
+    is_download=True,
+    file_name="file1",
+    )
+    file2_url = distribution_to_url(
+    fusion_obj.root_url,
+    dataset,
+    datasetseries,
+    file_format,
+    catalog,
+    is_download=True,
+    file_name="file2",
+    )
+    expected_data = b"some binary data"
+    requests_mock.get(file1_url, content=expected_data)
+    requests_mock.get(file2_url, content=expected_data)
+
+    data = fusion_obj.to_bytes(dataset, datasetseries, file_format, catalog)
 
     # Check if the data is returned correctly
-    assert data.getbuffer() == expected_data
+    if isinstance(data, list):
+        assert all(isinstance(d, BytesIO) for d in data)
+        for d in data:
+            assert d.getvalue() == expected_data
+
+def test_to_bytes_single_file(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    mock_data = {
+        "resources": [
+            {
+                "description": "Sample file 1",
+                "fileExtension": ".parquet",
+                "identifier": "file1",
+                "title": "File 1",
+                "@id": "file1"
+            }
+        ]
+    }  
+
+    distri_files_url = (
+        f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+        f"{datasetseries}/distributions/{file_format}/files"
+    )
+
+    requests_mock.get(distri_files_url, json=mock_data)
+    file1_url = distribution_to_url(
+    fusion_obj.root_url,
+    dataset,
+    datasetseries,
+    file_format,
+    catalog,
+    is_download=True,
+    file_name="file1",
+    )
+    expected_data = b"some binary data"
+    requests_mock.get(file1_url, content=expected_data)
+    
+    data = fusion_obj.to_bytes(dataset, datasetseries, file_format, catalog)
+
+    # Check if the data is returned correctly
+    if isinstance(data, BytesIO):
+        assert data.getbuffer() == expected_data
+
+def test_to_bytes_with_filename(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"  
+    file1_url = distribution_to_url(
+    fusion_obj.root_url,
+    dataset,
+    datasetseries,
+    file_format,
+    catalog,
+    is_download=True,
+    file_name="file1"
+    )
+    expected_data = b"some binary data"
+    requests_mock.get(file1_url, content=expected_data)
+    
+    data = fusion_obj.to_bytes(dataset, datasetseries, file_format, catalog, file_name="file1")
+
+    # Check if the data is returned correctly
+    if isinstance(data, BytesIO):
+        assert data.getbuffer() == expected_data
 
 
 @pytest.mark.skip(reason="MUST FIX")

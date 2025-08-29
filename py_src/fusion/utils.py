@@ -545,17 +545,10 @@ def distribution_to_filename(
     if file_name and file_name != file_format:
         # Use explicit filename directly
         final_name = file_name
-    else:
-        # Build default filename
-        if partitioning == "hive":
-            final_name = f"{dataset}.{file_format}"
-        else:
-            final_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
-
-    if partitioning == "hive":
-        file_name = f"{dataset}.{file_format}"
-    else:
-        file_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
+    elif partitioning == "hive":        
+        final_name = f"{dataset}.{file_format}"
+    else:        
+        final_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
 
     sep = "/"
     if "\\" in root_folder:
@@ -584,7 +577,7 @@ def distribution_to_url(
     file_format: str,
     catalog: str = "common",
     is_download: bool = False,
-    filename: str | None = None,
+    file_name: str | None = None,
 ) -> str:
     """Returns the API URL to download a dataset distribution.
 
@@ -608,7 +601,7 @@ def distribution_to_url(
     if is_download:
         return (
             f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-            f"{datasetseries}/distributions/{file_format}/files/operationType/download?file={filename}"
+            f"{datasetseries}/distributions/{file_format}/files/operationType/download?file={file_name}"
         )
     return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
 
