@@ -17,6 +17,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     import requests
+
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -69,10 +70,12 @@ class Dataflow(metaclass=CamelCaseMeta):
             Defaults to ``None``.
 
         startTime (str | None, optional):
-            Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). Defaults to ``None``.
+            Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). 
+            Defaults to ``None``.
 
         endTime (str | None, optional):
-            Scheduled end time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). Defaults to ``None``.
+            Scheduled end time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``).
+             Defaults to ``None``.
 
         dataAssets (list[dict[str, Any]], optional):
             List of data asset objects involved in the data flow (up to API-defined limits). Defaults to empty list.
