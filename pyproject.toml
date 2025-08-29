@@ -33,7 +33,7 @@ dependencies = [
     "aiohttp >= 3.7.1",
     "rich >= 11.0.0",
     "certifi",
-    "jwt>=1.4.0",
+    "pyjwt>=2.10.1",
 ]
 
 [build-system]
