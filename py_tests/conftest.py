@@ -10,8 +10,8 @@ import pandas as pd
 import polars as pl
 import pytest
 
-from fusion._fusion import FusionCredentials
 from fusion.authentication import FusionOAuthAdapter
+from fusion.credentials import FusionCredentials
 from fusion.fusion import Fusion
 
 PathLike = Union[str, Path]

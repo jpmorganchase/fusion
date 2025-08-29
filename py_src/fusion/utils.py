@@ -45,7 +45,7 @@ from .authentication import FusionAiohttpSession, FusionOAuthAdapter
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from fusion._fusion import FusionCredentials
+    from fusion.credentials import FusionCredentials
 
     from .types import PyArrowFilterT
 

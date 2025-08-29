@@ -13,19 +13,13 @@ import requests_mock
 from opensearchpy import OpenSearch
 from pytest_mock import MockerFixture
 
-from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
 from fusion.report import Report
 from fusion.utils import _normalise_dt_param, distribution_to_url
-
-
-def test_rust_ok() -> None:
-    from fusion import rust_ok
-
-    assert rust_ok()
 
 
 def test__get_canonical_root_url() -> None:
@@ -60,7 +54,7 @@ def test_fusion_init_cred_value_error(example_creds_dict: dict[str, Any]) -> Non
     with pytest.raises(
         ValueError, match="credentials must be a path to a credentials file or FusionCredentials object"
     ) as error_info:
-        Fusion(credentials=example_creds_dict)  # type: ignore
+        Fusion(credentials=example_creds_dict)  # type: ignore[arg-type]
     assert str(error_info.value) == "credentials must be a path to a credentials file or FusionCredentials object"
 
 

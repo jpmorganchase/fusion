@@ -28,7 +28,7 @@ from opensearchpy.exceptions import (
 )
 from opensearchpy.metrics import Metrics, MetricsNone
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.embeddings_utils import (
     _modify_post_haystack,
     _modify_post_response_langchain,
