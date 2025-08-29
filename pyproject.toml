@@ -52,7 +52,7 @@ Issues = "https://github.com/jpmorganchase/fusion/issues"
 
 [project.optional-dependencies]
 all = [
-   "pyfusion[doc, awx, gcs, azr, polars, events, embeddings]"
+   "pyfusion[doc, aws, gcs, azr, polars, events, embeddings]"
 ]
 doc = [
     "mkdocs",

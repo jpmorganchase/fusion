@@ -508,13 +508,22 @@ def test_path_to_url() -> None:
     assert result == "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv"
 
     result = path_to_url("path/to/dataset__catalog__datasetseries.csv", is_download=True)
-    assert result == "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv/operationType/download"
+    assert result == (
+        "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv/"
+        "files/operationType/download?file=None"
+    )
 
     result = path_to_url("path/to/dataset__catalog__datasetseries.csv", is_raw=True, is_download=True)
-    assert result == "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv/operationType/download"
+    assert result == (
+        "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv/"
+        "files/operationType/download?file=None"
+    )
 
     result = path_to_url("path/to/dataset__catalog__datasetseries.pt", is_raw=True, is_download=True)
-    assert result == "catalog/datasets/dataset/datasetseries/datasetseries/distributions/raw/operationType/download"
+    assert result == (
+        "catalog/datasets/dataset/datasetseries/datasetseries/distributions/raw/"
+        "files/operationType/download?file=None"
+    )
 
 
 def test_filename_to_distribution() -> None:
@@ -554,11 +563,19 @@ def test_distribution_to_url() -> None:
     datasetseries = "2020-04-04"
     exp_res = (
         f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-        f"{datasetseries}/distributions/{file_format}/operationType/download"
+        f"{datasetseries}/distributions/{file_format}/files/operationType/download?file=file"
     )
     for ch in bad_series_chs:
         datasetseries_mod = f"2020-04-04{ch}"
-        result = distribution_to_url(root_url, dataset, datasetseries_mod, file_format, catalog, is_download=True)
+        result = distribution_to_url(
+            root_url,
+            dataset,
+            datasetseries_mod,
+            file_format,
+            catalog,
+            is_download=True,
+            file_name="file",
+        )
         assert result == exp_res
 
     # Test samples
