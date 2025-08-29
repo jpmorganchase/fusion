@@ -374,7 +374,7 @@ class FusionCredentials:
                 "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
                 "client_assertion": private_key_jwt
                 if isinstance(private_key_jwt, str)
-                else private_key_jwt.decode("utf-8"),
+                else private_key_jwt.decode("utf-8"),  # type: ignore[attr-defined]
                 "resource": self.resource or "",
             }
         elif self.grant_type == "client_credentials":
