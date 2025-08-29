@@ -9,8 +9,8 @@ from fusion.fusion import Fusion
 
 def test_dataflow_basic_fields() -> None:
     flow = Dataflow(
-        providerNode={"name": "CRM_DB", "dataNodeType": "Database"},
-        consumerNode={"name": "DWH", "dataNodeType": "Database"},
+        providerNode={"name": "CRM_DB", "nodeType": "Database"},
+        consumerNode={"name": "DWH", "nodeType": "Database"},
         description="CRM to DWH load",
         transportType="API",
         frequency="DAILY",
@@ -25,22 +25,22 @@ def test_dataflow_basic_fields() -> None:
 
 def test_dataflow_to_dict() -> None:
     flow = Dataflow(
-        providerNode={"name": "S3", "dataNodeType": "Storage"},
-        consumerNode={"name": "Analytics", "dataNodeType": "Dashboard"},
+        providerNode={"name": "S3", "nodeType": "Storage"},
+        consumerNode={"name": "Analytics", "nodeType": "Dashboard"},
         description="S3 to Analytics feed",
         transportType="FILE TRANSFER",
         frequency="WEEKLY",
     )
     result = flow.to_dict()
     assert result["providerNode"]["name"] == "S3"
-    assert result["consumerNode"]["dataNodeType"] == "Dashboard"
+    assert result["consumerNode"]["nodeType"] == "Dashboard"
     assert result["frequency"] == "WEEKLY"
 
 
 def test_dataflow_from_dict() -> None:
     data = {
-        "providerNode": {"name": "App1", "dataNodeType": "User Tool"},
-        "consumerNode": {"name": "DWH", "dataNodeType": "Database"},
+        "providerNode": {"name": "App1", "nodeType": "User Tool"},
+        "consumerNode": {"name": "DWH", "nodeType": "Database"},
         "description": "Dict-based dataflow",
         "transportType": "API",
         "frequency": "DAILY",
@@ -55,8 +55,8 @@ def test_dataflow_from_dict() -> None:
 def test_dataflow_from_object_series() -> None:
     series = pd.Series(
         {
-            "providerNode": {"name": "CRM_DB", "dataNodeType": "Database"},
-            "consumerNode": {"name": "DWH", "dataNodeType": "Database"},
+            "providerNode": {"name": "CRM_DB", "nodeType": "Database"},
+            "consumerNode": {"name": "DWH", "nodeType": "Database"},
             "description": "Series-based dataflow",
             "transportType": "API",
             "frequency": "DAILY",
@@ -72,8 +72,8 @@ def test_dataflow_from_object_series() -> None:
 
 def test_dataflow_from_object_json() -> None:
     json_str = """{
-        "providerNode": {"name": "SystemA", "dataNodeType": "App"},
-        "consumerNode": {"name": "SystemB", "dataNodeType": "Database"},
+        "providerNode": {"name": "SystemA", "nodeType": "App"},
+        "consumerNode": {"name": "SystemB", "nodeType": "Database"},
         "description": "JSON-based dataflow",
         "frequency": "MONTHLY"
     }"""
@@ -88,15 +88,15 @@ def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
     frame = pd.DataFrame(
         [
             {
-                "providerNode": {"name": "CRM_DB", "dataNodeType": "Database"},
-                "consumerNode": {"name": "DWH", "dataNodeType": "Database"},
+                "providerNode": {"name": "CRM_DB", "nodeType": "Database"},
+                "consumerNode": {"name": "DWH", "nodeType": "Database"},
                 "description": "Row1",
                 "transportType": "API",
                 "frequency": "DAILY",
             },
             {
-                "providerNode": {"name": "S3", "dataNodeType": "Storage"},
-                "consumerNode": {"name": "Analytics", "dataNodeType": "Dashboard"},
+                "providerNode": {"name": "S3", "nodeType": "Storage"},
+                "consumerNode": {"name": "Analytics", "nodeType": "Dashboard"},
                 "description": "Row2",
                 "transportType": "FILE TRANSFER",
                 "frequency": "WEEKLY",
@@ -114,8 +114,8 @@ def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
 
 def test_dataflow_validate_nodes_for_create_passes() -> None:
     flow = Dataflow(
-        providerNode={"name": "CRM_DB", "dataNodeType": "Database"},
-        consumerNode={"name": "DWH", "dataNodeType": "Database"},
+        providerNode={"name": "CRM_DB", "nodeType": "Database"},
+        consumerNode={"name": "DWH", "nodeType": "Database"},
     )
     # should not raise
     flow._validate_nodes_for_create()
