@@ -421,25 +421,27 @@ class Fusion:
         # try for exact match
         if contains and isinstance(contains, str):
             url = f"{self.root_url}catalogs/{catalog}/datasets/{contains}"
-            resp_json = handle_paginated_request(self.session, url)
-
-            if not display_all_columns:
-                cols = [
-                    "identifier",
-                    "title",
-                    "containerType",
-                    "region",
-                    "category",
-                    "coverageStartDate",
-                    "coverageEndDate",
-                    "description",
-                    "status",
-                    "type",
-                ]
-                data = {col: resp_json.get(col, None) for col in cols}
-                return pd.DataFrame([data])
-            else:
-                return pd.json_normalize(resp_json)
+            resp = self.session.get(url)
+            status_success = 200
+            if resp.status_code == status_success:
+                resp_json = resp.json()
+                if not display_all_columns:
+                    cols = [
+                        "identifier",
+                        "title",
+                        "containerType",
+                        "region",
+                        "category",
+                        "coverageStartDate",
+                        "coverageEndDate",
+                        "description",
+                        "status",
+                        "type",
+                    ]
+                    data = {col: resp_json.get(col, None) for col in cols}
+                    return pd.DataFrame([data])
+                else:
+                    return pd.json_normalize(resp_json)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets"
         ds_df = Fusion._call_for_dataframe(url, self.session)
