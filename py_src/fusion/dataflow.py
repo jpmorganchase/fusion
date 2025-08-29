@@ -17,7 +17,6 @@ from .utils import (
 
 if TYPE_CHECKING:
     import requests
-
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -28,14 +27,14 @@ class Dataflow(metaclass=CamelCaseMeta):
     """Fusion Dataflow class for managing dataflow metadata in the Fusion system.
 
     Attributes:
-        providerNode (dict[str, str]):
+        providerNode (dict[str, str] | None):
             Defines the provider/source node of the data flow.
             Required when creating a data flow.
             Expected keys:
               - ``name`` (str): Provider node name.
               - ``dataNodeType`` (str): Provider node type.
 
-        consumerNode (dict[str, str]):
+        consumerNode (dict[str, str] | None):
             Defines the consumer/target node of the data flow.
             Required when creating a data flow and must be distinct from the provider node.
             Expected keys:
@@ -70,12 +69,10 @@ class Dataflow(metaclass=CamelCaseMeta):
             Defaults to ``None``.
 
         startTime (str | None, optional):
-            Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``).
-             Defaults to ``None``.
+            Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). Defaults to ``None``.
 
         endTime (str | None, optional):
-            Scheduled end time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``).
-             Defaults to ``None``.
+            Scheduled end time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). Defaults to ``None``.
 
         dataAssets (list[dict[str, Any]], optional):
             List of data asset objects involved in the data flow (up to API-defined limits). Defaults to empty list.
@@ -84,9 +81,9 @@ class Dataflow(metaclass=CamelCaseMeta):
             Boundary set objects for the data flow; items are stored as provided. Defaults to empty list.
     """
 
-    # Required
-    providerNode: dict[str, str]
-    consumerNode: dict[str, str]
+    # Required at create-time (optional at init-time for handles)
+    providerNode: dict[str, str] | None = None
+    consumerNode: dict[str, str] | None = None
 
     # Optional fields
     description: str | None = None
@@ -155,6 +152,10 @@ class Dataflow(metaclass=CamelCaseMeta):
             raise ValueError("A Fusion client object is required.")
         return res
 
+    # -----------------------
+    # Converters / loaders
+    # -----------------------
+
     @classmethod
     def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
         """Create a Dataflow object from a dictionary.
@@ -166,13 +167,6 @@ class Dataflow(metaclass=CamelCaseMeta):
 
         Returns:
             Dataflow: A populated Dataflow instance.
-
-        Examples:
-            >>> df = Dataflow.from_dict({
-            ...     "providerNode": {"name": "CRM_DB", "dataNodeType": "Database"},
-            ...     "consumerNode": {"name": "DWH", "dataNodeType": "Database"},
-            ...     "description": "CRM to DWH load",
-            ... })
         """
 
         def normalize_value(val: Any) -> Any:
@@ -188,7 +182,8 @@ class Dataflow(metaclass=CamelCaseMeta):
                     converted[key] = convert_keys(v)
                 elif isinstance(v, list):
                     converted[key] = [
-                        convert_keys(i) if isinstance(i, dict) else i for i in v
+                        convert_keys(i) if isinstance(i, dict) else i
+                        for i in v
                     ]
                 else:
                     converted[key] = normalize_value(v)
@@ -207,33 +202,12 @@ class Dataflow(metaclass=CamelCaseMeta):
 
     @classmethod
     def _from_series(cls: type[Dataflow], series: pd.Series) -> Dataflow:  # type: ignore[type-arg]
-        """Instantiate a single Dataflow from a pandas Series.
-
-        Args:
-            series (pd.Series): One row with dataflow fields.
-
-        Returns:
-            Dataflow: A populated Dataflow instance.
-
-        Examples:
-            >>> row = pd.Series({
-            ...     "providerNode": {"name": "S3", "dataNodeType": "Storage"},
-            ...     "consumerNode": {"name": "Analytics", "dataNodeType": "Dashboard"},
-            ... })
-            >>> Dataflow._from_series(row)
-        """
+        """Instantiate a single Dataflow from a pandas Series."""
         return cls.from_dict(series.to_dict())
 
     @classmethod
     def _from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
-        """Instantiate a single Dataflow from a dict.
-
-        Args:
-            data (dict[str, Any]): Dataflow fields.
-
-        Returns:
-            Dataflow: A populated Dataflow instance.
-        """
+        """Instantiate a single Dataflow from a dict."""
         return cls.from_dict(data)
 
     @classmethod
@@ -241,17 +215,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         """Instantiate multiple Dataflow objects from a DataFrame (row-wise).
 
         NaN/inf values are converted to None before object creation. Rows that fail validation are skipped with a log.
-
-        Args:
-            frame (pd.DataFrame): Tabular data with one dataflow per row.
-            client (Fusion | None): Optional Fusion client to bind to each created Dataflow.
-
-        Returns:
-            list[Dataflow]: Successfully validated Dataflow objects.
-
-        Examples:
-            >>> flows = Dataflow.from_dataframe(df, client=fusion)
-            >>> len(flows)
         """
         frame = frame.replace([np.nan, np.inf, -np.inf], None).where(frame.notna(), None)
         results: list[Dataflow] = []
@@ -269,40 +232,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         """Instantiate a single Dataflow from a Dataflow, dict, JSON-object string, or pandas Series.
 
         Note: CSV input is not supported here.
-
-        Args:
-            dataflow_source (Dataflow | dict[str, Any] | str | pd.Series): Source to construct a Dataflow from.
-
-        Returns:
-            Dataflow: The constructed Dataflow with this instance's client bound.
-
-        Raises:
-            ValueError: If a string source is not a JSON object string.
-            TypeError: If the source type is unsupported.
-
-        Examples:
-            From a dict:
-            >>> fusion = Fusion()
-            >>> handle = fusion.dataflow(
-            ...     provider_node={"name": "TMP", "dataNodeType": "TMP"},
-            ...     consumer_node={"name": "TMP", "dataNodeType": "TMP"},
-            ... )
-            >>> flow = handle.from_object({
-            ...     "providerNode": {"name": "CRM_DB", "dataNodeType": "Database"},
-            ...     "consumerNode": {"name": "DWH", "dataNodeType": "Database"},
-            ...     "description": "CRM to DWH load"
-            ... })
-
-            From a Series:
-            >>> s = pd.Series({
-            ...     "providerNode": {"name": "S3", "dataNodeType": "Storage"},
-            ...     "consumerNode": {"name": "Analytics", "dataNodeType": "Dashboard"},
-            ... })
-            >>> flow = handle.from_object(s)
-
-            From JSON:
-            >>> flow = handle.from_object('{"providerNode":{"name":"A","dataNodeType":"DB"},'
-            ...                           '"consumerNode":{"name":"B","dataNodeType":"DB"}}')
         """
         import json
 
@@ -324,6 +253,9 @@ class Dataflow(metaclass=CamelCaseMeta):
         obj.client = self._client
         return obj
 
+    # -----------------------
+    # Validation / serialization
+    # -----------------------
 
     def validate(self) -> None:
         """Validate that required fields exist.
@@ -336,24 +268,22 @@ class Dataflow(metaclass=CamelCaseMeta):
         if missing:
             raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")
 
+    def _validate_nodes_for_create(self) -> None:
+        """Ensure provider/consumer nodes are present with non-blank name and dataNodeType for create()."""
+        for attr in ("provider_node", "consumer_node"):
+            node = getattr(self, attr, None)
+            if not isinstance(node, dict):
+                raise ValueError(f"{attr} must be a dict with 'name' and 'dataNodeType' for create().")
+            if not node.get("name") or not node.get("dataNodeType"):
+                raise ValueError(f"{attr} requires non-empty 'name' and 'dataNodeType' for create().")
+
     def to_dict(
         self,
         *,
         drop_none: bool = True,
         exclude: set[str] | None = None,
     ) -> dict[str, Any]:
-        """Convert Dataflow object into a JSON-serializable dictionary.
-
-        Args:
-            drop_none (bool, optional): Exclude None/blank-string values if True. Defaults to True.
-            exclude (set[str] | None, optional): Snake_case field names to omit from the output.
-
-        Returns:
-            dict[str, Any]: Serialized Dataflow with camelCase keys.
-
-        Examples:
-            >>> flow.to_dict()
-        """
+        """Convert Dataflow object into a JSON-serializable dictionary."""
         out: dict[str, Any] = {}
         for k, v in self.__dict__.items():
             if k.startswith("_"):
@@ -371,24 +301,11 @@ class Dataflow(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Create the dataflow via API.
-
-        Args:
-            client (Fusion | None, optional): Fusion session. Defaults to the bound client.
-            return_resp_obj (bool, optional): If True, return the response object. Defaults to False.
-
-        Returns:
-            requests.Response | None: The response object if requested, otherwise None.
-
-        Examples:
-            >>> flow = fusion.dataflow(
-            ...     provider_node={"name": "CRM_DB", "dataNodeType": "Database"},
-            ...     consumer_node={"name": "DWH", "dataNodeType": "Database"},
-            ...     description="CRM to DWH",
-            ... )
-            >>> flow.create()
-        """
+        """Create the dataflow via API."""
         client = self._use_client(client)
+
+   
+        self._validate_nodes_for_create()
 
         payload = self.to_dict(drop_none=True, exclude={"id"})
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows"
@@ -402,27 +319,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Full replace (PUT) using self.id, excluding provider/consumer nodes from the payload.
-
-        Args:
-            client (Fusion | None, optional): Fusion session. Defaults to the bound client.
-            return_resp_obj (bool, optional): If True, return the response object. Defaults to False.
-
-        Returns:
-            requests.Response | None: The response object if requested, otherwise None.
-
-        Raises:
-            ValueError: If the object has no `id` set.
-
-        Examples:
-            >>> flow = fusion.dataflow(
-            ...     provider_node={"name": "A", "dataNodeType": "DB"},
-            ...     consumer_node={"name": "B", "dataNodeType": "DB"},
-            ... )
-            >>> flow.id = "abc-123"
-            >>> flow.description = "Updated description"
-            >>> flow.update()
-        """
+        """Full replace (PUT) using self.id, excluding provider/consumer nodes from the payload."""
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Dataflow ID is required on the object (set self.id before update()).")
@@ -443,27 +340,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Partial update (PATCH) using self.id. Provider/consumer nodes are not allowed.
-
-        Args:
-            changes (dict[str, Any]): Fields to update; accepts snake_case or camelCase keys.
-            client (Fusion | None, optional): Fusion session. Defaults to the bound client.
-            return_resp_obj (bool, optional): If True, return the response object. Defaults to False.
-
-        Returns:
-            requests.Response | None: The response object if requested, otherwise None.
-
-        Raises:
-            ValueError: If no id is set, or if forbidden fields are provided.
-
-        Examples:
-            >>> flow = fusion.dataflow(
-            ...     provider_node={"name": "A", "dataNodeType": "DB"},
-            ...     consumer_node={"name": "B", "dataNodeType": "DB"},
-            ... )
-            >>> flow.id = "abc-123"
-            >>> flow.update_fields({"description": "Patched"})
-        """
+        """Partial update (PATCH) using self.id. Provider/consumer nodes are not allowed."""
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Dataflow ID is required on the object (set self.id before update_fields()).")
@@ -488,26 +365,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Delete this dataflow using self.id.
-
-        Args:
-            client (Fusion | None, optional): Fusion session. Defaults to the bound client.
-            return_resp_obj (bool, optional): If True, return the response object. Defaults to False.
-
-        Returns:
-            requests.Response | None: The response object if requested, otherwise None.
-
-        Raises:
-            ValueError: If the object has no `id` set.
-
-        Examples:
-            >>> flow = fusion.dataflow(
-            ...     provider_node={"name": "A", "dataNodeType": "DB"},
-            ...     consumer_node={"name": "B", "dataNodeType": "DB"},
-            ... )
-            >>> flow.id = "abc-123"
-            >>> flow.delete()
-        """
+        """Delete this dataflow using self.id."""
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Dataflow ID is required on the object (set self.id before delete()).")

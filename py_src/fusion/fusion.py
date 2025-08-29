@@ -2511,129 +2511,86 @@ class Fusion:
         return report_obj
 
     def dataflow(  # noqa: PLR0913
-        self,
-        provider_node: dict[str, str] | None = None,
-        consumer_node: dict[str, str] | None = None,
-        description: str | None = None,
-        alternative_id: dict[str, Any] | None = None,
-        transport_type: str | None = None,
-        frequency: str | None = None,
-        start_time: str | None = None,
-        end_time: str | None = None,
-        boundary_sets: list[dict[str, Any]] | None = None,
-        data_assets: list[dict[str, Any]] | None = None,
-        id: str | None = None,   # noqa: A002
-        **kwargs: Any,
-    ) -> Dataflow:
-        """Instantiate a Dataflow and bind it to this Fusion client.
+    self,
+    provider_node: dict[str, str] | None = None,
+    consumer_node: dict[str, str] | None = None,
+    description: str | None = None,
+    alternative_id: dict[str, Any] | None = None,
+    transport_type: str | None = None,
+    frequency: str | None = None,
+    start_time: str | None = None,
+    end_time: str | None = None,
+    boundary_sets: list[dict[str, Any]] | None = None,
+    data_assets: list[dict[str, Any]] | None = None,
+    id: str | None = None,  # noqa: A002
+    **kwargs: Any,
+) -> Dataflow:
+    """Instantiate a Dataflow object bound to this Fusion client.
 
-        Supports two usage modes:
-        1. Full construction for create/update: provide provider_node and consumer_node (plus optional metadata).
-        2. ID-only handle for delete/update-by-id: provide just id (nodes omitted).
-        Attributes:
-            providerNode (dict[str, str]):
-                Defines the provider/source node of the data flow.
-                Required when creating a data flow.
-                Expected keys:
-                - ``name`` (str): Provider node name.
-                - ``dataNodeType`` (str): Provider node type.
+    You may instantiate with just an ``id`` (useful for ``update()``, ``update_fields()``, or ``delete()``);
+    however, **creating** a new data flow via ``create()`` requires valid provider/consumer nodes.
 
-            consumerNode (dict[str, str]):
-                Defines the consumer/target node of the data flow.
-                Required when creating a data flow and must be distinct from the provider node.
-                Expected keys:
-                - ``name`` (str): Consumer node name.
-                - ``dataNodeType`` (str): Consumer node type.
+    Args:
+        provider_node (dict[str, str] | None, optional):
+            Provider/source node details. Expected keys: ``name`` and ``dataNodeType``.
+        consumer_node (dict[str, str] | None, optional):
+            Consumer/target node details. Expected keys: ``name`` and ``dataNodeType``.
+        description (str | None, optional):
+            Purpose/summary of the data flow (if provided, must not be blank).
+        alternative_id (dict[str, Any] | None, optional):
+            Alternative identifier object (e.g., ``{"value": "...", "domain": "...", "isSor": true}``).
+        transport_type (str | None, optional):
+            Transport mechanism (e.g., ``"API"``, ``"FILE TRANSFER"``, ``"SYNCHRONOUS MESSAGING"``).
+        frequency (str | None, optional):
+            Flow cadence (e.g., ``"DAILY"``, ``"WEEKLY"``, ``"MONTHLY"``, etc.).
+        start_time (str | None, optional):
+            Scheduled start time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
+        end_time (str | None, optional):
+            Scheduled end time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
+        boundary_sets (list[dict[str, Any]] | None, optional):
+            Boundary set objects associated with the flow.
+        data_assets (list[dict[str, Any]] | None, optional):
+            Related data asset objects.
+        id (str | None, optional):
+            Server-assigned identifier; required for ``update()``, ``update_fields()``, and ``delete()``.
+        **kwargs (Any):
+            Additional fields supported by the API; passed through to the Dataflow dataclass.
 
-            description (str | None, optional):
-                Purpose/summary of the data flow. If this field is present, it must not be blank.
-                (API range reference: length 1..65535). Defaults to ``None``.
+    Returns:
+        Dataflow: A Dataflow instance with this Fusion client attached.
 
-            id (str | None, optional):
-                Server-assigned unique identifier of the data flow. Must be set on the object for
-                ``update()``, ``update_fields()``, and ``delete()``. Defaults to ``None``.
+    Examples:
+        Create a handle with full details (ready for ``create()``):
 
-            alternativeId (dict[str, Any] | None, optional):
-                Alternative/secondary identifier object for the data flow. Based on the API schema,
-                this may include:
-                - ``value`` (str): Up to 255 characters.
-                - ``domain`` (str): A domain string.
-                - ``isSor`` (bool): Whether this is a System-of-Record id.
-                Defaults to ``None``.
+        >>> flow = fusion.dataflow(
+        ...     provider_node={"name": "CRM_DB", "dataNodeType": "Database"},
+        ...     consumer_node={"name": "DWH", "dataNodeType": "Database"},
+        ...     description="CRM → DWH nightly load",
+        ...     frequency="DAILY",
+        ...     transport_type="API",
+        ... )
 
-            transportType (str | None, optional):
-                Transport type of the data flow. API allows values like
-                ``"SYNCHRONOUS MESSAGING"``, ``"FILE TRANSFER"``, ``"API"``, ``"ASYNCHRONOUS MESSAGING"``.
-                Defaults to ``None``.
+        Create a handle for an existing flow by ID (for update/delete):
 
-            frequency (str | None, optional):
-                Frequency of the data flow. API allows values such as
-                ``"BI-WEEKLY"``, ``"WEEKLY"``, ``"SEMI-ANNUALLY"``, ``"QUARTERLY"``, ``"ANNUALLY"``,
-                ``"DAILY"``, ``"ADHOC"``, ``"INTRA-DAY"``, ``"MONTHLY"``, ``"TWICE-WEEKLY"``, ``"BI-MONTHLY"``.
-                Defaults to ``None``.
-
-            startTime (str | None, optional):
-                Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``).
-                Defaults to ``None``.
-
-            endTime (str | None, optional):
-                Scheduled end time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``).
-                Defaults to ``None``.
-
-            dataAssets (list[dict[str, Any]], optional):
-                List of data asset objects involved in the data flow (up to API-defined limits).
-                Defaults to empty list.
-
-            boundarySets (list[dict[str, Any]], optional):
-                Boundary set objects for the data flow; items are stored as provided.
-                Defaults to empty list.
-
-        Returns:
-            Dataflow: A Dataflow object wired to this client and ready for create/update/delete operations.
-
-        Examples:
-            # Full construction (create-ready)
-            >>> flow = fusion.dataflow(
-            ...     provider_node={"name": "CRM_DB", "dataNodeType": "Database"},
-            ...     consumer_node={"name": "DWH", "dataNodeType": "Database"},
-            ...     description="CRM to DWH nightly load",
-            ...     transport_type="Batch",
-            ...     frequency="Daily",
-            ... )
-            >>> flow.create()
-
-            # ID-only handle (delete/update using a known id)
-            >>> handle = fusion.dataflow(id="abc-123")
-            >>> handle.delete()
-        """
-        if id and not provider_node and not consumer_node:
-            # ID-only path (dummy nodes to satisfy dataclass constructor)
-            df_obj = Dataflow(
-                providerNode={"name": "__TMP__", "dataNodeType": "TMP"},
-                consumerNode={"name": "__TMP__", "dataNodeType": "TMP"},
-                id=id,
-                **kwargs,
-            )
-        else:
-            # Full constructor path
-            df_obj = Dataflow(
-                providerNode=provider_node or {"name": "", "dataNodeType": ""},
-                consumerNode=consumer_node or {"name": "", "dataNodeType": ""},
-                description=description,
-                alternativeId=alternative_id,
-                transportType=transport_type,
-                frequency=frequency,
-                startTime=start_time,
-                endTime=end_time,
-                boundarySets=boundary_sets or [],
-                dataAssets=data_assets or [],
-                id=id,
-                **kwargs,
-            )
-
-        df_obj.client = self
-        return df_obj
-
+        >>> flow = fusion.dataflow(id="abc-123")
+        >>> flow.delete()
+    """
+    df_obj = Dataflow(
+        providerNode=provider_node,
+        consumerNode=consumer_node,
+        description=description,
+        alternativeId=alternative_id,
+        transportType=transport_type,
+        frequency=frequency,
+        startTime=start_time,
+        endTime=end_time,
+        boundarySets=boundary_sets or [],
+        dataAssets=data_assets or [],
+        id=id,
+        **kwargs,
+    )
+    df_obj.client = self
+    return df_obj
 
 
     def link_attributes_to_terms(
