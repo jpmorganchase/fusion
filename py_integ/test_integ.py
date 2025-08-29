@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import shutil
+import pytest
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -120,7 +121,7 @@ def gen_generic_dl() -> None:
         print_res[test_nm] = params
 
 
-
+@pytest.mark.skip(reason="Disabled integration test until MDL API changes are in prod")
 def test_generic_dl(client: Fusion) -> None:
     for test_nm, params in download_hashes.items():
         res_params = params.client_dl_params

@@ -519,6 +519,7 @@ def distribution_to_filename(
     file_format: str,
     catalog: str = "common",
     partitioning: str | None = None,
+    file_name: str | None = None,
 ) -> str:
     """Returns a filename representing a dataset distribution.
 
@@ -529,6 +530,7 @@ def distribution_to_filename(
         file_format (str): The file type, e.g. CSV or Parquet
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
         partitioning (str, optional): Partitioning specification.
+        file_name (str, optional): Explicit filename override.
 
     Returns:
         str: FQ distro file name
@@ -536,15 +538,18 @@ def distribution_to_filename(
     if datasetseries[-1] == "/" or datasetseries[-1] == "\\":
         datasetseries = datasetseries[0:-1]
 
-    if partitioning == "hive":
-        file_name = f"{dataset}.{file_format}"
-    else:
-        file_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
+    if file_name and file_name != file_format:
+        # Use explicit filename directly
+        final_name = f"{file_name}.{file_format}"
+    elif partitioning == "hive":        
+        final_name = f"{dataset}.{file_format}"
+    else:        
+        final_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
 
     sep = "/"
     if "\\" in root_folder:
         sep = "\\"
-    return f"{root_folder}{sep}{file_name}"
+    return f"{root_folder}{sep}{final_name}"
 
 
 def _filename_to_distribution(file_name: str) -> tuple[str, str, str, str]:
@@ -568,6 +573,7 @@ def distribution_to_url(
     file_format: str,
     catalog: str = "common",
     is_download: bool = False,
+    file_name: str | None = None,
 ) -> str:
     """Returns the API URL to download a dataset distribution.
 
@@ -578,6 +584,7 @@ def distribution_to_url(
         file_format (str): The file type, e.g. CSV or Parquet
         catalog (str, optional): The data catalog containing the dataset. Defaults to "common".
         is_download (bool, optional): Is url for download
+        file_name (str, optional): Explicit filename to download.
 
     Returns:
         str: A URL for the API distribution endpoint.
@@ -589,8 +596,8 @@ def distribution_to_url(
         return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/{file_format}"
     if is_download:
         return (
-            f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-            f"{datasetseries}/distributions/{file_format}/operationType/download"
+             f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+            f"{datasetseries}/distributions/{file_format}/files/operationType/download?file={file_name}"
         )
     return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
 
