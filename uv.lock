@@ -3208,7 +3208,7 @@ wheels = [
 
 [[package]]
 name = "pyfusion"
-version = "3.0.0.dev0"
+version = "3.0.0-dev0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -3348,7 +3348,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=1.1" },
     { name = "polars", marker = "extra == 'polars'" },
     { name = "pyarrow", specifier = ">=11" },
-    { name = "pyfusion", extras = ["doc", "awx", "gcs", "azr", "polars", "events", "embeddings"], marker = "extra == 'all'" },
+    { name = "pyfusion", extras = ["doc", "aws", "gcs", "azr", "polars", "events", "embeddings"], marker = "extra == 'all'" },
     { name = "pyjwt", specifier = ">=2.10.1" },
     { name = "requests", specifier = ">=2" },
     { name = "rich", specifier = ">=11.0.0" },
