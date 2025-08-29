@@ -36,6 +36,9 @@ def test_from_client_id_sets_fields() -> None:
         auth_url="https://auth.example",
         proxies={"https": "https://proxy"},
         fusion_e2e="e2e",
+        headers={"key": "value"},
+        kid="kid",
+        private_key="privkey",
     )
     assert creds.client_id == "id"
     assert creds.client_secret == "secret"
@@ -44,6 +47,9 @@ def test_from_client_id_sets_fields() -> None:
     assert creds.grant_type == "client_credentials"
     assert creds.proxies.get("https") == "https://proxy"
     assert creds.fusion_e2e == "e2e"
+    assert creds.headers == {"key": "value"}
+    assert creds.kid == "kid"
+    assert creds.private_key == "privkey"
 
 
 def test_from_user_id_sets_fields() -> None:

@@ -33,6 +33,7 @@ dependencies = [
     "aiohttp >= 3.7.1",
     "rich >= 11.0.0",
     "certifi",
+    "jwt>=1.4.0",
 ]
 
 [build-system]
@@ -98,7 +99,6 @@ dev-dependencies = [
     "cffi>=1.16.0; sys_platform=='darwin'",
     "freezegun>=1.4.1",
     "ipython",
-    "maturin>=1.6,<2.0",
     "moto[s3]>=5.0.5",
     "mypy",
     "patchelf>=0.17.2.1; sys_platform=='linux'",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 from dataclasses import dataclass
@@ -7,6 +8,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
+import jwt
 import requests
 
 from fusion.exceptions import CredentialError
@@ -110,9 +112,12 @@ class FusionCredentials:
     proxies: dict[str, str]  # keep public annotation (non-breaking)
     bearer_token: AuthToken | None
     fusion_token: dict[str, AuthToken]
+    headers: dict[str, str] | None
+    kid: str | None
+    private_key: str | None
 
     @classmethod
-    def from_client_id(
+    def from_client_id(  # noqa: PLR0913
         cls,
         client_id: str | None,
         client_secret: str | None,
@@ -120,6 +125,9 @@ class FusionCredentials:
         auth_url: str | None,
         proxies: dict[str, str] | None,
         fusion_e2e: str | None,
+        headers: dict[str, str] | None = None,
+        kid: str | None = None,
+        private_key: str | None = None,
     ) -> FusionCredentials:
         return cls(
             client_id=client_id,
@@ -132,10 +140,13 @@ class FusionCredentials:
             proxies=proxies,
             grant_type=_DEFAULT_GRANT_TYPE,
             fusion_e2e=fusion_e2e,
+            headers=headers,
+            kid=kid,
+            private_key=private_key,
         )
 
     @classmethod
-    def from_user_id(
+    def from_user_id(  # noqa: PLR0913
         cls,
         username: str | None,
         password: str | None,
@@ -143,6 +154,9 @@ class FusionCredentials:
         auth_url: str | None,
         proxies: dict[str, str] | None,
         fusion_e2e: str | None,
+        headers: dict[str, str] | None = None,
+        kid: str | None = None,
+        private_key: str | None = None,
     ) -> FusionCredentials:
         return cls(
             client_id=None,
@@ -155,6 +169,9 @@ class FusionCredentials:
             proxies=proxies,
             grant_type="password",
             fusion_e2e=fusion_e2e,
+            headers=headers,
+            kid=kid,
+            private_key=private_key,
         )
 
     @classmethod
@@ -201,11 +218,13 @@ class FusionCredentials:
         auth_url = cfg.get("auth_url")
         proxies = cfg.get("proxies") or {}
         fusion_e2e = cfg.get("fusion_e2e")
+        kid = cfg.get("kid")
+        private_key = cfg.get("private_key")
 
         if grant_type == "client_credentials":
             if not client_id:
                 raise CredentialError(ValueError("Missing client ID (Error Code: 400)"))
-            if not client_secret:
+            if client_secret is None:
                 raise CredentialError(ValueError("Missing client secret (Error Code: 400)"))
             return cls.from_client_id(
                 client_id=client_id,
@@ -214,6 +233,8 @@ class FusionCredentials:
                 auth_url=auth_url,
                 proxies=proxies,
                 fusion_e2e=fusion_e2e,
+                kid=kid,
+                private_key=private_key,
             )
         if grant_type == "password":
             if not client_id:
@@ -229,6 +250,8 @@ class FusionCredentials:
                 proxies=proxies,
                 grant_type="password",
                 fusion_e2e=fusion_e2e,
+                kid=kid,
+                private_key=private_key,
             )
         if grant_type == "bearer":
             return cls.from_bearer_token(
@@ -253,6 +276,9 @@ class FusionCredentials:
         proxies: dict[str, str] | None = None,
         grant_type: str | None = None,
         fusion_e2e: str | None = None,
+        headers: dict[str, str] | None = None,
+        kid: str | None = None,
+        private_key: str | None = None,
     ) -> None:
         self.client_id = client_id
         self.client_secret = client_secret
@@ -269,6 +295,10 @@ class FusionCredentials:
 
         # lazy HTTP session
         self._session: requests.Session | None = None
+
+        self.headers = headers or {}
+        self.kid = kid
+        self.private_key = private_key
 
     @property  # type: ignore[no-redef]
     def proxies(self) -> dict[str, str]:
@@ -324,7 +354,30 @@ class FusionCredentials:
         # narrow Optional[str] to str for mypy/type-checking
         auth_url: str = self.auth_url or _DEFAULT_AUTH_URL
 
-        if self.grant_type == "client_credentials":
+        if self.kid and self.private_key:
+            # JWT-based client assertion
+            # Construct claims
+            iat = int(datetime.now(dt.timezone.utc).timestamp())
+            exp = iat + 3600
+            claims = {
+                "iss": self.client_id or "",
+                "aud": self.auth_url or "",
+                "sub": self.client_id or "",
+                "iat": iat,
+                "exp": exp,
+                "jti": "id001",
+            }
+            private_key_jwt = jwt.encode(claims, self.private_key, algorithm="RS256", headers={"kid": self.kid})
+            payload = {
+                "grant_type": self.grant_type,
+                "client_id": self.client_id or "",
+                "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+                "client_assertion": private_key_jwt
+                if isinstance(private_key_jwt, str)
+                else private_key_jwt.decode("utf-8"),
+                "resource": self.resource or "",
+            }
+        elif self.grant_type == "client_credentials":
             payload.update(
                 {
                     "client_id": self.client_id or "",
@@ -391,8 +444,8 @@ class FusionCredentials:
         # Always include standard bearer
         headers["Authorization"] = f"Bearer {self.bearer_token.token}"
 
-        if getattr(self, "headers", None):
-            headers.update(self.headers)  # type: ignore[attr-defined]
+        if self.headers:
+            headers.update(self.headers)
 
         info = _fusion_url_to_auth_url(url)
         if not info:
