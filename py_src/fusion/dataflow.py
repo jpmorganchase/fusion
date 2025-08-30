@@ -277,7 +277,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             node = getattr(self, attr, None)
             if not isinstance(node, dict):
                 raise ValueError(f"{attr} must be a dict with 'name' and 'dataNodeType' for create().")
-            if not node.get("name") or not node.get("NodeType"):
+            if not node.get("name") or not node.get("nodeType"):
                 raise ValueError(f"{attr} requires non-empty 'name' and 'dataNodeType' for create().")
 
     def to_dict(
