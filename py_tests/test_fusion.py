@@ -3430,8 +3430,8 @@ def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
 
 def test_fusion_dataflow_full(fusion_obj: Fusion) -> None:
     """Full constructor path: provider/consumer plus optional fields."""
-    provider = {"name": "CRM_DB", "dataNodeType": "Database"}
-    consumer = {"name": "DWH", "dataNodeType": "Database"}
+    provider = {"name": "CRM_DB", "nodeType": "Database"}
+    consumer = {"name": "DWH", "nodeType": "Database"}
     flow = fusion_obj.dataflow(
         provider_node=provider,
         consumer_node=consumer,
@@ -3456,8 +3456,8 @@ def test_list_dataflows_success(requests_mock: requests_mock.Mocker, fusion_obj:
     server_json = {
         "id": flow_id,
         "description": "sample flow",
-        "providerNode": {"name": "A", "dataNodeType": "DB"},
-        "consumerNode": {"name": "B", "dataNodeType": "DB"},
+        "providerNode": {"name": "A", "nodeType": "DB"},
+        "consumerNode": {"name": "B", "nodeType": "DB"},
         "frequency": "Daily",
     }
     requests_mock.get(url, json=server_json, status_code=200)
