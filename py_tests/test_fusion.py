@@ -3007,7 +3007,6 @@ def test_list_registered_attributes_paginated_fail(requests_mock: requests_mock.
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_registered_attributes(catalog=catalog)
 
-
 def test_fusion_report(fusion_obj: Fusion) -> None:
     """Test Fusion Report object creation using required and optional arguments."""
     report = fusion_obj.report(
@@ -3035,114 +3034,6 @@ def test_fusion_report(fusion_obj: Fusion) -> None:
     assert report.is_bcbs239_program is True
     assert report.region == "EMEA"
     assert report.data_node_id["name"] == "ComplianceTable"
-
-
-def test_fusion_input_dataflow(fusion_obj: Fusion) -> None:
-    """Test Fusion Input Dataflow class from client"""
-    test_input_dataflow = fusion_obj.input_dataflow(
-        title="Test Input Dataflow",
-        identifier="Test Input Dataflow",
-        category="Test",
-        application_id="12345",
-        producer_application_id={"id": "12345", "type": "Application (SEAL)"},
-        consumer_application_id={"id": "12345", "type": "Application (SEAL)"},
-    )
-
-    assert str(test_input_dataflow)
-    assert repr(test_input_dataflow)
-    assert test_input_dataflow.title == "Test Input Dataflow"
-    assert test_input_dataflow.identifier == "TEST_INPUT_DATAFLOW"
-    assert test_input_dataflow.category == ["Test"]
-    assert test_input_dataflow.description == "Test Input Dataflow"
-    assert test_input_dataflow.frequency == "Once"
-    assert test_input_dataflow.is_internal_only_dataset is False
-    assert test_input_dataflow.is_third_party_data is True
-    assert test_input_dataflow.is_restricted is None
-    assert test_input_dataflow.is_raw_data is True
-    assert test_input_dataflow.maintainer == "J.P. Morgan Fusion"
-    assert test_input_dataflow.source is None
-    assert test_input_dataflow.region is None
-    assert test_input_dataflow.publisher == "J.P. Morgan"
-    assert test_input_dataflow.product is None
-    assert test_input_dataflow.sub_category is None
-    assert test_input_dataflow.tags is None
-    assert test_input_dataflow.created_date is None
-    assert test_input_dataflow.modified_date is None
-    assert test_input_dataflow.delivery_channel == ["API"]
-    assert test_input_dataflow.language == "English"
-    assert test_input_dataflow.status == "Available"
-    assert test_input_dataflow.type_ == "Flow"
-    assert test_input_dataflow.container_type == "Snapshot-Full"
-    assert test_input_dataflow.snowflake is None
-    assert test_input_dataflow.complexity is None
-    assert test_input_dataflow.is_immutable is None
-    assert test_input_dataflow.is_mnpi is None
-    assert test_input_dataflow.is_pii is None
-    assert test_input_dataflow.is_pci is None
-    assert test_input_dataflow.is_client is None
-    assert test_input_dataflow.is_public is None
-    assert test_input_dataflow.is_internal is None
-    assert test_input_dataflow.is_confidential is None
-    assert test_input_dataflow.is_highly_confidential is None
-    assert test_input_dataflow.is_active is None
-    assert test_input_dataflow.client == fusion_obj
-    assert test_input_dataflow.application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_input_dataflow.producer_application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_input_dataflow.consumer_application_id == [{"id": "12345", "type": "Application (SEAL)"}]
-    assert test_input_dataflow.flow_details == {"flowDirection": "Input"}
-
-
-def test_fusion_output_dataflow(fusion_obj: Fusion) -> None:
-    """Test Fusion Output Dataflow class from client"""
-    test_output_dataflow = fusion_obj.output_dataflow(
-        title="Test Output Dataflow",
-        identifier="Test Output Dataflow",
-        category="Test",
-        application_id="12345",
-        producer_application_id={"id": "12345", "type": "Application (SEAL)"},
-        consumer_application_id={"id": "12345", "type": "Application (SEAL)"},
-    )
-
-    assert str(test_output_dataflow)
-    assert repr(test_output_dataflow)
-    assert test_output_dataflow.title == "Test Output Dataflow"
-    assert test_output_dataflow.identifier == "TEST_OUTPUT_DATAFLOW"
-    assert test_output_dataflow.category == ["Test"]
-    assert test_output_dataflow.description == "Test Output Dataflow"
-    assert test_output_dataflow.frequency == "Once"
-    assert test_output_dataflow.is_internal_only_dataset is False
-    assert test_output_dataflow.is_third_party_data is True
-    assert test_output_dataflow.is_restricted is None
-    assert test_output_dataflow.is_raw_data is True
-    assert test_output_dataflow.maintainer == "J.P. Morgan Fusion"
-    assert test_output_dataflow.source is None
-    assert test_output_dataflow.region is None
-    assert test_output_dataflow.publisher == "J.P. Morgan"
-    assert test_output_dataflow.product is None
-    assert test_output_dataflow.sub_category is None
-    assert test_output_dataflow.tags is None
-    assert test_output_dataflow.created_date is None
-    assert test_output_dataflow.modified_date is None
-    assert test_output_dataflow.delivery_channel == ["API"]
-    assert test_output_dataflow.language == "English"
-    assert test_output_dataflow.status == "Available"
-    assert test_output_dataflow.type_ == "Flow"
-    assert test_output_dataflow.container_type == "Snapshot-Full"
-    assert test_output_dataflow.snowflake is None
-    assert test_output_dataflow.complexity is None
-    assert test_output_dataflow.is_immutable is None
-    assert test_output_dataflow.is_mnpi is None
-    assert test_output_dataflow.is_pii is None
-    assert test_output_dataflow.is_pci is None
-    assert test_output_dataflow.is_client is None
-    assert test_output_dataflow.is_public is None
-    assert test_output_dataflow.is_internal is None
-    assert test_output_dataflow.is_confidential is None
-    assert test_output_dataflow.application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_output_dataflow.producer_application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_output_dataflow.consumer_application_id == [{"id": "12345", "type": "Application (SEAL)"}]
-    assert test_output_dataflow.flow_details == {"flowDirection": "Output"}
-    assert test_output_dataflow.client == fusion_obj
 
 
 def test_list_indexes_summary(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -3706,3 +3597,69 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
     )
     assert len(df_over_limit) == TOTAL_FILES
     assert df_over_limit["@id"].tolist() == ["file1", "file2"]
+
+
+def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
+    """ID-only path: instantiate with just an id; nodes remain None."""
+    flow = fusion_obj.dataflow(id="abc-123")
+    assert flow.id == "abc-123"
+    assert flow.providerNode is None
+    assert flow.consumerNode is None
+    assert flow.client == fusion_obj
+
+
+def test_fusion_dataflow_full(fusion_obj: Fusion) -> None:
+    """Full constructor path: provider/consumer plus optional fields."""
+    provider = {"name": "CRM_DB", "nodeType": "Database"}
+    consumer = {"name": "DWH", "nodeType": "Database"}
+    flow = fusion_obj.dataflow(
+        provider_node=provider,
+        consumer_node=consumer,
+        description="CRM → DWH nightly load",
+        frequency="Daily",
+        transport_type="Batch",
+    )
+    assert flow.providerNode == provider
+    assert flow.consumerNode == consumer
+    assert flow.description == "CRM → DWH nightly load"
+    assert flow.frequency == "Daily"
+    assert flow.transportType == "Batch"
+    assert flow.client == fusion_obj
+
+
+def test_list_dataflows_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_dataflows returns a normalized dataframe when the API responds 200."""
+    import pandas as pd
+
+    flow_id = "abc-123"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{flow_id}"
+    server_json = {
+        "id": flow_id,
+        "description": "sample flow",
+        "providerNode": {"name": "A", "nodeType": "DB"},
+        "consumerNode": {"name": "B", "nodeType": "DB"},
+        "frequency": "Daily",
+    }
+    requests_mock.get(url, json=server_json, status_code=200)
+
+    test_df = fusion_obj.list_dataflows(flow_id)
+    assert isinstance(test_df, pd.DataFrame)
+    assert len(test_df) == 1
+    assert test_df.loc[0, "id"] == flow_id
+    assert test_df.loc[0, "description"] == "sample flow"
+    assert "providerNode.name" in test_df.columns
+    assert "consumerNode.name" in test_df.columns
+    assert test_df.loc[0, "providerNode.name"] == "A"
+    assert test_df.loc[0, "consumerNode.name"] == "B"
+
+
+def test_list_dataflows_http_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_dataflows raises for non-200 responses."""
+    import requests
+
+    flow_id = "does-not-exist"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{flow_id}"
+    requests_mock.get(url, status_code=404)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_dataflows(flow_id)
