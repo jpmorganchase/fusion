@@ -980,17 +980,8 @@ class Fusion:
                 self.fs.mkdir(d, create_parents=True)
 
         n_par = cpu_count(n_par)
-        # handle filenames
-        filenames: list[str]
-        if not file_name:
-            df_files = self.list_distribution_files(dataset, dt_str, dataset_format, catalog)
-            filenames = [fid.rstrip("/") for fid in df_files["@id"].tolist()]
-        elif isinstance(file_name, str):
-            filenames = [file_name.rstrip("/")]
-        else:
-            filenames = [f.rstrip("/") for f in file_name]
 
-        download_spec: list[dict[str, Any]] = [
+        download_spec: list[dict[str, Any]]  = [
             {
                 "lfs": self.fs,
                 "rpath": distribution_to_url(
@@ -1015,7 +1006,16 @@ class Fusion:
                 "preserve_original_name": preserve_original_name,
             }
             for i, series in enumerate(required_series)
-            for fname in filenames
+            for fname in (
+                [fid.rstrip("/") for fid in self.list_distribution_files(
+                    dataset=series[1],
+                    series=series[2],
+                    file_format=series[3],
+                    catalog=series[0],
+                )["@id"].tolist()]
+                if not file_name else
+                [file_name.rstrip("/")] if isinstance(file_name, str) else [f.rstrip("/") for f in file_name]
+            )
         ]
 
         logger.log(
