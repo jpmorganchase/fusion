@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import re
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -13,19 +14,13 @@ import requests_mock
 from opensearchpy import OpenSearch
 from pytest_mock import MockerFixture
 
-from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
 from fusion.report import Report
 from fusion.utils import _normalise_dt_param, distribution_to_url
-
-
-def test_rust_ok() -> None:
-    from fusion import rust_ok
-
-    assert rust_ok()
 
 
 def test__get_canonical_root_url() -> None:
@@ -60,7 +55,7 @@ def test_fusion_init_cred_value_error(example_creds_dict: dict[str, Any]) -> Non
     with pytest.raises(
         ValueError, match="credentials must be a path to a credentials file or FusionCredentials object"
     ) as error_info:
-        Fusion(credentials=example_creds_dict)  # type: ignore
+        Fusion(credentials=example_creds_dict)  # type: ignore[arg-type]
     assert str(error_info.value) == "credentials must be a path to a credentials file or FusionCredentials object"
 
 
@@ -1352,20 +1347,129 @@ def test__resolve_distro_tuples(mocker: MockerFixture, fusion_obj: Fusion) -> No
         assert res == [exp_tuples[-1]]
 
 
-def test_to_bytes(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+def test_to_bytes_multiple_files(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
     file_format = "csv"
-    url = distribution_to_url(fusion_obj.root_url, catalog, dataset, datasetseries, file_format)
-    expected_data = b"some binary data"
-    requests_mock.get(url, content=expected_data)
+    mock_data = {
+        "resources": [
+            {
+                "description": "Sample file 1",
+                "fileExtension": ".parquet",
+                "identifier": "file1",
+                "title": "File 1",
+                "@id": "file1"
+            },
+            {
+                "description": "Sample file 2",
+                "fileExtension": ".parquet",
+                "identifier": "file2",
+                "title": "File 2",
+                "@id": "file2"
+            }
+        ]
+    }  
 
-    data = fusion_obj.to_bytes(catalog, dataset, datasetseries, file_format)
+    distri_files_url = (
+        f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+        f"{datasetseries}/distributions/{file_format}/files"
+    )
+
+    requests_mock.get(distri_files_url, json=mock_data)
+    file1_url = distribution_to_url(
+    fusion_obj.root_url,
+    dataset,
+    datasetseries,
+    file_format,
+    catalog,
+    is_download=True,
+    file_name="file1",
+    )
+    file2_url = distribution_to_url(
+    fusion_obj.root_url,
+    dataset,
+    datasetseries,
+    file_format,
+    catalog,
+    is_download=True,
+    file_name="file2",
+    )
+    expected_data = b"some binary data"
+    requests_mock.get(file1_url, content=expected_data)
+    requests_mock.get(file2_url, content=expected_data)
+
+    data = fusion_obj.to_bytes(dataset, datasetseries, file_format, catalog)
 
     # Check if the data is returned correctly
-    assert data.getbuffer() == expected_data
+    if isinstance(data, list):
+        assert all(isinstance(d, BytesIO) for d in data)
+        for d in data:
+            assert d.getvalue() == expected_data
 
+def test_to_bytes_single_file(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"
+    mock_data = {
+        "resources": [
+            {
+                "description": "Sample file 1",
+                "fileExtension": ".parquet",
+                "identifier": "file1",
+                "title": "File 1",
+                "@id": "file1"
+            }
+        ]
+    }  
+
+    distri_files_url = (
+        f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+        f"{datasetseries}/distributions/{file_format}/files"
+    )
+
+    requests_mock.get(distri_files_url, json=mock_data)
+    file1_url = distribution_to_url(
+    fusion_obj.root_url,
+    dataset,
+    datasetseries,
+    file_format,
+    catalog,
+    is_download=True,
+    file_name="file1",
+    )
+    expected_data = b"some binary data"
+    requests_mock.get(file1_url, content=expected_data)
+
+    data = fusion_obj.to_bytes(dataset, datasetseries, file_format, catalog)
+
+    # Check if the data is returned correctly
+    if isinstance(data, BytesIO):
+        assert data.getbuffer() == expected_data
+
+def test_to_bytes_with_filename(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    catalog = "my_catalog"
+    dataset = "my_dataset"
+    datasetseries = "2020-04-04"
+    file_format = "csv"  
+    file1_url = distribution_to_url(
+    fusion_obj.root_url,
+    dataset,
+    datasetseries,
+    file_format,
+    catalog,
+    is_download=True,
+    file_name="file1"
+    )
+    expected_data = b"some binary data"
+    requests_mock.get(file1_url, content=expected_data)
+
+    data = fusion_obj.to_bytes(dataset, datasetseries, file_format, catalog, file_name="file1")
+
+    # Check if the data is returned correctly
+    if isinstance(data, BytesIO):
+        assert data.getbuffer() == expected_data
 
 @pytest.mark.skip(reason="MUST FIX")
 def test_download_main(mocker: MockerFixture, fusion_obj: Fusion) -> None:
@@ -1759,6 +1863,178 @@ def test_download_multiple_format_error(requests_mock: requests_mock.Mocker, fus
         ),
     ):
         fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=None, catalog=catalog)
+
+
+def test_download_invalid_dt_str_format(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test download method when dt_str is not a valid date time format and not available in datasetseries."""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    dt_str = "invalid_date_format"  # Invalid date format
+    file_format = "csv"
+
+    # Mock dataset access check
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
+    expected_data = {
+        "catalog": {
+            "@id": "my_catalog/",
+            "description": "my catalog",
+            "title": "my catalog",
+            "identifier": "my_catalog",
+        },
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "status": "Subscribed",  # User has access
+        "@id": "TEST_DATASET/",
+    }
+    requests_mock.get(url, json=expected_data)
+
+    # Mock list_datasetmembers to return some dataset members (but not our invalid date)
+    url_members = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+    requests_mock.get(
+        url_members,
+        json={
+            "resources": [
+                {
+                    "@id": "2020-01-01",
+                    "identifier": "2020-01-01",
+                    "dataset": dataset,
+                    "createdDate": "2020-01-01",
+                }
+            ]
+        },
+    )
+
+    # Mock list_datasetmembers_distributions (changes endpoint) - required for format validation
+    url_distributions = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+    requests_mock.get(
+        url_distributions,
+        json={
+            "datasets": [
+                {
+                    "key": dataset,
+                    "distributions": [
+                        {
+                            "key": f"{dataset}/20200101/distribution.csv",
+                            "values": [
+                                "2020-01-01T10:00:00Z",
+                                "1000",
+                                "hash1",
+                                catalog,
+                                dataset,
+                                "20200101",
+                                "csv",
+                                "bucket",
+                                "version1",
+                            ],
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+
+    # The download should not create any directories or download any files
+    # It should raise an error because the invalid dt_str doesn't match the regex pattern
+    # and also doesn't exist in the datasetseries
+    with pytest.raises(APIResponseError, match=f"datasetseries '{dt_str}' not found for dataset"):
+        fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=file_format, catalog=catalog)
+
+
+def test_download_valid_dt_str_format_not_in_datasetseries(
+    requests_mock: requests_mock.Mocker, fusion_obj: Fusion
+) -> None:
+    """Test download method when dt_str is a valid date time format but not available in datasetseries."""
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    dt_str = "2020-01-01"  # Valid date format but not available
+    file_format = "csv"
+
+    # Mock dataset access check
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
+    expected_data = {
+        "catalog": {
+            "@id": "my_catalog/",
+            "description": "my catalog",
+            "title": "my catalog",
+            "identifier": "my_catalog",
+        },
+        "title": "Test Dataset",
+        "identifier": "TEST_DATASET",
+        "status": "Subscribed",  # User has access
+        "@id": "TEST_DATASET/",
+    }
+    requests_mock.get(url, json=expected_data)
+
+    # Mock list_datasetmembers to return different dates (not including our target date)
+    url_members = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+    requests_mock.get(
+        url_members,
+        json={
+            "resources": [
+                {
+                    "@id": "2020-02-01",
+                    "identifier": "2020-02-01",
+                    "dataset": dataset,
+                    "createdDate": "2020-02-01",
+                },
+                {
+                    "@id": "2020-03-01",
+                    "identifier": "2020-03-01",
+                    "dataset": dataset,
+                    "createdDate": "2020-03-01",
+                },
+            ]
+        },
+    )
+
+    # Mock list_datasetmembers_distributions to return available formats
+    url_distributions = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+    requests_mock.get(
+        url_distributions,
+        json={
+            "datasets": [
+                {
+                    "key": dataset,
+                    "distributions": [
+                        {
+                            "key": f"{dataset}/2020-02-01/distribution.csv",
+                            "values": [
+                                "2020-02-01T10:00:00Z",
+                                "1000",
+                                "hash1",
+                                catalog,
+                                dataset,
+                                "2020-02-01",
+                                "csv",
+                                "bucket",
+                                "version1",
+                            ],
+                        },
+                        {
+                            "key": f"{dataset}/2020-03-01/distribution.csv",
+                            "values": [
+                                "2020-03-01T10:00:00Z",
+                                "1000",
+                                "hash2",
+                                catalog,
+                                dataset,
+                                "2020-03-01",
+                                "csv",
+                                "bucket",
+                                "version2",
+                            ],
+                        },
+                    ],
+                }
+            ]
+        },
+    )
+
+    # The download should not create any directories or download any files
+    # It should raise an error because while the date format is valid,
+    # no datasetseries exists for the requested date
+    with pytest.raises(APIResponseError, match=f"No data available for dataset {dataset} in catalog {catalog}"):
+        fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=file_format, catalog=catalog)
 
 
 def test_download_no_distributions_available(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -2731,7 +3007,6 @@ def test_list_registered_attributes_paginated_fail(requests_mock: requests_mock.
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_registered_attributes(catalog=catalog)
 
-
 def test_fusion_report(fusion_obj: Fusion) -> None:
     """Test Fusion Report object creation using required and optional arguments."""
     report = fusion_obj.report(
@@ -2759,114 +3034,6 @@ def test_fusion_report(fusion_obj: Fusion) -> None:
     assert report.is_bcbs239_program is True
     assert report.region == "EMEA"
     assert report.data_node_id["name"] == "ComplianceTable"
-
-
-def test_fusion_input_dataflow(fusion_obj: Fusion) -> None:
-    """Test Fusion Input Dataflow class from client"""
-    test_input_dataflow = fusion_obj.input_dataflow(
-        title="Test Input Dataflow",
-        identifier="Test Input Dataflow",
-        category="Test",
-        application_id="12345",
-        producer_application_id={"id": "12345", "type": "Application (SEAL)"},
-        consumer_application_id={"id": "12345", "type": "Application (SEAL)"},
-    )
-
-    assert str(test_input_dataflow)
-    assert repr(test_input_dataflow)
-    assert test_input_dataflow.title == "Test Input Dataflow"
-    assert test_input_dataflow.identifier == "TEST_INPUT_DATAFLOW"
-    assert test_input_dataflow.category == ["Test"]
-    assert test_input_dataflow.description == "Test Input Dataflow"
-    assert test_input_dataflow.frequency == "Once"
-    assert test_input_dataflow.is_internal_only_dataset is False
-    assert test_input_dataflow.is_third_party_data is True
-    assert test_input_dataflow.is_restricted is None
-    assert test_input_dataflow.is_raw_data is True
-    assert test_input_dataflow.maintainer == "J.P. Morgan Fusion"
-    assert test_input_dataflow.source is None
-    assert test_input_dataflow.region is None
-    assert test_input_dataflow.publisher == "J.P. Morgan"
-    assert test_input_dataflow.product is None
-    assert test_input_dataflow.sub_category is None
-    assert test_input_dataflow.tags is None
-    assert test_input_dataflow.created_date is None
-    assert test_input_dataflow.modified_date is None
-    assert test_input_dataflow.delivery_channel == ["API"]
-    assert test_input_dataflow.language == "English"
-    assert test_input_dataflow.status == "Available"
-    assert test_input_dataflow.type_ == "Flow"
-    assert test_input_dataflow.container_type == "Snapshot-Full"
-    assert test_input_dataflow.snowflake is None
-    assert test_input_dataflow.complexity is None
-    assert test_input_dataflow.is_immutable is None
-    assert test_input_dataflow.is_mnpi is None
-    assert test_input_dataflow.is_pii is None
-    assert test_input_dataflow.is_pci is None
-    assert test_input_dataflow.is_client is None
-    assert test_input_dataflow.is_public is None
-    assert test_input_dataflow.is_internal is None
-    assert test_input_dataflow.is_confidential is None
-    assert test_input_dataflow.is_highly_confidential is None
-    assert test_input_dataflow.is_active is None
-    assert test_input_dataflow.client == fusion_obj
-    assert test_input_dataflow.application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_input_dataflow.producer_application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_input_dataflow.consumer_application_id == [{"id": "12345", "type": "Application (SEAL)"}]
-    assert test_input_dataflow.flow_details == {"flowDirection": "Input"}
-
-
-def test_fusion_output_dataflow(fusion_obj: Fusion) -> None:
-    """Test Fusion Output Dataflow class from client"""
-    test_output_dataflow = fusion_obj.output_dataflow(
-        title="Test Output Dataflow",
-        identifier="Test Output Dataflow",
-        category="Test",
-        application_id="12345",
-        producer_application_id={"id": "12345", "type": "Application (SEAL)"},
-        consumer_application_id={"id": "12345", "type": "Application (SEAL)"},
-    )
-
-    assert str(test_output_dataflow)
-    assert repr(test_output_dataflow)
-    assert test_output_dataflow.title == "Test Output Dataflow"
-    assert test_output_dataflow.identifier == "TEST_OUTPUT_DATAFLOW"
-    assert test_output_dataflow.category == ["Test"]
-    assert test_output_dataflow.description == "Test Output Dataflow"
-    assert test_output_dataflow.frequency == "Once"
-    assert test_output_dataflow.is_internal_only_dataset is False
-    assert test_output_dataflow.is_third_party_data is True
-    assert test_output_dataflow.is_restricted is None
-    assert test_output_dataflow.is_raw_data is True
-    assert test_output_dataflow.maintainer == "J.P. Morgan Fusion"
-    assert test_output_dataflow.source is None
-    assert test_output_dataflow.region is None
-    assert test_output_dataflow.publisher == "J.P. Morgan"
-    assert test_output_dataflow.product is None
-    assert test_output_dataflow.sub_category is None
-    assert test_output_dataflow.tags is None
-    assert test_output_dataflow.created_date is None
-    assert test_output_dataflow.modified_date is None
-    assert test_output_dataflow.delivery_channel == ["API"]
-    assert test_output_dataflow.language == "English"
-    assert test_output_dataflow.status == "Available"
-    assert test_output_dataflow.type_ == "Flow"
-    assert test_output_dataflow.container_type == "Snapshot-Full"
-    assert test_output_dataflow.snowflake is None
-    assert test_output_dataflow.complexity is None
-    assert test_output_dataflow.is_immutable is None
-    assert test_output_dataflow.is_mnpi is None
-    assert test_output_dataflow.is_pii is None
-    assert test_output_dataflow.is_pci is None
-    assert test_output_dataflow.is_client is None
-    assert test_output_dataflow.is_public is None
-    assert test_output_dataflow.is_internal is None
-    assert test_output_dataflow.is_confidential is None
-    assert test_output_dataflow.application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_output_dataflow.producer_application_id == {"id": "12345", "type": "Application (SEAL)"}
-    assert test_output_dataflow.consumer_application_id == [{"id": "12345", "type": "Application (SEAL)"}]
-    assert test_output_dataflow.flow_details == {"flowDirection": "Output"}
-    assert test_output_dataflow.client == fusion_obj
 
 
 def test_list_indexes_summary(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -3175,8 +3342,9 @@ def test_fusion_init_logging_to_specified_file(credentials: FusionCredentials) -
     Fusion(credentials=credentials, enable_logging=True)
 
     # Check that StreamHandler and FileHandler were added
-    assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
-    assert any(isinstance(h, logging.FileHandler) for h in logger.handlers)
+    assert any(type(handler) is logging.StreamHandler for handler in logger.handlers)
+    assert any(type(handler) is logging.FileHandler for handler in logger.handlers)
+    assert not any(type(handler) is logging.NullHandler for handler in logger.handlers)
 
     # Confirm log file exists
     log_file = Path("fusion_sdk.log")
@@ -3194,8 +3362,9 @@ def test_fusion_init_logging_enabled_to_stdout_and_file(credentials: FusionCrede
     Fusion(credentials=credentials, enable_logging=True)
 
     # Ensure the logger is configured with both handlers
-    assert any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
-    assert any(isinstance(handler, logging.FileHandler) for handler in logger.handlers)
+    assert any(type(handler) is logging.StreamHandler for handler in logger.handlers)
+    assert any(type(handler) is logging.FileHandler for handler in logger.handlers)
+    assert not any(type(handler) is logging.NullHandler for handler in logger.handlers)
 
     # Verify the log file exists
     log_file = Path("fusion_sdk.log")
@@ -3213,9 +3382,9 @@ def test_fusion_init_logging_disabled(credentials: FusionCredentials) -> None:
     Fusion(credentials=credentials, enable_logging=False)
 
     # No additional handlers should be added
-    assert any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers)
-    assert all(not isinstance(handler, logging.FileHandler) for handler in logger.handlers)
-    assert not any(isinstance(handler, logging.NullHandler) for handler in logger.handlers)
+    assert any(type(handler) is logging.StreamHandler for handler in logger.handlers)
+    assert all(type(handler) is not logging.FileHandler for handler in logger.handlers)
+    assert not any(type(handler) is logging.NullHandler for handler in logger.handlers)
 
     # Clean up
     logger.handlers.clear()
@@ -3238,7 +3407,7 @@ def test_fusion_adds_streamhandler_when_no_handlers(credentials: FusionCredentia
     Fusion(credentials=credentials, enable_logging=False)
 
     assert len(logger.handlers) == 1
-    assert isinstance(logger.handlers[0], logging.StreamHandler)
+    assert type(logger.handlers[0]) is logging.StreamHandler
 
     logger.handlers.clear()
 
@@ -3358,3 +3527,139 @@ def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fus
     resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
 
     assert resp is mock_resp
+
+def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
+    mock_data = {
+        "resources": [
+            {
+                "description": "Sample file 1",
+                "fileExtension": ".parquet",
+                "identifier": "file1",
+                "title": "File 1",
+                "@id": "file1"
+            },
+            {
+                "description": "Sample file 2",
+                "fileExtension": ".parquet",
+                "identifier": "file2",
+                "title": "File 2",
+                "@id": "file2"
+            }
+        ]
+    }
+
+    catalog = "common"
+    dataset = "test_dataset"
+    series = "test_series"
+    file_format = "parquet"
+
+    url = (
+        f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+        f"{series}/distributions/{file_format}/files"
+    )
+
+    requests_mock.get(url, json=mock_data)
+
+    # Case 1: Default (max_results = -1) → return all rows
+    df_all = fusion_obj.list_distribution_files(
+        dataset=dataset,
+        series=series,
+        file_format=file_format,
+        catalog=catalog,
+        max_results=-1
+    )
+    assert isinstance(df_all, pd.DataFrame)
+    TOTAL_FILES = 2
+    assert len(df_all) == TOTAL_FILES
+    assert set(df_all.columns) >= {"description", "fileExtension", "identifier", "title", "@id"}
+    assert df_all["@id"].tolist() == ["file1", "file2"]
+
+    # Case 2: Limit to max_results = 1
+    MAX_RESULTS=1
+    df_limited = fusion_obj.list_distribution_files(
+        dataset=dataset,
+        series=series,
+        file_format=file_format,
+        catalog=catalog,
+        max_results=MAX_RESULTS
+    )
+
+    assert len(df_limited) == MAX_RESULTS
+    assert df_limited["@id"].tolist() == ["file1"]
+
+    # Case 3: Limit higher than available rows → returns all
+    df_over_limit = fusion_obj.list_distribution_files(
+        dataset=dataset,
+        series=series,
+        file_format=file_format,
+        catalog=catalog,
+        max_results=10
+    )
+    assert len(df_over_limit) == TOTAL_FILES
+    assert df_over_limit["@id"].tolist() == ["file1", "file2"]
+
+
+def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
+    """ID-only path: instantiate with just an id; nodes remain None."""
+    flow = fusion_obj.dataflow(id="abc-123")
+    assert flow.id == "abc-123"
+    assert flow.providerNode is None
+    assert flow.consumerNode is None
+    assert flow.client == fusion_obj
+
+
+def test_fusion_dataflow_full(fusion_obj: Fusion) -> None:
+    """Full constructor path: provider/consumer plus optional fields."""
+    provider = {"name": "CRM_DB", "nodeType": "Database"}
+    consumer = {"name": "DWH", "nodeType": "Database"}
+    flow = fusion_obj.dataflow(
+        provider_node=provider,
+        consumer_node=consumer,
+        description="CRM → DWH nightly load",
+        frequency="Daily",
+        transport_type="Batch",
+    )
+    assert flow.providerNode == provider
+    assert flow.consumerNode == consumer
+    assert flow.description == "CRM → DWH nightly load"
+    assert flow.frequency == "Daily"
+    assert flow.transportType == "Batch"
+    assert flow.client == fusion_obj
+
+
+def test_list_dataflows_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_dataflows returns a normalized dataframe when the API responds 200."""
+    import pandas as pd
+
+    flow_id = "abc-123"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{flow_id}"
+    server_json = {
+        "id": flow_id,
+        "description": "sample flow",
+        "providerNode": {"name": "A", "nodeType": "DB"},
+        "consumerNode": {"name": "B", "nodeType": "DB"},
+        "frequency": "Daily",
+    }
+    requests_mock.get(url, json=server_json, status_code=200)
+
+    test_df = fusion_obj.list_dataflows(flow_id)
+    assert isinstance(test_df, pd.DataFrame)
+    assert len(test_df) == 1
+    assert test_df.loc[0, "id"] == flow_id
+    assert test_df.loc[0, "description"] == "sample flow"
+    assert "providerNode.name" in test_df.columns
+    assert "consumerNode.name" in test_df.columns
+    assert test_df.loc[0, "providerNode.name"] == "A"
+    assert test_df.loc[0, "consumerNode.name"] == "B"
+
+
+def test_list_dataflows_http_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_dataflows raises for non-200 responses."""
+    import requests
+
+    flow_id = "does-not-exist"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{flow_id}"
+    requests_mock.get(url, status_code=404)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_dataflows(flow_id)

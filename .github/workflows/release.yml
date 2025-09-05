@@ -22,7 +22,7 @@ concurrency:
 env:
   UV_HTTP_TIMEOUT: 300
   PIP_DISABLE_PIP_VERSION_CHECK: 1
-  DOCS_PY_VERSION: 3.12
+  DOCS_PY_VERSION: 3.13
 
 
 jobs:
@@ -120,7 +120,7 @@ jobs:
 
     - uses: actions/download-artifact@v4
       with:
-        pattern: artifacts-*
+        pattern: artifacts*
         path: dist/
         merge-multiple: true
         github-token: ${{ secrets.GITHUB_TOKEN }}

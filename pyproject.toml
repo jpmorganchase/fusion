@@ -1,8 +1,7 @@
 [project]
 name = "pyfusion"
-version = "2.0.17"
+version = "3.0.0-dev0"
 
-homepage = "https://github.com/jpmorganchase/fusion"
 description = "JPMC Fusion Developer Tools"
 authors = [
     { name = "FusionDevs", email = "fusion_developers@jpmorgan.com" }
@@ -12,14 +11,13 @@ license = "Apache-2.0"
 classifiers = [
     'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',
-    'License :: OSI Approved :: Apache Software License',
     'Natural Language :: English',
-    'Programming Language :: Rust',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
     'Typing :: Typed',
 ]
 
@@ -35,20 +33,26 @@ dependencies = [
     "aiohttp >= 3.7.1",
     "rich >= 11.0.0",
     "certifi",
+    "pyjwt>=2.10.1",
 ]
 
 [build-system]
-requires = ["maturin>=1.6,<2.0"]
-build-backend = "maturin"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
-[tool.maturin]
-python-source = "py_src"
-module-name = "fusion._fusion"
-features = ["pyo3/extension-module"]
+[tool.setuptools.packages.find]
+where = ["py_src"]
+include = ["fusion*"]
+exclude = ["py_tests*", "py_integ*"]
+
+[project.urls]
+Homepage = "https://github.com/jpmorganchase/fusion"
+Repository = "https://github.com/jpmorganchase/fusion"
+Issues = "https://github.com/jpmorganchase/fusion/issues"
 
 [project.optional-dependencies]
 all = [
-   "pyfusion[doc, awx, gcs, azr, polars, events, embeddings]"
+   "pyfusion[doc, aws, gcs, azr, polars, events, embeddings]"
 ]
 doc = [
     "mkdocs",
@@ -95,7 +99,6 @@ dev-dependencies = [
     "cffi>=1.16.0; sys_platform=='darwin'",
     "freezegun>=1.4.1",
     "ipython",
-    "maturin>=1.6,<2.0",
     "moto[s3]>=5.0.5",
     "mypy",
     "patchelf>=0.17.2.1; sys_platform=='linux'",
@@ -243,7 +246,7 @@ exclude_lines = [
 
 
 [tool.bumpversion]
-current_version = "2.0.17"
+current_version = "3.0.0-dev0"
 parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[a-z]+)(?P<candidate>\d+))?'
 serialize = [
     '{major}.{minor}.{patch}-{release}{candidate}',
@@ -269,9 +272,6 @@ values = [
     'dev',
     'release'
 ]
-
-[[tool.bumpversion.files]]
-filename = "Cargo.toml"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"

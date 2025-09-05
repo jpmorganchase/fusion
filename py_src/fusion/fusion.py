@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import datetime
 import json as js
 import logging
 import re
@@ -19,9 +20,9 @@ import pyarrow as pa
 from rich.progress import Progress
 from tabulate import tabulate
 
-from fusion._fusion import FusionCredentials
 from fusion.attributes import Attribute, Attributes
-from fusion.dataflow import InputDataFlow, OutputDataFlow
+from fusion.credentials import FusionCredentials
+from fusion.dataflow import Dataflow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
@@ -75,7 +76,7 @@ class Fusion:
 
     @staticmethod
     def _call_for_dataframe(url: str, session: requests.Session) -> pd.DataFrame:
-        """Private function that calls an API endpoint and returns the data as a pandas dataframe, 
+        """Private function that calls an API endpoint and returns the data as a pandas dataframe,
         with pagination support.
         Args:
             url (Union[FusionCredentials, Union[str, dict]): URL for an API endpoint with valid parameters.
@@ -84,8 +85,12 @@ class Fusion:
             pandas.DataFrame: a dataframe containing the requested data.
         """
         response_data = handle_paginated_request(session, url)
-        table = response_data.get("resources", [])
-        ret_df = pd.DataFrame(table).reset_index(drop=True)
+        if "resources" not in response_data or not response_data["resources"]:
+            raise APIResponseError(
+                ValueError("No data found"),
+            )
+
+        ret_df = pd.DataFrame(response_data["resources"]).reset_index(drop=True)
         return ret_df
 
     @staticmethod
@@ -146,18 +151,18 @@ class Fusion:
             datefmt="%Y-%m-%d %H:%M:%S",
         )
 
-        if enable_logging and not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+        if enable_logging and not any(type(h) is logging.FileHandler for h in logger.handlers):
             file_handler = logging.FileHandler(filename=f"{log_path}/fusion_sdk.log")
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
 
-        if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        if not any(type(h) is logging.StreamHandler for h in logger.handlers):
             stdout_handler = logging.StreamHandler(sys.stdout)
             stdout_handler.setFormatter(formatter)
             logger.addHandler(stdout_handler)
 
         if len(logger.handlers) > 1:
-            logger.handlers = [h for h in logger.handlers if not isinstance(h, logging.NullHandler)]
+            logger.handlers = [h for h in logger.handlers if type(h) is not logging.NullHandler]
 
         if isinstance(credentials, FusionCredentials):
             self.credentials = credentials
@@ -179,8 +184,8 @@ class Fusion:
 
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
-        return "Fusion object \nAvailable methods:\n" + tabulate(
-            pd.DataFrame(  # type: ignore
+        return "Fusion object \nAvailable methods:\n" + tabulate( 
+            pd.DataFrame(  # type: ignore[arg-type]
                 [
                     [
                         method_name
@@ -421,25 +426,27 @@ class Fusion:
         # try for exact match
         if contains and isinstance(contains, str):
             url = f"{self.root_url}catalogs/{catalog}/datasets/{contains}"
-            resp_json = handle_paginated_request(self.session, url)
-
-            if not display_all_columns:
-                cols = [
-                    "identifier",
-                    "title",
-                    "containerType",
-                    "region",
-                    "category",
-                    "coverageStartDate",
-                    "coverageEndDate",
-                    "description",
-                    "status",
-                    "type",
-                ]
-                data = {col: resp_json.get(col, None) for col in cols}
-                return pd.DataFrame([data])
-            else:
-                return pd.json_normalize(resp_json)
+            resp = self.session.get(url)
+            status_success = 200
+            if resp.status_code == status_success:
+                resp_json = resp.json()
+                if not display_all_columns:
+                    cols = [
+                        "identifier",
+                        "title",
+                        "containerType",
+                        "region",
+                        "category",
+                        "coverageStartDate",
+                        "coverageEndDate",
+                        "description",
+                        "status",
+                        "type",
+                    ]
+                    data = {col: resp_json.get(col, None) for col in cols}
+                    return pd.DataFrame([data])
+                else:
+                    return pd.json_normalize(resp_json)
 
         url = f"{self.root_url}catalogs/{catalog}/datasets"
         ds_df = Fusion._call_for_dataframe(url, self.session)
@@ -515,7 +522,7 @@ class Fusion:
             "reportOwner",
             "lob",
             "description",
-        ]
+        ] 
 
         if report_id:
             url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
@@ -778,16 +785,12 @@ class Fusion:
                 parsed_dates = (parsed_dates[0], parsed_dates[0])
 
             if parsed_dates[0]:
-                datasetseries_list = datasetseries_list[
-                    pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
-                    >= pd.to_datetime(parsed_dates[0])
-                ].reset_index()
+                start_dt = pd.to_datetime(parsed_dates[0])
+                datasetseries_list = self._filter_datasetseries_by_date(datasetseries_list, start_dt, "ge")
 
             if parsed_dates[1]:
-                datasetseries_list = datasetseries_list[
-                    pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
-                    <= pd.to_datetime(parsed_dates[1])
-                ].reset_index()
+                end_dt = pd.to_datetime(parsed_dates[1])
+                datasetseries_list = self._filter_datasetseries_by_date(datasetseries_list, end_dt, "le")
 
         if len(datasetseries_list) == 0:
             raise APIResponseError(  # pragma: no cover
@@ -803,7 +806,34 @@ class Fusion:
 
         return tups
 
-    def download(  # noqa: PLR0912, PLR0913
+    @staticmethod
+    def _filter_datasetseries_by_date(
+        datasetseries_list: pd.DataFrame,
+        date_value: datetime.datetime,
+        op: str,
+    ) -> pd.DataFrame:
+        """Private function - Filter datasetseries_list by date or datetime using the given operator ('ge' or 'le').
+        'ge' means greater than or equal to, 'le' means less than or equal to.
+        """
+        if date_value.time() == datetime.time(0, 0):
+            series_dates = pd.Series(
+                [pd.to_datetime(i, errors="coerce").date() for i in datasetseries_list["identifier"]]
+            )
+            cmp_value = date_value.date()
+        else:
+            series_dates = pd.Series([pd.to_datetime(i, errors="coerce") for i in datasetseries_list["identifier"]])
+            cmp_value = date_value
+
+        if op == "ge":
+            mask = series_dates >= cmp_value
+        if op == "le":
+            mask = series_dates <= cmp_value
+
+        result = datasetseries_list[mask].reset_index(drop=True)
+        assert isinstance(result, pd.DataFrame)
+        return result
+
+    def download(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         dataset: str,
         dt_str: str = "latest",
@@ -816,6 +846,7 @@ class Fusion:
         return_paths: bool = False,
         partitioning: str | None = None,
         preserve_original_name: bool = False,
+        file_name: str | list[str] | None = None,
     ) -> list[tuple[bool, str, str | None]] | None:
         """Downloads the requested distributions of a dataset to disk.
 
@@ -825,6 +856,13 @@ class Fusion:
                 or both separated with a ":". Defaults to 'latest' which will return the most recent
                 instance of the dataset. If more than one series member exists on the latest date, the
                 series member identifiers will be sorted alphabetically and the last one will be downloaded.
+                dt_str supports below range formats:
+                YYYYMMDD:YYYYMMDD,
+                YYYY-MM-DD:YYYY-MM-DD,
+                YYYYMMDDTHHMM:YYYYMMDDTHHMM,
+                YYYYMMDDTHHMMSS:YYYYMMDDTHHMMSS,
+                YYYY-MM-DDTHH-MM-SS:YYYY-MM-DDTHH-MM-SS,
+                YYYY-MM-DDTHH-MM:YYYY-MM-DDTHH-MM
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
                 If set to None, the function will download if only one format is available, else it will raise an error.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
@@ -832,15 +870,39 @@ class Fusion:
                 Defaults to all cpus available.
             show_progress (bool, optional): Display a progress bar during data download Defaults to True.
             force_download (bool, optional): If True then will always download a file even
-                if it is already on disk. Defaults to True.
+                if it is already on disk. Defaults to False.
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
             return_paths (bool, optional): Return paths and success statuses of the downloaded files.
             partitioning (str, optional): Partitioning specification.
             preserve_original_name (bool, optional): Preserve the original name of the file. Defaults to False.
+            file_name (str | list[str] | None, optional): Specific file(s) to fetch.
+                This can be a single file name or a list of file names.
+                The file name should match exactly the name of the file in the distribution with out format.
+                If not provided, fetch all available distribution files.
+
+        Examples:
+            Download the latest available distribution:
+                >>> fusion.download(dataset="MY_DATASET", dt_str="latest", dataset_format="csv", catalog="my_catalog")
+
+            Download a specific date:
+                >>> fusion.download(dataset="MY_DATASET", dt_str="20250428", dataset_format="csv", catalog="my_catalog")
+
+            Download a range of dates:
+                >>> fusion.download(dataset="MY_DATASET", dt_str="20250428:20250430", 
+                ...                dataset_format="csv", catalog="my_catalog")
+
+            Download a range of datetimes (YYYYMMDDTHHMM format):
+                >>> fusion.download(dataset="MY_DATASET", dt_str="20250428T0000:20250430T2359",
+                ...                 dataset_format="csv", catalog="my_catalog")
+
+            Download multiple specific files within a dataset:
+                >>> fusion.download(dataset="MY_DATASET", dt_str="20250428", dataset_format="csv",
+                ...                 catalog="my_catalog", file_name=["file1", "file2"])
 
         Returns:
-
+            list[tuple[bool, str, str | None]] | None: A list of tuples containing download status,
+            file path, and error message (if any), or None if return_paths=False.
         """
         catalog = self._use_catalog(catalog)
 
@@ -848,14 +910,20 @@ class Fusion:
         dataset_resp = self.session.get(f"{self.root_url}catalogs/{catalog}/datasets/{dataset}")
         requests_raise_for_status(dataset_resp)
 
-        access_status = dataset_resp.json().get("status")
-        if access_status != "Subscribed":
+        if dataset_resp.json().get("status") != "Subscribed":
             raise APIResponseError(
                 ValueError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access."),
                 status_code=401,
             )
 
-        valid_date_range = re.compile(r"^(\d{4}\d{2}\d{2})$|^((\d{4}\d{2}\d{2})?([:])(\d{4}\d{2}\d{2})?)$")
+        valid_date_range = re.compile(
+            r"^("
+            r"(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?"
+            r"(:(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?)?"
+            r"|"
+            r"(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?"
+            r")$"
+        )
 
         # check that format is valid and if none, check if there is only one format available
         distributions_df = self.list_datasetmembers_distributions(dataset, catalog)
@@ -863,20 +931,7 @@ class Fusion:
         if distributions_df.empty:
             raise FileFormatError(f"No distributions found for dataset '{dataset}' in catalog '{catalog}'.")
 
-        available_formats = list(distributions_df["format"].unique())
-        if dataset_format and dataset_format not in available_formats:
-            raise FileFormatError(
-                f"Dataset format {dataset_format} is not available for {dataset} in catalog {catalog}. "
-                f"Available formats are {available_formats}."
-            )
-        if dataset_format is None:
-            if len(available_formats) == 1:
-                dataset_format = available_formats[0]
-            else:
-                raise FileFormatError(
-                    f"Multiple formats found for {dataset} in catalog {catalog}. Dataset format is required to"
-                    f"download. Available formats are {available_formats}."
-                )
+        dataset_format = self._validate_format(dataset, catalog, dataset_format)
 
         if valid_date_range.match(dt_str) or dt_str == "latest":
             required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
@@ -884,7 +939,26 @@ class Fusion:
             # sample data is limited to csv
             if dt_str == "sample":
                 dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
+            # Check if dt_str exists as a series member
+            dataset_members_df = self.list_datasetmembers(dataset, catalog)
+            if dt_str not in dataset_members_df["identifier"].to_numpy():
+                raise APIResponseError(
+                    ValueError(
+                        f"datasetseries '{dt_str}' not found for dataset '{dataset}' in catalog '{catalog}'"
+                        f"for the given date/date range ({dt_str})."
+                    ),
+                    status_code=404,
+                )
             required_series = [(catalog, dataset, dt_str, dataset_format)]  # type: ignore[list-item]
+
+        if not required_series:
+            raise APIResponseError(
+                ValueError(
+                    f"No data available for dataset {dataset} in catalog {catalog} "
+                    f"for the given date/date range ({dt_str})."
+                ),
+                status_code=404,
+            )
 
         if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
             raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
@@ -906,7 +980,8 @@ class Fusion:
                 self.fs.mkdir(d, create_parents=True)
 
         n_par = cpu_count(n_par)
-        download_spec = [
+
+        download_spec: list[dict[str, Any]]  = [
             {
                 "lfs": self.fs,
                 "rpath": distribution_to_url(
@@ -916,6 +991,7 @@ class Fusion:
                     series[3],
                     series[0],
                     is_download=True,
+                    file_name=fname,
                 ),
                 "lpath": distribution_to_filename(
                     download_folders[i],
@@ -924,11 +1000,22 @@ class Fusion:
                     series[3],
                     series[0],
                     partitioning=partitioning,
+                    file_name=fname,
                 ),
                 "overwrite": force_download,
                 "preserve_original_name": preserve_original_name,
             }
             for i, series in enumerate(required_series)
+            for fname in (
+                [fid.rstrip("/") for fid in self.list_distribution_files(
+                    dataset=series[1],
+                    series=series[2],
+                    file_format=series[3],
+                    catalog=series[0],
+                )["@id"].tolist()]
+                if not file_name else
+                [file_name.rstrip("/")] if isinstance(file_name, str) else [f.rstrip("/") for f in file_name]
+            )
         ]
 
         logger.log(
@@ -952,8 +1039,30 @@ class Fusion:
                     warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
         return res if return_paths else None
 
+    def _validate_format(
+        self,
+        dataset: str,
+        catalog: str,
+        dataset_format: str | None,
+    ) -> str:
+        available_formats = list(self.list_datasetmembers_distributions(dataset, catalog)["format"].unique())
+        if dataset_format and dataset_format not in available_formats:
+            raise FileFormatError(
+                f"Dataset format {dataset_format} is not available for {dataset} in catalog {catalog}. "
+                f"Available formats are {available_formats}."
+            )
+        if dataset_format is None:
+            if len(available_formats) == 1:
+                return str(available_formats[0])
+            else:
+                raise FileFormatError(
+                    f"Multiple formats found for {dataset} in catalog {catalog}. Dataset format is required to"
+                    f"download. Available formats are {available_formats}."
+                )
+        return dataset_format
+
     async def _async_stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
-        """Return async stream of a file fro mthe given url.
+        """Return async stream of a file from the given url.
 
         Args:
             url (str): File url. Appends Fusion.root_url if http prefix not present.
@@ -1005,6 +1114,7 @@ class Fusion:
         force_download: bool = False,
         download_folder: str | None = None,
         dataframe_type: str = "pandas",
+        file_name: str | list[str] | None = None,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """Gets distributions for a specified date or date range and returns the data as a dataframe.
@@ -1033,6 +1143,10 @@ class Fusion:
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
             dataframe_type (str, optional): Type
+            file_name (str | list[str] | None, optional): Specific file(s) to fetch.
+                This can be a single file name or a list of file names.
+                The file name should match exactly the name of the file in the distribution with out format.
+                If not provided, fetch all available distribution files.
         Returns:
             class:`pandas.DataFrame`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
@@ -1056,6 +1170,7 @@ class Fusion:
             force_download,
             download_folder,
             return_paths=True,
+            file_name=file_name,
         )
 
         if not download_res:
@@ -1139,7 +1254,6 @@ class Fusion:
                 data_df = pd.concat(dataframes, ignore_index=True)
             if dataframe_type == "polars":
                 import polars as pl
-
                 data_df = pl.concat(dataframes, how="diagonal")  # type: ignore
 
         return data_df
@@ -1150,27 +1264,50 @@ class Fusion:
         series_member: str,
         dataset_format: str = "parquet",
         catalog: str | None = None,
-    ) -> BytesIO:
-        """Returns an instance of dataset (the distribution) as a bytes object.
+        file_name: str | list[str] | None = None,
+    ) -> BytesIO | list[BytesIO]:
+        """Returns an instance of dataset (the distribution) as a single bytes object or a list of bytes.
 
         Args:
             dataset (str): A dataset identifier
             series_member (str,): A dataset series member identifier
             dataset_format (str, optional): The file format, e.g. CSV or Parquet. Defaults to 'parquet'.
             catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            file_name (str | list[str] | None, optional): Specific file(s) to fetch.
+                This can be a single file name or a list of file names.
+                The file name should match exactly the name of the file in the distribution with out format.
+                If not provided, fetch all available distribution files.
+        Returns:
+            BytesIO | list[BytesIO]: A single BytesIO if one file, or a list of BytesIO for multiple files.
         """
 
         catalog = self._use_catalog(catalog)
 
-        url = distribution_to_url(
-            self.root_url,
-            dataset,
-            series_member,
-            dataset_format,
-            catalog,
-        )
+        # Get list of files if not provided
+        if not file_name:
+            df_files = self.list_distribution_files(dataset, series_member, dataset_format, catalog)
+            filenames = [fid.rstrip("/") for fid in df_files["@id"].tolist()]
+        elif isinstance(file_name, str):
+            filenames = [file_name]
+        else:  # already a list[str]
+            filenames = file_name
 
-        return Fusion._call_for_bytes_object(url, self.session)
+        # Fetch each file as BytesIO
+        results = []
+        for fname in filenames:
+            url = distribution_to_url(
+                self.root_url,
+                dataset,
+                series_member,
+                dataset_format,
+                catalog,
+                is_download=True,
+                file_name=fname,
+            )
+            results.append(Fusion._call_for_bytes_object(url, self.session))
+
+        # Return single BytesIO if only one file, else list
+        return results[0] if len(results) == 1 else results
 
     def to_table(  # noqa: PLR0913
         self,
@@ -1184,6 +1321,7 @@ class Fusion:
         filters: PyArrowFilterT | None = None,
         force_download: bool = False,
         download_folder: str | None = None,
+        file_name: str | list[str] | None = None,
         **kwargs: Any,
     ) -> pa.Table:
         """Gets distributions for a specified date or date range and returns the data as an arrow table.
@@ -1211,6 +1349,10 @@ class Fusion:
                 if it is already on disk. Defaults to False.
             download_folder (str, optional): The path, absolute or relative, where downloaded files are saved.
                 Defaults to download_folder as set in __init__
+            file_name (str | list[str] | None, optional): Specific file(s) to fetch.
+                This can be a single file name or a list of file names.
+                The file name should match exactly the name of the file in the distribution with out format.
+                If not provided, fetch all available distribution files.    
         Returns:
             class:`pyarrow.Table`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
@@ -1229,6 +1371,7 @@ class Fusion:
             force_download,
             download_folder,
             return_paths=True,
+            file_name=file_name,
         )
 
         if not download_res:
@@ -1334,6 +1477,7 @@ class Fusion:
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
 
+
         fs_fusion = self.get_fusion_filesystem()
         if self.fs.info(path)["type"] == "directory":
             validate_file_formats(self.fs, path)
@@ -1381,6 +1525,7 @@ class Fusion:
                     dt_str = pd.Timestamp("today").date().strftime("%Y%m%d")
                 elif date_identifier.match(dt_str):
                     dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
+
 
                 file_format = path.split(".")[-1]
                 file_name = [path.split("/")[-1]]
@@ -2145,6 +2290,7 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
 
+
     def report_attribute(
         self,
         title: str,
@@ -2345,308 +2491,6 @@ class Fusion:
 
         return ds_attr_df
 
-    def input_dataflow(  # noqa: PLR0913
-        self,
-        identifier: str,
-        title: str = "",
-        category: str | list[str] | None = None,
-        description: str = "",
-        frequency: str = "Once",
-        is_internal_only_dataset: bool = False,
-        is_third_party_data: bool = True,
-        is_restricted: bool | None = None,
-        is_raw_data: bool = True,
-        maintainer: str | None = "J.P. Morgan Fusion",
-        source: str | list[str] | None = None,
-        region: str | list[str] | None = None,
-        publisher: str = "J.P. Morgan",
-        product: str | list[str] | None = None,
-        sub_category: str | list[str] | None = None,
-        tags: str | list[str] | None = None,
-        created_date: str | None = None,
-        modified_date: str | None = None,
-        delivery_channel: str | list[str] = "API",
-        language: str = "English",
-        status: str = "Available",
-        type_: str | None = "Flow",
-        container_type: str | None = "Snapshot-Full",
-        snowflake: str | None = None,
-        complexity: str | None = None,
-        is_immutable: bool | None = None,
-        is_mnpi: bool | None = None,
-        is_pci: bool | None = None,
-        is_pii: bool | None = None,
-        is_client: bool | None = None,
-        is_public: bool | None = None,
-        is_internal: bool | None = None,
-        is_confidential: bool | None = None,
-        is_highly_confidential: bool | None = None,
-        is_active: bool | None = None,
-        owners: list[str] | None = None,
-        application_id: str | dict[str, str] | None = None,
-        producer_application_id: dict[str, str] | None = None,
-        consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None,
-        flow_details: dict[str, str] | None = None,
-        **kwargs: Any,
-    ) -> InputDataFlow:
-        """Instantiate an Input Dataflow object with this client for metadata creation.
-
-        Args:
-            identifier (str): Dataset identifier.
-            title (str, optional): Dataset title. If not provided, defaults to identifier.
-            category (str | list[str] | None, optional): A category or list of categories for the dataset.
-            Defaults to None.
-            description (str, optional): Dataset description. If not provided, defaults to identifier.
-            frequency (str, optional): The frequency of the dataset. Defaults to "Once".
-            is_internal_only_dataset (bool, optional): Flag for internal datasets. Defaults to False.
-            is_third_party_data (bool, optional): Flag for third party data. Defaults to True.
-            is_restricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
-            is_raw_data (bool, optional): Flag for raw datasets. Defaults to True.
-            maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
-            source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
-            region (str | list[str] | None, optional): Region. Defaults to None.
-            publisher (str, optional): Name of vendor that publishes the data. Defaults to "J.P. Morgan".
-            product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
-            sub_category (str | list[str] | None, optional): Sub-category. Defaults to None.
-            tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
-            created_date (str | None, optional): Created date. Defaults to None.
-            modified_date (str | None, optional): Modified date. Defaults to None.
-            delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
-            language (str, optional): Language. Defaults to "English".
-            status (str, optional): Status. Defaults to "Available".
-            type_ (str | None, optional): Dataset type. Defaults to "Flow".
-            container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
-            snowflake (str | None, optional): Snowflake account connection. Defaults to None.
-            complexity (str | None, optional): Complexity. Defaults to None.
-            is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
-            is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
-            is_pci (bool | None, optional): is_pci. Defaults to None.
-            is_pii (bool | None, optional): is_pii. Defaults to None.
-            is_client (bool | None, optional): is_client. Defaults to None.
-            is_public (bool | None, optional): is_public. Defaults to None.
-            is_internal (bool | None, optional): is_internal. Defaults to None.
-            is_confidential (bool | None, optional): is_confidential. Defaults to None.
-            is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
-            is_active (bool | None, optional): is_active. Defaults to None.
-            owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
-            producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
-                producing the flow).
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application
-                ID (downstream application, consuming the flow).
-            flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
-                Defaults to {"flowDirection": "Input"}.
-
-        Returns:
-            Dataset: Fusion InputDataFlow class.
-
-        Examples:
-            >>> from fusion import Fusion
-            >>> fusion = Fusion()
-            >>> dataset = fusion.input_dataflow(identifier="MY_DATAFLOW")
-
-        Note:
-            See the dataset module for more information on functionalities of input dataflow objects.
-
-        """
-        flow_details = {"flowDirection": "Input"} if flow_details is None else flow_details
-        dataflow_obj = InputDataFlow(
-            identifier=identifier,
-            title=title,
-            category=category,
-            description=description,
-            frequency=frequency,
-            is_internal_only_dataset=is_internal_only_dataset,
-            is_third_party_data=is_third_party_data,
-            is_restricted=is_restricted,
-            is_raw_data=is_raw_data,
-            maintainer=maintainer,
-            source=source,
-            region=region,
-            publisher=publisher,
-            product=product,
-            sub_category=sub_category,
-            tags=tags,
-            created_date=created_date,
-            modified_date=modified_date,
-            delivery_channel=delivery_channel,
-            language=language,
-            status=status,
-            type_=type_,
-            container_type=container_type,
-            snowflake=snowflake,
-            complexity=complexity,
-            is_immutable=is_immutable,
-            is_mnpi=is_mnpi,
-            is_pci=is_pci,
-            is_pii=is_pii,
-            is_client=is_client,
-            is_public=is_public,
-            is_internal=is_internal,
-            is_confidential=is_confidential,
-            is_highly_confidential=is_highly_confidential,
-            is_active=is_active,
-            owners=owners,
-            application_id=application_id,
-            producer_application_id=producer_application_id,
-            consumer_application_id=consumer_application_id,
-            flow_details=flow_details,
-            **kwargs,
-        )
-        dataflow_obj.client = self
-        return dataflow_obj
-
-    def output_dataflow(  # noqa: PLR0913
-        self,
-        identifier: str,
-        title: str = "",
-        category: str | list[str] | None = None,
-        description: str = "",
-        frequency: str = "Once",
-        is_internal_only_dataset: bool = False,
-        is_third_party_data: bool = True,
-        is_restricted: bool | None = None,
-        is_raw_data: bool = True,
-        maintainer: str | None = "J.P. Morgan Fusion",
-        source: str | list[str] | None = None,
-        region: str | list[str] | None = None,
-        publisher: str = "J.P. Morgan",
-        product: str | list[str] | None = None,
-        sub_category: str | list[str] | None = None,
-        tags: str | list[str] | None = None,
-        created_date: str | None = None,
-        modified_date: str | None = None,
-        delivery_channel: str | list[str] = "API",
-        language: str = "English",
-        status: str = "Available",
-        type_: str | None = "Flow",
-        container_type: str | None = "Snapshot-Full",
-        snowflake: str | None = None,
-        complexity: str | None = None,
-        is_immutable: bool | None = None,
-        is_mnpi: bool | None = None,
-        is_pci: bool | None = None,
-        is_pii: bool | None = None,
-        is_client: bool | None = None,
-        is_public: bool | None = None,
-        is_internal: bool | None = None,
-        is_confidential: bool | None = None,
-        is_highly_confidential: bool | None = None,
-        is_active: bool | None = None,
-        owners: list[str] | None = None,
-        application_id: str | dict[str, str] | None = None,
-        producer_application_id: dict[str, str] | None = None,
-        consumer_application_id: list[dict[str, str]] | dict[str, str] | None = None,
-        flow_details: dict[str, str] | None = None,
-        **kwargs: Any,
-    ) -> OutputDataFlow:
-        """Instantiate an Output Dataflow object with this client for metadata creation.
-
-        Args:
-            identifier (str): Dataset identifier.
-            title (str, optional): Dataset title. If not provided, defaults to identifier.
-            category (str | list[str] | None, optional): A category or list of categories for the dataset.
-            Defaults to None.
-            description (str, optional): Dataset description. If not provided, defaults to identifier.
-            frequency (str, optional): The frequency of the dataset. Defaults to "Once".
-            is_internal_only_dataset (bool, optional): Flag for internal datasets. Defaults to False.
-            is_third_party_data (bool, optional): Flag for third party data. Defaults to True.
-            is_restricted (bool | None, optional): Flag for restricted datasets. Defaults to None.
-            is_raw_data (bool, optional): Flag for raw datasets. Defaults to True.
-            maintainer (str | None, optional): Dataset maintainer. Defaults to "J.P. Morgan Fusion".
-            source (str | list[str] | None, optional): Name of data vendor which provided the data. Defaults to None.
-            region (str | list[str] | None, optional): Region. Defaults to None.
-            publisher (str, optional): Name of vendor that publishes the data. Defaults to "J.P. Morgan".
-            product (str | list[str] | None, optional): Product to associate dataset with. Defaults to None.
-            sub_category (str | list[str] | None, optional): Sub-category. Defaults to None.
-            tags (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
-            created_date (str | None, optional): Created date. Defaults to None.
-            modified_date (str | None, optional): Modified date. Defaults to None.
-            delivery_channel (str | list[str], optional): Delivery channel. Defaults to "API".
-            language (str, optional): Language. Defaults to "English".
-            status (str, optional): Status. Defaults to "Available".
-            type_ (str | None, optional): Dataset type. Defaults to "Flow".
-            container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
-            snowflake (str | None, optional): Snowflake account connection. Defaults to None.
-            complexity (str | None, optional): Complexity. Defaults to None.
-            is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
-            is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
-            is_pci (bool | None, optional): is_pci. Defaults to None.
-            is_pii (bool | None, optional): is_pii. Defaults to None.
-            is_client (bool | None, optional): is_client. Defaults to None.
-            is_public (bool | None, optional): is_public. Defaults to None.
-            is_internal (bool | None, optional): is_internal. Defaults to None.
-            is_confidential (bool | None, optional): is_confidential. Defaults to None.
-            is_highly_confidential (bool | None, optional): is_highly_confidential. Defaults to None.
-            is_active (bool | None, optional): is_active. Defaults to None.
-            owners (list[str] | None, optional): The owners of the dataset. Defaults to None.
-            application_id (str | None, optional): The application ID of the dataset. Defaults to None.
-            producer_application_id (dict[str, str] | None, optional): The producer application ID (upstream application
-                producing the flow).
-            consumer_application_id (list[dict[str, str]] | dict[str, str] | None, optional): The consumer application
-                ID (downstream application, consuming the flow).
-            flow_details (dict[str, str] | None, optional): The flow details. Specifies input versus output flow.
-                Defaults to {"flowDirection": "Output"}.
-
-        Returns:
-            Dataset: Fusion OutputDataFlow class.
-
-        Examples:
-            >>> from fusion import Fusion
-            >>> fusion = Fusion()
-            >>> dataset = fusion.output_dataflow(identifier="MY_DATAFLOW")
-
-        Note:
-            See the dataset module for more information on functionalities of output dataflow objects.
-
-        """
-        flow_details = {"flowDirection": "Output"} if flow_details is None else flow_details
-        dataflow_obj = OutputDataFlow(
-            identifier=identifier,
-            title=title,
-            category=category,
-            description=description,
-            frequency=frequency,
-            is_internal_only_dataset=is_internal_only_dataset,
-            is_third_party_data=is_third_party_data,
-            is_restricted=is_restricted,
-            is_raw_data=is_raw_data,
-            maintainer=maintainer,
-            source=source,
-            region=region,
-            publisher=publisher,
-            product=product,
-            sub_category=sub_category,
-            tags=tags,
-            created_date=created_date,
-            modified_date=modified_date,
-            delivery_channel=delivery_channel,
-            language=language,
-            status=status,
-            type_=type_,
-            container_type=container_type,
-            snowflake=snowflake,
-            complexity=complexity,
-            is_immutable=is_immutable,
-            is_mnpi=is_mnpi,
-            is_pci=is_pci,
-            is_pii=is_pii,
-            is_client=is_client,
-            is_public=is_public,
-            is_internal=is_internal,
-            is_confidential=is_confidential,
-            is_highly_confidential=is_highly_confidential,
-            is_active=is_active,
-            owners=owners,
-            application_id=application_id,
-            producer_application_id=producer_application_id,
-            consumer_application_id=consumer_application_id,
-            flow_details=flow_details,
-            **kwargs,
-        )
-        dataflow_obj.client = self
-        return dataflow_obj
-
     def list_indexes(
         self,
         knowledge_base: str,
@@ -2731,8 +2575,7 @@ class Fusion:
                 Args:
                     dataset (str): Dataset identifier.
                     catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-                    output (bool, optional): If True then print the dataframe. Defaults to False.
-        F
+                    
                 Returns:
                     pd.DataFrame: A dataframe with a row for each dataset member distribution.
 
@@ -2829,23 +2672,104 @@ class Fusion:
         report_obj.client = self
         return report_obj
 
+    def dataflow(  # noqa: PLR0913
+    self,
+    provider_node: dict[str, str] | None = None,
+    consumer_node: dict[str, str] | None = None,
+    description: str | None = None,
+    alternative_id: dict[str, Any] | None = None,
+    transport_type: str | None = None,
+    frequency: str | None = None,
+    start_time: str | None = None,
+    end_time: str | None = None,
+    boundary_sets: list[dict[str, Any]] | None = None,
+    data_assets: list[dict[str, Any]] | None = None,
+    id: str | None = None,  # noqa: A002
+    **kwargs: Any,  
+     ) -> Dataflow:
+        """Instantiate a Dataflow object bound to this Fusion client.
+
+        You may instantiate with just an ``id`` (useful for ``update()``, ``update_fields()``, or ``delete()``);
+        however, **creating** a new data flow via ``create()`` requires valid provider/consumer nodes.
+
+        Args:
+            provider_node (dict[str, str] | None, optional):
+                Provider/source node details. Expected keys: ``name`` and ``dataNodeType``.
+            consumer_node (dict[str, str] | None, optional):
+                Consumer/target node details. Expected keys: ``name`` and ``dataNodeType``.
+            description (str | None, optional):
+                Purpose/summary of the data flow (if provided, must not be blank).
+            alternative_id (dict[str, Any] | None, optional):
+                Alternative identifier object (e.g., ``{"value": "...", "domain": "...", "isSor": true}``).
+            transport_type (str | None, optional):
+                Transport mechanism (e.g., ``"API"``, ``"FILE TRANSFER"``, ``"SYNCHRONOUS MESSAGING"``).
+            frequency (str | None, optional):
+                Flow cadence (e.g., ``"DAILY"``, ``"WEEKLY"``, ``"MONTHLY"``, etc.).
+            start_time (str | None, optional):
+                Scheduled start time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
+            end_time (str | None, optional):
+                Scheduled end time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
+            boundary_sets (list[dict[str, Any]] | None, optional):
+                Boundary set objects associated with the flow.
+            data_assets (list[dict[str, Any]] | None, optional):
+                Related data asset objects.
+            id (str | None, optional):
+                Server-assigned identifier; required for ``update()``, ``update_fields()``, and ``delete()``.
+            **kwargs (Any):
+                Additional fields supported by the API; passed through to the Dataflow dataclass.
+
+        Returns:
+            Dataflow: A Dataflow instance with this Fusion client attached.
+
+        Examples:
+            Create a handle with full details (ready for ``create()``):
+
+            >>> flow = fusion.dataflow(
+            ...     provider_node={"name": "CRM_DB", "dataNodeType": "Database"},
+            ...     consumer_node={"name": "DWH", "dataNodeType": "Database"},
+            ...     description="CRM → DWH nightly load",
+            ...     frequency="DAILY",
+            ...     transport_type="API",
+            ... )
+
+            Create a handle for an existing flow by ID (for update/delete):
+
+            >>> flow = fusion.dataflow(id="abc-123")
+            >>> flow.delete()
+        """
+        df_obj = Dataflow(
+            providerNode=provider_node,
+            consumerNode=consumer_node,
+            description=description,
+            alternativeId=alternative_id,
+            transportType=transport_type,
+            frequency=frequency,
+            startTime=start_time,
+            endTime=end_time,
+            boundarySets=boundary_sets or [],
+            dataAssets=data_assets or [],
+            id=id,
+            **kwargs,
+        )
+        df_obj.client = self
+        return df_obj
+
+
     def link_attributes_to_terms(
         self,
         report_id: str,
         mappings: list[Report.AttributeTermMapping],
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """
-        Link one or more report attributes to business glossary terms.
+        """Link attributes to business terms for a report.
 
-        Each mapping should follow this format:
-            {
-                "attribute": {"id": "attribute-id"},
-                "term": {"id": "term-id"},
-                "isKDE": True  # Optional; defaults to True if not provided
-            }
+        Args:
+            report_id (str): ID of the report to link terms to.
+            mappings (list): List of attribute-to-term mappings.
+            return_resp_obj (bool): Whether to return the raw response object.
 
-        This method wraps `Report.link_attributes_to_terms` and automatically attaches the Fusion client.
+        Returns:
+            requests.Response | None: API response
         """
 
         processed_mappings = []
@@ -2855,6 +2779,67 @@ class Fusion:
                 new_mapping["isKDE"] = True
             processed_mappings.append(new_mapping)
 
-        return Report.link_attributes_to_terms(
+        return Report.link_attributes_to_terms( 
             report_id=report_id, mappings=processed_mappings, client=self, return_resp_obj=return_resp_obj
         )
+    
+    def list_distribution_files(
+        self,
+        dataset: str,
+        series: str,
+        file_format: str | None = "parquet",
+        catalog: str | None = None,
+        output: bool = False,
+        max_results: int = -1,
+    ) -> pd.DataFrame:
+        """ List the available files for a specific dataset distribution.
+        Args:
+            dataset (str): A dataset identifier.
+            series (str): The dataset series identifier.
+            file_format (str): Format of the distribution files (e.g., "parquet", "csv"). Defaults to 'parquet'.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True, prints the DataFrame. Defaults to False.
+            max_results (int, optional): Limit the number of rows returned in the DataFrame.
+                Defaults to -1 which returns all results.
+        Returns:
+            pandas.DataFrame: A DataFrame containing metadata for each available file
+            in the distribution.
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = (
+            f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+            f"{series}/distributions/{file_format}/files"
+        )
+        files_df = Fusion._call_for_dataframe(url, self.session)
+
+        if max_results > -1:
+            files_df = files_df.iloc[:max_results]
+
+        if output:
+            pass
+
+        return files_df
+
+
+    def list_dataflows(
+        self,
+        id_contains: str,
+        output: bool = False,
+    ) -> pd.DataFrame:
+        """Retrieve a single dataflow from the Fusion system."""
+
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{id_contains}"
+        resp = self.session.get(url)
+
+        if resp.status_code == HTTPStatus.OK:
+            list_df = pd.json_normalize(resp.json())
+            if output:
+                pass  
+            return list_df
+        else:
+            resp.raise_for_status()
+
+        # fallback empty frame if something unexpected happens
+        return pd.DataFrame()
+

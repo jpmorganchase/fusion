@@ -1,4 +1,5 @@
 """Fusion FileSystem."""
+from __future__ import annotations
 
 import asyncio
 import base64
@@ -10,7 +11,7 @@ import time
 from collections.abc import AsyncGenerator, Generator
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, urljoin
 
 import aiohttp
@@ -22,10 +23,15 @@ from fsspec.callbacks import _DEFAULT_CALLBACK
 from fsspec.implementations.http import HTTPFile, HTTPFileSystem, sync, sync_wrapper
 from fsspec.utils import nullcontext
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 
 from .utils import _merge_responses, cpu_count, get_client, get_default_fs, get_session
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Generator
+
+    import aiohttp
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -37,7 +43,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     def __init__(
         self,
-        credentials: Optional[Union[str, FusionCredentials]] = "config/client_credentials.json",
+        credentials: str | FusionCredentials | None = "config/client_credentials.json",
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -360,7 +366,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         out = await super()._exists(url, **kwargs)
         return out
 
-    def isfile(self, path: str) -> Union[bool, Any]:
+    def isfile(self, path: str) -> bool | Any:
         """Is path a file.
 
         Args:
@@ -373,7 +379,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         return super().isfile(path)
 
     @staticmethod
-    def _merge_all_data(all_data: Optional[dict[str, Any]], response_dict: dict[str, Any]) -> dict[str, Any]:
+    def _merge_all_data(all_data: dict[str, Any] | None, response_dict: dict[str, Any]) -> dict[str, Any]:
         # Handles merging of paginated resources
         if all_data is None:
             return response_dict
@@ -400,7 +406,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             all_data = {"resources": [response_dict]}
         return all_data
 
-    def cat(self, url: str, start: Optional[int] = None, end: Optional[int] = None, **kwargs: Any) -> Any:
+    def cat(
+    self,
+    url: str,
+    start: int | None = None,
+    end: int | None = None,
+    **kwargs: Any,
+    ) -> Any:
         """Fetch paths' contents with pagination support.
 
         Args:
@@ -442,7 +454,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return json.dumps(all_data).encode("utf-8")
 
-    async def _cat(self, url: str, start: Optional[int] = None, end: Optional[int] = None, **kwargs: Any) -> Any:
+    async def _cat(
+    self,
+    url: str,
+    start: int | None = None,
+    end: int | None = None,
+    **kwargs: Any,
+    ) -> Any:
         """Fetch paths' contents with pagination support (async).
 
         Args:
@@ -529,7 +547,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
 
         async def fetch() -> None:
-            async with session.get(url + f"?downloadRange=bytes={start}-{end - 1}", **self.kwargs) as response:
+            async with session.get(url + f"&downloadRange=bytes={start}-{end - 1}", **self.kwargs) as response:
                 if response.status in [200, 206]:
                     chunk = await response.read()
                     output_file.seek(start)
@@ -570,7 +588,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         file_size: int,
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         n_threads: int = 10,
-    ) -> list[tuple[bool, str, Optional[str]]]:
+    ) -> list[tuple[bool, str, str | None]]:
         """Download a single file using asynchronous range requests.
 
         Args:
@@ -608,7 +626,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         url: str,
         output_file: fsspec.spec.AbstractBufferedFile,
         block_size: int = DEFAULT_CHUNK_SIZE,
-    ) -> tuple[bool, str, Optional[str]]:
+    ) -> tuple[bool, str, str | None]:
         """Function to stream a single file from the API to a file on disk.
 
         Args:
@@ -667,11 +685,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     return False, output_file.path, str(ex)
         return False, output_file.path, None
 
-    def download(
+    def download(  # noqa: PLR0913
         self,
         lfs: fsspec.AbstractFileSystem,
-        rpath: Union[str, Path],
-        lpath: Union[str, Path],
+        rpath: str | Path,
+        lpath: str | Path,
         chunk_size: int = 5 * 2**20,
         overwrite: bool = True,
         preserve_original_name: bool = False,
@@ -701,12 +719,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 return r.headers
 
         try:
-            headers = sync(self.loop, get_headers)
-            if "x-jpmc-file-name" in headers.keys() and preserve_original_name:  # noqa: SIM118
-                file_name = headers.get("x-jpmc-file-name")
-                lpath = Path(lpath).parent.joinpath(file_name)
-                if not overwrite and lfs.exists(lpath):
-                    return True, lpath, None
+            headers = sync(self.loop, get_headers)            
+            if not overwrite and lfs.exists(lpath):
+                 return True, lpath, None
         except Exception as ex:  # noqa: BLE001
             headers = {}
             logger.info(f"Failed to get headers for {rpath}", exc_info=ex)
@@ -732,8 +747,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     def get(  # disable: W0221
         self,
-        rpath: Union[str, io.IOBase],
-        lpath: Union[str, io.IOBase],
+        rpath: str | io.IOBase,
+        lpath: str | io.IOBase,
         chunk_size: int = 5 * 2**20,
         **kwargs: Any,
     ) -> Any:
@@ -770,7 +785,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     @staticmethod
     def _update_kwargs(
-        kw: dict[str, Any], headers: dict[str, str], additional_headers: Optional[dict[str, str]]
+        kw: dict[str, Any],
+        headers: dict[str, str],
+        additional_headers: dict[str, str] | None
     ) -> dict[str, Any]:
         if "File-Name" in headers:  # noqa: PLR0915
             kw.setdefault("headers", {})
@@ -781,13 +798,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     async def _put_file(  # noqa: PLR0915, PLR0913
         self,
-        lpath: Union[str, io.IOBase, fsspec.spec.AbstractBufferedFile],
+        lpath: str | io.IOBase | fsspec.spec.AbstractBufferedFile,
         rpath: str,
         chunk_size: int = 5 * 2**20,
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         method: str = "post",
         multipart: bool = False,
-        additional_headers: Optional[dict[str, str]] = None,
+        additional_headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> None:
         async def put_data() -> AsyncGenerator[dict[Any, Any], None]:
@@ -867,7 +884,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         dt_created: str,
         chunk_size: int = 5 * 2**20,
         multipart: bool = False,
-        file_name: Optional[str] = None,
+        file_name: str | None = None
     ) -> tuple[dict[str, str], list[dict[str, str]]]:
         headers = {
             "Content-Type": "application/octet-stream",
@@ -912,8 +929,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         chunk_size: int = 5 * 2**20,
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         method: str = "put",
-        file_name: Optional[str] = None,
-        additional_headers: Optional[dict[str, str]] = None,
+        file_name: str | None = None,
+        additional_headers: dict[str, str] | None = None,
     ) -> None:
         async def _get_operation_id(kw: dict[str, str]) -> dict[str, Any]:
             session = await self.set_session()
@@ -1017,10 +1034,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         callback: fsspec.callbacks.Callback = _DEFAULT_CALLBACK,
         method: str = "put",
         multipart: bool = False,
-        from_date: Optional[str] = None,
-        to_date: Optional[str] = None,
-        file_name: Optional[str] = None,
-        additional_headers: Optional[dict[str, str]] = None,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        file_name: str | None = None,
+        additional_headers: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> Any:
         """Copy file(s) from local.
@@ -1067,7 +1084,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return sync(super().loop, self._put_file, *args, **kwargs)
 
-    def find(self, path: str, maxdepth: Optional[int] = None, withdirs: bool = False, **kwargs: Any) -> Any:
+    def find(self, path: str, maxdepth: int | None = None, withdirs: bool = False, **kwargs: Any) -> Any:
         """Find all file in a folder.
 
         Args:
@@ -1082,7 +1099,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         path = self._decorate_url(path)
         return super().find(path, maxdepth=maxdepth, withdirs=withdirs, **kwargs)
 
-    async def _find(self, path: str, maxdepth: Optional[int] = None, withdirs: bool = False, **kwargs: Any) -> Any:
+    async def _find(self, path: str, maxdepth: int | None = None, withdirs: bool = False, **kwargs: Any) -> Any:
         await self._async_startup()
         path = self._decorate_url(path)
         out = await super()._find(path, maxdepth=maxdepth, withdirs=withdirs, **kwargs)
@@ -1129,11 +1146,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         self,
         path: str,
         mode: str = "rb",
-        block_size: Optional[int] = None,
-        _autocommit: Optional[bool] = None,
+        block_size: int | None = None,
+        _autocommit: bool | None = None,
         cache_type: None = None,
         cache_options: None = None,
-        size: Optional[None] = None,
+        size: int | None = None,
         **kwargs: Any,
     ) -> fsspec.spec.AbstractBufferedFile:
         """Make a file-like object.
