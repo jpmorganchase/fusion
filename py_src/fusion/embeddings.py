@@ -28,7 +28,7 @@ from opensearchpy.exceptions import (
 )
 from opensearchpy.metrics import Metrics, MetricsNone
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.embeddings_utils import (
     _modify_post_haystack,
     _modify_post_response_langchain,
@@ -524,7 +524,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
 
     @staticmethod
     def _remap_endpoints(url: str) -> str:
-        return url.replace("_bulk", "embeddings").replace("_search", "search")
+        return url.replace("_bulk", "embeddings").replace("_search", "search").replace("_doc", "embeddings")
 
     def _make_url_valid(self, url: str, body: bytes | None = None) -> str:
         if url == "/_bulk":

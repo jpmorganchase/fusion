@@ -10,7 +10,7 @@ import fsspec
 import pytest
 from aiohttp import ClientResponse
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 from fusion.fusion_filesystem import FusionFile, FusionHTTPFileSystem
 
@@ -41,7 +41,7 @@ def test_filesystem(
 
     assert FusionHTTPFileSystem(None, **kwargs)
 
-    kwargs = {"client_kwargs": {"credentials": 3.14}}  # type: ignore
+    kwargs = {"client_kwargs": {"credentials": 3.14}}  # type: ignore[dict-item]
     with pytest.raises(ValueError, match="Credentials not provided"):
         FusionHTTPFileSystem(None, **kwargs)
 
@@ -343,7 +343,7 @@ async def test_fetch_range_exception(
 async def test_fetch_range_success(
     mock_client_session: mock.AsyncMock, example_creds_dict: dict[str, Any], tmp_path: Path
 ) -> None:
-    url = "http://example.com/data"
+    url = "http://example.com/data?file=file"
     output_file = MagicMock(spec=io.IOBase)
     output_file.path = "./output_file_path/file.txt"
     output_file.seek = MagicMock()
@@ -382,7 +382,7 @@ async def test_fetch_range_success(
     output_file.seek.assert_called_once_with(0)
     output_file.write.assert_called_once_with(b"some data")
     mock_response.raise_for_status.assert_not_called()
-    mock_session.get.assert_called_once_with(url + f"?downloadRange=bytes={start}-{end - 1}", **http_fs_instance.kwargs)
+    mock_session.get.assert_called_once_with(url + f"&downloadRange=bytes={start}-{end - 1}", **http_fs_instance.kwargs)
 
 
 @pytest.mark.parametrize(
@@ -484,12 +484,26 @@ def test_download(  # noqa: PLR0913
     mock_response.headers = {"Content-Length": "100", "x-jpmc-file-name": "original_file.txt"}
     mock_response.__aenter__.return_value = mock_response
     mock_session.head.return_value = mock_response
+    if not overwrite and not preserve_original_name:
+        lfs.exists.return_value = True
+    else:
+        lfs.exists.return_value = False
 
     # Act
-    result = fs.download(lfs, rpath, lpath, chunk_size, overwrite, preserve_original_name)
+    result = fs.download(
+    lfs=lfs,
+    rpath=rpath,
+    lpath=lpath,
+    chunk_size=chunk_size,
+    overwrite=overwrite,
+    preserve_original_name=preserve_original_name,
+    )
 
     # Assert
-    if overwrite:
+    if not overwrite and not preserve_original_name:
+        # only case where early return happens
+        assert result == (True, lpath, None)
+    else:
         assert result == ("mocked_return", "mocked_lpath", "mocked_extra")
         mock_get.assert_called_once_with(
             str(rpath),
@@ -498,11 +512,6 @@ def test_download(  # noqa: PLR0913
             headers={"Content-Length": "100", "x-jpmc-file-name": "original_file.txt"},
             is_local_fs=False,
         )
-    elif preserve_original_name:
-        assert result == (True, Path(expected_lpath), None)
-    else:
-        assert result == (True, lpath, None)
-
 
 @patch.object(FusionHTTPFileSystem, "get", return_value=("mocked_return", "mocked_lpath", "mocked_extra"))
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)

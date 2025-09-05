@@ -4,8 +4,10 @@ import hashlib
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from fusion import Fusion
+if TYPE_CHECKING:
+    from fusion import Fusion
 
 
 @dataclass
@@ -77,7 +79,7 @@ def download_clean_up(download_res: list[tuple[bool, str, str | None]] | None) -
 def gen_generic_dl() -> None:
     import os
 
-    from fusion._fusion import FusionCredentials
+    from fusion.credentials import FusionCredentials
     from fusion.fusion import Fusion
 
     creds = FusionCredentials.from_client_id(
@@ -117,9 +119,6 @@ def gen_generic_dl() -> None:
 
         print_res[test_nm] = params
 
-    print(print_res)
-
-
 def test_generic_dl(client: Fusion) -> None:
     for test_nm, params in download_hashes.items():
         res_params = params.client_dl_params
@@ -137,7 +136,6 @@ def test_generic_dl(client: Fusion) -> None:
             for success, path, _ in res:
                 if success:
                     with Path(path).open("rb") as f:
-                        print(f"Reading {path}")
                         hash_out.update(f.read())
             assert hash_out.hexdigest() == params.md5_hash, f"Failed hash for {test_nm}"
             #download_clean_up(res)

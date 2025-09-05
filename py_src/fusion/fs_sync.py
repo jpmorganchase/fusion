@@ -283,18 +283,18 @@ def fsync(  # noqa: PLR0912, PLR0913, PLR0915
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    if not any(isinstance(h, logging.FileHandler) for h in logger.handlers):
+    if not any(type(h) is logging.FileHandler for h in logger.handlers):
         file_handler = logging.FileHandler(filename="{}/{}".format(log_path, "fusion_fsync.log"))
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
-    if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+    if not any(type(h) is logging.StreamHandler for h in logger.handlers):
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setFormatter(formatter)
         logger.addHandler(stdout_handler)
 
     if len(logger.handlers) > 1:
-        logger.handlers = [h for h in logger.handlers if not isinstance(h, logging.NullHandler)]
+        logger.handlers = [h for h in logger.handlers if type(h) is not logging.NullHandler]
 
     catalog = catalog if catalog else "common"
     datasets = datasets if datasets else []

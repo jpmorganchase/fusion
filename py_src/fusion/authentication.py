@@ -9,7 +9,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from fusion._fusion import FusionCredentials
+from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 
 logger = logging.getLogger(__name__)

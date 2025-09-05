@@ -1,38 +1,127 @@
-"""Test dataflow.py"""
+"""Test file for Dataflow integration"""
 
-import requests
-import requests_mock
+import pandas as pd
+import pytest
 
-from fusion.dataflow import InputDataFlow, OutputDataFlow
+from fusion.dataflow import Dataflow
 from fusion.fusion import Fusion
 
 
-def test_inputdataflow_class_object_representation() -> None:
-    """Test the object representation of the Dataflow class."""
-    dataflow = InputDataFlow(identifier="my_dataflow", flow_details={"key": "value"})
-    assert repr(dataflow)
-
-
-def test_outputdataflow_class_object_representation() -> None:
-    """Test the object representation of the Dataflow class."""
-    dataflow = OutputDataFlow(identifier="my_dataflow", flow_details={"key": "value"})
-    assert repr(dataflow)
-
-
-def test_add_registered_attribute(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
-    """Test the add_registered_attribute method."""
-    catalog = "my_catalog"
-    dataflow = "TEST_DATAFLOW"
-    attribute_identifier = "my_attribute"
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataflow}/attributes/{attribute_identifier}/registration"
-
-    requests_mock.post(url, json={"isCriticalDataElement": False})
-
-    dataflow_obj = InputDataFlow(identifier="TEST_DATAFLOW")
-    dataflow_obj.client = fusion_obj
-    resp = dataflow_obj.add_registered_attribute(
-        attribute_identifier="my_attribute", catalog=catalog, return_resp_obj=True
+def test_dataflow_basic_fields() -> None:
+    flow = Dataflow(
+        providerNode={"name": "CRM_DB", "nodeType": "Database"},
+        consumerNode={"name": "DWH", "nodeType": "Database"},
+        description="CRM to DWH load",
+        transportType="API",
+        frequency="DAILY",
     )
-    assert isinstance(resp, requests.Response)
-    status_code = 200
-    assert resp.status_code == status_code
+    assert flow.providerNode is not None
+    assert flow.consumerNode is not None
+    assert flow.providerNode["name"] == "CRM_DB"
+    assert flow.consumerNode["name"] == "DWH"
+    assert flow.transportType == "API"
+    assert flow.frequency == "DAILY"
+
+
+def test_dataflow_to_dict() -> None:
+    flow = Dataflow(
+        providerNode={"name": "S3", "nodeType": "Storage"},
+        consumerNode={"name": "Analytics", "nodeType": "Dashboard"},
+        description="S3 to Analytics feed",
+        transportType="FILE TRANSFER",
+        frequency="WEEKLY",
+    )
+    result = flow.to_dict()
+    assert result["providerNode"]["name"] == "S3"
+    assert result["consumerNode"]["nodeType"] == "Dashboard"
+    assert result["frequency"] == "WEEKLY"
+
+
+def test_dataflow_from_dict() -> None:
+    data = {
+        "providerNode": {"name": "App1", "nodeType": "User Tool"},
+        "consumerNode": {"name": "DWH", "nodeType": "Database"},
+        "description": "Dict-based dataflow",
+        "transportType": "API",
+        "frequency": "DAILY",
+    }
+    flow = Dataflow.from_dict(data)
+    assert isinstance(flow, Dataflow)
+    assert flow.providerNode is not None
+    assert flow.providerNode["name"] == "App1"
+    assert flow.transportType == "API"
+
+
+def test_dataflow_from_object_series() -> None:
+    series = pd.Series(
+        {
+            "providerNode": {"name": "CRM_DB", "nodeType": "Database"},
+            "consumerNode": {"name": "DWH", "nodeType": "Database"},
+            "description": "Series-based dataflow",
+            "transportType": "API",
+            "frequency": "DAILY",
+        }
+    )
+    # provider/consumer optional at init so we can start empty and let from_object populate
+    flow = Dataflow().from_object(series)
+    assert isinstance(flow, Dataflow)
+    assert flow.description == "Series-based dataflow"
+    assert flow.providerNode is not None
+    assert flow.providerNode["name"] == "CRM_DB"
+
+
+def test_dataflow_from_object_json() -> None:
+    json_str = """{
+        "providerNode": {"name": "SystemA", "nodeType": "App"},
+        "consumerNode": {"name": "SystemB", "nodeType": "Database"},
+        "description": "JSON-based dataflow",
+        "frequency": "MONTHLY"
+    }"""
+    flow = Dataflow().from_object(json_str)
+    assert isinstance(flow, Dataflow)
+    assert flow.consumerNode is not None
+    assert flow.consumerNode["name"] == "SystemB"
+    assert flow.frequency == "MONTHLY"
+
+
+def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "providerNode": {"name": "CRM_DB", "nodeType": "Database"},
+                "consumerNode": {"name": "DWH", "nodeType": "Database"},
+                "description": "Row1",
+                "transportType": "API",
+                "frequency": "DAILY",
+            },
+            {
+                "providerNode": {"name": "S3", "nodeType": "Storage"},
+                "consumerNode": {"name": "Analytics", "nodeType": "Dashboard"},
+                "description": "Row2",
+                "transportType": "FILE TRANSFER",
+                "frequency": "WEEKLY",
+            },
+        ]
+    )
+    flows = Dataflow.from_dataframe(frame, client=fusion_obj)
+    assert isinstance(flows, list)
+    test_value = 2
+    assert len(flows) == test_value
+    assert all(isinstance(f, Dataflow) for f in flows)
+    assert flows[0].description == "Row1"
+    assert flows[1].frequency == "WEEKLY"
+
+    
+def test_dataflow_validate_nodes_for_create_passes() -> None:
+    flow = Dataflow(
+        providerNode={"name": "CRM_DB", "nodeType": "Database"},
+        consumerNode={"name": "DWH", "nodeType": "Database"},
+    )
+    # should not raise
+    flow._validate_nodes_for_create()
+
+
+def test_dataflow_validate_nodes_for_create_raises() -> None:
+    flow = Dataflow(providerNode=None, consumerNode=None)
+    with pytest.raises(ValueError, match="must be a dict"):
+        flow._validate_nodes_for_create()
