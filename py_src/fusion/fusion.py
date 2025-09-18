@@ -17,8 +17,8 @@ from zipfile import ZipFile
 
 import pandas as pd
 import pyarrow as pa
-from rich.progress import Progress
 from tabulate import tabulate
+from tqdm import tqdm
 
 from fusion.attributes import Attribute, Attributes
 from fusion.credentials import FusionCredentials
@@ -1022,22 +1022,23 @@ class Fusion:
             VERBOSE_LVL,
             f"Beginning {len(download_spec)} downloads in batches of {n_par}",
         )
+        res = [None] * len(download_spec)
+
         if show_progress:
-            with Progress() as p:
-                task = p.add_task("Downloading", total=len(download_spec))
-                res = []
-                for spec in download_spec:
+            with tqdm(total=len(download_spec)) as p:
+                for i, spec in enumerate(download_spec):
                     r = self.get_fusion_filesystem().download(**spec)
-                    res.append(r)
-                    p.update(task, advance=1)
+                    res[i] = r
+                    if r[0] is True:
+                        p.update(1)
         else:
             res = [self.get_fusion_filesystem().download(**spec) for spec in download_spec]
 
-        if (len(res) > 0) and (not all(r[0] for r in res)):
+        if (len(res) > 0) and (not all(r[0] for r in res)):  # type: ignore
             for r in res:
                 if not r[0]:
                     warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
-        return res if return_paths else None
+        return res if return_paths else None  # type: ignore
 
     def _validate_format(
         self,
