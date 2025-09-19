@@ -8,13 +8,11 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 import pandas as pd
 
-from fusion.exceptions import APIResponseError
 from fusion.fusion_types import Types
 from fusion.utils import (
     CamelCaseMeta,
     camel_to_snake,
     convert_date_format,
-    handle_paginated_request,
     make_bool,
     requests_raise_for_status,
     snake_to_camel,
@@ -798,13 +796,11 @@ class Attributes:
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         url = f"{client.root_url}catalogs/{catalog}/datasets/{dataset}/attributes"
-        response = handle_paginated_request(client.session, url)
-        if "resources" not in response or not response["resources"]:
-            raise APIResponseError(
-                ValueError("No data found"),
-            )
-        list_attributes = response["resources"]
+        response = client.session.get(url)
+        requests_raise_for_status(response)
+        list_attributes = response.json()["resources"]
         list_attributes = sorted(list_attributes, key=lambda x: x["index"])
+
         self.attributes = [Attribute._from_dict(attr_data) for attr_data in list_attributes]
         return self
 

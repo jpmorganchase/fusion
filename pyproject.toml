@@ -31,7 +31,6 @@ dependencies = [
     "pyarrow >= 11",
     "fsspec >= 2021",
     "aiohttp >= 3.7.1",
-    "tqdm >= 4.48.0",
     "rich >= 11.0.0",
     "certifi",
     "pyjwt>=2.10.1",
