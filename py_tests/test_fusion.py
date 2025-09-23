@@ -1359,17 +1359,17 @@ def test_to_bytes_multiple_files(requests_mock: requests_mock.Mocker, fusion_obj
                 "fileExtension": ".parquet",
                 "identifier": "file1",
                 "title": "File 1",
-                "@id": "file1"
+                "@id": "file1",
             },
             {
                 "description": "Sample file 2",
                 "fileExtension": ".parquet",
                 "identifier": "file2",
                 "title": "File 2",
-                "@id": "file2"
-            }
+                "@id": "file2",
+            },
         ]
-    }  
+    }
 
     distri_files_url = (
         f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
@@ -1378,22 +1378,22 @@ def test_to_bytes_multiple_files(requests_mock: requests_mock.Mocker, fusion_obj
 
     requests_mock.get(distri_files_url, json=mock_data)
     file1_url = distribution_to_url(
-    fusion_obj.root_url,
-    dataset,
-    datasetseries,
-    file_format,
-    catalog,
-    is_download=True,
-    file_name="file1",
+        fusion_obj.root_url,
+        dataset,
+        datasetseries,
+        file_format,
+        catalog,
+        is_download=True,
+        file_name="file1",
     )
     file2_url = distribution_to_url(
-    fusion_obj.root_url,
-    dataset,
-    datasetseries,
-    file_format,
-    catalog,
-    is_download=True,
-    file_name="file2",
+        fusion_obj.root_url,
+        dataset,
+        datasetseries,
+        file_format,
+        catalog,
+        is_download=True,
+        file_name="file2",
     )
     expected_data = b"some binary data"
     requests_mock.get(file1_url, content=expected_data)
@@ -1407,6 +1407,7 @@ def test_to_bytes_multiple_files(requests_mock: requests_mock.Mocker, fusion_obj
         for d in data:
             assert d.getvalue() == expected_data
 
+
 def test_to_bytes_single_file(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     catalog = "my_catalog"
     dataset = "my_dataset"
@@ -1419,10 +1420,10 @@ def test_to_bytes_single_file(requests_mock: requests_mock.Mocker, fusion_obj: F
                 "fileExtension": ".parquet",
                 "identifier": "file1",
                 "title": "File 1",
-                "@id": "file1"
+                "@id": "file1",
             }
         ]
-    }  
+    }
 
     distri_files_url = (
         f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
@@ -1431,13 +1432,13 @@ def test_to_bytes_single_file(requests_mock: requests_mock.Mocker, fusion_obj: F
 
     requests_mock.get(distri_files_url, json=mock_data)
     file1_url = distribution_to_url(
-    fusion_obj.root_url,
-    dataset,
-    datasetseries,
-    file_format,
-    catalog,
-    is_download=True,
-    file_name="file1",
+        fusion_obj.root_url,
+        dataset,
+        datasetseries,
+        file_format,
+        catalog,
+        is_download=True,
+        file_name="file1",
     )
     expected_data = b"some binary data"
     requests_mock.get(file1_url, content=expected_data)
@@ -1448,19 +1449,14 @@ def test_to_bytes_single_file(requests_mock: requests_mock.Mocker, fusion_obj: F
     if isinstance(data, BytesIO):
         assert data.getbuffer() == expected_data
 
+
 def test_to_bytes_with_filename(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
-    file_format = "csv"  
+    file_format = "csv"
     file1_url = distribution_to_url(
-    fusion_obj.root_url,
-    dataset,
-    datasetseries,
-    file_format,
-    catalog,
-    is_download=True,
-    file_name="file1"
+        fusion_obj.root_url, dataset, datasetseries, file_format, catalog, is_download=True, file_name="file1"
     )
     expected_data = b"some binary data"
     requests_mock.get(file1_url, content=expected_data)
@@ -1470,6 +1466,7 @@ def test_to_bytes_with_filename(requests_mock: requests_mock.Mocker, fusion_obj:
     # Check if the data is returned correctly
     if isinstance(data, BytesIO):
         assert data.getbuffer() == expected_data
+
 
 @pytest.mark.skip(reason="MUST FIX")
 def test_download_main(mocker: MockerFixture, fusion_obj: Fusion) -> None:
@@ -3007,6 +3004,7 @@ def test_list_registered_attributes_paginated_fail(requests_mock: requests_mock.
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_registered_attributes(catalog=catalog)
 
+
 def test_fusion_report(fusion_obj: Fusion) -> None:
     """Test Fusion Report object creation using required and optional arguments."""
     report = fusion_obj.report(
@@ -3528,6 +3526,7 @@ def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fus
 
     assert resp is mock_resp
 
+
 def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     mock_data = {
         "resources": [
@@ -3536,15 +3535,15 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
                 "fileExtension": ".parquet",
                 "identifier": "file1",
                 "title": "File 1",
-                "@id": "file1"
+                "@id": "file1",
             },
             {
                 "description": "Sample file 2",
                 "fileExtension": ".parquet",
                 "identifier": "file2",
                 "title": "File 2",
-                "@id": "file2"
-            }
+                "@id": "file2",
+            },
         ]
     }
 
@@ -3562,11 +3561,7 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
 
     # Case 1: Default (max_results = -1) → return all rows
     df_all = fusion_obj.list_distribution_files(
-        dataset=dataset,
-        series=series,
-        file_format=file_format,
-        catalog=catalog,
-        max_results=-1
+        dataset=dataset, series=series, file_format=file_format, catalog=catalog, max_results=-1
     )
     assert isinstance(df_all, pd.DataFrame)
     TOTAL_FILES = 2
@@ -3575,13 +3570,9 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
     assert df_all["@id"].tolist() == ["file1", "file2"]
 
     # Case 2: Limit to max_results = 1
-    MAX_RESULTS=1
+    MAX_RESULTS = 1
     df_limited = fusion_obj.list_distribution_files(
-        dataset=dataset,
-        series=series,
-        file_format=file_format,
-        catalog=catalog,
-        max_results=MAX_RESULTS
+        dataset=dataset, series=series, file_format=file_format, catalog=catalog, max_results=MAX_RESULTS
     )
 
     assert len(df_limited) == MAX_RESULTS
@@ -3589,11 +3580,7 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
 
     # Case 3: Limit higher than available rows → returns all
     df_over_limit = fusion_obj.list_distribution_files(
-        dataset=dataset,
-        series=series,
-        file_format=file_format,
-        catalog=catalog,
-        max_results=10
+        dataset=dataset, series=series, file_format=file_format, catalog=catalog, max_results=10
     )
     assert len(df_over_limit) == TOTAL_FILES
     assert df_over_limit["@id"].tolist() == ["file1", "file2"]

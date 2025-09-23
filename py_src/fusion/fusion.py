@@ -2289,10 +2289,10 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
 
-
     def report_attribute(
         self,
-        title: str,
+        title: str | None = None,
+        id: int | None = None,  # noqa: A002
         sourceIdentifier: str | None = None,
         description: str | None = None,
         technicalDataType: str | None = None,
@@ -2301,7 +2301,9 @@ class Fusion:
         """Instantiate a ReportAttribute object with this client for metadata creation.
 
         Args:
-            title (str): The display title of the attribute (required).
+            title (str | None, optional): The display title of the attribute.
+            id (int | None, optional): The unique identifier of the attribute. 
+                id argument is not required for 'create' operation.
             sourceIdentifier (str | None, optional): A unique identifier or reference ID from the source system.
             description (str | None, optional): A longer description of the attribute.
             technicalDataType (str | None, optional): The technical data type (e.g., string, int, boolean).
@@ -2323,6 +2325,7 @@ class Fusion:
         attribute_obj = ReportAttribute(
             sourceIdentifier=sourceIdentifier,
             title=title,
+            id=id,
             description=description,
             technicalDataType=technicalDataType,
             path=path,
