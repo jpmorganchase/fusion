@@ -2608,7 +2608,7 @@ class Fusion:
         members_df = pd.DataFrame(rows, columns=["identifier", "format"])
         return members_df
 
-   def report(  # noqa: PLR0913
+    def report(  # noqa: PLR0913
         self,
         description: str,
         title: str,
