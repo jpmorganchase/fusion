@@ -1,7 +1,10 @@
+"""Fusion Report class and functions."""
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field, fields
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
 
 import numpy as np
@@ -17,7 +20,10 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     import requests
+
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -40,7 +46,7 @@ class Report(metaclass=CamelCaseMeta):
 
         owner_node (dict[str, str], optional): Owner node with keys {"name", "type"}.
         publisher_node (dict[str, Any], optional): Publisher node with keys {"name", "type"} and optional
-            {"publisher_node_identifier"} which will serialize to "publisherNodeIdentifier" in API.
+            {"publisher_node_identifier"} which serializes to "publisherNodeIdentifier" in API.
 
         source_system (dict[str, Any], optional): Source system object if provided.
 
@@ -73,6 +79,7 @@ class Report(metaclass=CamelCaseMeta):
 
     # Node fields (new schema)
     owner_node: dict[str, str] | None = None
+    # may include {"publisher_node_identifier"} (becomes publisherNodeIdentifier in payload)
     publisher_node: dict[str, Any] | None = None
 
     # Optional complex
@@ -192,6 +199,7 @@ class Report(metaclass=CamelCaseMeta):
             >>> report_dict = report.to_dict()
 
         """
+
         def _camelize(obj: Any) -> Any:
             if isinstance(obj, dict):
                 out: dict[str, Any] = {}
@@ -212,7 +220,7 @@ class Report(metaclass=CamelCaseMeta):
 
         payload = _camelize({k: v for k, v in self.__dict__.items() if not k.startswith("_")})
 
-        # Ensure publisherNode order: name, type, publisherNodeIdentifier (for readability)
+        # make publisherNode order pretty: name, type, publisherNodeIdentifier
         pn = payload.get("publisherNode")
         if isinstance(pn, dict):
             ordered: dict[str, Any] = {}
@@ -268,7 +276,6 @@ class Report(metaclass=CamelCaseMeta):
         Returns:
             list[Report]: List of Report objects.
         """
-        # Apply permanent column mapping (expects Report.COLUMN_MAPPING defined at module level)
         df = data.rename(columns=Report.COLUMN_MAPPING)  # type: ignore[attr-defined]
         df = df.replace([np.nan, np.inf, -np.inf], None)
         df = df.where(df.notna(), None)
@@ -292,7 +299,7 @@ class Report(metaclass=CamelCaseMeta):
             owner_node = build_node("owner_name", "owner_type")
             publisher_node = build_node("publisher_name", "publisher_type")
 
-            # Backward-compat: if old Application columns exist, map to owner_node
+            # Backward-compat: old single-node → owner_node
             if owner_node is None and ("data_node_name" in report_data or "data_node_type" in report_data):
                 name_str = Report._str_or_none(report_data.pop("data_node_name", None))
                 type_str = cls.map_node_type(report_data.pop("data_node_type", None))
@@ -327,7 +334,7 @@ class Report(metaclass=CamelCaseMeta):
             report_data = {k: v for k, v in report_data.items() if k in valid_fields}
 
             report_obj = cls(**report_data)
-            report_obj.client = client  # Attach the client if provided
+            report_obj.client = client
 
             try:
                 report_obj.validate()
@@ -364,6 +371,7 @@ class Report(metaclass=CamelCaseMeta):
                 return cls.from_csv(source, client=client)
             elif source.strip().startswith("[{"):
                 import json
+
                 return cls.from_dataframe(pd.DataFrame(json.loads(source)), client=client)
             else:
                 raise ValueError("Unsupported string input — must be .csv path or JSON array string")
@@ -426,13 +434,10 @@ class Report(metaclass=CamelCaseMeta):
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports"
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
-
-        # Try to capture server-assigned id (if returned)
         try:
             self.id = resp.json().get("id", self.id)
         except Exception:
             pass
-
         return resp if return_resp_obj else None
 
     def update(
@@ -452,7 +457,6 @@ class Report(metaclass=CamelCaseMeta):
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Report ID is required on the object (set self.id before update()).")
-
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{self.id}"
         resp: requests.Response = client.session.put(url, json=self.to_dict())
         requests_raise_for_status(resp)
@@ -494,7 +498,7 @@ class Report(metaclass=CamelCaseMeta):
                 node["publisherNodeIdentifier"] = v
                 continue
 
-            # full nested publisher_node dict provided (snake or camel inside)
+            # nested publisher_node dict (snake or camel inside)
             if k in ("publisher_node", "publisherNode"):
                 if not isinstance(v, dict):
                     raise TypeError("publisher_node must be a dict with keys like name/type/publisher_node_identifier")
@@ -520,7 +524,6 @@ class Report(metaclass=CamelCaseMeta):
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Report ID is required on the object (set self.id before delete()).")
-
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{self.id}"
         resp: requests.Response = client.session.delete(url)
         requests_raise_for_status(resp)
@@ -561,3 +564,122 @@ class Report(metaclass=CamelCaseMeta):
         resp = client.session.post(url, json=mappings)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
+
+# ----------- permanent column mapping for DataFrame/CSV ingestion -----------
+
+Report.COLUMN_MAPPING = {  # type: ignore[attr-defined]
+    # Core
+    "Report/Process Name": "title",
+    "Report/Process Description": "description",
+    "Frequency": "frequency",
+    "Category": "category",
+    "Sub Category": "sub_category",
+    "Regulatory Designated": "regulatory_related",
+    "CDO Office": "business_domain",  # now a simple string
+    # Old single-node columns (backward-compat → owner_node)
+    "Application ID": "data_node_name",
+    "Application Type": "data_node_type",
+    # New dual-node inputs (owner / publisher)
+    "Owner Name": "owner_name",
+    "Owner Type": "owner_type",
+    "Publisher Name": "publisher_name",
+    "Publisher Type": "publisher_type",
+    # Optionals / flags
+    "LOB": "lob",
+    "Sub-LOB": "sub_lob",
+    "JPMSE BCBS Related": "is_bcbs239_program",
+    "Report Type": "risk_stripe",
+    "Risk Area": "risk_area",
+    "Tier Type": "tier_designation",
+    "Region": "region",
+    "MNPI Indicator": "mnpi_indicator",
+    "Country of Reporting Obligation": "country_of_reporting_obligation",
+    "Primary Regulator": "primary_regulator",
+    # Optional nested identifier for publisher_node
+    "Publisher Node Identifier": "publisher_node_identifier",
+}
+
+
+class Reports:
+    def __init__(self, reports: list[Report] | None = None) -> None:
+        self.reports = reports or []
+        self._client: Fusion | None = None
+
+    def __getitem__(self, index: int) -> Report:
+        return self.reports[index]
+
+    def __iter__(self) -> Iterator[Report]:
+        return iter(self.reports)
+
+    def __len__(self) -> int:
+        return len(self.reports)
+
+    @property
+    def client(self) -> Fusion | None:
+        return self._client
+
+    @client.setter
+    def client(self, client: Fusion | None) -> None:
+        self._client = client
+        for report in self.reports:
+            report.client = client
+
+    @classmethod
+    def from_csv(cls, file_path: str, client: Fusion | None = None) -> Reports:
+        """Load Reports from a CSV file path."""
+        data = pd.read_csv(file_path)
+        return cls.from_dataframe(data, client=client)
+
+    @classmethod
+    def from_dataframe(cls, df: pd.DataFrame, client: Fusion | None = None) -> Reports:
+        """Load Reports from a pandas DataFrame."""
+        report_objs = Report.from_dataframe(df, client=client)
+        obj = cls(report_objs)
+        obj.client = client
+        return obj
+
+    def create_all(self) -> None:
+        """Create all Report objects in this collection."""
+        for report in self.reports:
+            report.create()
+
+    @classmethod
+    def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None) -> Reports:
+        """Load Reports from DataFrame, list of dicts, .csv path, or JSON string."""
+        import json
+
+        if isinstance(source, pd.DataFrame):
+            return cls.from_dataframe(source, client=client)
+
+        elif isinstance(source, list) and all(isinstance(item, dict) for item in source):
+            return cls.from_dataframe(pd.DataFrame(source), client=client)
+
+        elif isinstance(source, str):
+            if source.lower().endswith(".csv") and Path(source).exists():
+                return cls.from_csv(source, client=client)
+            elif source.strip().startswith("[{"):
+                dict_list = json.loads(source)
+                return cls.from_dataframe(pd.DataFrame(dict_list), client=client)
+            else:
+                raise ValueError("Unsupported string input — must be .csv path or JSON array string")
+
+        raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
+
+
+class ReportsWrapper(Reports):
+    def __init__(self, client: Fusion) -> None:
+        super().__init__([])
+        self.client = client
+
+    def from_csv(self, file_path: str) -> Reports:  # type: ignore[override]
+        """Load Reports from CSV using the bound client."""
+        return Reports.from_csv(file_path, client=self.client)
+
+    def from_dataframe(self, df: pd.DataFrame) -> Reports:  # type: ignore[override]
+        """Load Reports from DataFrame using the bound client."""
+        return Reports.from_dataframe(df, client=self.client)
+
+    def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports:  # type: ignore[override]
+        """Load Reports from object using the bound client."""
+        return Reports.from_object(source, client=self.client)
