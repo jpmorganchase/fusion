@@ -17,7 +17,6 @@ from .utils import (
 
 if TYPE_CHECKING:
     import requests
-
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -28,19 +27,19 @@ class Dataflow(metaclass=CamelCaseMeta):
     """Fusion Dataflow class for managing dataflow metadata in the Fusion system.
 
     Attributes:
-        providerNode (dict[str, str] | None):
+        providerNode (dict[str, Any] | None):
             Defines the provider/source node of the data flow.
             Required when creating a data flow.
             Expected keys:
               - ``name`` (str): Provider node name.
-              - ``dataNodeType`` (str): Provider node type.
+              - ``type`` (str): Provider node type.
 
-        consumerNode (dict[str, str] | None):
+        consumerNode (dict[str, Any] | None):
             Defines the consumer/target node of the data flow.
             Required when creating a data flow and must be distinct from the provider node.
             Expected keys:
               - ``name`` (str): Consumer node name.
-              - ``dataNodeType`` (str): Consumer node type.
+              - ``type`` (str): Consumer node type.
 
         description (str | None, optional):
             Purpose/summary of the data flow. If this field is present, it must not be blank.
@@ -51,23 +50,13 @@ class Dataflow(metaclass=CamelCaseMeta):
             ``update()``, ``update_fields()``, and ``delete()``. Defaults to ``None``.
 
         alternativeId (dict[str, Any] | None, optional):
-            Alternative/secondary identifier object for the data flow. Based on the API schema,
-            this may include:
-              - ``value`` (str): Up to 255 characters.
-              - ``domain`` (str): A domain string.
-              - ``isSor`` (bool): Whether this is a System-of-Record id.
-            Defaults to ``None``.
+            Alternative/secondary identifier object for the data flow. Defaults to ``None``.
 
         transportType (str | None, optional):
-            Transport type of the data flow. API allows values like
-            ``"SYNCHRONOUS MESSAGING"``, ``"FILE TRANSFER"``, ``"API"``, ``"ASYNCHRONOUS MESSAGING"``.
-            Defaults to ``None``.
+            Transport type of the data flow. Defaults to ``None``.
 
         frequency (str | None, optional):
-            Frequency of the data flow. API allows values such as
-            ``"BI-WEEKLY"``, ``"WEEKLY"``, ``"SEMI-ANNUALLY"``, ``"QUARTERLY"``, ``"ANNUALLY"``,
-            ``"DAILY"``, ``"ADHOC"``, ``"INTRA-DAY"``, ``"MONTHLY"``, ``"TWICE-WEEKLY"``, ``"BI-MONTHLY"``.
-            Defaults to ``None``.
+            Frequency of the data flow. Defaults to ``None``.
 
         startTime (str | None, optional):
             Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). 
@@ -75,20 +64,26 @@ class Dataflow(metaclass=CamelCaseMeta):
 
         endTime (str | None, optional):
             Scheduled end time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``).
-             Defaults to ``None``.
+            Defaults to ``None``.
 
-        dataAssets (list[dict[str, Any]], optional):
-            List of data asset objects involved in the data flow (up to API-defined limits). Defaults to empty list.
+        sourceSystem (dict[str, Any] | None, optional):
+            Optional source system metadata object. Defaults to ``None``.
+
+        datasets (list[dict[str, Any]], optional):
+            List of dataset/data asset objects involved in the data flow. Defaults to empty list.
 
         boundarySets (list[dict[str, Any]], optional):
             Boundary set objects for the data flow; items are stored as provided. Defaults to empty list.
+
+        connectionType (str | None, required for create):
+            Connection type for a dataflow. (Validation of specific values is deferred to the API.)
     """
 
     # Required at create-time (optional at init-time for handles)
-    providerNode: dict[str, str] | None = None
-    consumerNode: dict[str, str] | None = None
+    providerNode: dict[str, Any] | None = None
+    consumerNode: dict[str, Any] | None = None
 
-    # Optional fields
+    # Optional/common fields
     description: str | None = None
     id: str | None = None
     alternativeId: dict[str, Any] | None = None
@@ -96,8 +91,12 @@ class Dataflow(metaclass=CamelCaseMeta):
     frequency: str | None = None
     startTime: str | None = None
     endTime: str | None = None
+
+    # Updated schema fields
+    sourceSystem: dict[str, Any] | None = None
     boundarySets: list[dict[str, Any]] = field(default_factory=list)
-    dataAssets: list[dict[str, Any]] = field(default_factory=list)
+    datasets: list[dict[str, Any]] = field(default_factory=list)
+    connectionType: str | None = None
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
@@ -134,8 +133,8 @@ class Dataflow(metaclass=CamelCaseMeta):
             >>> from fusion import Fusion
             >>> fusion = Fusion()
             >>> flow = fusion.dataflow(
-            ...     provider_node={"name": "CRM_DB", "dataNodeType": "Database"},
-            ...     consumer_node={"name": "DWH", "dataNodeType": "Database"},
+            ...     provider_node={"name": "CRM_DB", "type": "Database"},
+            ...     consumer_node={"name": "DWH", "type": "Database"},
             ... )
             >>> flow.client = fusion
         """
@@ -164,14 +163,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         """Create a Dataflow object from a dictionary.
 
         Accepts camelCase or snake_case keys and normalizes empty strings to None.
-
-        Args:
-            data (dict[str, Any]): Dataflow fields, potentially nested, in camelCase or snake_case.
-
-        Returns:
-            Dataflow: A populated Dataflow instance.
         """
-
         def normalize_value(val: Any) -> Any:
             if isinstance(val, str) and val.strip() == "":
                 return None
@@ -263,22 +255,24 @@ class Dataflow(metaclass=CamelCaseMeta):
     def validate(self) -> None:
         """Validate that required fields exist.
 
-        Raises:
-            ValueError: If required fields are missing.
+        (Only checks presence of key structures; detailed value validation is left to the API.)
         """
         required_fields = ["provider_node", "consumer_node"]
+        # If you still want to enforce presence of connectionType at init-time, uncomment below:
+        # required_fields.append("connection_type")
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
         if missing:
             raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")
 
     def _validate_nodes_for_create(self) -> None:
-        """Ensure provider/consumer nodes are present with non-blank name and dataNodeType for create()."""
+        """Ensure provider/consumer nodes are present with non-blank name and type for create()."""
         for attr in ("provider_node", "consumer_node"):
             node = getattr(self, attr, None)
             if not isinstance(node, dict):
-                raise ValueError(f"{attr} must be a dict with 'name' and 'dataNodeType' for create().")
-            if not node.get("name") or not node.get("nodeType"):
-                raise ValueError(f"{attr} requires non-empty 'name' and 'dataNodeType' for create().")
+                raise ValueError(f"{attr} must be a dict with 'name' and 'type' for create().")
+            if not node.get("name") or not node.get("type"):
+                raise ValueError(f"{attr} requires non-empty 'name' and 'type' for create().")
+        # Do not validate connectionType values here; let the API enforce.
 
     def to_dict(
         self,
@@ -298,7 +292,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             out[snake_to_camel(k)] = v
         return out
 
-
     def create(
         self,
         client: Fusion | None = None,
@@ -307,7 +300,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         """Create the dataflow via API."""
         client = self._use_client(client)
 
-   
         self._validate_nodes_for_create()
 
         payload = self.to_dict(drop_none=True, exclude={"id"})
