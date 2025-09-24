@@ -11,46 +11,57 @@ from fusion.report import Report, Reports, ReportsWrapper
 def test_report_basic_fields() -> None:
     report = Report(
         title="Quarterly Report",
-        data_node_id={"name": "Node1", "dataNodeType": "User Tool"},
+        owner_node={"name": "Node1", "type": "User Tool"},
+        publisher_node={"name": "Dash1", "type": "Intelligent Solutions"},
         description="Quarterly risk analysis",
         frequency="Quarterly",
         category="Risk",
         sub_category="Ops",
-        domain={"name": "CDO"},
+        business_domain="CDO",
         regulatory_related=True,
     )
     assert report.title == "Quarterly Report"
-    assert report.data_node_id["name"] == "Node1"
-    assert report.domain["name"] == "CDO"
+    assert report.owner_node["name"] == "Node1"
+    assert report.business_domain == "CDO"
 
 
 def test_report_to_dict() -> None:
     report = Report(
         title="Sample Report",
-        data_node_id={"name": "X", "dataNodeType": "Y"},
+        owner_node={"name": "X", "type": "User Tool"},
+        publisher_node={
+            "name": "Y",
+            "type": "Intelligent Solutions",
+            "publisher_node_identifier": "seal:app:1",
+        },
         description="Some desc",
         frequency="Monthly",
         category="Cat",
         sub_category="Sub",
-        domain={"name": "CDO"},
+        business_domain="CDO",
         regulatory_related=False,
     )
     result = report.to_dict()
     assert result["title"] == "Sample Report"
-    assert result["domain"]["name"] == "CDO"
+    assert result["businessDomain"] == "CDO"
     assert result["regulatoryRelated"] is False
+    assert result["publisherNode"]["publisherNodeIdentifier"] == "seal:app:1"
+    assert result["ownerNode"]["name"] == "X"
+    assert result["publisherNode"]["name"] == "Y"
 
 
 def test_report_validation_raises() -> None:
     report = Report(
         title="",
-        data_node_id={"name": "X", "dataNodeType": "Y"},
         description="",
         frequency="",
         category="",
         sub_category="",
-        domain={"name": ""},
+        business_domain="",
         regulatory_related=True,
+        # deliberately omit/leave invalid nodes to trigger validation
+        owner_node=None,
+        publisher_node=None,
     )
     with pytest.raises(ValueError, match="Missing required fields"):
         report.validate()
@@ -59,25 +70,33 @@ def test_report_validation_raises() -> None:
 def test_report_from_dict() -> None:
     data = {
         "Title": "Dict Report",
-        "DataNodeId": {"name": "X", "dataNodeType": "Y"},
         "Description": "Dict desc",
         "Frequency": "Daily",
         "Category": "Cat",
         "SubCategory": "Sub",
-        "Domain": {"name": "CDO"},
+        "BusinessDomain": "CDO",
         "RegulatoryRelated": True,
+        "OwnerNode": {"name": "OWN", "type": "User Tool"},
+        "PublisherNode": {
+            "name": "PUB",
+            "type": "Intelligent Solutions",
+            "publisherNodeIdentifier": "pid-1",
+        },
     }
     report = Report.from_dict(data)
     assert isinstance(report, Report)
     assert report.title == "Dict Report"
     assert report.frequency == "Daily"
+    assert report.publisher_node["publisher_node_identifier"] == "pid-1"
 
 
 def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     csv_data = (
         "Report/Process Name,Report/Process Description,Frequency,Category,"
-        "Sub Category,CDO Office,Application ID,Application Type,Regulatory Designated\n"
-        "TestReport,Test description,Monthly,Risk,Ops,CDO,App1,User Tool,Yes"
+        "Sub Category,CDO Office,Application ID,Application Type,"
+        "Publisher Name,Publisher Type,Publisher Node Identifier,Regulatory Designated\n"
+        "TestReport,Test description,Monthly,Risk,Ops,CDO,App1,User Tool,"
+        "Dash1,Intelligent Solutions,pub-123,Yes"
     )
     file_path = tmp_path / "test_report.csv"
     file_path.write_text(csv_data)
@@ -87,6 +106,9 @@ def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     assert isinstance(reports, Reports)
     assert len(reports) == 1
     assert reports[0].title == "TestReport"
+    assert reports[0].owner_node["name"] == "App1"
+    assert reports[0].publisher_node["name"] == "Dash1"
+    assert reports[0].publisher_node["publisher_node_identifier"] == "pub-123"
 
 
 def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
@@ -100,6 +122,9 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
             "CDO Office": "CDO",
             "Application ID": "AppID",
             "Application Type": "User Tool",
+            "Publisher Name": "DashX",
+            "Publisher Type": "Intelligent Solutions",
+            "Publisher Node Identifier": "pid-99",
             "Regulatory Designated": "No",
         }
     ]
@@ -108,3 +133,5 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     assert isinstance(reports, Reports)
     assert reports[0].title == "ObjReport"
     assert reports[0].regulatory_related is False
+    assert reports[0].owner_node["name"] == "AppID"
+    assert reports[0].publisher_node["publisher_node_identifier"] == "pid-99"

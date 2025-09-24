@@ -981,7 +981,7 @@ class Fusion:
 
         n_par = cpu_count(n_par)
 
-        download_spec: list[dict[str, Any]]  = [
+        download_spec: list[dict[str, Any]] = [
             {
                 "lfs": self.fs,
                 "rpath": distribution_to_url(
@@ -2365,18 +2365,25 @@ class Fusion:
         Example:
             >>> fusion = Fusion()
             >>> reports = fusion.reports()
-            >>> new_report = reports.create(
+            >>> new_report = fusion.report(
             ...     title="Monthly Risk Report",
             ...     description="Summary of monthly risk metrics",
             ...     frequency="Monthly",
             ...     category="Risk",
             ...     sub_category="Credit Risk",
-            ...     data_node_id={"id": "node123"},
+            ...     business_domain="CDAO Office",
             ...     regulatory_related=True,
-            ...     domain={"id": "domain123"}
+            ...     owner_node={"name": "APP-123", "type": "Application (SEAL)"},
+            ...     publisher_node={
+            ...         "name": "DASH-01",
+            ...         "type": "Intelligent Solutions",
+            ...         "publisher_node_identifier": "seal:app:APP-123"
+            ...     },
             ... )
+            >>> new_report.create()
         """
         return ReportsWrapper(client=self)
+
 
     def delete_datasetmembers(
         self,
@@ -2601,24 +2608,25 @@ class Fusion:
         members_df = pd.DataFrame(rows, columns=["identifier", "format"])
         return members_df
 
-    def report(  # noqa: PLR0913
+   def report(  # noqa: PLR0913
         self,
         description: str,
         title: str,
         frequency: str,
         category: str,
         sub_category: str,
-        data_node_id: dict[str, str],
+        owner_node: dict[str, str],
+        publisher_node: dict[str, Any],
         regulatory_related: bool,
-        domain: dict[str, str],
-        tier_type: str | None = None,
+        business_domain: str,
         lob: str | None = None,
-        alternative_id: dict[str, str] | None = None,
         sub_lob: str | None = None,
         is_bcbs239_program: bool | None = None,
         risk_area: str | None = None,
         risk_stripe: str | None = None,
         sap_code: str | None = None,
+        source_system: dict[str, Any] | None = None,
+        id: str | None = None,
         **kwargs: Any,
     ) -> Report:
         """Instantiate a Report object with the current Fusion client attached.
@@ -2629,17 +2637,21 @@ class Fusion:
             frequency (str): Reporting frequency (e.g., Monthly, Quarterly).
             category (str): Main classification of the report.
             sub_category (str): Sub-classification under the main category.
-            data_node_id (dict[str, str]): Associated data node details. Should include "name" and "dataNodeType".
+            owner_node (dict[str, str]): Owner node details. Should include "name" and "type".
+            publisher_node (dict[str, Any]): Publisher node details. Should include "name" and "type".
+                If you need to provide an identifier per Swagger, include
+                {"publisher_node_identifier": "<value>"} — this will serialize as
+                "publisherNodeIdentifier" inside publisherNode in the payload.
             regulatory_related (bool): Whether the report is regulatory-designated. This is a required field.
-            tier_type (str, optional): Tier classification (e.g., "Tier 1", "Non Tier 1").
+            business_domain (str): Business domain string (replaces old domain object).
             lob (str, optional): Line of business.
-            alternative_id (dict[str, str], optional): Alternate identifiers for the report.
             sub_lob (str, optional): Subdivision of the line of business.
             is_bcbs239_program (bool, optional): Whether the report is part of the BCBS 239 program.
             risk_area (str, optional): Risk area covered by the report.
             risk_stripe (str, optional): Stripe or classification under the risk area.
             sap_code (str, optional): SAP financial tracking code.
-            domain (dict[str, str | bool], optional): Domain details. Typically contains a "name" key.
+            source_system (dict[str, Any], optional): Source system object, if provided.
+            id (str, optional): Server-assigned report identifier (needed for update/patch/delete if already known).
             **kwargs (Any): Additional optional fields such as:
                 - tier_designation (str)
                 - region (str)
@@ -2651,42 +2663,43 @@ class Fusion:
             Report: A Report object ready for API upload or further manipulation.
         """
         report_obj = Report(
+            id=id,
             title=title,
             description=description,
             frequency=frequency,
             category=category,
             sub_category=sub_category,
-            data_node_id=data_node_id,
+            business_domain=business_domain,
             regulatory_related=regulatory_related,
-            tier_type=tier_type,
+            owner_node=owner_node,
+            publisher_node=publisher_node,
             lob=lob,
-            alternative_id=alternative_id,
             sub_lob=sub_lob,
             is_bcbs239_program=is_bcbs239_program,
             risk_area=risk_area,
             risk_stripe=risk_stripe,
             sap_code=sap_code,
-            domain=domain,
+            source_system=source_system,
             **kwargs,
         )
         report_obj.client = self
         return report_obj
 
     def dataflow(  # noqa: PLR0913
-    self,
-    provider_node: dict[str, str] | None = None,
-    consumer_node: dict[str, str] | None = None,
-    description: str | None = None,
-    alternative_id: dict[str, Any] | None = None,
-    transport_type: str | None = None,
-    frequency: str | None = None,
-    start_time: str | None = None,
-    end_time: str | None = None,
-    boundary_sets: list[dict[str, Any]] | None = None,
-    data_assets: list[dict[str, Any]] | None = None,
-    id: str | None = None,  # noqa: A002
-    **kwargs: Any,  
-     ) -> Dataflow:
+        self,
+        provider_node: dict[str, str] | None = None,
+        consumer_node: dict[str, str] | None = None,
+        description: str | None = None,
+        alternative_id: dict[str, Any] | None = None,
+        transport_type: str | None = None,
+        frequency: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        boundary_sets: list[dict[str, Any]] | None = None,
+        data_assets: list[dict[str, Any]] | None = None,  # kept for compatibility
+        id: str | None = None,  # noqa: A002
+        **kwargs: Any,
+    ) -> Dataflow:
         """Instantiate a Dataflow object bound to this Fusion client.
 
         You may instantiate with just an ``id`` (useful for ``update()``, ``update_fields()``, or ``delete()``);
@@ -2694,9 +2707,9 @@ class Fusion:
 
         Args:
             provider_node (dict[str, str] | None, optional):
-                Provider/source node details. Expected keys: ``name`` and ``dataNodeType``.
+                Provider/source node details. Expected keys: ``name`` and ``type``.
             consumer_node (dict[str, str] | None, optional):
-                Consumer/target node details. Expected keys: ``name`` and ``dataNodeType``.
+                Consumer/target node details. Expected keys: ``name`` and ``type``.
             description (str | None, optional):
                 Purpose/summary of the data flow (if provided, must not be blank).
             alternative_id (dict[str, Any] | None, optional):
@@ -2712,11 +2725,12 @@ class Fusion:
             boundary_sets (list[dict[str, Any]] | None, optional):
                 Boundary set objects associated with the flow.
             data_assets (list[dict[str, Any]] | None, optional):
-                Related data asset objects.
+                Deprecated argument. Will be mapped to ``datasets`` for the new API schema.
             id (str | None, optional):
                 Server-assigned identifier; required for ``update()``, ``update_fields()``, and ``delete()``.
             **kwargs (Any):
                 Additional fields supported by the API; passed through to the Dataflow dataclass.
+                For new fields, use camelCase keys (e.g., ``connectionType``, ``sourceSystem``, or ``datasets``).
 
         Returns:
             Dataflow: A Dataflow instance with this Fusion client attached.
@@ -2725,11 +2739,13 @@ class Fusion:
             Create a handle with full details (ready for ``create()``):
 
             >>> flow = fusion.dataflow(
-            ...     provider_node={"name": "CRM_DB", "dataNodeType": "Database"},
-            ...     consumer_node={"name": "DWH", "dataNodeType": "Database"},
+            ...     provider_node={"name": "CRM_DB", "type": "Database"},
+            ...     consumer_node={"name": "DWH", "type": "Database"},
             ...     description="CRM → DWH nightly load",
             ...     frequency="DAILY",
             ...     transport_type="API",
+            ...     # connectionType / sourceSystem / datasets can be supplied via **kwargs:
+            ...     connectionType="Consumes From",
             ... )
 
             Create a handle for an existing flow by ID (for update/delete):
@@ -2737,6 +2753,9 @@ class Fusion:
             >>> flow = fusion.dataflow(id="abc-123")
             >>> flow.delete()
         """
+        # Prefer an explicit 'datasets' provided via kwargs; otherwise fall back to data_assets.
+        datasets_val = kwargs.pop("datasets", data_assets or [])
+
         df_obj = Dataflow(
             providerNode=provider_node,
             consumerNode=consumer_node,
@@ -2747,13 +2766,12 @@ class Fusion:
             startTime=start_time,
             endTime=end_time,
             boundarySets=boundary_sets or [],
-            dataAssets=data_assets or [],
+            datasets=datasets_val,
             id=id,
             **kwargs,
         )
         df_obj.client = self
         return df_obj
-
 
     def link_attributes_to_terms(
         self,

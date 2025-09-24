@@ -111,7 +111,7 @@ def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
     assert flows[0].description == "Row1"
     assert flows[1].frequency == "WEEKLY"
 
-    
+
 def test_dataflow_validate_nodes_for_create_passes() -> None:
     flow = Dataflow(
         providerNode={"name": "CRM_DB", "nodeType": "Database"},

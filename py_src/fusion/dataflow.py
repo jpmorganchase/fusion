@@ -17,6 +17,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     import requests
+
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             Frequency of the data flow. Defaults to ``None``.
 
         startTime (str | None, optional):
-            Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``). 
+            Scheduled start time (ISO 8601 / time-of-day formats like ``HH:mm:ss`` or ``HH:mm:ssZ``).
             Defaults to ``None``.
 
         endTime (str | None, optional):
@@ -164,6 +165,7 @@ class Dataflow(metaclass=CamelCaseMeta):
 
         Accepts camelCase or snake_case keys and normalizes empty strings to None.
         """
+
         def normalize_value(val: Any) -> Any:
             if isinstance(val, str) and val.strip() == "":
                 return None
@@ -176,10 +178,7 @@ class Dataflow(metaclass=CamelCaseMeta):
                 if isinstance(v, dict):
                     converted[key] = convert_keys(v)
                 elif isinstance(v, list):
-                    converted[key] = [
-                        convert_keys(i) if isinstance(i, dict) else i
-                        for i in v
-                    ]
+                    converted[key] = [convert_keys(i) if isinstance(i, dict) else i for i in v]
                 else:
                     converted[key] = normalize_value(v)
             return converted
