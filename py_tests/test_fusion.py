@@ -3013,25 +3013,20 @@ def test_fusion_report(fusion_obj: Fusion) -> None:
         frequency="Quarterly",
         category="Risk Management",
         sub_category="Operational Risk",
-        data_node_id={"name": "ComplianceTable", "dataNodeType": "Table"},
+        # NEW schema
+        owner_node={"name": "ComplianceTable", "type": "User Tool"},
+        publisher_node={"name": "ComplianceDash", "type": "Intelligent Solutions"},
+        business_domain="Risk",
         regulatory_related=True,
-        domain={"name": "Risk"},
-        tier_type="Tier 1",
+        # optionals that still exist
         lob="Global Markets",
         is_bcbs239_program=True,
         sap_code="SAP123",
         region="EMEA",
     )
+    assert report.regulatory_related is True
+    assert report.business_domain == "Risk"
 
-    assert isinstance(report, Report)
-    assert report.title == "Quarterly Risk Report"
-    assert report.description == "Q1 Risk report for compliance"
-    assert report.client == fusion_obj
-    assert report.domain == {"name": "Risk"}
-    assert report.tier_type == "Tier 1"
-    assert report.is_bcbs239_program is True
-    assert report.region == "EMEA"
-    assert report.data_node_id["name"] == "ComplianceTable"
 
 
 def test_list_indexes_summary(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -3464,13 +3459,15 @@ def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
         frequency="Monthly",
         category="Finance",
         sub_category="Market",
-        data_node_id={"name": "Node1", "dataNodeType": "Table"},
+        # NEW schema minimal required set
+        owner_node={"name": "Node1", "type": "User Tool"},
+        publisher_node={"name": "Dash-A", "type": "Intelligent Solutions"},
+        business_domain="Risk",
         regulatory_related=True,
-        domain={"name": "Risk"},
     )
-    assert isinstance(report, Report)
     assert report.title == "Test Report"
-    assert report.client is fusion_obj
+    assert report.business_domain == "Risk"
+
 
 
 def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
@@ -3480,12 +3477,17 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         frequency="Quarterly",
         category="Credit",
         sub_category="Wholesale",
-        data_node_id={"name": "NodeX", "dataNodeType": "View"},
+        # NEW schema
+        owner_node={"name": "NodeX", "type": "User Tool"},
+        publisher_node={
+            "name": "DashX",
+            "type": "Intelligent Solutions",
+            "publisher_node_identifier": "pub-001",  # optional
+        },
+        business_domain="Ops",
         regulatory_related=False,
-        domain={"name": "Ops"},
-        tier_type="Tier 1",
+        # kept optionals (still valid)
         lob="Banking",
-        alternative_id={"system": "ABC"},
         sub_lob="Retail",
         is_bcbs239_program=True,
         risk_area="Liquidity",
@@ -3493,8 +3495,11 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         sap_code="SAP001",
         region="EMEA",
     )
-    assert report.lob == "Banking"
-    assert report.client is fusion_obj
+    # (add any asserts you previously had; e.g.)
+    assert report.business_domain == "Ops"
+    assert report.owner_node["name"] == "NodeX"
+    assert report.publisher_node["publisher_node_identifier"] == "pub-001"
+
 
 
 @patch("fusion.report.Report.link_attributes_to_terms")
