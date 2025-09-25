@@ -140,3 +140,107 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     assert reports[0].publisher_node is not None
     assert reports[0].publisher_node["publisher_node_identifier"] == "pid-99"
 
+def test_report_patch_rejects_id(monkeypatch) -> None:
+    """PATCH must not allow changing 'id' in the body."""
+    # minimal valid report
+    rpt = Report(
+        id="rpt-123",
+        title="T",
+        description="D",
+        frequency="Monthly",
+        category="Cat",
+        sub_category="Sub",
+        business_domain="BD",
+        regulatory_related=True,
+        owner_node={"name": "OwnerApp", "type": "User Tool"},
+        publisher_node={"name": "PubDash", "type": "Intelligent Solutions"},
+    )
+
+    # dummy fusion client with a no-op session.patch
+    class _Resp:
+        status_code = 200
+
+        def raise_for_status(self) -> None:  # pragma: no cover
+            return None
+
+        def json(self) -> dict:  # pragma: no cover
+            return {}
+
+    class _Sess:
+        def patch(self, url: str, json: dict) -> _Resp:  # pragma: no cover
+            return _Resp()
+
+    class _Fusion:
+        def __init__(self) -> None:
+            self.session = _Sess()
+
+        def _get_new_root_url(self) -> str:
+            return "http://fake"
+
+    rpt.client = _Fusion()
+
+    with pytest.raises(ValueError, match="Cannot patch 'id'"):
+        rpt.patch({"id": "new-id"})  # type: ignore[dict-item]
+
+
+def test_report_patch_builds_correct_payload(monkeypatch) -> None:
+    """PATCH should serialize booleans and nested publisher identifier correctly, and exclude 'id'."""
+    # minimal valid report
+    rpt = Report(
+        id="rpt-999",
+        title="T",
+        description="D",
+        frequency="Monthly",
+        category="Cat",
+        sub_category="Sub",
+        business_domain="BD",
+        regulatory_related=False,
+        owner_node={"name": "OwnerApp", "type": "User Tool"},
+        publisher_node={"name": "PubDash", "type": "Intelligent Solutions"},
+    )
+
+    captured: dict[str, Any] = {}
+
+    class _Resp:
+        status_code = 200
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return {}
+
+    class _Sess:
+        def __init__(self) -> None:
+            self.last: dict[str, Any] | None = None
+
+        def patch(self, url: str, json: dict) -> _Resp:
+            # capture URL and payload for assertions
+            captured["url"] = url
+            captured["json"] = json
+            return _Resp()
+
+    class _Fusion:
+        def __init__(self) -> None:
+            self.session = _Sess()
+
+        def _get_new_root_url(self) -> str:
+            return "http://fake"
+
+    rpt.client = _Fusion()
+
+    # perform a partial update
+    rpt.patch(
+        {
+            "regulatory_related": True,                 # -> regulatoryRelated
+            "publisher_node_identifier": "seal:app:7",  # -> publisherNode.publisherNodeIdentifier
+        }
+    )
+
+    # assertions on what was sent
+    assert captured["url"].endswith("/api/corelineage-service/v1/reports/rpt-999")
+    body = captured["json"]
+    assert "id" not in body  # never in PATCH payload
+    assert body["regulatoryRelated"] is True
+    assert "publisherNode" in body and isinstance(body["publisherNode"], dict)
+    assert body["publisherNode"]["publisherNodeIdentifier"] == "seal:app:7"
