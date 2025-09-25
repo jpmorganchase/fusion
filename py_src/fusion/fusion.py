@@ -2626,8 +2626,8 @@ class Fusion:
         risk_stripe: str | None = None,
         sap_code: str | None = None,
         source_system: dict[str, Any] | None = None,
-        id: str | None = None,
-        **kwargs: Any,
+        id: str | None = None,  # noqa: A002
+        **kwargs: Any, 
     ) -> Report:
         """Instantiate a Report object with the current Fusion client attached.
 
