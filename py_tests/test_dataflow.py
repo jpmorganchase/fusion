@@ -88,15 +88,15 @@ def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
     frame = pd.DataFrame(
         [
             {
-                "providerNode": {"name": "CRM_DB", "nodeType": "Database"},
-                "consumerNode": {"name": "DWH", "nodeType": "Database"},
+                "providerNode": {"name": "CRM_DB", "type": "Database"},     # was nodeType
+                "consumerNode": {"name": "DWH", "type": "Database"},        # was nodeType
                 "description": "Row1",
                 "transportType": "API",
                 "frequency": "DAILY",
             },
             {
-                "providerNode": {"name": "S3", "nodeType": "Storage"},
-                "consumerNode": {"name": "Analytics", "nodeType": "Dashboard"},
+                "providerNode": {"name": "S3", "type": "Storage"},          # was nodeType
+                "consumerNode": {"name": "Analytics", "type": "Dashboard"}, # was nodeType
                 "description": "Row2",
                 "transportType": "FILE TRANSFER",
                 "frequency": "WEEKLY",
@@ -105,8 +105,8 @@ def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
     )
     flows = Dataflow.from_dataframe(frame, client=fusion_obj)
     assert isinstance(flows, list)
-    test_value = 2
-    assert len(flows) == test_value
+    num = 2
+    assert len(flows) == num
     assert all(isinstance(f, Dataflow) for f in flows)
     assert flows[0].description == "Row1"
     assert flows[1].frequency == "WEEKLY"
@@ -114,11 +114,13 @@ def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
 
 def test_dataflow_validate_nodes_for_create_passes() -> None:
     flow = Dataflow(
-        providerNode={"name": "CRM_DB", "type": "Database"},   # was nodeType
-        consumerNode={"name": "DWH", "type": "Database"},      # was nodeType
+        providerNode={"name": "CRM_DB", "type": "Database"},
+        consumerNode={"name": "DWH", "type": "Database"},
+        connectionType="API",  # <-- required for create-time validation
     )
     # should not raise
     flow._validate_nodes_for_create()
+
 
 
 

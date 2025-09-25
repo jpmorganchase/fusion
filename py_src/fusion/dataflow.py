@@ -17,7 +17,6 @@ from .utils import (
 
 if TYPE_CHECKING:
     import requests
-
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -51,7 +50,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             ``update()``, ``update_fields()``, and ``delete()``. Defaults to ``None``.
 
         alternativeId (dict[str, Any] | None, optional):
-            Alternative/secondary identifier object for the data flow. Defaults to ``None``.
+            Alternative/secondary identifier object. Defaults to ``None``.
 
         transportType (str | None, optional):
             Transport type of the data flow. Defaults to ``None``.
@@ -80,7 +79,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             Connection type for a dataflow. (Validation of specific values is deferred to the API.)
     """
 
-    # Required at create-time (optional at init-time for handles)
+    # --- revert fix 1: camelCase field names restored ---
     providerNode: dict[str, Any] | None = None
     consumerNode: dict[str, Any] | None = None
 
@@ -184,12 +183,14 @@ class Dataflow(metaclass=CamelCaseMeta):
             return converted
 
         converted_data = convert_keys(data)
-        valid_fields = {f.name for f in fields(cls)}
-        filtered_data = {k: v for k, v in converted_data.items() if k in valid_fields}
 
+        # minimal glue so camelCase dataclass fields load from snake_cased data
         obj = cls.__new__(cls)
         for field_obj in fields(cls):
-            setattr(obj, field_obj.name, filtered_data.get(field_obj.name, None))
+            fname = field_obj.name                 # e.g., "providerNode"
+            snake = camel_to_snake(fname)          # -> "provider_node"
+            val = converted_data.get(snake, converted_data.get(fname, None))
+            setattr(obj, fname, val)
 
         obj.__post_init__()
         return obj
@@ -256,8 +257,8 @@ class Dataflow(metaclass=CamelCaseMeta):
 
         (Only checks presence of key structures; detailed value validation is left to the API.)
         """
+        # keep minimal presence checks only
         required_fields = ["provider_node", "consumer_node"]
-        required_fields.append("connection_type")
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
         if missing:
             raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")
@@ -270,7 +271,9 @@ class Dataflow(metaclass=CamelCaseMeta):
                 raise ValueError(f"{attr} must be a dict with 'name' and 'type' for create().")
             if not node.get("name") or not node.get("type"):
                 raise ValueError(f"{attr} requires non-empty 'name' and 'type' for create().")
-        # Do not validate connectionType values here; let the API enforce.
+        # require presence of connection_type only at create-time (no enum/value checks)
+        if not self.connection_type:
+            raise ValueError("connection_type is required for create().")
 
     def to_dict(
         self,

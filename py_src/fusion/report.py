@@ -289,8 +289,7 @@ class Report(metaclass=CamelCaseMeta):
             if report_data.get("business_domain") is None:
                 report_data["business_domain"] = Report._str_or_none(report_data.pop("domain_name", None))
 
-            # Build owner/publisher nodes
-
+            # Build owner/publisher nodes (using agreed CSV column names)
             def build_node(report_data: dict[str, Any], name_key: str, type_key: str) -> dict[str, Any] | None:
                 name_val = Report._str_or_none(report_data.pop(name_key, None))
                 type_val = cls.map_node_type(report_data.pop(type_key, None))
@@ -298,9 +297,9 @@ class Report(metaclass=CamelCaseMeta):
                     return {"name": name_val or "", "type": type_val or ""}
                 return None
 
-            publisher_node = build_node(report_data, "publisherNode.name", "publisherNode.type")
-            owner_node = build_node(report_data, "ownerNode.name", "ownerNode.type")
-
+            # UPDATED to use your new headers
+            publisher_node = build_node(report_data, "publisherNode_name", "publisherNode_type")
+            owner_node = build_node(report_data, "ownerNode_name", "ownerNode_type")
 
             # Backward-compat: old single-node → owner_node
             if owner_node is None and ("data_node_name" in report_data or "data_node_type" in report_data):
@@ -578,15 +577,22 @@ Report.COLUMN_MAPPING = {  # type: ignore[attr-defined]
     "Category": "category",
     "Sub Category": "sub_category",
     "Regulatory Designated": "regulatory_related",
-    "CDO Office": "business_domain",  # now a simple string
+
+    # Business domain (new agreed header)
+    "businessDomain": "business_domain",
+    # Optional backward-compat (old sheet header)
+    "CDO Office": "business_domain",
+
     # Old single-node columns (backward-compat → owner_node)
     "Application ID": "data_node_name",
     "Application Type": "data_node_type",
-    # New dual-node inputs (owner / publisher)
-    "Owner Name": "owner_name",
-    "Owner Type": "owner_type",
-    "Publisher Name": "publisher_name",
-    "Publisher Type": "publisher_type",
+
+    # NEW: publisherNode identifier CSV header → nested field
+    "publisherNode_publisherNodeIdentifier": "publisher_node_identifier",
+
+    # NEW: source system CSV header → field
+    "sourceSystem": "source_system",
+
     # Optionals / flags
     "LOB": "lob",
     "Sub-LOB": "sub_lob",
@@ -598,8 +604,6 @@ Report.COLUMN_MAPPING = {  # type: ignore[attr-defined]
     "MNPI Indicator": "mnpi_indicator",
     "Country of Reporting Obligation": "country_of_reporting_obligation",
     "Primary Regulator": "primary_regulator",
-    # Optional nested identifier for publisher_node
-    "Publisher Node Identifier": "publisher_node_identifier",
 }
 
 
@@ -660,7 +664,7 @@ class Reports:
         elif isinstance(source, str):
             if source.lower().endswith(".csv") and Path(source).exists():
                 return cls.from_csv(source, client=client)
-            elif source.strip().startswith("[{"):
+            elif source.strip().startsWith("[{"):
                 dict_list = json.loads(source)
                 return cls.from_dataframe(pd.DataFrame(dict_list), client=client)
             else:

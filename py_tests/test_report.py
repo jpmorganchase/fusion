@@ -89,12 +89,11 @@ def test_report_from_dict() -> None:
     assert report.frequency == "Daily"
     assert report.publisher_node["publisher_node_identifier"] == "pid-1"
 
-
 def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     csv_data = (
         "Report/Process Name,Report/Process Description,Frequency,Category,"
-        "Sub Category,CDO Office,Application ID,Application Type,"
-        "Publisher Name,Publisher Type,Publisher Node Identifier,Regulatory Designated\n"
+        "Sub Category,businessDomain,ownerNode_name,ownerNode_type,"
+        "publisherNode_name,publisherNode_type,publisherNode_publisherNodeIdentifier,Regulatory Designated\n"
         "TestReport,Test description,Monthly,Risk,Ops,CDO,App1,User Tool,"
         "Dash1,Intelligent Solutions,pub-123,Yes"
     )
@@ -110,7 +109,6 @@ def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     assert reports[0].publisher_node["name"] == "Dash1"
     assert reports[0].publisher_node["publisher_node_identifier"] == "pub-123"
 
-
 def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     source = [
         {
@@ -119,12 +117,12 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
             "Frequency": "Monthly",
             "Category": "Finance",
             "Sub Category": "Analysis",
-            "CDO Office": "CDO",
-            "Application ID": "AppID",
-            "Application Type": "User Tool",
-            "Publisher Name": "DashX",
-            "Publisher Type": "Intelligent Solutions",
-            "Publisher Node Identifier": "pid-99",
+            "businessDomain": "CDO",
+            "ownerNode_name": "AppID",
+            "ownerNode_type": "User Tool",
+            "publisherNode_name": "DashX",
+            "publisherNode_type": "Intelligent Solutions",
+            "publisherNode_publisherNodeIdentifier": "pid-99",
             "Regulatory Designated": "No",
         }
     ]
@@ -135,3 +133,4 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     assert reports[0].regulatory_related is False
     assert reports[0].owner_node["name"] == "AppID"
     assert reports[0].publisher_node["publisher_node_identifier"] == "pid-99"
+
