@@ -440,13 +440,17 @@ class Report(metaclass=CamelCaseMeta):
 
         """
         client = self._use_client(client)
-        data = self.to_dict()
+        payload = self.to_dict()
+        # CREATE must not send id
+        payload.pop("id", None)
+
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports"
-        resp: requests.Response = client.session.post(url, json=data)
+        resp: requests.Response = client.session.post(url, json=payload)
         requests_raise_for_status(resp)
         with suppress(Exception):
             self.id = resp.json().get("id", self.id)
         return resp if return_resp_obj else None
+
 
 
     def update(
@@ -466,10 +470,16 @@ class Report(metaclass=CamelCaseMeta):
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Report ID is required on the object (set self.id before update()).")
+
+        payload = self.to_dict()
+        # Many APIs don't accept id in the body for PUT either; exclude it.
+        payload.pop("id", None)
+
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{self.id}"
-        resp: requests.Response = client.session.put(url, json=self.to_dict())
+        resp: requests.Response = client.session.put(url, json=payload)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
 
     def patch(
         self,
@@ -490,6 +500,10 @@ class Report(metaclass=CamelCaseMeta):
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Report ID is required on the object (set self.id before patch()).")
+
+        # hard block attempts to change 'id' via PATCH (path param only)
+        if any(camel_to_snake(k) == "id" for k in fields_to_update):
+            raise ValueError("Cannot patch 'id'; it is specified via the URL path.")
 
         payload: dict[str, Any] = {}
         for k, v in fields_to_update.items():
@@ -519,10 +533,14 @@ class Report(metaclass=CamelCaseMeta):
             # default top-level
             payload[snake_to_camel(camel_to_snake(k))] = v
 
+        # belt-and-suspenders: ensure no 'id' sneaks into body
+        payload.pop("id", None)
+
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{self.id}"
         resp: requests.Response = client.session.patch(url, json=payload)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
 
     def delete(
         self,
