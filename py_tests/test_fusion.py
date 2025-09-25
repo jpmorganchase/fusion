@@ -3500,7 +3500,9 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
     )
     # (add any asserts you previously had; e.g.)
     assert report.business_domain == "Ops"
+    assert report.owner_node is not None
     assert report.owner_node["name"] == "NodeX"
+    assert report.publisher_node is not None
     assert report.publisher_node["publisher_node_identifier"] == "pub-001"
 
 

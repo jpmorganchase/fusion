@@ -21,6 +21,7 @@ def test_report_basic_fields() -> None:
         regulatory_related=True,
     )
     assert report.title == "Quarterly Report"
+    assert report.owner_node is not None
     assert report.owner_node["name"] == "Node1"
     assert report.business_domain == "CDO"
 
@@ -87,6 +88,7 @@ def test_report_from_dict() -> None:
     assert isinstance(report, Report)
     assert report.title == "Dict Report"
     assert report.frequency == "Daily"
+    assert report.publisher_node is not None
     assert report.publisher_node["publisher_node_identifier"] == "pid-1"
 
 def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
@@ -105,7 +107,9 @@ def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     assert isinstance(reports, Reports)
     assert len(reports) == 1
     assert reports[0].title == "TestReport"
+    assert reports[0].owner_node is not None
     assert reports[0].owner_node["name"] == "App1"
+    assert reports[0].publisher_node is not None
     assert reports[0].publisher_node["name"] == "Dash1"
     assert reports[0].publisher_node["publisher_node_identifier"] == "pub-123"
 
@@ -131,6 +135,8 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     assert isinstance(reports, Reports)
     assert reports[0].title == "ObjReport"
     assert reports[0].regulatory_related is False
+    assert reports[0].owner_node is not None
     assert reports[0].owner_node["name"] == "AppID"
+    assert reports[0].publisher_node is not None
     assert reports[0].publisher_node["publisher_node_identifier"] == "pid-99"
 
