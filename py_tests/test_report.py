@@ -1,6 +1,7 @@
 """Test file for updated report.py and reports integration"""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -91,6 +92,7 @@ def test_report_from_dict() -> None:
     assert report.publisher_node is not None
     assert report.publisher_node["publisher_node_identifier"] == "pid-1"
 
+
 def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     csv_data = (
         "Report/Process Name,Report/Process Description,Frequency,Category,"
@@ -112,6 +114,7 @@ def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     assert reports[0].publisher_node is not None
     assert reports[0].publisher_node["name"] == "Dash1"
     assert reports[0].publisher_node["publisher_node_identifier"] == "pub-123"
+
 
 def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     source = [
@@ -140,34 +143,69 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     assert reports[0].publisher_node is not None
     assert reports[0].publisher_node["publisher_node_identifier"] == "pid-99"
 
-def test_report_patch_rejects_id(monkeypatch) -> None:
+
+# ---------- extra coverage: PATCH guard + create/update body rules ----------
+
+def test_report_patch_rejects_id() -> None:
     """PATCH must not allow changing 'id' in the body."""
-    # minimal valid report
-    rpt = Report(
-        id="rpt-123",
-        title="T",
-        description="D",
-        frequency="Monthly",
-        category="Cat",
-        sub_category="Sub",
-        business_domain="BD",
+    report = Report(
+        id="r-1",
+        title="t",
+        description="d",
+        frequency="f",
+        category="c",
+        sub_category="s",
+        business_domain="bd",
         regulatory_related=True,
-        owner_node={"name": "OwnerApp", "type": "User Tool"},
-        publisher_node={"name": "PubDash", "type": "Intelligent Solutions"},
+        owner_node={"name": "own", "type": "User Tool"},
+        publisher_node={"name": "pub", "type": "Intelligent Solutions"},
     )
 
-    # dummy fusion client with a no-op session.patch
+    # attach a dummy client so _use_client passes before the 'id' guard triggers
+    class _Dummy:
+        pass
+
+    report.client = _Dummy()
+
+    with pytest.raises(ValueError, match="Cannot patch 'id'"):
+        report.patch({"id": "other"})
+
+
+def test_report_create_excludes_id_and_sets_id() -> None:
+    """CREATE should not send 'id' and should set self.id from response JSON."""
+    report = Report(
+        id="pre-set",
+        title="t",
+        description="d",
+        frequency="f",
+        category="c",
+        sub_category="s",
+        business_domain="bd",
+        regulatory_related=True,
+        owner_node={"name": "own", "type": "User Tool"},
+        publisher_node={"name": "pub", "type": "Intelligent Solutions"},
+    )
+
     class _Resp:
         status_code = 200
+        ok = True
+        text = ""
+        content = b""
 
         def raise_for_status(self) -> None:  # pragma: no cover
             return None
 
-        def json(self) -> dict:  # pragma: no cover
-            return {}
+        def json(self) -> dict:
+            return {"id": "new-123"}
 
     class _Sess:
-        def patch(self, url: str, json: dict) -> _Resp:  # pragma: no cover
+        def __init__(self) -> None:
+            self.last_url: str | None = None
+            self.last: dict[str, Any] | None = None
+
+        def post(self, url: str, json: dict) -> _Resp:  # pragma: no cover
+            self.last_url = url
+            self.last = json
             return _Resp()
 
     class _Fusion:
@@ -175,49 +213,52 @@ def test_report_patch_rejects_id(monkeypatch) -> None:
             self.session = _Sess()
 
         def _get_new_root_url(self) -> str:
-            return "http://fake"
+            return "http://unit.test"
 
-    rpt.client = _Fusion()
+    client = _Fusion()
+    report.client = client
 
-    with pytest.raises(ValueError, match="Cannot patch 'id'"):
-        rpt.patch({"id": "new-id"})  # type: ignore[dict-item]
+    report.create()
+
+    assert client.session.last is not None
+    assert "id" not in client.session.last  # id must be excluded from create payload
+    assert client.session.last_url is not None
+    assert client.session.last_url.endswith("/api/corelineage-service/v1/reports")
+    assert report.id == "new-123"  # id updated from response
 
 
-def test_report_patch_builds_correct_payload(monkeypatch) -> None:
-    """PATCH should serialize booleans and nested publisher identifier correctly, and exclude 'id'."""
-    # minimal valid report
-    rpt = Report(
-        id="rpt-999",
-        title="T",
-        description="D",
-        frequency="Monthly",
-        category="Cat",
-        sub_category="Sub",
-        business_domain="BD",
+def test_report_update_excludes_id_in_body_and_uses_path() -> None:
+    """UPDATE should not send 'id' in body and must use /reports/{id} path."""
+    report = Report(
+        id="abc-999",
+        title="t",
+        description="d",
+        frequency="f",
+        category="c",
+        sub_category="s",
+        business_domain="bd",
         regulatory_related=False,
-        owner_node={"name": "OwnerApp", "type": "User Tool"},
-        publisher_node={"name": "PubDash", "type": "Intelligent Solutions"},
+        owner_node={"name": "own", "type": "User Tool"},
+        publisher_node={"name": "pub", "type": "Intelligent Solutions"},
     )
-
-    captured: dict[str, Any] = {}
 
     class _Resp:
         status_code = 200
+        ok = True
+        text = ""
+        content = b""
 
-        def raise_for_status(self) -> None:
+        def raise_for_status(self) -> None:  # pragma: no cover
             return None
-
-        def json(self) -> dict:
-            return {}
 
     class _Sess:
         def __init__(self) -> None:
+            self.last_url: str | None = None
             self.last: dict[str, Any] | None = None
 
-        def patch(self, url: str, json: dict) -> _Resp:
-            # capture URL and payload for assertions
-            captured["url"] = url
-            captured["json"] = json
+        def put(self, url: str, json: dict) -> _Resp:  # pragma: no cover
+            self.last_url = url
+            self.last = json
             return _Resp()
 
     class _Fusion:
@@ -225,22 +266,14 @@ def test_report_patch_builds_correct_payload(monkeypatch) -> None:
             self.session = _Sess()
 
         def _get_new_root_url(self) -> str:
-            return "http://fake"
+            return "http://unit.test"
 
-    rpt.client = _Fusion()
+    client = _Fusion()
+    report.client = client
 
-    # perform a partial update
-    rpt.patch(
-        {
-            "regulatory_related": True,                 # -> regulatoryRelated
-            "publisher_node_identifier": "seal:app:7",  # -> publisherNode.publisherNodeIdentifier
-        }
-    )
+    report.update()
 
-    # assertions on what was sent
-    assert captured["url"].endswith("/api/corelineage-service/v1/reports/rpt-999")
-    body = captured["json"]
-    assert "id" not in body  # never in PATCH payload
-    assert body["regulatoryRelated"] is True
-    assert "publisherNode" in body and isinstance(body["publisherNode"], dict)
-    assert body["publisherNode"]["publisherNodeIdentifier"] == "seal:app:7"
+    assert client.session.last is not None
+    assert "id" not in client.session.last  # id must be excluded from update body too
+    assert client.session.last_url is not None
+    assert client.session.last_url.endswith("/api/corelineage-service/v1/reports/abc-999")
