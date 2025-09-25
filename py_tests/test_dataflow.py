@@ -122,9 +122,35 @@ def test_dataflow_validate_nodes_for_create_passes() -> None:
     flow._validate_nodes_for_create()
 
 
-
-
 def test_dataflow_validate_nodes_for_create_raises() -> None:
     flow = Dataflow(providerNode=None, consumerNode=None)
     with pytest.raises(ValueError, match="must be a dict"):
         flow._validate_nodes_for_create()
+
+def test_dataflow_to_dict_exclude_and_drop_none() -> None:
+    """to_dict should drop None fields and respect exclude set."""
+    flow = Dataflow(
+        providerNode={"name": "SRC", "type": "Database"},
+        consumerNode={"name": "DST", "type": "Database"},
+        description=None,
+        id=None,
+        frequency="DAILY",
+    )
+    out = flow.to_dict(drop_none=True, exclude={"id", "provider_node"})
+    assert "id" not in out                     # excluded
+    assert "providerNode" not in out           # excluded (snake -> camel)
+    assert "consumerNode" in out               # kept
+    assert "description" not in out            # None dropped
+    assert out["frequency"] == "DAILY"         # preserved
+
+
+def test_dataflow_update_fields_forbidden_nodes_raises(fusion_obj: Fusion) -> None:
+    """update_fields must reject provider/consumer node updates."""
+    flow = Dataflow(
+        providerNode={"name": "A", "type": "Database"},
+        consumerNode={"name": "B", "type": "Database"},
+        id="xyz-123",
+    )
+    flow.client = fusion_obj
+    with pytest.raises(ValueError, match=r"Cannot update .* via PATCH"):
+        flow.update_fields({"providerNode": {"name": "C", "type": "Database"}}, client=fusion_obj)
