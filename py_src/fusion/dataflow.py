@@ -257,8 +257,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         (Only checks presence of key structures; detailed value validation is left to the API.)
         """
         required_fields = ["provider_node", "consumer_node"]
-        # If you still want to enforce presence of connectionType at init-time, uncomment below:
-        # required_fields.append("connection_type")
+        required_fields.append("connection_type")
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
         if missing:
             raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")

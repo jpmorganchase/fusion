@@ -4,7 +4,7 @@ import logging
 import re
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -19,8 +19,11 @@ from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
-from fusion.report import Report
 from fusion.utils import _normalise_dt_param, distribution_to_url
+
+if TYPE_CHECKING:
+    from fusion.report import Report
+ 
 
 
 def test__get_canonical_root_url() -> None:

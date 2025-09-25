@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
@@ -276,12 +277,12 @@ class Report(metaclass=CamelCaseMeta):
         Returns:
             list[Report]: List of Report objects.
         """
-        df = data.rename(columns=Report.COLUMN_MAPPING)  # type: ignore[attr-defined]
-        df = df.replace([np.nan, np.inf, -np.inf], None)
-        df = df.where(df.notna(), None)
+        df_df = data.rename(columns=Report.COLUMN_MAPPING)  # type: ignore[attr-defined]
+        df_df = df_df.replace([np.nan, np.inf, -np.inf], None)
+        df_df = df_df.where(df_df.notna(), None)
 
         reports: list[Report] = []
-        for _, row in df.iterrows():
+        for _, row in df_df.iterrows():
             report_data: dict[str, Any] = row.to_dict()
 
             # business_domain now plain string; if only domain_name available, use it
@@ -289,15 +290,17 @@ class Report(metaclass=CamelCaseMeta):
                 report_data["business_domain"] = Report._str_or_none(report_data.pop("domain_name", None))
 
             # Build owner/publisher nodes
-            def build_node(name_key: str, type_key: str) -> dict[str, Any] | None:
+
+            def build_node(report_data: dict[str, Any], name_key: str, type_key: str) -> dict[str, Any] | None:
                 name_val = Report._str_or_none(report_data.pop(name_key, None))
                 type_val = cls.map_node_type(report_data.pop(type_key, None))
                 if name_val or type_val:
                     return {"name": name_val or "", "type": type_val or ""}
                 return None
 
-            owner_node = build_node("owner_name", "owner_type")
-            publisher_node = build_node("publisher_name", "publisher_type")
+            publisher_node = build_node(report_data, "publisherNode.name", "publisherNode.type")
+            owner_node = build_node(report_data, "ownerNode.name", "ownerNode.type")
+
 
             # Backward-compat: old single-node → owner_node
             if owner_node is None and ("data_node_name" in report_data or "data_node_type" in report_data):
@@ -360,7 +363,7 @@ class Report(metaclass=CamelCaseMeta):
         return cls.from_dataframe(data, client=client)
 
     @classmethod
-    def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None):
+    def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None) -> Report:
         """Unified loader for Reports from CSV path, DataFrame, list of dicts, or JSON string."""
         if isinstance(source, pd.DataFrame):
             return cls.from_dataframe(source, client=client)
@@ -434,11 +437,10 @@ class Report(metaclass=CamelCaseMeta):
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports"
         resp: requests.Response = client.session.post(url, json=data)
         requests_raise_for_status(resp)
-        try:
+        with suppress(Exception):
             self.id = resp.json().get("id", self.id)
-        except Exception:
-            pass
         return resp if return_resp_obj else None
+
 
     def update(
         self,
