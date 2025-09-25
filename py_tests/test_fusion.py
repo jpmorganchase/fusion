@@ -3412,10 +3412,9 @@ def test_get_new_root_url_strip_version(fusion_obj: Fusion) -> None:
     fusion_obj.root_url = "https://fusion.jpmorgan.com/api/v1/"
     assert fusion_obj._get_new_root_url() == "https://fusion.jpmorgan.com"
 
-
 def test_list_reports_all(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/list"
-    mock_data = {"content": [{"id": "rep1", "name": "Test Report", "category": "Finance", "subCategory": "Equities"}]}
+    mock_data = {"content": [{"id": "rep1", "title": "Test Report", "category": "Finance", "subCategory": "Equities"}]}
     requests_mock.post(url, json=mock_data)
     df = fusion_obj.list_reports()  # noqa
     assert isinstance(df, pd.DataFrame)
@@ -3426,11 +3425,12 @@ def test_list_reports_all(fusion_obj: Fusion, requests_mock: requests_mock.Mocke
 def test_list_reports_by_id(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     report_id = "rep1"
     url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
-    mock_data = {"id": "rep1", "name": "Test Report", "category": "Finance", "subCategory": "Equities"}
+    mock_data = {"id": "rep1", "title": "Test Report", "category": "Finance", "subCategory": "Equities"}
     requests_mock.get(url, json=mock_data)
     df = fusion_obj.list_reports(report_id=report_id)  # noqa
     assert isinstance(df, pd.DataFrame)
     assert df.iloc[0]["id"] == "rep1"
+
 
 
 def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
@@ -3454,7 +3454,6 @@ def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock
     assert "id" in df.columns
     assert df.iloc[0]["id"] == "attr1"
 
-
 def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
     report = fusion_obj.report(
         title="Test Report",
@@ -3470,7 +3469,6 @@ def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
     )
     assert report.title == "Test Report"
     assert report.business_domain == "Risk"
-
 
 
 def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
@@ -3498,12 +3496,12 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         sap_code="SAP001",
         region="EMEA",
     )
-    # (add any asserts you previously had; e.g.)
     assert report.business_domain == "Ops"
     assert report.owner_node is not None
     assert report.owner_node["name"] == "NodeX"
     assert report.publisher_node is not None
     assert report.publisher_node["publisher_node_identifier"] == "pub-001"
+
 
 
 

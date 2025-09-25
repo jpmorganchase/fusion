@@ -2608,17 +2608,19 @@ class Fusion:
         members_df = pd.DataFrame(rows, columns=["identifier", "format"])
         return members_df
 
+    from typing import Any  # make sure this import exists at the top of fusion.py
+
     def report(  # noqa: PLR0913
         self,
-        description: str,
-        title: str,
-        frequency: str,
-        category: str,
-        sub_category: str,
-        owner_node: dict[str, str],
-        publisher_node: dict[str, Any],
-        regulatory_related: bool,
-        business_domain: str,
+        description: str | None = None,
+        title: str | None = None,
+        frequency: str | None = None,
+        category: str | None = None,
+        sub_category: str | None = None,
+        owner_node: dict[str, str] | None = None,
+        publisher_node: dict[str, Any] | None = None,
+        regulatory_related: bool | None = None,
+        business_domain: str | None = None,
         lob: str | None = None,
         sub_lob: str | None = None,
         is_bcbs239_program: bool | None = None,
@@ -2627,37 +2629,29 @@ class Fusion:
         sap_code: str | None = None,
         source_system: dict[str, Any] | None = None,
         id: str | None = None,  # noqa: A002
-        **kwargs: Any, 
+        **kwargs: Any,
     ) -> Report:
         """Instantiate a Report object with the current Fusion client attached.
 
         Args:
-            description (str): Description of the report.
-            title (str): Title of the report or process.
-            frequency (str): Reporting frequency (e.g., Monthly, Quarterly).
-            category (str): Main classification of the report.
-            sub_category (str): Sub-classification under the main category.
-            owner_node (dict[str, str]): Owner node details. Should include "name" and "type".
-            publisher_node (dict[str, Any]): Publisher node details. Should include "name" and "type".
-                If you need to provide an identifier per Swagger, include
-                {"publisher_node_identifier": "<value>"} — this will serialize as
-                "publisherNodeIdentifier" inside publisherNode in the payload.
-            regulatory_related (bool): Whether the report is regulatory-designated. This is a required field.
-            business_domain (str): Business domain string (replaces old domain object).
-            lob (str, optional): Line of business.
-            sub_lob (str, optional): Subdivision of the line of business.
-            is_bcbs239_program (bool, optional): Whether the report is part of the BCBS 239 program.
-            risk_area (str, optional): Risk area covered by the report.
-            risk_stripe (str, optional): Stripe or classification under the risk area.
-            sap_code (str, optional): SAP financial tracking code.
-            source_system (dict[str, Any], optional): Source system object, if provided.
-            id (str, optional): Server-assigned report identifier (needed for update/patch/delete if already known).
-            **kwargs (Any): Additional optional fields such as:
-                - tier_designation (str)
-                - region (str)
-                - mnpi_indicator (bool)
-                - country_of_reporting_obligation (str)
-                - primary_regulator (str)
+            description (str | None): Description of the report.
+            title (str | None): Title of the report or process.
+            frequency (str | None): Reporting frequency (e.g., Monthly, Quarterly).
+            category (str | None): Main classification of the report.
+            sub_category (str | None): Sub-classification under the main category.
+            owner_node (dict[str, str] | None): {"name","type"} for the owner node.
+            publisher_node (dict[str, Any] | None): {"name","type"} (+ optional {"publisher_node_identifier"}).
+            regulatory_related (bool | None): Regulatory-designated flag.
+            business_domain (str | None): Business domain string.
+            lob (str | None): Line of business.
+            sub_lob (str | None): Subdivision of the line of business.
+            is_bcbs239_program (bool | None): BCBS 239 program flag.
+            risk_area (str | None): Risk area.
+            risk_stripe (str | None): Risk stripe.
+            sap_code (str | None): SAP financial tracking code.
+            source_system (dict[str, Any] | None): Source system object, if provided.
+            id (str | None): Server-assigned report identifier (needed for update/patch/delete if already known).
+            **kwargs (Any): Additional optional fields (tier_designation, region, mnpi_indicator, etc.).
 
         Returns:
             Report: A Report object ready for API upload or further manipulation.
@@ -2684,7 +2678,8 @@ class Fusion:
         )
         report_obj.client = self
         return report_obj
-
+  
+  
     def dataflow(  # noqa: PLR0913
         self,
         provider_node: dict[str, str] | None = None,
