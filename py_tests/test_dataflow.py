@@ -114,11 +114,12 @@ def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
 
 def test_dataflow_validate_nodes_for_create_passes() -> None:
     flow = Dataflow(
-        providerNode={"name": "CRM_DB", "nodeType": "Database"},
-        consumerNode={"name": "DWH", "nodeType": "Database"},
+        providerNode={"name": "CRM_DB", "type": "Database"},   # was nodeType
+        consumerNode={"name": "DWH", "type": "Database"},      # was nodeType
     )
     # should not raise
     flow._validate_nodes_for_create()
+
 
 
 def test_dataflow_validate_nodes_for_create_raises() -> None:
