@@ -1,7 +1,7 @@
 """Test file for updated report.py and reports integration"""
 
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Optional, cast
 
 import pytest
 
@@ -200,8 +200,8 @@ def test_report_create_excludes_id_and_sets_id() -> None:
 
     class _Sess:
         def __init__(self) -> None:
-            self.last_url: str | None = None
-            self.last: dict[str, Any] | None = None
+            self.last_url: Optional[str] = None
+            self.last: Optional[dict[str, Any]] = None
 
         def post(self, url: str, json: dict[str, Any]) -> _Resp:  # pragma: no cover
             self.last_url = url
@@ -253,8 +253,8 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
 
     class _Sess:
         def __init__(self) -> None:
-            self.last_url: str | None = None
-            self.last: dict[str, Any] | None = None
+            self.last_url: Optional[str] = None
+            self.last: Optional[dict[str, Any]] = None
 
         def put(self, url: str, json: dict[str, Any]) -> _Resp:  # pragma: no cover
             self.last_url = url
