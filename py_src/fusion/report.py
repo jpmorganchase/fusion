@@ -472,13 +472,15 @@ class Report(metaclass=CamelCaseMeta):
             raise ValueError("Report ID is required on the object (set self.id before update()).")
 
         payload = self.to_dict()
-        # Many APIs don't accept id in the body for PUT either; exclude it.
+        # Exclude fields not accepted by PUT body
         payload.pop("id", None)
+        payload.pop("title", None)  # PUT schema does not accept 'title'
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{self.id}"
         resp: requests.Response = client.session.put(url, json=payload)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
 
 
     def patch(
