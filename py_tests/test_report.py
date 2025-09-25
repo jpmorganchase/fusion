@@ -1,7 +1,7 @@
 """Test file for updated report.py and reports integration"""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -165,7 +165,7 @@ def test_report_patch_rejects_id() -> None:
     class _Dummy:
         pass
 
-    report.client = _Dummy()
+    report.client = cast(Fusion, _Dummy())
 
     with pytest.raises(ValueError, match="Cannot patch 'id'"):
         report.patch({"id": "other"})
@@ -195,7 +195,7 @@ def test_report_create_excludes_id_and_sets_id() -> None:
         def raise_for_status(self) -> None:  # pragma: no cover
             return None
 
-        def json(self) -> dict:
+        def json(self) -> dict[str, Any]:
             return {"id": "new-123"}
 
     class _Sess:
@@ -203,7 +203,7 @@ def test_report_create_excludes_id_and_sets_id() -> None:
             self.last_url: str | None = None
             self.last: dict[str, Any] | None = None
 
-        def post(self, url: str, json: dict) -> _Resp:  # pragma: no cover
+        def post(self, url: str, json: dict[str, Any]) -> _Resp:  # pragma: no cover
             self.last_url = url
             self.last = json
             return _Resp()
@@ -216,7 +216,7 @@ def test_report_create_excludes_id_and_sets_id() -> None:
             return "http://unit.test"
 
     client = _Fusion()
-    report.client = client
+    report.client = cast(Fusion, client)
 
     report.create()
 
@@ -256,7 +256,7 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
             self.last_url: str | None = None
             self.last: dict[str, Any] | None = None
 
-        def put(self, url: str, json: dict) -> _Resp:  # pragma: no cover
+        def put(self, url: str, json: dict[str, Any]) -> _Resp:  # pragma: no cover
             self.last_url = url
             self.last = json
             return _Resp()
@@ -269,7 +269,7 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
             return "http://unit.test"
 
     client = _Fusion()
-    report.client = client
+    report.client = cast(Fusion, client)
 
     report.update()
 
