@@ -2689,7 +2689,6 @@ class Fusion:
         frequency: str | None = None,
         start_time: str | None = None,
         end_time: str | None = None,
-        boundary_sets: list[dict[str, Any]] | None = None,
         data_assets: list[dict[str, Any]] | None = None,  # kept for compatibility
         id: str | None = None,  # noqa: A002
         **kwargs: Any,
@@ -2716,8 +2715,6 @@ class Fusion:
                 Scheduled start time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
             end_time (str | None, optional):
                 Scheduled end time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
-            boundary_sets (list[dict[str, Any]] | None, optional):
-                Boundary set objects associated with the flow.
             data_assets (list[dict[str, Any]] | None, optional):
                 Deprecated argument. Will be mapped to ``datasets`` for the new API schema.
             id (str | None, optional):
@@ -2759,7 +2756,6 @@ class Fusion:
             frequency=frequency,
             startTime=start_time,
             endTime=end_time,
-            boundarySets=boundary_sets or [],
             datasets=datasets_val,
             id=id,
             **kwargs,

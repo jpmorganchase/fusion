@@ -73,9 +73,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         datasets (list[dict[str, Any]], optional):
             List of dataset/data asset objects involved in the data flow. Defaults to empty list.
 
-        boundarySets (list[dict[str, Any]], optional):
-            Boundary set objects for the data flow; items are stored as provided. Defaults to empty list.
-
         connectionType (str | None, required for create):
             Connection type for a dataflow. (Validation of specific values is deferred to the API.)
     """
@@ -95,7 +92,6 @@ class Dataflow(metaclass=CamelCaseMeta):
 
     # Updated schema fields
     sourceSystem: dict[str, Any] | None = None
-    boundarySets: list[dict[str, Any]] = field(default_factory=list)
     datasets: list[dict[str, Any]] = field(default_factory=list)
     connectionType: str | None = None
 
