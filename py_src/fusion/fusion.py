@@ -2289,22 +2289,24 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
 
-
     def report_attribute(
         self,
-        title: str,
-        sourceIdentifier: str | None = None,
+        title: str | None = None,
+        id: int | None = None,  # noqa: A002
+        source_identifier: str | None = None,
         description: str | None = None,
-        technicalDataType: str | None = None,
+        technical_data_type: str | None = None,
         path: str | None = None,
     ) -> ReportAttribute:
         """Instantiate a ReportAttribute object with this client for metadata creation.
 
         Args:
-            title (str): The display title of the attribute (required).
-            sourceIdentifier (str | None, optional): A unique identifier or reference ID from the source system.
+            title (str | None, optional): The display title of the attribute.
+            id (int | None, optional): The unique identifier of the attribute. 
+                id argument is not required for 'create' operation.
+            source_identifier (str | None, optional): A unique identifier or reference ID from the source system.
             description (str | None, optional): A longer description of the attribute.
-            technicalDataType (str | None, optional): The technical data type (e.g., string, int, boolean).
+            technical_data_type (str | None, optional): The technical data type (e.g., string, int, boolean).
             path (str | None, optional): The hierarchical path or logical grouping for the attribute.
 
         Returns:
@@ -2314,17 +2316,18 @@ class Fusion:
             >>> fusion = Fusion()
             >>> attr = fusion.report_attribute(
             ...     title="Customer ID",
-            ...     sourceIdentifier="cust_id_123",
+            ...     source_identifier="cust_id_123",
             ...     description="Unique customer identifier",
-            ...     technicalDataType="String",
+            ...     technical_data_type="String",
             ...     path="Customer.Details"
             ... )
         """
         attribute_obj = ReportAttribute(
-            sourceIdentifier=sourceIdentifier,
+            source_identifier=source_identifier,
             title=title,
+            id=id,
             description=description,
-            technicalDataType=technicalDataType,
+            technical_data_type=technical_data_type,
             path=path,
         )
         attribute_obj.client = self
