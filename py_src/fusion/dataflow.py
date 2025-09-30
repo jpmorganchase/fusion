@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
 
 from .utils import (
-    CamelCaseMeta,
     requests_raise_for_status,
     tidy_string,
 )
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Dataflow():
+class Dataflow:
     """Fusion Dataflow class for managing dataflow metadata in the Fusion system.
 
     Attributes:
@@ -279,8 +278,8 @@ class Dataflow():
             if drop_none and (v is None or (isinstance(v, str) and v.strip() == "")):
                 continue
             out[k] = v  # keep camelCase keys as-is
-        return normalize_tree(out)
-
+        return cast(dict[str, Any], normalize_tree(out))
+    
     def create(
         self,
         client: Fusion | None = None,
