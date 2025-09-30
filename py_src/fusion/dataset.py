@@ -8,14 +8,11 @@ from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
-from .exceptions import APIResponseError
 from .utils import (
     CamelCaseMeta,
     _is_json,
     camel_to_snake,
     convert_date_format,
-    ensure_resources,
-    handle_paginated_request,
     make_bool,
     make_list,
     requests_raise_for_status,
@@ -306,10 +303,6 @@ class Dataset(metaclass=CamelCaseMeta):
         """
         keys = [f.name for f in fields(cls)]
         keys = ["type" if key == "type_" else key for key in keys]
-
-        if "tag" in data:
-            data["tags"] = data.pop("tag")
-            
         data = {camel_to_snake(k): v for k, v in data.items()}
         data = {k: v for k, v in data.items() if k in keys}
         if "type" in data:
@@ -451,26 +444,18 @@ class Dataset(metaclass=CamelCaseMeta):
         client = self._use_client(client)
         catalog = client._use_catalog(catalog)
         dataset = self.identifier
-
-        url = f"{client.root_url}catalogs/{catalog}/datasets"
-        resp = handle_paginated_request(client.session, url)
-        ensure_resources(resp)
-        list_datasets = resp["resources"]
-        matching_datasets = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset]
-        if not matching_datasets:
-            raise ValueError(f"Dataset with identifier '{dataset}' not found in catalog '{catalog}'.")
-        dict_ = matching_datasets[0]
+        resp = client.session.get(f"{client.root_url}catalogs/{catalog}/datasets")
+        requests_raise_for_status(resp)
+        list_datasets = resp.json()["resources"]
+        dict_ = [dict_ for dict_ in list_datasets if dict_["identifier"] == dataset][0]
         dataset_obj = self._from_dict(dict_)
         dataset_obj.client = client
 
-        try:
-            prod_df = client.list_product_dataset_mapping(catalog=catalog)
+        prod_df = client.list_product_dataset_mapping(catalog=catalog)
 
-            if dataset.lower() in list(prod_df.dataset.str.lower()):
-                product = [prod_df[prod_df["dataset"].str.lower() == dataset.lower()]["product"].iloc[0]]
-                dataset_obj.product = product
-        except APIResponseError:
-            pass
+        if dataset.lower() in list(prod_df.dataset.str.lower()):
+            product = [prod_df[prod_df["dataset"].str.lower() == dataset.lower()]["product"].iloc[0]]
+            dataset_obj.product = product
 
         return dataset_obj
 
@@ -488,8 +473,7 @@ class Dataset(metaclass=CamelCaseMeta):
 
         """
         dataset_dict = {snake_to_camel(k): v for k, v in self.__dict__.items() if not k.startswith("_")}
-        if "tags" in dataset_dict:
-            dataset_dict["tag"] = dataset_dict.pop("tags")
+
         return dataset_dict
 
     def create(

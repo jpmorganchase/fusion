@@ -407,11 +407,11 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         return all_data
 
     def cat(
-        self,
-        url: str,
-        start: int | None = None,
-        end: int | None = None,
-        **kwargs: Any,
+    self,
+    url: str,
+    start: int | None = None,
+    end: int | None = None,
+    **kwargs: Any,
     ) -> Any:
         """Fetch paths' contents with pagination support.
 
@@ -425,47 +425,41 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
         url = self._decorate_url(url)
+        all_data = None
         kw = kwargs.copy()
         headers = kw.get("headers", {}).copy()
         kw["headers"] = headers
 
         session = self.sync_session
+        info_result = self.info(url)
+        if isinstance(info_result, dict):
+            file_size = info_result.get("size", None)
+        elif isinstance(info_result, list) and info_result:
+            file_size = info_result[0].get("size", None) if isinstance(info_result[0], dict) else None
+        else:
+            file_size = None
+
         range_start = start if start is not None else 0
-        range_end = end if end is not None else 2**63 - 1
-
-        fusion_file = FusionFile(self, url, session=session, **kw)
-        all_bytes = bytearray()
-        all_data = None
-
+        range_end = end if end is not None else file_size if file_size is not None else 0
+        fusion_file = FusionFile(self, url, session=session, size=file_size, **kw)
         while True:
             out, resp_headers = fusion_file._fetch_range_with_headers(range_start, range_end)
-            try:
-                # Try to decode as JSON (API response)
-                response_dict = json.loads(out.decode("utf-8"))
-                all_data = self._merge_all_data(all_data, response_dict)
-                is_json = True
-            except json.JSONDecodeError:
-                # Not JSON, treat as file content
-                all_bytes += out
-                is_json = False
-
+            response_dict = json.loads(out.decode("utf-8"))
+            all_data = self._merge_all_data(all_data, response_dict)
             next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
                 break
             headers["x-jpmc-next-token"] = next_token
             kw["headers"] = headers
-        
-        if is_json:
-            return json.dumps(all_data, separators=(",", ":")).encode("utf-8")
-        else:
-            return bytes(all_bytes)
+
+        return json.dumps(all_data).encode("utf-8")
 
     async def _cat(
-        self,
-        url: str,
-        start: int | None = None,
-        end: int | None = None,
-        **kwargs: Any,
+    self,
+    url: str,
+    start: int | None = None,
+    end: int | None = None,
+    **kwargs: Any,
     ) -> Any:
         """Fetch paths' contents with pagination support (async).
 
@@ -480,39 +474,34 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
         await self._async_startup()
         url = self._decorate_url(url)
+        all_data = None
         kw = kwargs.copy()
         headers = kw.get("headers", {}).copy()
         kw["headers"] = headers
 
         session = await self.set_session()
-        range_start = start if start is not None else 0
-        range_end = end if end is not None else 2**63 - 1
-        fusion_file = FusionFile(self, url, session=session, **kw)
-        all_bytes = bytearray()
-        all_data = None
+        info_result = await self._info(url)
+        if isinstance(info_result, dict):
+            file_size = info_result.get("size", None)
+        elif isinstance(info_result, list) and info_result:
+            file_size = info_result[0].get("size", None) if isinstance(info_result[0], dict) else None
+        else:
+            file_size = None
 
+        range_start = start if start is not None else 0
+        range_end = end if end is not None else file_size if file_size is not None else 0
+        fusion_file = FusionFile(self, url, session=session, size=file_size, **kw)
         while True:
             out, resp_headers = await fusion_file._async_fetch_range_with_headers(range_start, range_end)
-            try:
-                # Try to decode as JSON (API response)
-                response_dict = json.loads(out.decode("utf-8"))
-                all_data = self._merge_all_data(all_data, response_dict)
-                is_json = True
-            except json.JSONDecodeError:
-                # Not JSON, treat as file content
-                all_bytes += out
-                is_json = False
-
+            response_dict = json.loads(out.decode("utf-8"))
+            all_data = self._merge_all_data(all_data, response_dict)
             next_token = resp_headers.get("x-jpmc-next-token")
             if not next_token:
                 break
             headers["x-jpmc-next-token"] = next_token
             kw["headers"] = headers
 
-        if is_json:
-            return json.dumps(all_data, separators=(",", ":")).encode("utf-8")
-        else:
-            return bytes(all_bytes)
+        return json.dumps(all_data).encode("utf-8")
 
     async def _stream_file(self, url: str, chunk_size: int = 100) -> AsyncGenerator[bytes, None]:
         """Return an async stream to file at the given url.

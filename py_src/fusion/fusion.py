@@ -17,8 +17,8 @@ from zipfile import ZipFile
 
 import pandas as pd
 import pyarrow as pa
+from rich.progress import Progress
 from tabulate import tabulate
-from tqdm import tqdm
 
 from fusion.attributes import Attribute, Attributes
 from fusion.credentials import FusionCredentials
@@ -38,7 +38,6 @@ from .utils import (
     csv_to_table,
     distribution_to_filename,
     distribution_to_url,
-    ensure_resources,
     file_name_to_url,
     get_default_fs,
     get_session,
@@ -86,7 +85,10 @@ class Fusion:
             pandas.DataFrame: a dataframe containing the requested data.
         """
         response_data = handle_paginated_request(session, url)
-        ensure_resources(response_data)
+        if "resources" not in response_data or not response_data["resources"]:
+            raise APIResponseError(
+                ValueError("No data found"),
+            )
 
         ret_df = pd.DataFrame(response_data["resources"]).reset_index(drop=True)
         return ret_df
@@ -1020,23 +1022,22 @@ class Fusion:
             VERBOSE_LVL,
             f"Beginning {len(download_spec)} downloads in batches of {n_par}",
         )
-        res = [None] * len(download_spec)
-
         if show_progress:
-            with tqdm(total=len(download_spec), desc="Downloading") as p:
-                for i, spec in enumerate(download_spec):
+            with Progress() as p:
+                task = p.add_task("Downloading", total=len(download_spec))
+                res = []
+                for spec in download_spec:
                     r = self.get_fusion_filesystem().download(**spec)
-                    res[i] = r
-                    if r[0] is True:
-                        p.update(1)
+                    res.append(r)
+                    p.update(task, advance=1)
         else:
             res = [self.get_fusion_filesystem().download(**spec) for spec in download_spec]
 
-        if (len(res) > 0) and (not all(r[0] for r in res)):  # type: ignore
+        if (len(res) > 0) and (not all(r[0] for r in res)):
             for r in res:
                 if not r[0]:
                     warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
-        return res if return_paths else None  # type: ignore
+        return res if return_paths else None
 
     def _validate_format(
         self,
@@ -2289,10 +2290,10 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
 
+
     def report_attribute(
         self,
-        title: str | None = None,
-        id: int | None = None,  # noqa: A002
+        title: str,
         sourceIdentifier: str | None = None,
         description: str | None = None,
         technicalDataType: str | None = None,
@@ -2301,9 +2302,7 @@ class Fusion:
         """Instantiate a ReportAttribute object with this client for metadata creation.
 
         Args:
-            title (str | None, optional): The display title of the attribute.
-            id (int | None, optional): The unique identifier of the attribute. 
-                id argument is not required for 'create' operation.
+            title (str): The display title of the attribute (required).
             sourceIdentifier (str | None, optional): A unique identifier or reference ID from the source system.
             description (str | None, optional): A longer description of the attribute.
             technicalDataType (str | None, optional): The technical data type (e.g., string, int, boolean).
@@ -2325,7 +2324,6 @@ class Fusion:
         attribute_obj = ReportAttribute(
             sourceIdentifier=sourceIdentifier,
             title=title,
-            id=id,
             description=description,
             technicalDataType=technicalDataType,
             path=path,
