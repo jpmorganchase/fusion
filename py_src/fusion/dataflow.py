@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Dataflow(metaclass=CamelCaseMeta):
+class Dataflow():
     """Fusion Dataflow class for managing dataflow metadata in the Fusion system.
 
     Attributes:
