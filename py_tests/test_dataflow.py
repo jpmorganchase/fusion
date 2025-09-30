@@ -9,8 +9,8 @@ from fusion.fusion import Fusion
 
 def test_dataflow_basic_fields() -> None:
     flow = Dataflow(
-        providerNode={"name": "CRM_DB", "nodeType": "Database"},
-        consumerNode={"name": "DWH", "nodeType": "Database"},
+        providerNode={"name": "CRM_DB", "type": "Database"},
+        consumerNode={"name": "DWH", "type": "Database"},
         description="CRM to DWH load",
         transportType="API",
         frequency="DAILY",
@@ -25,22 +25,22 @@ def test_dataflow_basic_fields() -> None:
 
 def test_dataflow_to_dict() -> None:
     flow = Dataflow(
-        providerNode={"name": "S3", "nodeType": "Storage"},
-        consumerNode={"name": "Analytics", "nodeType": "Dashboard"},
+        providerNode={"name": "S3", "type": "Storage"},
+        consumerNode={"name": "Analytics", "type": "Dashboard"},
         description="S3 to Analytics feed",
         transportType="FILE TRANSFER",
         frequency="WEEKLY",
     )
     result = flow.to_dict()
     assert result["providerNode"]["name"] == "S3"
-    assert result["consumerNode"]["nodeType"] == "Dashboard"
+    assert result["consumerNode"]["type"] == "Dashboard"
     assert result["frequency"] == "WEEKLY"
 
 
 def test_dataflow_from_dict() -> None:
     data = {
-        "providerNode": {"name": "App1", "nodeType": "User Tool"},
-        "consumerNode": {"name": "DWH", "nodeType": "Database"},
+        "providerNode": {"name": "App1", "type": "User Tool"},
+        "consumerNode": {"name": "DWH", "type": "Database"},
         "description": "Dict-based dataflow",
         "transportType": "API",
         "frequency": "DAILY",
@@ -55,8 +55,8 @@ def test_dataflow_from_dict() -> None:
 def test_dataflow_from_object_series() -> None:
     series = pd.Series(
         {
-            "providerNode": {"name": "CRM_DB", "nodeType": "Database"},
-            "consumerNode": {"name": "DWH", "nodeType": "Database"},
+            "providerNode": {"name": "CRM_DB", "type": "Database"},
+            "consumerNode": {"name": "DWH", "type": "Database"},
             "description": "Series-based dataflow",
             "transportType": "API",
             "frequency": "DAILY",
@@ -72,8 +72,8 @@ def test_dataflow_from_object_series() -> None:
 
 def test_dataflow_from_object_json() -> None:
     json_str = """{
-        "providerNode": {"name": "SystemA", "nodeType": "App"},
-        "consumerNode": {"name": "SystemB", "nodeType": "Database"},
+        "providerNode": {"name": "SystemA", "type": "App"},
+        "consumerNode": {"name": "SystemB", "type": "Database"},
         "description": "JSON-based dataflow",
         "frequency": "MONTHLY"
     }"""
@@ -88,15 +88,15 @@ def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
     frame = pd.DataFrame(
         [
             {
-                "providerNode": {"name": "CRM_DB", "type": "Database"},     # was nodeType
-                "consumerNode": {"name": "DWH", "type": "Database"},        # was nodeType
+                "providerNode": {"name": "CRM_DB", "type": "Database"},
+                "consumerNode": {"name": "DWH", "type": "Database"},
                 "description": "Row1",
                 "transportType": "API",
                 "frequency": "DAILY",
             },
             {
-                "providerNode": {"name": "S3", "type": "Storage"},          # was nodeType
-                "consumerNode": {"name": "Analytics", "type": "Dashboard"}, # was nodeType
+                "providerNode": {"name": "S3", "type": "Storage"},
+                "consumerNode": {"name": "Analytics", "type": "Dashboard"},
                 "description": "Row2",
                 "transportType": "FILE TRANSFER",
                 "frequency": "WEEKLY",
@@ -127,6 +127,7 @@ def test_dataflow_validate_nodes_for_create_raises() -> None:
     with pytest.raises(ValueError, match="must be a dict"):
         flow._validate_nodes_for_create()
 
+
 def test_dataflow_to_dict_drop_none_false_includes_nulls() -> None:
     """to_dict with drop_none=False should keep None values and defaults."""
     flow = Dataflow(
@@ -141,9 +142,9 @@ def test_dataflow_to_dict_drop_none_false_includes_nulls() -> None:
     assert "providerNode" in out
     assert "consumerNode" in out
     # None-valued fields are retained
-    assert "description" in out 
+    assert "description" in out
     assert out["description"] is None
-    assert "id" in out 
+    assert "id" in out
     assert out["id"] is None
     # defaulted list field should be present
     assert "datasets" in out
@@ -179,8 +180,6 @@ def test_dataflow_from_dataframe_skips_invalid_rows_and_sets_client(fusion_obj: 
     assert flows[0].description == "Valid row"
     # client should be attached
     assert flows[0].client is fusion_obj
-
-
 
 
 def test_dataflow_update_fields_forbidden_nodes_raises(fusion_obj: Fusion) -> None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -25,14 +25,14 @@ class Dataflow:
     """Fusion Dataflow class for managing dataflow metadata in the Fusion system.
 
     Attributes:
-        providerNode (dict[str, Any] | None):
+        providerNode (dict[str, str] | None):
             Defines the provider/source node of the data flow.
             Required when creating a data flow.
             Expected keys:
               - ``name`` (str): Provider node name.
               - ``type`` (str): Provider node type.
 
-        consumerNode (dict[str, Any] | None):
+        consumerNode (dict[str, str] | None):
             Defines the consumer/target node of the data flow.
             Required when creating a data flow and must be distinct from the provider node.
             Expected keys:
@@ -46,9 +46,6 @@ class Dataflow:
         id (str | None, optional):
             Server-assigned unique identifier of the data flow. Must be set on the object for
             ``update()``, ``update_fields()``, and ``delete()``. Defaults to ``None``.
-
-        alternativeId (dict[str, Any] | None, optional):
-            Alternative/secondary identifier object. Defaults to ``None``.
 
         transportType (str | None, optional):
             Transport type of the data flow. Defaults to ``None``.
@@ -68,15 +65,15 @@ class Dataflow:
             Optional source system metadata object. Defaults to ``None``.
 
         datasets (list[dict[str, Any]], optional):
-            List of dataset/data asset objects involved in the data flow. Defaults to empty list.
+            List of datasets involved in the data flow. Defaults to empty list.
 
         connectionType (str | None, required for create):
             Connection type for a dataflow. (Validation of specific values is deferred to the API.)
     """
 
     # --- camelCase field names (kept as-is) ---
-    providerNode: dict[str, Any] | None = None
-    consumerNode: dict[str, Any] | None = None
+    providerNode: dict[str, str] | None = None
+    consumerNode: dict[str, str] | None = None
 
     # Optional/common fields
     description: str | None = None
@@ -95,8 +92,23 @@ class Dataflow:
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
-        """Normalize description immediately after initialization."""
-        self.description = tidy_string(self.description or "")
+        """Normalize strings/empties across the instance after initialization."""
+        def norm_val(v: Any) -> Any:
+            if isinstance(v, str):
+                s = tidy_string(v)
+                return None if s == "" else s
+            return v
+
+        def norm_tree(o: Any) -> Any:
+            if isinstance(o, dict):
+                return {k: norm_tree(v) for k, v in o.items()}
+            if isinstance(o, list):
+                return [norm_tree(i) for i in o]
+            return norm_val(o)
+
+        # normalize all declared dataclass fields in-place
+        for f in fields(self):
+            setattr(self, f.name, norm_tree(getattr(self, f.name)))
 
     @property
     def client(self) -> Fusion | None:
@@ -143,30 +155,13 @@ class Dataflow:
     def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
         """Create a Dataflow object from a dictionary.
 
-        Accepts camelCase or snake_case keys and normalizes empty strings to None.
+        Accepts camelCase or snake_case keys; normalization occurs in __post_init__.
         """
-
-        def normalize_value(val: Any) -> Any:
-            if isinstance(val, str) and val.strip() == "":
-                return None
-            return val
-
-        def normalize_tree(obj: Any) -> Any:
-            if isinstance(obj, dict):
-                return {k: normalize_tree(v) for k, v in obj.items()}
-            if isinstance(obj, list):
-                return [normalize_tree(i) for i in obj]
-            return normalize_value(obj)
-
-        converted_data = normalize_tree(data)
-
-        # assign by field names directly (camelCase only)
+        # assign by field names directly (camelCase only); __post_init__ will normalize
         obj = cls.__new__(cls)
         for field_obj in fields(cls):
             fname = field_obj.name  # e.g., "providerNode"
-            val = converted_data.get(fname, None)
-            setattr(obj, fname, val)
-
+            setattr(obj, fname, data.get(fname))
         obj.__post_init__()
         return obj
 
@@ -232,7 +227,6 @@ class Dataflow:
 
         (Only checks presence of key structures; detailed value validation is left to the API.)
         """
-        # keep minimal presence checks only
         required_fields = ["providerNode", "consumerNode"]
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
         if missing:
@@ -246,7 +240,6 @@ class Dataflow:
                 raise ValueError(f"{attr} must be a dict with 'name' and 'type' for create().")
             if not node.get("name") or not node.get("type"):
                 raise ValueError(f"{attr} requires non-empty 'name' and 'type' for create().")
-        # require presence of connection_type only at create-time (no enum/value checks)
         if not self.connectionType:
             raise ValueError("connection_type is required for create().")
 
@@ -256,19 +249,8 @@ class Dataflow:
         drop_none: bool = True,
         exclude: set[str] | None = None,
     ) -> dict[str, Any]:
-        """Convert Dataflow object into a JSON-serializable dictionary."""
-        def normalize_value(val: Any) -> Any:
-            if isinstance(val, str) and val.strip() == "":
-                return None
-            return val
-
-        def normalize_tree(obj: Any) -> Any:
-            if isinstance(obj, dict):
-                return {k: normalize_tree(v) for k, v in obj.items()}
-            if isinstance(obj, list):
-                return [normalize_tree(i) for i in obj]
-            return normalize_value(obj)
-
+        """Convert Dataflow object into a JSON-serializable dictionary
+        (object is already normalized in __post_init__)."""
         out: dict[str, Any] = {}
         for k, v in self.__dict__.items():
             if k.startswith("_"):
@@ -278,8 +260,8 @@ class Dataflow:
             if drop_none and (v is None or (isinstance(v, str) and v.strip() == "")):
                 continue
             out[k] = v  # keep camelCase keys as-is
-        return cast(dict[str, Any], normalize_tree(out))
-    
+        return out
+
     def create(
         self,
         client: Fusion | None = None,
@@ -328,7 +310,6 @@ class Dataflow:
         if not self.id:
             raise ValueError("Dataflow ID is required on the object (set self.id before update_fields()).")
 
-        # forbid changing nodes via PATCH
         forbidden = {"providerNode", "consumerNode"}
         used = forbidden.intersection(changes.keys())
         if used:
@@ -336,20 +317,21 @@ class Dataflow:
                 f"Cannot update {sorted(used)} via PATCH; provider/consumer nodes are immutable for updates."
             )
 
-        # normalize empty strings to None recursively, keep keys camelCase
-        def normalize_value(val: Any) -> Any:
-            if isinstance(val, str) and val.strip() == "":
-                return None
-            return val
+        # tiny normalization for external input (strings tidied, ""->None), local to this method
+        def norm_val(v: Any) -> Any:
+            if isinstance(v, str):
+                s = tidy_string(v)
+                return None if s == "" else s
+            return v
 
-        def normalize_tree(obj: Any) -> Any:
-            if isinstance(obj, dict):
-                return {k: normalize_tree(v) for k, v in obj.items()}
-            if isinstance(obj, list):
-                return [normalize_tree(i) for i in obj]
-            return normalize_value(obj)
+        def norm_tree(o: Any) -> Any:
+            if isinstance(o, dict):
+                return {k: norm_tree(v) for k, v in o.items()}
+            if isinstance(o, list):
+                return [norm_tree(i) for i in o]
+            return norm_val(o)
 
-        patch_body = normalize_tree(changes)
+        patch_body = norm_tree(changes)
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{self.id}"
         resp: requests.Response = client.session.patch(url, json=patch_body)
