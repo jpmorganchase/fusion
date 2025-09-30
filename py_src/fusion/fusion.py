@@ -2365,7 +2365,7 @@ class Fusion:
         Example:
             >>> fusion = Fusion()
             >>> reports = fusion.reports()
-            >>> new_report = fusion.report(
+            >>> new_report = reports.create(
             ...     title="Monthly Risk Report",
             ...     description="Summary of monthly risk metrics",
             ...     frequency="Monthly",
@@ -2633,15 +2633,16 @@ class Fusion:
         """Instantiate a Report object with the current Fusion client attached.
 
         Args:
-            description (str | None): Description of the report.
-            title (str | None): Title of the report or process.
-            frequency (str | None): Reporting frequency (e.g., Monthly, Quarterly).
-            category (str | None): Main classification of the report.
-            sub_category (str | None): Sub-classification under the main category.
-            owner_node (dict[str, str] | None): {"name","type"} for the owner node.
+            description (str | None): Description of the report.This is mandatory field for report creation.
+            title (str | None): Title of the report or process.This is mandatory field for report creation.
+            frequency (str | None): Reporting frequency (e.g., Monthly, Quarterly). This is mandatory field for report creation.
+            category (str | None): Main classification of the report. This is mandatory field for report creation.
+            sub_category (str | None): Sub-classification under the main category. This is mandatory field for report creation.
+            business_domain (str): Business domain string 
+            owner_node (dict[str, str] | None): {"name","type"} for the owner node. This is mandatory field for report creation.
             publisher_node (dict[str, Any] | None): {"name","type"} (+ optional {"publisher_node_identifier"}).
-            regulatory_related (bool | None): Regulatory-designated flag.
-            business_domain (str | None): Business domain string.
+            regulatory_related (bool | None): Regulatory-designated flag. This is mandatory field for report creation.
+            business_domain (str | None): Business domain string. This is mandatory field for report creation.
             lob (str | None): Line of business.
             sub_lob (str | None): Subdivision of the line of business.
             is_bcbs239_program (bool | None): BCBS 239 program flag.
@@ -2705,8 +2706,6 @@ class Fusion:
                 Consumer/target node details. Expected keys: ``name`` and ``type``.
             description (str | None, optional):
                 Purpose/summary of the data flow (if provided, must not be blank).
-            alternative_id (dict[str, Any] | None, optional):
-                Alternative identifier object (e.g., ``{"value": "...", "domain": "...", "isSor": true}``).
             transport_type (str | None, optional):
                 Transport mechanism (e.g., ``"API"``, ``"FILE TRANSFER"``, ``"SYNCHRONOUS MESSAGING"``).
             frequency (str | None, optional):
