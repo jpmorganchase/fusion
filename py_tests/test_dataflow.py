@@ -141,10 +141,13 @@ def test_dataflow_to_dict_drop_none_false_includes_nulls() -> None:
     assert "providerNode" in out
     assert "consumerNode" in out
     # None-valued fields are retained
-    assert "description" in out and out["description"] is None
-    assert "id" in out and out["id"] is None
+    assert "description" in out 
+    assert out["description"] is None
+    assert "id" in out 
+    assert out["id"] is None
     # defaulted list field should be present
-    assert "datasets" in out and isinstance(out["datasets"], list)
+    assert "datasets" in out
+    assert isinstance(out["datasets"], list)
     # a normal field is preserved
     assert out["frequency"] == "DAILY"
 
