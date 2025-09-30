@@ -4,8 +4,6 @@ import logging
 from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any, cast
 
-from dataclasses import fields as dc_fields
-
 import numpy as np
 import pandas as pd
 
@@ -252,13 +250,13 @@ class Dataflow:
         if not self.connectionType:
             raise ValueError("connection_type is required for create().")
 
-
     def to_dict(
         self,
         *,
         drop_none: bool = True,
         exclude: set[str] | None = None,
     ) -> dict[str, Any]:
+        """Convert Dataflow object into a JSON-serializable dictionary."""
         def normalize_value(val: Any) -> Any:
             if isinstance(val, str) and val.strip() == "":
                 return None
@@ -272,17 +270,15 @@ class Dataflow:
             return normalize_value(obj)
 
         out: dict[str, Any] = {}
-        for f in dc_fields(self):                 # ← use declared dataclass fields
-            k = f.name                            # e.g., "providerNode"
+        for k, v in self.__dict__.items():
+            if k.startswith("_"):
+                continue
             if exclude and k in exclude:
                 continue
-            v = getattr(self, k)
             if drop_none and (v is None or (isinstance(v, str) and v.strip() == "")):
                 continue
-            out[k] = v
-
+            out[k] = v  # keep camelCase keys as-is
         return cast(dict[str, Any], normalize_tree(out))
-
     
     def create(
         self,

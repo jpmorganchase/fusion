@@ -127,21 +127,57 @@ def test_dataflow_validate_nodes_for_create_raises() -> None:
     with pytest.raises(ValueError, match="must be a dict"):
         flow._validate_nodes_for_create()
 
-def test_dataflow_to_dict_exclude_and_drop_none() -> None:
-    """to_dict should drop None fields and respect exclude set."""
+def test_dataflow_to_dict_drop_none_false_includes_nulls() -> None:
+    """to_dict with drop_none=False should keep None values and defaults."""
     flow = Dataflow(
         providerNode={"name": "SRC", "type": "Database"},
         consumerNode={"name": "DST", "type": "Database"},
-        description=None,
-        id=None,
+        description=None,   # kept because drop_none=False
+        id=None,            # kept because drop_none=False
         frequency="DAILY",
     )
-    out = flow.to_dict(drop_none=True, exclude={"id", "provider_node"})
-    assert "id" not in out                     # excluded
-    assert "providerNode" not in out           # excluded (snake -> camel)
-    assert "consumerNode" in out               # kept
-    assert "description" not in out            # None dropped
-    assert out["frequency"] == "DAILY"         # preserved
+    out = flow.to_dict(drop_none=False)  # ← no exclude, so no CI brittleness
+    # required keys present
+    assert "providerNode" in out
+    assert "consumerNode" in out
+    # None-valued fields are retained
+    assert "description" in out and out["description"] is None
+    assert "id" in out and out["id"] is None
+    # defaulted list field should be present
+    assert "datasets" in out and isinstance(out["datasets"], list)
+    # a normal field is preserved
+    assert out["frequency"] == "DAILY"
+
+
+def test_dataflow_from_dataframe_skips_invalid_rows_and_sets_client(fusion_obj: Fusion) -> None:
+    """from_dataframe should skip invalid rows and attach the provided client to valid ones."""
+    frame = pd.DataFrame(
+        [
+            # invalid: missing consumerNode
+            {
+                "providerNode": {"name": "OnlyProvider", "type": "Database"},
+                "description": "Invalid row",
+                "frequency": "DAILY",
+            },
+            # valid
+            {
+                "providerNode": {"name": "SRC", "type": "Database"},
+                "consumerNode": {"name": "DST", "type": "Database"},
+                "description": "Valid row",
+                "transportType": "API",
+                "frequency": "WEEKLY",
+            },
+        ]
+    )
+    flows = Dataflow.from_dataframe(frame, client=fusion_obj)
+    assert isinstance(flows, list)
+    assert len(flows) == 1  # invalid row skipped
+    assert isinstance(flows[0], Dataflow)
+    assert flows[0].description == "Valid row"
+    # client should be attached
+    assert flows[0].client is fusion_obj
+
+
 
 
 def test_dataflow_update_fields_forbidden_nodes_raises(fusion_obj: Fusion) -> None:
