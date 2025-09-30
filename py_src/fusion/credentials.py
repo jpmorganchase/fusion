@@ -13,8 +13,11 @@ import requests
 
 from fusion.exceptions import CredentialError
 
+from . import __version__
+
 _DEFAULT_GRANT_TYPE = "client_credentials"
 _DEFAULT_AUTH_URL = "https://authe.jpmorgan.com/as/token.oauth2"
+VERSION = __version__
 
 
 def _now_ts() -> int:
@@ -400,7 +403,7 @@ class FusionCredentials:
         else:
             raise ValueError("Unrecognized grant type")
 
-        resp = sess.post(auth_url, data=payload, headers={"User-Agent": "fusion-python-sdk"})
+        resp = sess.post(auth_url, data=payload, headers={"User-Agent": f"fusion-python-sdk {VERSION}"})
         try:
             resp.raise_for_status()
         except requests.HTTPError as e:  # noqa: TRY003
@@ -437,7 +440,7 @@ class FusionCredentials:
         if not self.bearer_token:
             raise ValueError("No bearer token set (Error Code: 400)")
 
-        headers: dict[str, str] = {"User-Agent": "fusion-python-sdk"}
+        headers: dict[str, str] = {"User-Agent": f"fusion-python-sdk {VERSION}"}
         if self.fusion_e2e:
             headers["fusion-e2e"] = self.fusion_e2e
 
@@ -468,7 +471,7 @@ class FusionCredentials:
             fusion_auth_url,
             headers={
                 "Authorization": f"Bearer {self.bearer_token.token}",
-                "User-Agent": "fusion-python-sdk",
+                "User-Agent": f"fusion-python-sdk {VERSION}",
             },
         )
         try:
