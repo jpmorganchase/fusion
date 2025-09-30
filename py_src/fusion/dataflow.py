@@ -9,9 +9,7 @@ import pandas as pd
 
 from .utils import (
     CamelCaseMeta,
-    camel_to_snake,
     requests_raise_for_status,
-    snake_to_camel,
     tidy_string,
 )
 
@@ -77,7 +75,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             Connection type for a dataflow. (Validation of specific values is deferred to the API.)
     """
 
-    # --- revert fix 1: camelCase field names restored ---
+    # --- camelCase field names (kept as-is) ---
     providerNode: dict[str, Any] | None = None
     consumerNode: dict[str, Any] | None = None
 
@@ -100,19 +98,6 @@ class Dataflow(metaclass=CamelCaseMeta):
     def __post_init__(self) -> None:
         """Normalize description immediately after initialization."""
         self.description = tidy_string(self.description or "")
-
-    def __getattr__(self, name: str) -> Any:
-        """Allow camelCase access for snake_case attributes."""
-        snake_name = camel_to_snake(name)
-        return self.__dict__.get(snake_name, None)
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        """Allow camelCase assignment to snake_case attributes."""
-        if name == "client":
-            object.__setattr__(self, name, value)
-        else:
-            snake_name = camel_to_snake(name)
-            self.__dict__[snake_name] = value
 
     @property
     def client(self) -> Fusion | None:
@@ -167,26 +152,20 @@ class Dataflow(metaclass=CamelCaseMeta):
                 return None
             return val
 
-        def convert_keys(d: dict[str, Any]) -> dict[str, Any]:
-            converted: dict[str, Any] = {}
-            for k, v in d.items():
-                key = camel_to_snake(k)
-                if isinstance(v, dict):
-                    converted[key] = convert_keys(v)
-                elif isinstance(v, list):
-                    converted[key] = [convert_keys(i) if isinstance(i, dict) else i for i in v]
-                else:
-                    converted[key] = normalize_value(v)
-            return converted
+        def normalize_tree(obj: Any) -> Any:
+            if isinstance(obj, dict):
+                return {k: normalize_tree(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [normalize_tree(i) for i in obj]
+            return normalize_value(obj)
 
-        converted_data = convert_keys(data)
+        converted_data = normalize_tree(data)
 
-        # minimal glue so camelCase dataclass fields load from snake_cased data
+        # assign by field names directly (camelCase only)
         obj = cls.__new__(cls)
         for field_obj in fields(cls):
-            fname = field_obj.name                 # e.g., "providerNode"
-            snake = camel_to_snake(fname)          # -> "provider_node"
-            val = converted_data.get(snake, converted_data.get(fname, None))
+            fname = field_obj.name  # e.g., "providerNode"
+            val = converted_data.get(fname, None)
             setattr(obj, fname, val)
 
         obj.__post_init__()
@@ -255,21 +234,21 @@ class Dataflow(metaclass=CamelCaseMeta):
         (Only checks presence of key structures; detailed value validation is left to the API.)
         """
         # keep minimal presence checks only
-        required_fields = ["provider_node", "consumer_node"]
+        required_fields = ["providerNode", "consumerNode"]
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
         if missing:
             raise ValueError(f"Missing required fields in Dataflow: {', '.join(missing)}")
 
     def _validate_nodes_for_create(self) -> None:
         """Ensure provider/consumer nodes are present with non-blank name and type for create()."""
-        for attr in ("provider_node", "consumer_node"):
+        for attr in ("providerNode", "consumerNode"):
             node = getattr(self, attr, None)
             if not isinstance(node, dict):
                 raise ValueError(f"{attr} must be a dict with 'name' and 'type' for create().")
             if not node.get("name") or not node.get("type"):
                 raise ValueError(f"{attr} requires non-empty 'name' and 'type' for create().")
         # require presence of connection_type only at create-time (no enum/value checks)
-        if not self.connection_type:
+        if not self.connectionType:
             raise ValueError("connection_type is required for create().")
 
     def to_dict(
@@ -279,6 +258,18 @@ class Dataflow(metaclass=CamelCaseMeta):
         exclude: set[str] | None = None,
     ) -> dict[str, Any]:
         """Convert Dataflow object into a JSON-serializable dictionary."""
+        def normalize_value(val: Any) -> Any:
+            if isinstance(val, str) and val.strip() == "":
+                return None
+            return val
+
+        def normalize_tree(obj: Any) -> Any:
+            if isinstance(obj, dict):
+                return {k: normalize_tree(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [normalize_tree(i) for i in obj]
+            return normalize_value(obj)
+
         out: dict[str, Any] = {}
         for k, v in self.__dict__.items():
             if k.startswith("_"):
@@ -287,8 +278,8 @@ class Dataflow(metaclass=CamelCaseMeta):
                 continue
             if drop_none and (v is None or (isinstance(v, str) and v.strip() == "")):
                 continue
-            out[snake_to_camel(k)] = v
-        return out
+            out[k] = v  # keep camelCase keys as-is
+        return normalize_tree(out)
 
     def create(
         self,
@@ -319,7 +310,7 @@ class Dataflow(metaclass=CamelCaseMeta):
 
         payload = self.to_dict(
             drop_none=True,
-            exclude={"id", "provider_node", "consumer_node"},
+            exclude={"id", "providerNode", "consumerNode"},
         )
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{self.id}"
@@ -338,15 +329,28 @@ class Dataflow(metaclass=CamelCaseMeta):
         if not self.id:
             raise ValueError("Dataflow ID is required on the object (set self.id before update_fields()).")
 
-        forbidden = {"provider_node", "consumer_node"}
-        normalized = {camel_to_snake(k): v for k, v in changes.items()}
-        used = forbidden.intersection(normalized.keys())
+        # forbid changing nodes via PATCH
+        forbidden = {"providerNode", "consumerNode"}
+        used = forbidden.intersection(changes.keys())
         if used:
             raise ValueError(
                 f"Cannot update {sorted(used)} via PATCH; provider/consumer nodes are immutable for updates."
             )
 
-        patch_body = {snake_to_camel(k): v for k, v in normalized.items()}
+        # normalize empty strings to None recursively, keep keys camelCase
+        def normalize_value(val: Any) -> Any:
+            if isinstance(val, str) and val.strip() == "":
+                return None
+            return val
+
+        def normalize_tree(obj: Any) -> Any:
+            if isinstance(obj, dict):
+                return {k: normalize_tree(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [normalize_tree(i) for i in obj]
+            return normalize_value(obj)
+
+        patch_body = normalize_tree(changes)
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{self.id}"
         resp: requests.Response = client.session.patch(url, json=patch_body)
