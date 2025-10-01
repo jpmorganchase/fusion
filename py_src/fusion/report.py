@@ -732,3 +732,21 @@ class ReportsWrapper(Reports):
     def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports:  # type: ignore[override]
         """Load Reports from object using the bound client."""
         return Reports.from_object(source, client=self.client)
+    
+data_camel = {
+    "title": "Liquidity Risk Overview",
+    "description": "Monthly liquidity metrics and breaches",
+    "frequency": "Monthly",
+    "category": "Risk",
+    "subCategory": "Liquidity",
+    "businessDomain": "CDAO Office",
+    "regulatoryRelated": True,
+    "ownerNode": {"name": "110437", "type": "Application (SEAL)"},
+    "publisherNode": {
+        "name": "110465",
+        "type": "Application (SEAL)",
+        "publisherNodeIdentifier": "seal:app:123"
+    },
+    "lob": "Corporate",
+    "riskArea": "Firmwide Risk"
+}
