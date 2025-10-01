@@ -41,7 +41,7 @@ class Dataflow:
 
         description (str | None, optional):
             Purpose/summary of the data flow. If this field is present, it must not be blank.
-            (API range reference: length 1..65535). Defaults to ``None``.
+            Defaults to ``None``.
 
         id (str | None, optional):
             Server-assigned unique identifier of the data flow. Must be set on the object for
@@ -68,23 +68,17 @@ class Dataflow:
             List of datasets involved in the data flow. Defaults to empty list.
 
         connectionType (str | None, required for create):
-            Connection type for a dataflow. (Validation of specific values is deferred to the API.)
+            Connection type for a dataflow. 
     """
 
-    # --- camelCase field names (kept as-is) ---
     providerNode: dict[str, str] | None = None
     consumerNode: dict[str, str] | None = None
-
-    # Optional/common fields
     description: str | None = None
     id: str | None = None
-    alternativeId: dict[str, Any] | None = None
     transportType: str | None = None
     frequency: str | None = None
     startTime: str | None = None
     endTime: str | None = None
-
-    # Updated schema fields
     sourceSystem: dict[str, Any] | None = None
     datasets: list[dict[str, Any]] = field(default_factory=list)
     connectionType: str | None = None
@@ -106,7 +100,6 @@ class Dataflow:
                 return [norm_tree(i) for i in o]
             return norm_val(o)
 
-        # normalize all declared dataclass fields in-place
         for f in fields(self):
             setattr(self, f.name, norm_tree(getattr(self, f.name)))
 
@@ -147,17 +140,11 @@ class Dataflow:
             raise ValueError("A Fusion client object is required.")
         return res
 
-    # -----------------------
-    # Converters / loaders
-    # -----------------------
-
     @classmethod
     def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
         """Create a Dataflow object from a dictionary.
 
-        Accepts camelCase or snake_case keys; normalization occurs in __post_init__.
         """
-        # assign by field names directly (camelCase only); __post_init__ will normalize
         obj = cls.__new__(cls)
         for field_obj in fields(cls):
             fname = field_obj.name  # e.g., "providerNode"
@@ -218,14 +205,8 @@ class Dataflow:
         obj.client = self._client
         return obj
 
-    # -----------------------
-    # Validation / serialization
-    # -----------------------
-
     def validate(self) -> None:
         """Validate that required fields exist.
-
-        Only checks presence of key structures; detailed value validation is left to the API.
         """
         required_fields = ["providerNode", "consumerNode"]
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]
@@ -249,8 +230,7 @@ class Dataflow:
         drop_none: bool = True,
         exclude: set[str] | None = None,
     ) -> dict[str, Any]:
-        """Convert Dataflow object into a JSON-serializable dictionary
-        (object is already normalized in __post_init__)."""
+        """Convert Dataflow object into a JSON-serializable dictionary"""
         out: dict[str, Any] = {}
         for k, v in self.__dict__.items():
             if k.startswith("_"):
@@ -259,7 +239,7 @@ class Dataflow:
                 continue
             if drop_none and (v is None or (isinstance(v, str) and v.strip() == "")):
                 continue
-            out[k] = v  # keep camelCase keys as-is
+            out[k] = v  
         return out
 
     def create(
@@ -284,7 +264,7 @@ class Dataflow:
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Full replace (PUT) using self.id, excluding provider/consumer nodes from the payload."""
+        """Full update using id"""
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Dataflow ID is required on the object (set self.id before update()).")
@@ -305,7 +285,7 @@ class Dataflow:
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Partial update (PATCH) using self.id. Provider/consumer nodes are not allowed."""
+        """Partial update using id."""
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Dataflow ID is required on the object (set self.id before update_fields()).")
@@ -317,7 +297,6 @@ class Dataflow:
                 f"Cannot update {sorted(used)} via PATCH; provider/consumer nodes are immutable for updates."
             )
 
-        # tiny normalization for external input (strings tidied, ""->None), local to this method
         def norm_val(v: Any) -> Any:
             if isinstance(v, str):
                 s = tidy_string(v)

@@ -2686,25 +2686,27 @@ class Fusion:
         report_obj.client = self
         return report_obj
   
-  
+    
     def dataflow(  # noqa: PLR0913
         self,
         provider_node: dict[str, str] | None = None,
         consumer_node: dict[str, str] | None = None,
         description: str | None = None,
-        alternative_id: dict[str, Any] | None = None,
         transport_type: str | None = None,
         frequency: str | None = None,
         start_time: str | None = None,
         end_time: str | None = None,
-        data_assets: list[dict[str, Any]] | None = None,  # kept for compatibility
+        datasets: list[dict[str, Any]] | None = None,
+        connection_type: str | None = None,
+        source_system: dict[str, Any] | None = None,
         id: str | None = None,  # noqa: A002
         **kwargs: Any,
     ) -> Dataflow:
         """Instantiate a Dataflow object bound to this Fusion client.
 
         You may instantiate with just an ``id`` (useful for ``update()``, ``update_fields()``, or ``delete()``);
-        however, **creating** a new data flow via ``create()`` requires valid provider/consumer nodes.
+        however, **creating** a new data flow via ``create()`` requires valid provider/consumer nodes and
+        a ``connection_type``.
 
         Args:
             provider_node (dict[str, str] | None, optional):
@@ -2714,26 +2716,28 @@ class Fusion:
             description (str | None, optional):
                 Purpose/summary of the data flow (if provided, must not be blank).
             transport_type (str | None, optional):
-                Transport mechanism (e.g., ``"API"``, ``"FILE TRANSFER"``, ``"SYNCHRONOUS MESSAGING"``).
+                Transport mechanism 
             frequency (str | None, optional):
-                Flow cadence (e.g., ``"DAILY"``, ``"WEEKLY"``, ``"MONTHLY"``, etc.).
+                Flow cadence (e.g., ``"DAILY"``, ``"WEEKLY"``, ``"MONTHLY"``).
             start_time (str | None, optional):
                 Scheduled start time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
             end_time (str | None, optional):
                 Scheduled end time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
-            data_assets (list[dict[str, Any]] | None, optional):
-                Deprecated argument. Will be mapped to ``datasets`` for the new API schema.
+            datasets (list[dict[str, Any]] | None, optional):
+                Datasets involved in the flow. Defaults to empty list if not provided.
+            connection_type (str | None, optional):
+                Connection type required for create (e.g., ``"Consumes From"``).
+            source_system (dict[str, Any] | None, optional):
+                Source system metadata object.
             id (str | None, optional):
                 Server-assigned identifier; required for ``update()``, ``update_fields()``, and ``delete()``.
-            **kwargs (Any):
-                Additional fields supported by the API; passed through to the Dataflow dataclass.
-                For new fields, use camelCase keys (e.g., ``connectionType``, ``sourceSystem``, or ``datasets``).
+            **kwargs (Any)
 
         Returns:
-            Dataflow: A Dataflow instance with this Fusion client attached.
+            Dataflow: A Dataflow instance with Fusion client attached.
 
         Examples:
-            Create a handle with full details (ready for ``create()``):
+            Create a handle ready for ``create()``:
 
             >>> flow = fusion.dataflow(
             ...     provider_node={"name": "CRM_DB", "type": "Database"},
@@ -2741,8 +2745,8 @@ class Fusion:
             ...     description="CRM → DWH nightly load",
             ...     frequency="DAILY",
             ...     transport_type="API",
-            ...     # connectionType / sourceSystem / datasets can be supplied via **kwargs:
-            ...     connectionType="Consumes From",
+            ...     connection_type="Consumes From",
+            ...     source_system={"system": "Airflow"},
             ... )
 
             Create a handle for an existing flow by ID (for update/delete):
@@ -2750,24 +2754,23 @@ class Fusion:
             >>> flow = fusion.dataflow(id="abc-123")
             >>> flow.delete()
         """
-        # Prefer an explicit 'datasets' provided via kwargs; otherwise fall back to data_assets.
-        datasets_val = kwargs.pop("datasets", data_assets or [])
-
         df_obj = Dataflow(
             providerNode=provider_node,
             consumerNode=consumer_node,
             description=description,
-            alternativeId=alternative_id,
             transportType=transport_type,
             frequency=frequency,
             startTime=start_time,
             endTime=end_time,
-            datasets=datasets_val,
+            datasets=datasets or [],
+            connectionType=connection_type,
+            sourceSystem=source_system,
             id=id,
             **kwargs,
         )
         df_obj.client = self
         return df_obj
+
 
     def link_attributes_to_terms(
         self,
