@@ -2638,7 +2638,7 @@ class Fusion:
             frequency (str | None): Reporting frequency (e.g., Monthly, Quarterly). This is mandatory field for report creation.
             category (str | None): Main classification of the report. This is mandatory field for report creation.
             sub_category (str | None): Sub-classification under the main category. This is mandatory field for report creation.
-            business_domain (str): Business domain string 
+            business_domain (str): Business domain string. This is mandatory field for report creation.
             owner_node (dict[str, str] | None): {"name","type"} for the owner node. This is mandatory field for report creation.
             publisher_node (dict[str, Any] | None): {"name","type"} (+ optional {"publisher_node_identifier"}).
             regulatory_related (bool | None): Regulatory-designated flag. This is mandatory field for report creation.

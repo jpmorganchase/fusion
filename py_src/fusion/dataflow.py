@@ -225,7 +225,7 @@ class Dataflow:
     def validate(self) -> None:
         """Validate that required fields exist.
 
-        (Only checks presence of key structures; detailed value validation is left to the API.)
+        Only checks presence of key structures; detailed value validation is left to the API.
         """
         required_fields = ["providerNode", "consumerNode"]
         missing = [f for f in required_fields if getattr(self, f, None) in [None, ""]]

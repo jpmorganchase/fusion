@@ -12,36 +12,36 @@ from fusion.report import Report, Reports, ReportsWrapper
 def test_report_basic_fields() -> None:
     report = Report(
         title="Quarterly Report",
-        owner_node={"name": "Node1", "type": "User Tool"},
-        publisher_node={"name": "Dash1", "type": "Intelligent Solutions"},
+        ownerNode={"name": "Node1", "type": "User Tool"},
+        publisherNode={"name": "Dash1", "type": "Intelligent Solutions"},
         description="Quarterly risk analysis",
         frequency="Quarterly",
         category="Risk",
-        sub_category="Ops",
-        business_domain="CDO",
-        regulatory_related=True,
+        subCategory="Ops",
+        businessDomain="CDO",
+        regulatoryRelated=True,
     )
     assert report.title == "Quarterly Report"
-    assert report.owner_node is not None
-    assert report.owner_node["name"] == "Node1"
-    assert report.business_domain == "CDO"
+    assert report.ownerNode is not None
+    assert report.ownerNode["name"] == "Node1"
+    assert report.businessDomain == "CDO"
 
 
 def test_report_to_dict() -> None:
     report = Report(
         title="Sample Report",
-        owner_node={"name": "X", "type": "User Tool"},
-        publisher_node={
+        ownerNode={"name": "X", "type": "User Tool"},
+        publisherNode={
             "name": "Y",
             "type": "Intelligent Solutions",
-            "publisher_node_identifier": "seal:app:1",
+            "publisherNodeIdentifier": "seal:app:1",
         },
         description="Some desc",
         frequency="Monthly",
         category="Cat",
-        sub_category="Sub",
-        business_domain="CDO",
-        regulatory_related=False,
+        subCategory="Sub",
+        businessDomain="CDO",
+        regulatoryRelated=False,
     )
     result = report.to_dict()
     assert result["title"] == "Sample Report"
@@ -58,12 +58,12 @@ def test_report_validation_raises() -> None:
         description="",
         frequency="",
         category="",
-        sub_category="",
-        business_domain="",
-        regulatory_related=True,
+        subCategory="",
+        businessDomain="",
+        regulatoryRelated=True,
         # deliberately omit/leave invalid nodes to trigger validation
-        owner_node=None,
-        publisher_node=None,
+        ownerNode=None,
+        publisherNode=None,
     )
     with pytest.raises(ValueError, match="Missing required fields"):
         report.validate()
@@ -71,15 +71,15 @@ def test_report_validation_raises() -> None:
 
 def test_report_from_dict() -> None:
     data = {
-        "Title": "Dict Report",
-        "Description": "Dict desc",
-        "Frequency": "Daily",
-        "Category": "Cat",
-        "SubCategory": "Sub",
-        "BusinessDomain": "CDO",
-        "RegulatoryRelated": True,
-        "OwnerNode": {"name": "OWN", "type": "User Tool"},
-        "PublisherNode": {
+        "title": "Dict Report",
+        "description": "Dict desc",
+        "frequency": "Daily",
+        "category": "Cat",
+        "subCategory": "Sub",
+        "businessDomain": "CDO",
+        "regulatoryRelated": True,
+        "ownerNode": {"name": "OWN", "type": "User Tool"},
+        "publisherNode": {
             "name": "PUB",
             "type": "Intelligent Solutions",
             "publisherNodeIdentifier": "pid-1",
@@ -89,8 +89,8 @@ def test_report_from_dict() -> None:
     assert isinstance(report, Report)
     assert report.title == "Dict Report"
     assert report.frequency == "Daily"
-    assert report.publisher_node is not None
-    assert report.publisher_node["publisher_node_identifier"] == "pid-1"
+    assert report.publisherNode is not None
+    assert report.publisherNode["publisherNodeIdentifier"] == "pid-1"
 
 
 def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
@@ -109,11 +109,11 @@ def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     assert isinstance(reports, Reports)
     assert len(reports) == 1
     assert reports[0].title == "TestReport"
-    assert reports[0].owner_node is not None
-    assert reports[0].owner_node["name"] == "App1"
-    assert reports[0].publisher_node is not None
-    assert reports[0].publisher_node["name"] == "Dash1"
-    assert reports[0].publisher_node["publisher_node_identifier"] == "pub-123"
+    assert reports[0].ownerNode is not None
+    assert reports[0].ownerNode["name"] == "App1"
+    assert reports[0].publisherNode is not None
+    assert reports[0].publisherNode["name"] == "Dash1"
+    assert reports[0].publisherNode["publisherNodeIdentifier"] == "pub-123"
 
 
 def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
@@ -137,11 +137,11 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     reports = wrapper.from_object(source)
     assert isinstance(reports, Reports)
     assert reports[0].title == "ObjReport"
-    assert reports[0].regulatory_related is False
-    assert reports[0].owner_node is not None
-    assert reports[0].owner_node["name"] == "AppID"
-    assert reports[0].publisher_node is not None
-    assert reports[0].publisher_node["publisher_node_identifier"] == "pid-99"
+    assert reports[0].regulatoryRelated is False
+    assert reports[0].ownerNode is not None
+    assert reports[0].ownerNode["name"] == "AppID"
+    assert reports[0].publisherNode is not None
+    assert reports[0].publisherNode["publisherNodeIdentifier"] == "pid-99"
 
 
 # ---------- extra coverage: PATCH guard + create/update body rules ----------
@@ -154,11 +154,11 @@ def test_report_patch_rejects_id() -> None:
         description="d",
         frequency="f",
         category="c",
-        sub_category="s",
-        business_domain="bd",
-        regulatory_related=True,
-        owner_node={"name": "own", "type": "User Tool"},
-        publisher_node={"name": "pub", "type": "Intelligent Solutions"},
+        subCategory="s",
+        businessDomain="bd",
+        regulatoryRelated=True,
+        ownerNode={"name": "own", "type": "User Tool"},
+        publisherNode={"name": "pub", "type": "Intelligent Solutions"},
     )
 
     # attach a dummy client so _use_client passes before the 'id' guard triggers
@@ -168,7 +168,7 @@ def test_report_patch_rejects_id() -> None:
     report.client = cast(Fusion, _Dummy())
 
     with pytest.raises(ValueError, match="Cannot patch 'id'"):
-        report.patch({"id": "other"})
+        report.update_partial({"id": "other"})
 
 
 def test_report_create_excludes_id_and_sets_id() -> None:
@@ -179,11 +179,11 @@ def test_report_create_excludes_id_and_sets_id() -> None:
         description="d",
         frequency="f",
         category="c",
-        sub_category="s",
-        business_domain="bd",
-        regulatory_related=True,
-        owner_node={"name": "own", "type": "User Tool"},
-        publisher_node={"name": "pub", "type": "Intelligent Solutions"},
+        subCategory="s",
+        businessDomain="bd",
+        regulatoryRelated=True,
+        ownerNode={"name": "own", "type": "User Tool"},
+        publisherNode={"name": "pub", "type": "Intelligent Solutions"},
     )
 
     class _Resp:
@@ -235,11 +235,11 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
         description="d",
         frequency="f",
         category="c",
-        sub_category="s",
-        business_domain="bd",
-        regulatory_related=False,
-        owner_node={"name": "own", "type": "User Tool"},
-        publisher_node={"name": "pub", "type": "Intelligent Solutions"},
+        subCategory="s",
+        businessDomain="bd",
+        regulatoryRelated=False,
+        ownerNode={"name": "own", "type": "User Tool"},
+        publisherNode={"name": "pub", "type": "Intelligent Solutions"},
     )
 
     class _Resp:
