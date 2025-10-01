@@ -35,17 +35,59 @@ class Report(metaclass=CamelCaseMeta):
     """
     Fusion Report class for managing report metadata.
 
-    Internally stores fields in snake_case; emits camelCase to the API.
+    Attributes (snake_case in code; camelCase on the wire via `to_dict()`):
+        id (str | None): Server-assigned report identifier. Required for update/patch/delete.
+        title (str | None): Title of the report or process.
+        description (str | None): Description of the report.
+        frequency (str | None): Reporting frequency (e.g., Monthly, Quarterly).
+        category (str | None): Primary category classification.
+        sub_category (str | None): Sub-category under the main category.
+        business_domain (str | None): Business domain string (e.g., "CDAO Office").
+        regulatory_related (bool | None): Whether the report is regulatory-related.
 
-    Required:
-        title, description, frequency, category, sub_category,
-        business_domain, regulatory_related, owner_node, publisher_node
+        owner_node (dict[str, str] | None): Owner node with keys {"name", "type"}.
+        publisher_node (dict[str, Any] | None): Publisher node with keys {"name", "type"} and optional
+            {"publisher_node_identifier"}.
+
+        source_system (dict[str, Any] | None): Source system object if provided.
+
+        lob (str | None): Line of Business.
+        sub_lob (str | None): Subdivision of the Line of Business.
+        is_bcbs239_program (bool | None): Flag indicating BCBS 239 program inclusion.
+        risk_stripe (str | None): Stripe under risk category.
+        risk_area (str | None): The area of risk addressed.
+        sap_code (str | None): Associated SAP cost code.
+        tier_designation (str | None): Tier designation (e.g., Tier 1, Non Tier 1).
+        region (str | None): Associated region.
+        mnpi_indicator (bool | None): Whether report contains MNPI.
+        country_of_reporting_obligation (str | None): Country of regulatory obligation.
+        primary_regulator (str | None): Main regulatory authority.
+
+        _client (Fusion | None): Fusion client for making API calls (injected automatically).
+
+    Examples:
+        Create with Fusion factory and upload:
+
+        >>> from fusion import Fusion
+        >>> fusion = Fusion()
+        >>> report = fusion.report(
+        ...     title="Quarterly Risk Report",
+        ...     description="Quarterly risk analysis",
+        ...     frequency="Quarterly",
+        ...     category="Risk",
+        ...     sub_category="Ops",
+        ...     business_domain="CDAO",
+        ...     regulatory_related=True,
+        ...     owner_node={"name": "110437", "type": "Application (SEAL)"},
+        ...     publisher_node={"name": "110465", "type": "Application (SEAL)"},
+        ... )
+        >>> report.create()
     """
 
     # Server id for existing reports
     id: str | None = None
 
-    # Required (snake_case)
+    # Required
     title: str | None = None
     description: str | None = None
     frequency: str | None = None
@@ -78,6 +120,7 @@ class Report(metaclass=CamelCaseMeta):
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
+        """Normalize certain text fields after initialization."""
         self.title = tidy_string(self.title or "") if self.title is not None else None
         self.description = tidy_string(self.description or "") if self.description is not None else None
         for n in (
@@ -96,25 +139,63 @@ class Report(metaclass=CamelCaseMeta):
             if isinstance(v, str):
                 setattr(self, n, tidy_string(v))
 
+    def __getattr__(self, name: str) -> Any:
+        """Allow camelCase access for snake_case attributes."""
+        snake_name = camel_to_snake(name)
+        return self.__dict__.get(snake_name, None)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Allow camelCase assignment to snake_case attributes."""
+        if name == "client":
+            object.__setattr__(self, name, value)
+        else:
+            snake_name = camel_to_snake(name)
+            self.__dict__[snake_name] = value
+
     @property
     def client(self) -> Fusion | None:
+        """Return the bound Fusion client, if any."""
         return self._client
 
     @client.setter
     def client(self, client: Fusion | None) -> None:
+        """Bind a Fusion client to the Report instance."""
         self._client = client
 
     def _use_client(self, client: Fusion | None) -> Fusion:
+        """Resolve the client to use (argument overrides bound client)."""
         res = self._client if client is None else client
         if res is None:
             raise ValueError("A Fusion client object is required.")
         return res
 
-    # ---------- loaders & converters ----------
+    # -------------------- conversions --------------------
 
     @classmethod
     def from_dict(cls: type[Report], data: dict[str, Any]) -> Report:
-        """Instantiate a Report object from a dictionary (accepts camelCase or snake_case)."""
+        """Instantiate a Report object from a dictionary.
+
+        Accepts camelCase or snake_case keys and normalizes empty strings to None.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> data = {
+            ...     "title": "Dict Report",
+            ...     "description": "From dict",
+            ...     "frequency": "Daily",
+            ...     "category": "Cat",
+            ...     "sub_category": "Sub",
+            ...     "business_domain": "CDAO",
+            ...     "regulatory_related": True,
+            ...     "owner_node": {"name": "OWN", "type": "User Tool"},
+            ...     "publisher_node": {"name": "PUB", "type": "Application (SEAL)"},
+            ... }
+            >>> report = Report.from_dict(data)
+            >>> report.client = fusion
+            >>> report.to_dict()["title"]
+            'Dict Report'
+        """
 
         def normalize_value(val: Any) -> Any:
             if isinstance(val, str) and val.strip() == "":
@@ -127,20 +208,20 @@ class Report(metaclass=CamelCaseMeta):
                 key = camel_to_snake(k)
                 if isinstance(v, dict):
                     converted[key] = convert_keys(v)
-                elif isinstance(v, list):
-                    converted[key] = [convert_keys(i) if isinstance(i, dict) else i for i in v]
                 else:
                     converted[key] = normalize_value(v)
             return converted
 
-        converted_data = convert_keys(data)
+        converted = convert_keys(data)
 
-        # explicit boolean normalization
-        if "is_bcbs239_program" in converted_data:
-            converted_data["is_bcbs239_program"] = make_bool(converted_data["is_bcbs239_program"])
+        # explicit boolean normalization if someone sent strings
+        if "is_bcbs239_program" in converted:
+            converted["is_bcbs239_program"] = make_bool(converted["is_bcbs239_program"])
+        if "regulatory_related" in converted:
+            converted["regulatory_related"] = make_bool(converted["regulatory_related"])
 
         valid = {f.name for f in fields(cls)}
-        filtered = {k: v for k, v in converted_data.items() if k in valid}
+        filtered = {k: v for k, v in converted.items() if k in valid}
 
         report = cls.__new__(cls)
         for fdef in fields(cls):
@@ -149,7 +230,29 @@ class Report(metaclass=CamelCaseMeta):
         return report
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert the Report instance to a dictionary (camelCase keys, ready for API)."""
+        """Convert the Report instance to a dictionary (camelCase keys, ready for API).
+
+        Returns:
+            dict[str, Any]: Report metadata as a dictionary with camelCase keys.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> report = fusion.report(
+            ...     title="Quarterly Risk Report",
+            ...     description="Quarterly risk analysis",
+            ...     frequency="Quarterly",
+            ...     category="Risk",
+            ...     sub_category="Ops",
+            ...     business_domain="CDAO",
+            ...     regulatory_related=True,
+            ...     owner_node={"name": "110437", "type": "Application (SEAL)"},
+            ...     publisher_node={"name": "110465", "type": "Application (SEAL)"},
+            ... )
+            >>> payload = report.to_dict()
+            >>> payload["title"]
+            'Quarterly Risk Report'
+        """
 
         def _camelize(obj: Any) -> Any:
             if isinstance(obj, dict):
@@ -157,10 +260,13 @@ class Report(metaclass=CamelCaseMeta):
                 for k, v in obj.items():
                     if k.startswith("_"):
                         continue
+                    # special cases for API field names
                     if k == "is_bcbs239_program":
                         ck = "isBCBS239Program"
                     elif k == "regulatory_related":
                         ck = "regulatoryRelated"
+                    elif k == "publisher_node_identifier":
+                        ck = "publisherNodeIdentifier"
                     else:
                         ck = snake_to_camel(k)
                     out[ck] = _camelize(v)
@@ -185,8 +291,11 @@ class Report(metaclass=CamelCaseMeta):
 
         return payload
 
+    # -------------------- helpers --------------------
+
     @staticmethod
     def _str_or_none(raw: Any) -> str | None:
+        """Return string form or None, collapsing floats like 5.0 -> '5'."""
         if raw is None:
             return None
         if isinstance(raw, float) and raw.is_integer():
@@ -195,7 +304,29 @@ class Report(metaclass=CamelCaseMeta):
 
     @classmethod
     def from_dataframe(cls, data: pd.DataFrame, client: Fusion | None = None) -> list[Report]:
-        """Create a list of Report objects from a DataFrame, applying permanent column mapping."""
+        """Create a list of Report objects from a DataFrame, applying permanent column mapping.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> import pandas as pd
+            >>> df = pd.DataFrame([{
+            ...   "Report/Process Name": "R1",
+            ...   "Report/Process Description": "desc",
+            ...   "Frequency": "Monthly",
+            ...   "Category": "Risk",
+            ...   "Sub Category": "Ops",
+            ...   "businessDomain": "CDAO",
+            ...   "ownerNode_name": "110437",
+            ...   "ownerNode_type": "Application (SEAL)",
+            ...   "publisherNode_name": "110465",
+            ...   "publisherNode_type": "Application (SEAL)",
+            ...   "Regulatory Designated": "Yes",
+            ... }])
+            >>> reports = Report.from_dataframe(df, client=fusion)
+            >>> reports[0].title
+            'R1'
+        """
         df_df = data.rename(columns=Report.COLUMN_MAPPING)  # type: ignore[attr-defined]
         df_df = df_df.replace([np.nan, np.inf, -np.inf], None)
         df_df = df_df.where(df_df.notna(), None)
@@ -204,18 +335,18 @@ class Report(metaclass=CamelCaseMeta):
         for _, row in df_df.iterrows():
             report_data: dict[str, Any] = row.to_dict()
 
-            # Build owner/publisher nodes from agreed CSV column names
+            # Build owner/publisher nodes (using agreed CSV column names)
             def build_node(d: dict[str, Any], name_key: str, type_key: str) -> dict[str, Any] | None:
                 name_val = Report._str_or_none(d.pop(name_key, None))
-                type_val = d.pop(type_key, None)  # pass through as-is
+                type_val = d.pop(type_key, None)
                 if name_val or type_val:
                     return {"name": name_val or "", "type": type_val or ""}
                 return None
 
-            publisher_node = build_node(report_data, "publisherNode_name", "publisherNode_type")
-            owner_node = build_node(report_data, "ownerNode_name", "ownerNode_type")
+            publisher_node = build_node(report_data, "publisher_node_name", "publisher_node_type")
+            owner_node = build_node(report_data, "owner_node_name", "owner_node_type")
 
-            # Funnel flat publisher_node_identifier into nested publisher_node
+            # Funnel flat "publisher_node_identifier" into nested publisher_node (from CSV header mapping)
             pub_ident = Report._str_or_none(report_data.pop("publisher_node_identifier", None))
             if pub_ident:
                 if publisher_node is None:
@@ -247,19 +378,37 @@ class Report(metaclass=CamelCaseMeta):
                 report_obj.validate()
                 reports.append(report_obj)
             except ValueError as e:
-                logger.warning(f"Skipping invalid row: {e}")
+                logger.warning("Skipping invalid row: %s", e)
 
         return reports
 
     @classmethod
     def from_csv(cls, file_path: str, client: Fusion | None = None) -> list[Report]:
-        """Create a list of Report objects from a CSV file, applying permanent column mapping."""
+        """Create a list of Report objects from a CSV file, applying permanent column mapping.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> reports = Report.from_csv("path/to/reports.csv", client=fusion)
+            >>> len(reports) > 0
+            True
+        """
         data = pd.read_csv(file_path)
         return cls.from_dataframe(data, client=client)
 
     @classmethod
     def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None) -> Reports:
-        """Unified loader for Reports from CSV path, DataFrame, list of dicts, or JSON string."""
+        """Unified loader for Reports from CSV path, DataFrame, list of dicts, or JSON string.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> json_str = '[{ "title": "R1", "description": "d", "frequency": "Monthly", 
+            "category": "Risk", "sub_category": "Ops", "business_domain": "CDAO", "regulatory_related": true }]'
+            >>> reports = Report.from_object(json_str, client=fusion)
+            >>> isinstance(reports, Reports)
+            True
+        """
         if isinstance(source, pd.DataFrame):
             return Reports(cls.from_dataframe(source, client=client))
 
@@ -281,9 +430,14 @@ class Report(metaclass=CamelCaseMeta):
 
         raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
 
-    # ---------- validation & API ----------
+    # -------------------- validation & API --------------------
 
     def validate(self) -> None:
+        """Validate presence of required fields and node sub-keys.
+
+        Raises:
+            ValueError: If required fields are missing.
+        """
         required_fields = [
             "title",
             "description",
@@ -308,10 +462,35 @@ class Report(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Upload a new report to a Fusion catalog."""
+        """Upload a new report to a Fusion catalog.
+
+        Args:
+            client (Fusion | None, optional): Fusion client (defaults to the bound client).
+            return_resp_obj (bool, optional): If True then return the response object.
+
+        Returns:
+            requests.Response | None: Response object if requested, otherwise None.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> report = fusion.report(
+            ...     title="Monthly Management Report",
+            ...     description="Pack sent to management",
+            ...     frequency="Monthly",
+            ...     category="Finance",
+            ...     sub_category="Management",
+            ...     business_domain="CDAO",
+            ...     regulatory_related=False,
+            ...     owner_node={"name": "110437", "type": "Application (SEAL)"},
+            ...     publisher_node={"name": "110465", "type": "Application (SEAL)"},
+            ... )
+            >>> _ = report.create(return_resp_obj=True)
+        """
         client = self._use_client(client)
         payload = self.to_dict()
-        payload.pop("id", None)  # CREATE must not send id
+        # CREATE must not send id
+        payload.pop("id", None)
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports"
         resp: requests.Response = client.session.post(url, json=payload)
@@ -325,14 +504,40 @@ class Report(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Update this report with the current object state."""
+        """Update this report with the current object state.
+
+        Args:
+            client (Fusion | None, optional): Fusion client (defaults to the bound client).
+            return_resp_obj (bool, optional): If True then return the response object.
+
+        Returns:
+            requests.Response | None: Response object if requested, otherwise None.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> report = fusion.report(
+            ...     id="r-123",
+            ...     title="Monthly Management Report",
+            ...     description="Updated description",
+            ...     frequency="Monthly",
+            ...     category="Finance",
+            ...     sub_category="Management",
+            ...     business_domain="CDAO",
+            ...     regulatory_related=False,
+            ...     owner_node={"name": "110437", "type": "Application (SEAL)"},
+            ...     publisher_node={"name": "110465", "type": "Application (SEAL)"},
+            ... )
+            >>> _ = report.update()
+        """
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Report ID is required on the object (set self.id before update()).")
 
         payload = self.to_dict()
+        # Exclude fields not accepted by PUT body
         payload.pop("id", None)
-        payload.pop("title", None)  # PUT schema does not accept 'title' for your API
+        payload.pop("title", None)  # PUT schema does not accept 'title' in your setup
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{self.id}"
         resp: requests.Response = client.session.put(url, json=payload)
@@ -345,32 +550,64 @@ class Report(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Partially update the report (accepts snake_case or camelCase keys)."""
+        """Partially update the report via PATCH.
+
+        Args:
+            fields_to_update (dict[str, Any]): Dictionary of fields to update. Keys may be snake_case or camelCase.
+            client (Fusion | None, optional): Fusion client (defaults to the bound client).
+            return_resp_obj (bool, optional): If True then return the response object.
+
+        Returns:
+            requests.Response | None: Response object if requested, otherwise None.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> report = fusion.report(
+            ...     id="r-123",
+            ...     title="Monthly Management Report",
+            ...     description="Initial",
+            ...     frequency="Monthly",
+            ...     category="Finance",
+            ...     sub_category="Management",
+            ...     business_domain="CDAO",
+            ...     regulatory_related=True,
+            ...     owner_node={"name": "110437", "type": "Application (SEAL)"},
+            ...     publisher_node={"name": "110465", "type": "Application (SEAL)"},
+            ... )
+            >>> report.update_partial({
+            ...     "description": "Now updated via patch",
+            ...     "publisher_node": {"publisher_node_identifier": "seal:app:123"},
+            ... })
+        """
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Report ID is required on the object (set self.id before patch()).")
 
+        # hard block attempts to change 'id' via PATCH (path param only)
         if any(camel_to_snake(k) == "id" for k in fields_to_update):
             raise ValueError("Cannot patch 'id'; it is specified via the URL path.")
 
         payload: dict[str, Any] = {}
         for k, v in fields_to_update.items():
+            sk = camel_to_snake(k)
+
             # boolean specials
-            if k in ("is_bcbs239_program", "isBCBS239Program"):
+            if sk == "is_bcbs239_program":
                 payload["isBCBS239Program"] = v
                 continue
-            if k in ("regulatory_related", "regulatoryRelated"):
+            if sk == "regulatory_related":
                 payload["regulatoryRelated"] = v
                 continue
 
-            # flat publisher_node_identifier -> nested publisherNode.publisherNodeIdentifier
-            if k in ("publisher_node_identifier", "publisherNodeIdentifier"):
+            # flat "publisher_node_identifier" -> nested publisherNode.publisherNodeIdentifier
+            if sk == "publisher_node_identifier":
                 node = payload.setdefault("publisherNode", {})
                 node["publisherNodeIdentifier"] = v
                 continue
 
             # nested publisher_node dict (snake or camel inside)
-            if k in ("publisher_node", "publisherNode"):
+            if sk == "publisher_node":
                 if not isinstance(v, dict):
                     raise TypeError("publisher_node must be a dict with keys like name/type/publisher_node_identifier")
                 node = payload.setdefault("publisherNode", {})
@@ -379,8 +616,9 @@ class Report(metaclass=CamelCaseMeta):
                 continue
 
             # default top-level
-            payload[snake_to_camel(camel_to_snake(k))] = v
+            payload[snake_to_camel(sk)] = v
 
+        # belt-and-suspenders: ensure no 'id' sneaks into body
         payload.pop("id", None)
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{self.id}"
@@ -393,7 +631,25 @@ class Report(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Delete this report using self.id."""
+        """Delete this report using self.id.
+
+        Args:
+            client (Fusion | None, optional): Fusion client (defaults to the bound client).
+            return_resp_obj (bool, optional): If True then return the response object.
+
+        Returns:
+            requests.Response | None: Response object if requested, otherwise None.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> report = fusion.report(id="r-123", title="T", description="D", frequency="Monthly",
+            ...                        category="Finance", sub_category="Mgmt",
+            ...                        business_domain="CDAO", regulatory_related=False,
+            ...                        owner_node={"name": "110437", "type": "Application (SEAL)"},
+            ...                        publisher_node={"name": "110465", "type": "Application (SEAL)"})
+            >>> report.delete()
+        """
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Report ID is required on the object (set self.id before delete()).")
@@ -401,6 +657,8 @@ class Report(metaclass=CamelCaseMeta):
         resp: requests.Response = client.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
+    # -------------------- terms linking --------------------
 
     class AttributeTermMapping(TypedDict):
         attribute: dict[str, str]
@@ -415,7 +673,20 @@ class Report(metaclass=CamelCaseMeta):
         client: Fusion,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Link attributes to business terms for a report."""
+        """Link attributes to business terms for a report.
+
+        Can be called without an instantiated Report.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> mappings = [{
+            ...     "attribute": {"name": "attr1"},
+            ...     "term": {"name": "term1"},
+            ...     "isKDE": False
+            ... }]
+            >>> _ = Report.link_attributes_to_terms("r-123", mappings, client=fusion, return_resp_obj=True)
+        """
         url = (
             f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
         )
@@ -437,10 +708,16 @@ Report.COLUMN_MAPPING = {  # type: ignore[attr-defined]
 
     # Business domain
     "businessDomain": "business_domain",
-    # Optional backward-compat (old sheet header) – keep for now
+    # Optional backward-compat (old sheet header)
     "CDO Office": "business_domain",
 
-    # NEW: publisherNode identifier CSV header → nested field (flat first)
+    # Node columns for building owner_node / publisher_node
+    "ownerNode_name": "owner_node_name",
+    "ownerNode_type": "owner_node_type",
+    "publisherNode_name": "publisher_node_name",
+    "publisherNode_type": "publisher_node_type",
+
+    # NEW: publisherNode identifier CSV header → nested field
     "publisherNode_publisherNodeIdentifier": "publisher_node_identifier",
 
     # NEW: source system CSV header → field
@@ -461,6 +738,8 @@ Report.COLUMN_MAPPING = {  # type: ignore[attr-defined]
 
 
 class Reports:
+    """Container for a list of Report objects with convenience loaders."""
+
     def __init__(self, reports: list[Report] | None = None) -> None:
         self.reports = reports or []
         self._client: Fusion | None = None
@@ -476,36 +755,68 @@ class Reports:
 
     @property
     def client(self) -> Fusion | None:
+        """Return the bound client for all contained reports (if any)."""
         return self._client
 
     @client.setter
     def client(self, client: Fusion | None) -> None:
+        """Bind a client to this collection and all contained reports."""
         self._client = client
         for report in self.reports:
             report.client = client
 
     @classmethod
     def from_csv(cls, file_path: str, client: Fusion | None = None) -> Reports:
-        """Load Reports from a CSV file path."""
+        """Load Reports from a CSV file path.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> reports = Reports.from_csv("path/to/reports.csv", client=fusion)
+            >>> isinstance(reports, Reports)
+            True
+        """
         data = pd.read_csv(file_path)
         return cls.from_dataframe(data, client=client)
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame, client: Fusion | None = None) -> Reports:
-        """Load Reports from a pandas DataFrame."""
+        """Load Reports from a pandas DataFrame.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> import pandas as pd
+            >>> reports = Reports.from_dataframe(pd.DataFrame([{"Report/Process Name": "R1"}]), client=fusion)
+            >>> isinstance(reports, Reports)
+            True
+        """
         report_objs = Report.from_dataframe(df, client=client)
         obj = cls(report_objs)
         obj.client = client
         return obj
 
     def create_all(self) -> None:
-        """Create all Report objects in this collection."""
+        """Create all Report objects in this collection.
+
+        Examples:
+            >>> # assuming 'reports' is a Reports collection with client bound
+            >>> # reports.create_all()
+        """
         for report in self.reports:
             report.create()
 
     @classmethod
     def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None) -> Reports:
-        """Load Reports from DataFrame, list of dicts, .csv path, or JSON string."""
+        """Load Reports from DataFrame, list of dicts, .csv path, or JSON string.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> reports = Reports.from_object('[{"title": "R1"}]', client=fusion)
+            >>> isinstance(reports, Reports)
+            True
+        """
         import json
 
         if isinstance(source, pd.DataFrame):
@@ -527,6 +838,8 @@ class Reports:
 
 
 class ReportsWrapper(Reports):
+    """A Reports facade that captures and reuses a bound Fusion client."""
+
     def __init__(self, client: Fusion) -> None:
         super().__init__([])
         self.client = client
