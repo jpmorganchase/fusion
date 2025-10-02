@@ -64,7 +64,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             Connection type for the dataflow.
 
         _client (Fusion | None):
-            Fusion client (injected by Fusion factory).
+            Fusion client .
     """
 
     provider_node: dict[str, str] | None = None
@@ -101,7 +101,7 @@ class Dataflow(metaclass=CamelCaseMeta):
 
 
     def __getattr__(self, name: str) -> Any:
-        """Allow camelCase attribute access (e.g., providerNode) for snake_case fields."""
+        """Allow camelCase attribute access (e.g., providerNode)"""
         snake = camel_to_snake(name)
         if snake in self.__dict__:
             return self.__dict__[snake]
@@ -142,7 +142,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             raise ValueError("A Fusion client object is required.")
         return res
 
-    # --- constructors ---
 
     @classmethod
     def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
@@ -160,7 +159,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             ...     "connectionType": "Consumes From"
             ... })
         """
-        # Map incoming keys to snake_case, keep only known dataclass fields
         keys = {f.name for f in fields(cls)}
         mapped = {camel_to_snake(k): v for k, v in data.items()}
         filtered = {k: v for k, v in mapped.items() if k in keys}
@@ -198,8 +196,6 @@ class Dataflow(metaclass=CamelCaseMeta):
     def from_object(self, dataflow_source: Dataflow | dict[str, Any] | str | pd.Series) -> Dataflow:  # type: ignore[type-arg]
         """Instantiate a Dataflow from a Dataflow, dict, JSON-object string, or pandas Series.
 
-        Note: CSV input is not supported here.
-
         Examples:
             >>> from fusion import Fusion
             >>> fusion = Fusion()
@@ -226,7 +222,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         obj.client = self._client
         return obj
 
-    # --- validation ---
 
     def validate(self) -> None:
         """Validate that required fields exist."""
@@ -246,7 +241,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         if not self.connection_type:
             raise ValueError("connection_type is required for create().")
 
-    # --- serialization ---
 
     def to_dict(
         self,
@@ -280,7 +274,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             out[snake_to_camel(k)] = v
         return out
 
-    # --- API calls ---
 
     def create(
         self,
@@ -355,8 +348,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             raise ValueError(
                 f"Cannot update {sorted(used)} via PATCH; provider/consumer nodes are immutable for updates."
             )
-
-        # Normalize strings/empties like __post_init__
         def norm_val(v: Any) -> Any:
             if isinstance(v, str):
                 s = tidy_string(v)
@@ -370,7 +361,7 @@ class Dataflow(metaclass=CamelCaseMeta):
                 return [norm_tree(i) for i in o]
             return norm_val(o)
 
-        # Accept snake or camel in 'changes'; send camel to API
+
         snake_changes = {camel_to_snake(k): v for k, v in changes.items()}
         patch_body = {snake_to_camel(k): norm_tree(v) for k, v in snake_changes.items()}
 
