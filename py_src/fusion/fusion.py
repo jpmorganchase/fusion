@@ -196,7 +196,7 @@ class Fusion:
                         for method_name in dir(Fusion)
                         if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
                     ]
-                    + [
+                    + [ 
                         (getattr(Fusion, p).__doc__ or "").split("\n")[0]
                         for p in dir(Fusion)
                         if isinstance(getattr(Fusion, p), property)
@@ -979,7 +979,7 @@ class Fusion:
 
         n_par = cpu_count(n_par)
 
-        download_spec: list[dict[str, Any]]  = [
+        download_spec: list[dict[str, Any]] = [
             {
                 "lfs": self.fs,
                 "rpath": distribution_to_url(
@@ -2373,12 +2373,19 @@ class Fusion:
             ...     frequency="Monthly",
             ...     category="Risk",
             ...     sub_category="Credit Risk",
-            ...     data_node_id={"id": "node123"},
+            ...     business_domain="CDAO Office",
             ...     regulatory_related=True,
-            ...     domain={"id": "domain123"}
+            ...     owner_node={"name": "APP-123", "type": "Application (SEAL)"},
+            ...     publisher_node={
+            ...         "name": "DASH-01",
+            ...         "type": "Intelligent Solutions",
+            ...         "publisher_node_identifier": "seal:app:APP-123"
+            ...     },
             ... )
+            >>> new_report.create()
         """
         return ReportsWrapper(client=self)
+
 
     def delete_datasetmembers(
         self,
@@ -2603,135 +2610,152 @@ class Fusion:
         members_df = pd.DataFrame(rows, columns=["identifier", "format"])
         return members_df
 
+
     def report(  # noqa: PLR0913
         self,
-        description: str,
-        title: str,
-        frequency: str,
-        category: str,
-        sub_category: str,
-        data_node_id: dict[str, str],
-        regulatory_related: bool,
-        domain: dict[str, str],
-        tier_type: str | None = None,
+        description: str | None = None,
+        title: str | None = None,
+        frequency: str | None = None,
+        category: str | None = None,
+        sub_category: str | None = None,
+        owner_node: dict[str, str] | None = None,
+        publisher_node: dict[str, Any] | None = None,
+        regulatory_related: bool | None = None,
+        business_domain: str | None = None,
         lob: str | None = None,
-        alternative_id: dict[str, str] | None = None,
         sub_lob: str | None = None,
         is_bcbs239_program: bool | None = None,
         risk_area: str | None = None,
         risk_stripe: str | None = None,
         sap_code: str | None = None,
+        source_system: dict[str, Any] | None = None,
+        id: str | None = None,  # noqa: A002
         **kwargs: Any,
     ) -> Report:
         """Instantiate a Report object with the current Fusion client attached.
 
         Args:
-            description (str): Description of the report.
-            title (str): Title of the report or process.
-            frequency (str): Reporting frequency (e.g., Monthly, Quarterly).
-            category (str): Main classification of the report.
-            sub_category (str): Sub-classification under the main category.
-            data_node_id (dict[str, str]): Associated data node details. Should include "name" and "dataNodeType".
-            regulatory_related (bool): Whether the report is regulatory-designated. This is a required field.
-            tier_type (str, optional): Tier classification (e.g., "Tier 1", "Non Tier 1").
-            lob (str, optional): Line of business.
-            alternative_id (dict[str, str], optional): Alternate identifiers for the report.
-            sub_lob (str, optional): Subdivision of the line of business.
-            is_bcbs239_program (bool, optional): Whether the report is part of the BCBS 239 program.
-            risk_area (str, optional): Risk area covered by the report.
-            risk_stripe (str, optional): Stripe or classification under the risk area.
-            sap_code (str, optional): SAP financial tracking code.
-            domain (dict[str, str | bool], optional): Domain details. Typically contains a "name" key.
-            **kwargs (Any): Additional optional fields such as:
-                - tier_designation (str)
-                - region (str)
-                - mnpi_indicator (bool)
-                - country_of_reporting_obligation (str)
-                - primary_regulator (str)
+            description (str | None): Detailed Description of the report.
+            This is mandatory field for report creation.
+            title (str | None): Title (Display Name) of the report.
+            This is mandatory field for report creation.
+            frequency (str | None): Frequency of the report.
+            This is mandatory field for report creation.
+            category (str | None): Category of the report. 
+            This is mandatory field for report creation.
+            sub_category (str | None): Sub-classification under the main category. 
+            This is mandatory field for report creation.
+            business_domain (str): Business domain string. This field cannot be blank if provided.
+            This is mandatory field for report creation.
+            owner_node (dict[str, str] | None): Owner node associated with the report.
+            {"name","type"} for the owner node.
+            This is mandatory field for report creation.
+            publisher_node (dict[str, Any] | None): Publisher node associated with the report. 
+            {"name","type"} (+ optional {"publisher_node_identifier"}).
+            regulatory_related (bool | None): Indicated whether the report is related to regulatory requirements.
+            This is mandatory field for report creation.
+            business_domain (str | None): Business domain string. This is mandatory field for report creation.
+            lob (str | None): Line of business.
+            sub_lob (str | None): Subdivision of the line of business.
+            is_bcbs239_program (bool | None): Indicates whether the report is associated with the BCBS 239 program.
+            risk_area (str | None): Risk area.
+            risk_stripe (str | None): Risk stripe.
+            sap_code (str | None): SAP code associated with the report.
+            source_system (dict[str, Any] | None): Source system details for the report.
+            id (str | None): Server-assigned report identifier (needed for update/patch/delete if already known).
+            **kwargs (Any): 
 
         Returns:
             Report: A Report object ready for API upload or further manipulation.
         """
         report_obj = Report(
+            id=id,
             title=title,
             description=description,
             frequency=frequency,
             category=category,
             sub_category=sub_category,
-            data_node_id=data_node_id,
+            business_domain=business_domain,
             regulatory_related=regulatory_related,
-            tier_type=tier_type,
+            owner_node=owner_node,
+            publisher_node=publisher_node,
             lob=lob,
-            alternative_id=alternative_id,
             sub_lob=sub_lob,
             is_bcbs239_program=is_bcbs239_program,
             risk_area=risk_area,
             risk_stripe=risk_stripe,
             sap_code=sap_code,
-            domain=domain,
+            source_system=source_system,
             **kwargs,
         )
         report_obj.client = self
         return report_obj
-
+  
+    
     def dataflow(  # noqa: PLR0913
-    self,
-    provider_node: dict[str, str] | None = None,
-    consumer_node: dict[str, str] | None = None,
-    description: str | None = None,
-    alternative_id: dict[str, Any] | None = None,
-    transport_type: str | None = None,
-    frequency: str | None = None,
-    start_time: str | None = None,
-    end_time: str | None = None,
-    boundary_sets: list[dict[str, Any]] | None = None,
-    data_assets: list[dict[str, Any]] | None = None,
-    id: str | None = None,  # noqa: A002
-    **kwargs: Any,  
-     ) -> Dataflow:
-        """Instantiate a Dataflow object bound to this Fusion client.
+        self,
+        provider_node: dict[str, str] | None = None,
+        consumer_node: dict[str, str] | None = None,
+        description: str | None = None,
+        transport_type: str | None = None,
+        frequency: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        datasets: list[dict[str, Any]] | None = None,
+        connection_type: str | None = None,
+        source_system: dict[str, Any] | None = None,
+        id: str | None = None,  # noqa: A002
+        **kwargs: Any,
+    ) -> Dataflow:
+        """Instantiate a Dataflow object with this client.
 
         You may instantiate with just an ``id`` (useful for ``update()``, ``update_fields()``, or ``delete()``);
-        however, **creating** a new data flow via ``create()`` requires valid provider/consumer nodes.
+        however, **creating** a new data flow via ``create()`` requires valid provider/consumer nodes and
+        a ``connection_type``.
 
         Args:
             provider_node (dict[str, str] | None, optional):
-                Provider/source node details. Expected keys: ``name`` and ``dataNodeType``.
+                Provider node of the dataflow. It must be distinct from the consumer node. Required for create().
+                Keys: ``name``, ``type``.
             consumer_node (dict[str, str] | None, optional):
-                Consumer/target node details. Expected keys: ``name`` and ``dataNodeType``.
+                Consumer node of the dataflow. It must be distinct from the provider node. Required for create().
+                Keys: ``name``, ``type``.
             description (str | None, optional):
-                Purpose/summary of the data flow (if provided, must not be blank).
-            alternative_id (dict[str, Any] | None, optional):
-                Alternative identifier object (e.g., ``{"value": "...", "domain": "...", "isSor": true}``).
+                Specifies the purpose of the data movement.
             transport_type (str | None, optional):
-                Transport mechanism (e.g., ``"API"``, ``"FILE TRANSFER"``, ``"SYNCHRONOUS MESSAGING"``).
+                Transport type  
             frequency (str | None, optional):
-                Flow cadence (e.g., ``"DAILY"``, ``"WEEKLY"``, ``"MONTHLY"``, etc.).
+                Frequency of the data flow
             start_time (str | None, optional):
-                Scheduled start time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
+                Scheduled start time of the Dataflow.
             end_time (str | None, optional):
-                Scheduled end time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
-            boundary_sets (list[dict[str, Any]] | None, optional):
-                Boundary set objects associated with the flow.
-            data_assets (list[dict[str, Any]] | None, optional):
-                Related data asset objects.
+                Scheduled end time of the Dataflow.
+            datasets (list[dict[str, Any]] | None, optional):
+                Specifies a list of datasets involved in the data flow, requiring a visibility license for each.
+                Maximum limit is of 100 datasets per dataflow.
+                An error will be thrown if the list contains duplicate entries. Defaults to empty list.
+            connection_type (str | None, optional):
+                Connection type for the dataflow.
+            source_system (dict[str, Any] | None, optional):
+                Source System of the data flow.
             id (str | None, optional):
                 Server-assigned identifier; required for ``update()``, ``update_fields()``, and ``delete()``.
-            **kwargs (Any):
-                Additional fields supported by the API; passed through to the Dataflow dataclass.
+            **kwargs (Any)
 
         Returns:
-            Dataflow: A Dataflow instance with this Fusion client attached.
+            Dataflow: A Dataflow instance with Fusion client attached.
 
         Examples:
-            Create a handle with full details (ready for ``create()``):
+            Create a handle ready for ``create()``:
 
             >>> flow = fusion.dataflow(
-            ...     provider_node={"name": "CRM_DB", "dataNodeType": "Database"},
-            ...     consumer_node={"name": "DWH", "dataNodeType": "Database"},
+            ...     provider_node={"name": "CRM_DB", "type": "Database"},
+            ...     consumer_node={"name": "DWH", "type": "Database"},
             ...     description="CRM → DWH nightly load",
             ...     frequency="DAILY",
             ...     transport_type="API",
+            ...     connection_type="Consumes From",
+            ...     source_system={"system": "Airflow"},
             ... )
 
             Create a handle for an existing flow by ID (for update/delete):
@@ -2740,16 +2764,16 @@ class Fusion:
             >>> flow.delete()
         """
         df_obj = Dataflow(
-            providerNode=provider_node,
-            consumerNode=consumer_node,
+            provider_node=provider_node,
+            consumer_node=consumer_node,
             description=description,
-            alternativeId=alternative_id,
-            transportType=transport_type,
+            transport_type=transport_type,
             frequency=frequency,
-            startTime=start_time,
-            endTime=end_time,
-            boundarySets=boundary_sets or [],
-            dataAssets=data_assets or [],
+            start_time=start_time,
+            end_time=end_time,
+            datasets=datasets or [],
+            connection_type=connection_type,
+            source_system=source_system,
             id=id,
             **kwargs,
         )
