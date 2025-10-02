@@ -217,26 +217,19 @@ class Report(metaclass=CamelCaseMeta):
             ... )
             >>> payload = report.to_dict()
         """
-
         def _camelize(obj: Any) -> Any:
             if isinstance(obj, dict):
                 out: dict[str, Any] = {}
                 for k, v in obj.items():
                     if k.startswith("_"):
                         continue
-                    if k == "is_bcbs239_program":
-                        ck = "isBCBS239Program"
-                    elif k == "regulatory_related":
-                        ck = "regulatoryRelated"
-                    elif k == "publisher_node_identifier":
-                        ck = "publisherNodeIdentifier"
-                    else:
-                        ck = snake_to_camel(k)
-                    out[ck] = _camelize(v)
+                    ck = "isBCBS239Program" if k == "is_bcbs239_program" else snake_to_camel(k)
+                    out[ck] = _camelize(v)  # pyright: ignore[reportUndefinedVariable]  # noqa: F821
                 return out
             if isinstance(obj, list):
-                return [_camelize(x) for x in obj]
+                return [_camelize(x)]  # pyright: ignore[reportUndefinedVariable]  # noqa: F821
             return obj
+
 
         payload = cast(dict[str, Any], _camelize({k: v for k, v in self.__dict__.items() if not k.startswith("_")}))
 

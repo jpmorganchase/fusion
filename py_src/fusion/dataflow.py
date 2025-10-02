@@ -155,7 +155,7 @@ class Dataflow(metaclass=CamelCaseMeta):
 
     @classmethod
     def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
-        """Instantiate a Dataflow object from a dictionary (accepts snake or camel keys).
+        """Instantiate a Dataflow object from a dictionary 
 
         Returns:
             Dataflow: The constructed object.
@@ -359,14 +359,12 @@ class Dataflow(metaclass=CamelCaseMeta):
                 f"Cannot update {sorted(used)} via PATCH; provider/consumer nodes are immutable for updates."
             )
 
-        # Minimal shallow cleanup: trim strings and convert "" -> None
         def clean(v: Any) -> Any:
             if isinstance(v, str):
                 s = tidy_string(v)
                 return None if s == "" else s
             return v
 
-        # Accept snake or camel input -> send camel to API
         snake_changes = {camel_to_snake(k): clean(v) for k, v in changes.items()}
         patch_body = {snake_to_camel(k): v for k, v in snake_changes.items()}
 
