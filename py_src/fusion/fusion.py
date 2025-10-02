@@ -198,7 +198,7 @@ class Fusion:
                         for method_name in dir(Fusion)
                         if callable(getattr(Fusion, method_name)) and not method_name.startswith("_")
                     ]
-                    + [
+                    + [ 
                         (getattr(Fusion, p).__doc__ or "").split("\n")[0]
                         for p in dir(Fusion)
                         if isinstance(getattr(Fusion, p), property)
@@ -2755,16 +2755,16 @@ class Fusion:
             >>> flow.delete()
         """
         df_obj = Dataflow(
-            providerNode=provider_node,
-            consumerNode=consumer_node,
+            provider_node=provider_node,
+            consumer_node=consumer_node,
             description=description,
-            transportType=transport_type,
+            transport_type=transport_type,
             frequency=frequency,
-            startTime=start_time,
-            endTime=end_time,
+            start_time=start_time,
+            end_time=end_time,
             datasets=datasets or [],
-            connectionType=connection_type,
-            sourceSystem=source_system,
+            connection_type=connection_type,
+            source_system=source_system,
             id=id,
             **kwargs,
         )
