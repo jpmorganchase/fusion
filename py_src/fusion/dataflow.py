@@ -17,6 +17,7 @@ from .utils import (
 
 if TYPE_CHECKING:
     import requests
+
     from fusion import Fusion
 
 logger = logging.getLogger(__name__)
@@ -98,7 +99,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         for f in fields(self):
             setattr(self, f.name, norm_tree(getattr(self, f.name)))
 
-    # --- snake↔camel attribute access like Dataset ---
 
     def __getattr__(self, name: str) -> Any:
         """Allow camelCase attribute access (e.g., providerNode) for snake_case fields."""
@@ -114,7 +114,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             snake = camel_to_snake(name)
             self.__dict__[snake] = value
 
-    # --- client plumbing ---
 
     @property
     def client(self) -> Fusion | None:
@@ -204,7 +203,8 @@ class Dataflow(metaclass=CamelCaseMeta):
         Examples:
             >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> flow = fusion.dataflow().from_object('{"providerNode":{"name":"A","type":"DB"},"consumerNode":{"name":"B","type":"DB"},"connectionType":"Consumes From"}')
+            >>> flow = fusion.dataflow().from_object('{"providerNode":{"name":"A","type":"DB"},
+            "consumerNode":{"name":"B","type":"DB"},"connectionType":"Consumes From"}')
         """
         import json
 

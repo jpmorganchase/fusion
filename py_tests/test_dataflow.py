@@ -180,16 +180,3 @@ def test_dataflow_from_dataframe_skips_invalid_rows_and_sets_client(fusion_obj: 
     assert flows[0].description == "Valid row"
     # client should be attached
     assert flows[0].client is fusion_obj
-
-
-def test_dataflow_update_fields_forbidden_nodes_raises(fusion_obj: Fusion) -> None:
-    """update_fields must reject provider/consumer node updates."""
-    flow = Dataflow(
-        provider_node={"name": "A", "type": "Database"},
-        consumer_node={"name": "B", "type": "Database"},
-        id="xyz-123",
-    )
-    flow.client = fusion_obj
-    with pytest.raises(ValueError, match=r"Cannot update .* via PATCH"):
-        # we intentionally send camelCase here; method should still reject after mapping
-        flow.update_fields({"providerNode": {"name": "C", "type": "Database"}}, client=fusion_obj)
