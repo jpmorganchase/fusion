@@ -155,7 +155,7 @@ class Dataflow(metaclass=CamelCaseMeta):
 
     @classmethod
     def from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
-        """Instantiate a Dataflow object from a dictionary 
+        """Instantiate a Dataflow object from a dictionary.
 
         Returns:
             Dataflow: The constructed object.
