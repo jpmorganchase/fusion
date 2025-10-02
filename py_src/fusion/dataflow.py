@@ -55,7 +55,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             Scheduled end time of the Dataflow.
 
         source_system (dict[str, Any] | None, optional):
-            Optional source system metadata.
+         Source System of the data flow.
 
         datasets (list[dict[str, Any]], optional):
             Specifies a list of datasets involved in the data flow, requiring a visibility license for each.

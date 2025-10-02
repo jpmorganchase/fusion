@@ -168,7 +168,7 @@ def test_report_patch_rejects_id() -> None:
     report.client = cast(Fusion, _Dummy())
 
     with pytest.raises(ValueError, match="Cannot patch 'id'"):
-        report.update_partial({"id": "other"})
+        report.update_fields({"id": "other"})
 
 
 def test_report_create_excludes_id_and_sets_id() -> None:
