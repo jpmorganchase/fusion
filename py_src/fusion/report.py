@@ -224,11 +224,12 @@ class Report(metaclass=CamelCaseMeta):
                     if k.startswith("_"):
                         continue
                     ck = "isBCBS239Program" if k == "is_bcbs239_program" else snake_to_camel(k)
-                    out[ck] = _camelize(v)  # pyright: ignore[reportUndefinedVariable]  # noqa: F821
+                    out[ck] = _camelize(v)
                 return out
             if isinstance(obj, list):
-                return [_camelize(x)]  # pyright: ignore[reportUndefinedVariable]  # noqa: F821
+                return [_camelize(x) for x in obj]  
             return obj
+
 
 
         payload = cast(dict[str, Any], _camelize({k: v for k, v in self.__dict__.items() if not k.startswith("_")}))
@@ -717,21 +718,15 @@ class Reports:
 
 
 class ReportsWrapper(Reports):
-    """A Reports Wrapper that captures and bounds a Fusion client."""
-
     def __init__(self, client: Fusion) -> None:
         super().__init__([])
         self.client = client
 
     def from_csv(self, file_path: str) -> Reports:  # type: ignore[override]
-        """Load Reports from CSV using the bound client."""
         return Reports.from_csv(file_path, client=self.client)
 
     def from_dataframe(self, df: pd.DataFrame) -> Reports:  # type: ignore[override]
-        """Load Reports from DataFrame using the bound client."""
         return Reports.from_dataframe(df, client=self.client)
 
     def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports:  # type: ignore[override]
-        """Load Reports from object using the bound client."""
         return Reports.from_object(source, client=self.client)
-    
