@@ -2645,9 +2645,11 @@ class Fusion:
             This is mandatory field for report creation.
             business_domain (str): Business domain string. This field cannot be blank if provided.
             This is mandatory field for report creation.
-            owner_node (dict[str, str] | None): Owner node associated with the report. {"name","type"} for the owner node.
+            owner_node (dict[str, str] | None): Owner node associated with the report.
+            {"name","type"} for the owner node.
             This is mandatory field for report creation.
-            publisher_node (dict[str, Any] | None): Publisher node associated with the report. {"name","type"} (+ optional {"publisher_node_identifier"}).
+            publisher_node (dict[str, Any] | None): Publisher node associated with the report. 
+            {"name","type"} (+ optional {"publisher_node_identifier"}).
             regulatory_related (bool | None): Indicated whether the report is related to regulatory requirements.
             This is mandatory field for report creation.
             business_domain (str | None): Business domain string. This is mandatory field for report creation.
