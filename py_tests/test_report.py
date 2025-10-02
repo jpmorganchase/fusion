@@ -1,4 +1,4 @@
-"""Test file for updated report.py and reports integration"""
+"""Test file for report.py and reports integration"""
 
 from pathlib import Path
 from typing import Any, Optional, cast
@@ -61,7 +61,6 @@ def test_report_validation_raises() -> None:
         sub_category="",
         business_domain="",
         regulatory_related=True,
-        # deliberately omit/leave invalid nodes to trigger validation
         owner_node=None,
         publisher_node=None,
     )
@@ -144,7 +143,6 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     assert reports[0].publisher_node["publisher_node_identifier"] == "pid-99"
 
 
-# ---------- extra coverage: PATCH guard + create/update body rules ----------
 
 def test_report_patch_rejects_id() -> None:
     """PATCH must not allow changing 'id' in the body."""
@@ -161,7 +159,6 @@ def test_report_patch_rejects_id() -> None:
         publisher_node={"name": "pub", "type": "Intelligent Solutions"},
     )
 
-    # attach a dummy client so _use_client passes before the 'id' guard triggers
     class _Dummy:
         pass
 
@@ -192,7 +189,7 @@ def test_report_create_excludes_id_and_sets_id() -> None:
         text = ""
         content = b""
 
-        def raise_for_status(self) -> None:  # pragma: no cover
+        def raise_for_status(self) -> None:  
             return None
 
         def json(self) -> dict[str, Any]:
@@ -203,7 +200,7 @@ def test_report_create_excludes_id_and_sets_id() -> None:
             self.last_url: Optional[str] = None
             self.last: Optional[dict[str, Any]] = None
 
-        def post(self, url: str, json: dict[str, Any]) -> _Resp:  # pragma: no cover
+        def post(self, url: str, json: dict[str, Any]) -> _Resp: 
             self.last_url = url
             self.last = json
             return _Resp()
@@ -221,10 +218,10 @@ def test_report_create_excludes_id_and_sets_id() -> None:
     report.create()
 
     assert client.session.last is not None
-    assert "id" not in client.session.last  # id must be excluded from create payload
+    assert "id" not in client.session.last  
     assert client.session.last_url is not None
     assert client.session.last_url.endswith("/api/corelineage-service/v1/reports")
-    assert report.id == "new-123"  # id updated from response
+    assert report.id == "new-123" 
 
 
 def test_report_update_excludes_id_in_body_and_uses_path() -> None:
@@ -248,7 +245,7 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
         text = ""
         content = b""
 
-        def raise_for_status(self) -> None:  # pragma: no cover
+        def raise_for_status(self) -> None:  
             return None
 
     class _Sess:
@@ -256,7 +253,7 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
             self.last_url: Optional[str] = None
             self.last: Optional[dict[str, Any]] = None
 
-        def put(self, url: str, json: dict[str, Any]) -> _Resp:  # pragma: no cover
+        def put(self, url: str, json: dict[str, Any]) -> _Resp:  
             self.last_url = url
             self.last = json
             return _Resp()
@@ -274,6 +271,6 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
     report.update()
 
     assert client.session.last is not None
-    assert "id" not in client.session.last  # id must be excluded from update body too
+    assert "id" not in client.session.last  
     assert client.session.last_url is not None
     assert client.session.last_url.endswith("/api/corelineage-service/v1/reports/abc-999")

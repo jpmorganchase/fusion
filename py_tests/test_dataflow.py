@@ -62,7 +62,6 @@ def test_dataflow_from_object_series() -> None:
             "frequency": "DAILY",
         }
     )
-    # start empty; from_object will populate
     flow = Dataflow().from_object(series)
     assert isinstance(flow, Dataflow)
     assert flow.description == "Series-based dataflow"
@@ -116,9 +115,9 @@ def test_dataflow_validate_nodes_for_create_passes() -> None:
     flow = Dataflow(
         provider_node={"name": "CRM_DB", "type": "Database"},
         consumer_node={"name": "DWH", "type": "Database"},
-        connection_type="API",  # required for create-time validation
+        connection_type="API", 
     )
-    # should not raise
+    
     flow._validate_nodes_for_create()
 
 
@@ -133,23 +132,23 @@ def test_dataflow_to_dict_drop_none_false_includes_nulls() -> None:
     flow = Dataflow(
         provider_node={"name": "SRC", "type": "Database"},
         consumer_node={"name": "DST", "type": "Database"},
-        description=None,   # kept because drop_none=False
-        id=None,            # kept because drop_none=False
+        description=None,   
+        id=None,            
         frequency="DAILY",
     )
-    out = flow.to_dict(drop_none=False)  # ← no exclude, so no CI brittleness
-    # required keys present
+    out = flow.to_dict(drop_none=False)  
+    
     assert "providerNode" in out
     assert "consumerNode" in out
-    # None-valued fields are retained
+    
     assert "description" in out
     assert out["description"] is None
     assert "id" in out
     assert out["id"] is None
-    # defaulted list field should be present
+    
     assert "datasets" in out
     assert isinstance(out["datasets"], list)
-    # a normal field is preserved
+   
     assert out["frequency"] == "DAILY"
 
 
@@ -157,13 +156,13 @@ def test_dataflow_from_dataframe_skips_invalid_rows_and_sets_client(fusion_obj: 
     """from_dataframe should skip invalid rows and attach the provided client to valid ones."""
     frame = pd.DataFrame(
         [
-            # invalid: missing consumerNode
+
             {
                 "providerNode": {"name": "OnlyProvider", "type": "Database"},
                 "description": "Invalid row",
                 "frequency": "DAILY",
             },
-            # valid
+
             {
                 "providerNode": {"name": "SRC", "type": "Database"},
                 "consumerNode": {"name": "DST", "type": "Database"},
@@ -175,8 +174,8 @@ def test_dataflow_from_dataframe_skips_invalid_rows_and_sets_client(fusion_obj: 
     )
     flows = Dataflow.from_dataframe(frame, client=fusion_obj)
     assert isinstance(flows, list)
-    assert len(flows) == 1  # invalid row skipped
+    assert len(flows) == 1  
     assert isinstance(flows[0], Dataflow)
     assert flows[0].description == "Valid row"
-    # client should be attached
+
     assert flows[0].client is fusion_obj

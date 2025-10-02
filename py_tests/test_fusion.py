@@ -3016,12 +3016,10 @@ def test_fusion_report(fusion_obj: Fusion) -> None:
         frequency="Quarterly",
         category="Risk Management",
         sub_category="Operational Risk",
-        # NEW schema
         owner_node={"name": "ComplianceTable", "type": "User Tool"},
         publisher_node={"name": "ComplianceDash", "type": "Intelligent Solutions"},
         business_domain="Risk",
         regulatory_related=True,
-        # optionals that still exist
         lob="Global Markets",
         is_bcbs239_program=True,
         sap_code="SAP123",
@@ -3461,7 +3459,6 @@ def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
         frequency="Monthly",
         category="Finance",
         sub_category="Market",
-        # NEW schema minimal required set
         owner_node={"name": "Node1", "type": "User Tool"},
         publisher_node={"name": "Dash-A", "type": "Intelligent Solutions"},
         business_domain="Risk",
@@ -3478,16 +3475,14 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         frequency="Quarterly",
         category="Credit",
         sub_category="Wholesale",
-        # NEW schema
         owner_node={"name": "NodeX", "type": "User Tool"},
         publisher_node={
             "name": "DashX",
             "type": "Intelligent Solutions",
-            "publisher_node_identifier": "pub-001",  # optional
+            "publisher_node_identifier": "pub-001", 
         },
         business_domain="Ops",
         regulatory_related=False,
-        # kept optionals (still valid)
         lob="Banking",
         sub_lob="Retail",
         is_bcbs239_program=True,
@@ -3605,8 +3600,8 @@ def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
 
 def test_fusion_dataflow_full(fusion_obj: Fusion) -> None:
     """Full constructor path: provider/consumer plus optional fields."""
-    provider = {"name": "CRM_DB", "type": "Database"}      # <- nodeType -> type
-    consumer = {"name": "DWH", "type": "Database"}          # <- nodeType -> type
+    provider = {"name": "CRM_DB", "type": "Database"}     
+    consumer = {"name": "DWH", "type": "Database"}          
     flow = fusion_obj.dataflow(
         provider_node=provider,
         consumer_node=consumer,
@@ -3631,8 +3626,8 @@ def test_list_dataflows_success(requests_mock: requests_mock.Mocker, fusion_obj:
     server_json = {
         "id": flow_id,
         "description": "sample flow",
-        "providerNode": {"name": "A", "type": "DB"},      # <- nodeType -> type
-        "consumerNode": {"name": "B", "type": "DB"},      # <- nodeType -> type
+        "providerNode": {"name": "A", "type": "DB"},      
+        "consumerNode": {"name": "B", "type": "DB"},      
         "frequency": "Daily",
     }
     requests_mock.get(url, json=server_json, status_code=200)
