@@ -27,38 +27,39 @@ logger = logging.getLogger(__name__)
 class Dataflow(metaclass=CamelCaseMeta):
     """Fusion Dataflow class for managing dataflow metadata in the Fusion system.
 
-    Attributes (snake_case on the model; camelCase emitted to the API):
+    Attributes:
         provider_node (dict[str, str] | None):
-            Provider/source node. Required for create().
+            Provider node of the dataflow. It must be distinct from the consumer node. Required for create().
             Keys: ``name``, ``type``.
 
         consumer_node (dict[str, str] | None):
-            Consumer/target node. Required for create().
+            Consumer node of the dataflow. It must be distinct from the provider node. Required for create().
             Keys: ``name``, ``type``.
 
         description (str | None, optional):
-            Purpose/summary of the flow. If present, must not be blank.
+            Specifies the purpose of the data movement.
 
         id (str | None, optional):
             Server-assigned identifier. Must be set for ``update()``, ``update_fields()``, and ``delete()``.
 
         transport_type (str | None, optional):
-            Transport type (e.g., API, Batch).
+            Transport type 
 
         frequency (str | None, optional):
-            Flow cadence.
+            Frequency of the data flow 
 
         start_time (str | None, optional):
-            Scheduled start time (e.g., ``HH:mm:ss`` or ISO-8601).
+            Scheduled start time of the Dataflow.
 
         end_time (str | None, optional):
-            Scheduled end time.
+            Scheduled end time of the Dataflow.
 
         source_system (dict[str, Any] | None, optional):
             Optional source system metadata.
 
         datasets (list[dict[str, Any]], optional):
-            Datasets involved in the data flow. Defaults to empty list.
+            Specifies a list of datasets involved in the data flow, requiring a visibility license for each.
+            Maximum limit is of 100 datasets per dataflow. An error will be thrown if the list contains duplicate entries. Defaults to empty list.
 
         connection_type (str | None, required for ``create()``):
             Connection type for the dataflow.
@@ -82,23 +83,32 @@ class Dataflow(metaclass=CamelCaseMeta):
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
-        """Normalize strings/empties across the instance after initialization."""
-        def norm_val(v: Any) -> Any:
-            if isinstance(v, str):
-                s = tidy_string(v)
-                return None if s == "" else s
-            return v
+        """Normalize key fields after initialization.
+        """
+        self.description     = tidy_string(self.description)     if self.description     is not None else None
+        self.id              = tidy_string(self.id)              if self.id              is not None else None
+        self.transport_type  = tidy_string(self.transport_type)  if self.transport_type  is not None else None
+        self.frequency       = tidy_string(self.frequency)       if self.frequency       is not None else None
+        self.start_time      = tidy_string(self.start_time)      if self.start_time      is not None else None
+        self.end_time        = tidy_string(self.end_time)        if self.end_time        is not None else None
+        self.connection_type = tidy_string(self.connection_type) if self.connection_type is not None else None
 
-        def norm_tree(o: Any) -> Any:
-            if isinstance(o, dict):
-                return {k: norm_tree(v) for k, v in o.items()}
-            if isinstance(o, list):
-                return [norm_tree(i) for i in o]
-            return norm_val(o)
+        if isinstance(self.provider_node, dict):
+            if isinstance(self.provider_node.get("name"), str):
+                self.provider_node["name"] = tidy_string(self.provider_node["name"])
+            if isinstance(self.provider_node.get("type"), str):
+                self.provider_node["type"] = tidy_string(self.provider_node["type"])
 
-        for f in fields(self):
-            setattr(self, f.name, norm_tree(getattr(self, f.name)))
+        if isinstance(self.consumer_node, dict):
+            if isinstance(self.consumer_node.get("name"), str):
+                self.consumer_node["name"] = tidy_string(self.consumer_node["name"])
+            if isinstance(self.consumer_node.get("type"), str):
+                self.consumer_node["type"] = tidy_string(self.consumer_node["type"])
 
+        if self.datasets is None:
+            self.datasets = []
+        elif not isinstance(self.datasets, list):
+            self.datasets = [self.datasets]
 
     def __getattr__(self, name: str) -> Any:
         """Allow camelCase attribute access (e.g., providerNode)"""
