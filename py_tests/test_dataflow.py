@@ -9,10 +9,10 @@ from fusion.fusion import Fusion
 
 def test_dataflow_basic_fields() -> None:
     flow = Dataflow(
-        providerNode={"name": "CRM_DB", "type": "Database"},
-        consumerNode={"name": "DWH", "type": "Database"},
+        provider_node={"name": "CRM_DB", "type": "Database"},
+        consumer_node={"name": "DWH", "type": "Database"},
         description="CRM to DWH load",
-        transportType="API",
+        transport_type="API",
         frequency="DAILY",
     )
     assert flow.providerNode is not None
@@ -25,10 +25,10 @@ def test_dataflow_basic_fields() -> None:
 
 def test_dataflow_to_dict() -> None:
     flow = Dataflow(
-        providerNode={"name": "S3", "type": "Storage"},
-        consumerNode={"name": "Analytics", "type": "Dashboard"},
+        provider_node={"name": "S3", "type": "Storage"},
+        consumer_node={"name": "Analytics", "type": "Dashboard"},
         description="S3 to Analytics feed",
-        transportType="FILE TRANSFER",
+        transport_type="FILE TRANSFER",
         frequency="WEEKLY",
     )
     result = flow.to_dict()
@@ -62,7 +62,7 @@ def test_dataflow_from_object_series() -> None:
             "frequency": "DAILY",
         }
     )
-    # provider/consumer optional at init so we can start empty and let from_object populate
+    # start empty; from_object will populate
     flow = Dataflow().from_object(series)
     assert isinstance(flow, Dataflow)
     assert flow.description == "Series-based dataflow"
@@ -114,16 +114,16 @@ def test_dataflow_from_dataframe(fusion_obj: Fusion) -> None:
 
 def test_dataflow_validate_nodes_for_create_passes() -> None:
     flow = Dataflow(
-        providerNode={"name": "CRM_DB", "type": "Database"},
-        consumerNode={"name": "DWH", "type": "Database"},
-        connectionType="API",  # <-- required for create-time validation
+        provider_node={"name": "CRM_DB", "type": "Database"},
+        consumer_node={"name": "DWH", "type": "Database"},
+        connection_type="API",  # required for create-time validation
     )
     # should not raise
     flow._validate_nodes_for_create()
 
 
 def test_dataflow_validate_nodes_for_create_raises() -> None:
-    flow = Dataflow(providerNode=None, consumerNode=None)
+    flow = Dataflow(provider_node=None, consumer_node=None)
     with pytest.raises(ValueError, match="must be a dict"):
         flow._validate_nodes_for_create()
 
@@ -131,8 +131,8 @@ def test_dataflow_validate_nodes_for_create_raises() -> None:
 def test_dataflow_to_dict_drop_none_false_includes_nulls() -> None:
     """to_dict with drop_none=False should keep None values and defaults."""
     flow = Dataflow(
-        providerNode={"name": "SRC", "type": "Database"},
-        consumerNode={"name": "DST", "type": "Database"},
+        provider_node={"name": "SRC", "type": "Database"},
+        consumer_node={"name": "DST", "type": "Database"},
         description=None,   # kept because drop_none=False
         id=None,            # kept because drop_none=False
         frequency="DAILY",
@@ -185,10 +185,11 @@ def test_dataflow_from_dataframe_skips_invalid_rows_and_sets_client(fusion_obj: 
 def test_dataflow_update_fields_forbidden_nodes_raises(fusion_obj: Fusion) -> None:
     """update_fields must reject provider/consumer node updates."""
     flow = Dataflow(
-        providerNode={"name": "A", "type": "Database"},
-        consumerNode={"name": "B", "type": "Database"},
+        provider_node={"name": "A", "type": "Database"},
+        consumer_node={"name": "B", "type": "Database"},
         id="xyz-123",
     )
     flow.client = fusion_obj
     with pytest.raises(ValueError, match=r"Cannot update .* via PATCH"):
+        # we intentionally send camelCase here; method should still reject after mapping
         flow.update_fields({"providerNode": {"name": "C", "type": "Database"}}, client=fusion_obj)
