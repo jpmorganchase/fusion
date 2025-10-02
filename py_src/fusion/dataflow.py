@@ -84,8 +84,7 @@ class Dataflow(metaclass=CamelCaseMeta):
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
-        """Normalize key fields after initialization.
-        """
+        """Normalize key fields after initialization."""
         self.description     = tidy_string(self.description)     if self.description     is not None else None
         self.id              = tidy_string(self.id)              if self.id              is not None else None
         self.transport_type  = tidy_string(self.transport_type)  if self.transport_type  is not None else None
@@ -112,7 +111,7 @@ class Dataflow(metaclass=CamelCaseMeta):
             self.datasets = [self.datasets]
 
     def __getattr__(self, name: str) -> Any:
-        """Allow camelCase attribute access (e.g., providerNode)"""
+        """Allow camelCase attribute access"""
         snake = camel_to_snake(name)
         if snake in self.__dict__:
             return self.__dict__[snake]
@@ -259,7 +258,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         drop_none: bool = True,
         exclude: set[str] | None = None,
     ) -> dict[str, Any]:
-        """Convert the Dataflow instance to a dictionary (camelCase keys for API).
+        """Convert the Dataflow instance to a dictionary.
 
         Returns:
             dict[str, Any]: Dataflow metadata as a dictionary ready for API calls.
@@ -359,22 +358,17 @@ class Dataflow(metaclass=CamelCaseMeta):
             raise ValueError(
                 f"Cannot update {sorted(used)} via PATCH; provider/consumer nodes are immutable for updates."
             )
-        def norm_val(v: Any) -> Any:
+
+        # Minimal shallow cleanup: trim strings and convert "" -> None
+        def clean(v: Any) -> Any:
             if isinstance(v, str):
                 s = tidy_string(v)
                 return None if s == "" else s
             return v
 
-        def norm_tree(o: Any) -> Any:
-            if isinstance(o, dict):
-                return {k: norm_tree(v) for k, v in o.items()}
-            if isinstance(o, list):
-                return [norm_tree(i) for i in o]
-            return norm_val(o)
-
-
-        snake_changes = {camel_to_snake(k): v for k, v in changes.items()}
-        patch_body = {snake_to_camel(k): norm_tree(v) for k, v in snake_changes.items()}
+        # Accept snake or camel input -> send camel to API
+        snake_changes = {camel_to_snake(k): clean(v) for k, v in changes.items()}
+        patch_body = {snake_to_camel(k): v for k, v in snake_changes.items()}
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{self.id}"
         resp: requests.Response = client.session.patch(url, json=patch_body)
@@ -386,7 +380,7 @@ class Dataflow(metaclass=CamelCaseMeta):
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Delete this dataflow using self.id.
+        """Delete this dataflow using Id.
 
         Examples:
             >>> flow = fusion.dataflow(id="abc-123")

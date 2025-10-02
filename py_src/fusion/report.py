@@ -468,7 +468,7 @@ class Report(metaclass=CamelCaseMeta):
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
-    def update_partial(
+    def update_fields(
         self,
         fields_to_update: dict[str, Any],
         client: Fusion | None = None,

@@ -2633,32 +2633,33 @@ class Fusion:
         """Instantiate a Report object with the current Fusion client attached.
 
         Args:
-            description (str | None): Description of the report.
+            description (str | None): Detailed Description of the report.
             This is mandatory field for report creation.
-            title (str | None): Title of the report or process.
+            title (str | None): Title (Display Name) of the report.
             This is mandatory field for report creation.
-            frequency (str | None): Reporting frequency (e.g., Monthly, Quarterly).
+            frequency (str | None): Frequency of the report.
             This is mandatory field for report creation.
-            category (str | None): Main classification of the report. 
+            category (str | None): Category of the report. 
             This is mandatory field for report creation.
             sub_category (str | None): Sub-classification under the main category. 
             This is mandatory field for report creation.
-            business_domain (str): Business domain string. 
+            business_domain (str): Business domain string. This field cannot be blank if provided.
             This is mandatory field for report creation.
-            owner_node (dict[str, str] | None): {"name","type"} for the owner node. 
+            owner_node (dict[str, str] | None): Owner node associated with the report. {"name","type"} for the owner node.
             This is mandatory field for report creation.
-            publisher_node (dict[str, Any] | None): {"name","type"} (+ optional {"publisher_node_identifier"}).
-            regulatory_related (bool | None): Regulatory-designated flag. This is mandatory field for report creation.
+            publisher_node (dict[str, Any] | None): Publisher node associated with the report. {"name","type"} (+ optional {"publisher_node_identifier"}).
+            regulatory_related (bool | None): Indicated whether the report is related to regulatory requirements.
+            This is mandatory field for report creation.
             business_domain (str | None): Business domain string. This is mandatory field for report creation.
             lob (str | None): Line of business.
             sub_lob (str | None): Subdivision of the line of business.
-            is_bcbs239_program (bool | None): BCBS 239 program flag.
+            is_bcbs239_program (bool | None): Indicates whether the report is associated with the BCBS 239 program.
             risk_area (str | None): Risk area.
             risk_stripe (str | None): Risk stripe.
-            sap_code (str | None): SAP financial tracking code.
-            source_system (dict[str, Any] | None): Source system object, if provided.
+            sap_code (str | None): SAP code associated with the report.
+            source_system (dict[str, Any] | None): Source system details for the report.
             id (str | None): Server-assigned report identifier (needed for update/patch/delete if already known).
-            **kwargs (Any): Additional optional fields (tier_designation, region, mnpi_indicator, etc.).
+            **kwargs (Any): 
 
         Returns:
             Report: A Report object ready for API upload or further manipulation.
@@ -2702,7 +2703,7 @@ class Fusion:
         id: str | None = None,  # noqa: A002
         **kwargs: Any,
     ) -> Dataflow:
-        """Instantiate a Dataflow object bound to this Fusion client.
+        """Instantiate a Dataflow object with this client.
 
         You may instantiate with just an ``id`` (useful for ``update()``, ``update_fields()``, or ``delete()``);
         however, **creating** a new data flow via ``create()`` requires valid provider/consumer nodes and
@@ -2710,25 +2711,29 @@ class Fusion:
 
         Args:
             provider_node (dict[str, str] | None, optional):
-                Provider/source node details. Expected keys: ``name`` and ``type``.
+                Provider node of the dataflow. It must be distinct from the consumer node. Required for create().
+                Keys: ``name``, ``type``.
             consumer_node (dict[str, str] | None, optional):
-                Consumer/target node details. Expected keys: ``name`` and ``type``.
+                Consumer node of the dataflow. It must be distinct from the provider node. Required for create().
+                Keys: ``name``, ``type``.
             description (str | None, optional):
-                Purpose/summary of the data flow (if provided, must not be blank).
+                Specifies the purpose of the data movement.
             transport_type (str | None, optional):
-                Transport mechanism 
+                Transport type  
             frequency (str | None, optional):
-                Flow cadence (e.g., ``"DAILY"``, ``"WEEKLY"``, ``"MONTHLY"``).
+                Frequency of the data flow
             start_time (str | None, optional):
-                Scheduled start time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
+                Scheduled start time of the Dataflow.
             end_time (str | None, optional):
-                Scheduled end time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
+                Scheduled end time of the Dataflow.
             datasets (list[dict[str, Any]] | None, optional):
-                Datasets involved in the flow. Defaults to empty list if not provided.
+                Specifies a list of datasets involved in the data flow, requiring a visibility license for each.
+                Maximum limit is of 100 datasets per dataflow.
+                An error will be thrown if the list contains duplicate entries. Defaults to empty list.
             connection_type (str | None, optional):
-                Connection type required for create (e.g., ``"Consumes From"``).
+                Connection type for the dataflow.
             source_system (dict[str, Any] | None, optional):
-                Source system metadata object.
+                Source System of the data flow.
             id (str | None, optional):
                 Server-assigned identifier; required for ``update()``, ``update_fields()``, and ``delete()``.
             **kwargs (Any)
