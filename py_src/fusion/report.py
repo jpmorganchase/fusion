@@ -415,6 +415,15 @@ class Report(metaclass=CamelCaseMeta):
         client = self._use_client(client)
         payload = self.to_dict()
 
+        def _strip_ids(x: Any) -> Any:
+            if isinstance(x, dict):
+                return {k: _strip_ids(v) for k, v in x.items() if k != "id"}
+            if isinstance(x, list):
+                return [_strip_ids(i) for i in x]
+            return x
+
+        payload = _strip_ids(payload)
+
         payload.pop("id", None)
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports"
@@ -427,7 +436,7 @@ class Report(metaclass=CamelCaseMeta):
     def update(
         self,
         client: Fusion | None = None,
-        return_resp_obj: bool = False,
+        return_resp_obj: bool = False, 
     ) -> requests.Response | None:
         """Update this report with the current object state.
 
@@ -475,7 +484,7 @@ class Report(metaclass=CamelCaseMeta):
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
         """Partially update the report via PATCH.
-
+ 
         Args:
             fields_to_update (dict[str, Any]): Dictionary of fields to update.
             client (Fusion | None, optional): Fusion client (defaults to the bound client).
