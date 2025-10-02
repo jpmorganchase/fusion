@@ -59,7 +59,8 @@ class Dataflow(metaclass=CamelCaseMeta):
 
         datasets (list[dict[str, Any]], optional):
             Specifies a list of datasets involved in the data flow, requiring a visibility license for each.
-            Maximum limit is of 100 datasets per dataflow. An error will be thrown if the list contains duplicate entries. Defaults to empty list.
+            Maximum limit is of 100 datasets per dataflow.
+            An error will be thrown if the list contains duplicate entries. Defaults to empty list.
 
         connection_type (str | None, required for ``create()``):
             Connection type for the dataflow.
