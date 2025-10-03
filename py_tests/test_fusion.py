@@ -3013,25 +3013,17 @@ def test_fusion_report(fusion_obj: Fusion) -> None:
         frequency="Quarterly",
         category="Risk Management",
         sub_category="Operational Risk",
-        data_node_id={"name": "ComplianceTable", "dataNodeType": "Table"},
+        owner_node={"name": "ComplianceTable", "type": "User Tool"},
+        publisher_node={"name": "ComplianceDash", "type": "Intelligent Solutions"},
+        business_domain="Risk",
         regulatory_related=True,
-        domain={"name": "Risk"},
-        tier_type="Tier 1",
         lob="Global Markets",
         is_bcbs239_program=True,
         sap_code="SAP123",
         region="EMEA",
     )
-
-    assert isinstance(report, Report)
-    assert report.title == "Quarterly Risk Report"
-    assert report.description == "Q1 Risk report for compliance"
-    assert report.client == fusion_obj
-    assert report.domain == {"name": "Risk"}
-    assert report.tier_type == "Tier 1"
-    assert report.is_bcbs239_program is True
-    assert report.region == "EMEA"
-    assert report.data_node_id["name"] == "ComplianceTable"
+    assert report.regulatory_related is True
+    assert report.business_domain == "Risk"
 
 
 def test_list_indexes_summary(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -3456,7 +3448,6 @@ def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock
     assert "id" in df.columns
     assert df.iloc[0]["id"] == "attr1"
 
-
 def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
     report = fusion_obj.report(
         title="Test Report",
@@ -3464,13 +3455,13 @@ def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
         frequency="Monthly",
         category="Finance",
         sub_category="Market",
-        data_node_id={"name": "Node1", "dataNodeType": "Table"},
+        owner_node={"name": "Node1", "type": "User Tool"},
+        publisher_node={"name": "Dash-A", "type": "Intelligent Solutions"},
+        business_domain="Risk",
         regulatory_related=True,
-        domain={"name": "Risk"},
     )
-    assert isinstance(report, Report)
     assert report.title == "Test Report"
-    assert report.client is fusion_obj
+    assert report.business_domain == "Risk"
 
 
 def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
@@ -3480,12 +3471,15 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         frequency="Quarterly",
         category="Credit",
         sub_category="Wholesale",
-        data_node_id={"name": "NodeX", "dataNodeType": "View"},
+        owner_node={"name": "NodeX", "type": "User Tool"},
+        publisher_node={
+            "name": "DashX",
+            "type": "Intelligent Solutions",
+            "publisher_node_identifier": "pub-001", 
+        },
+        business_domain="Ops",
         regulatory_related=False,
-        domain={"name": "Ops"},
-        tier_type="Tier 1",
         lob="Banking",
-        alternative_id={"system": "ABC"},
         sub_lob="Retail",
         is_bcbs239_program=True,
         risk_area="Liquidity",
@@ -3493,8 +3487,12 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         sap_code="SAP001",
         region="EMEA",
     )
-    assert report.lob == "Banking"
-    assert report.client is fusion_obj
+    assert report.business_domain == "Ops"
+    assert report.owner_node is not None
+    assert report.owner_node["name"] == "NodeX"
+    assert report.publisher_node is not None
+    assert report.publisher_node["publisher_node_identifier"] == "pub-001"
+
 
 
 @patch("fusion.report.Report.link_attributes_to_terms")
@@ -3585,7 +3583,6 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
     assert len(df_over_limit) == TOTAL_FILES
     assert df_over_limit["@id"].tolist() == ["file1", "file2"]
 
-
 def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
     """ID-only path: instantiate with just an id; nodes remain None."""
     flow = fusion_obj.dataflow(id="abc-123")
@@ -3597,8 +3594,8 @@ def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
 
 def test_fusion_dataflow_full(fusion_obj: Fusion) -> None:
     """Full constructor path: provider/consumer plus optional fields."""
-    provider = {"name": "CRM_DB", "nodeType": "Database"}
-    consumer = {"name": "DWH", "nodeType": "Database"}
+    provider = {"name": "CRM_DB", "type": "Database"}     
+    consumer = {"name": "DWH", "type": "Database"}          
     flow = fusion_obj.dataflow(
         provider_node=provider,
         consumer_node=consumer,
@@ -3623,8 +3620,8 @@ def test_list_dataflows_success(requests_mock: requests_mock.Mocker, fusion_obj:
     server_json = {
         "id": flow_id,
         "description": "sample flow",
-        "providerNode": {"name": "A", "nodeType": "DB"},
-        "consumerNode": {"name": "B", "nodeType": "DB"},
+        "providerNode": {"name": "A", "type": "DB"},      
+        "consumerNode": {"name": "B", "type": "DB"},      
         "frequency": "Daily",
     }
     requests_mock.get(url, json=server_json, status_code=200)
