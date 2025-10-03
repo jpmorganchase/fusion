@@ -925,6 +925,76 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
     assert my_dataset.is_active is False
 
 
+def test_dataset_class_from_catalog_empty_product_datasets(
+    requests_mock: requests_mock.Mocker, fusion_obj: Fusion
+) -> None:
+    """Test Dataset from_catalog method when catalog has no products."""
+    catalog = "my_catalog"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets"
+
+    expected_data = {
+        "resources": [
+            {
+                "catalog": {
+                    "@id": "my_catalog/",
+                    "description": "my catalog",
+                    "title": "my catalog",
+                    "identifier": "my_catalog",
+                },
+                "title": "Test Dataset",
+                "identifier": "TEST_DATASET",
+                "category": ["category"],
+                "shortAbstract": "short abstract",
+                "description": "description",
+                "frequency": "Once",
+                "isInternalOnlyDataset": False,
+                "isThirdPartyData": True,
+                "isRestricted": False,
+                "isRawData": True,
+                "maintainer": "maintainer",
+                "source": "source",
+                "region": ["region"],
+                "publisher": "publisher",
+                "subCategory": ["subCategory"],
+                "tags": ["tag1", "tag2"],
+                "createdDate": "2020-05-05",
+                "modifiedDate": "2020-05-05",
+                "deliveryChannel": ["API"],
+                "language": "English",
+                "status": "Available",
+                "type": "Source",
+                "containerType": "Snapshot-Full",
+                "snowflake": "snowflake",
+                "complexity": "complexity",
+                "isImmutable": False,
+                "isMnpi": False,
+                "isPii": False,
+                "isPci": False,
+                "isClient": False,
+                "isPublic": False,
+                "isInternal": False,
+                "isConfidential": False,
+                "isHighlyConfidential": False,
+                "isActive": False,
+                "@id": "TEST_DATASET/",
+            },
+        ],
+    }
+    requests_mock.get(url, json=expected_data)
+
+    # Mock empty product datasets response - this should trigger the APIResponseError
+    url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
+    empty_data: dict[str, list[dict[str, str]]] = {"resources": []}
+    requests_mock.get(url2, json=empty_data)
+
+    # This should work without raising an exception and product should be None
+    my_dataset = Dataset(identifier="TEST_DATASET").from_catalog(client=fusion_obj, catalog=catalog)
+    assert isinstance(my_dataset, Dataset)
+    assert my_dataset.title == "Test Dataset"
+    assert my_dataset.identifier == "TEST_DATASET"
+    assert my_dataset.product is None
+
+
 def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test create Dataset method."""
     catalog = "my_catalog"
@@ -1270,7 +1340,7 @@ def test_dataset_case_switching() -> None:
         "publisher": "J.P. Morgan",
         "product": ["TEST_PRODUCT"],
         "subCategory": ["subCategory"],
-        "tags": ["tag1", "tag2"],
+        "tag": ["tag1", "tag2"],
         "createdDate": "2020-05-05",
         "modifiedDate": "2020-05-05",
         "deliveryChannel": ["API"],
