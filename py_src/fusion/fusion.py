@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
 
+from fusion.data_dependency import DataDependency
 import pandas as pd
 import pyarrow as pa
 from rich.progress import Progress
@@ -2842,4 +2843,60 @@ class Fusion:
 
         # fallback empty frame if something unexpected happens
         return pd.DataFrame()
+    
+    def data_dependency(self, **kwargs: Any) -> DataDependency:
+        """Instantiate a DataDependency object with this client for managing
+        relationships between metadata objects (e.g., Dataset, Report) and business domains.
+
+        Args:
+            **kwargs (Any): Additional keyword arguments (reserved for future extensions).
+
+        Returns:
+            DataDependency: Fusion DataDependency class for creating, updating, and deleting
+            dependencies such as:
+                - logical_data_elements
+                - logical_data_element_to_glossary_term
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> from fusion.data_dependency import DataElement
+            >>> fusion = Fusion()
+            >>> data_dependency = fusion.data_dependency()
+
+            # Create an element-to-element dependency
+            >>> source = DataElement(
+            ...     data_space="Finance",
+            ...     entity_type="Dataset",
+            ...     entity_identifier="dataset1",
+            ...     element_identifier="colA"
+            ... )
+            >>> target = DataElement(
+            ...     data_space="Finance",
+            ...     entity_type="Dataset",
+            ...     entity_identifier="dataset2",
+            ...     element_identifier="colB"
+            ... )
+            >>> data_dependency.logical_data_elements.create(source, target)
+
+            # Create a logical data element to glossary term dependency
+            >>> element = DataElement(
+            ...     data_space="Finance",
+            ...     entity_type="Dataset",
+            ...     entity_identifier="dataset1",
+            ...     element_identifier="colA"
+            ... )
+            >>> data_dependency.logical_data_element_to_glossary_term.create(
+            ...     element=element,
+            ...     glossary_term="Revenue",
+            ...     is_authoritative=True
+            ... )
+
+        Note:
+            `DataDependency` does not represent metadata itself. It manages
+            **relationships** between metadata objects (datasets, reports, etc.)
+            and business terms or other logical elements.
+        """
+        dependency_obj = DataDependency(self, **kwargs)
+        dependency_obj.client = self
+        return dependency_obj
 
