@@ -338,38 +338,34 @@ class Dataflow(metaclass=CamelCaseMeta):
 
     def update_fields(
         self,
-        changes: dict[str, Any],
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Partial update using id.
+        """Partial update using the object's current state.
+
+        Notes:
+            - Fields set to ``None`` on this object are included in the PATCH body
+              (sent as JSON ``null``), allowing you to clear values on the server.
+            - Provider/consumer nodes are excluded from partial updates.
 
         Examples:
-            >>> flow = fusion.dataflow(id="abc-123")
-            >>> flow.update_fields({"frequency": "WEEKLY"})
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> flow = fusion.dataflow(id="abc-123", frequency=None)  # clear frequency
+            >>> flow.update_fields()
         """
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Dataflow ID is required on the object (set self.id before update_fields()).")
 
-        forbidden = {"provider_node", "consumer_node"}
-        used = forbidden.intersection(changes.keys())
-        if used:
-            raise ValueError(
-                f"Cannot update {sorted(used)} via PATCH; provider/consumer nodes are immutable for updates."
-            )
-
-        def clean(v: Any) -> Any:
-            if isinstance(v, str):
-                s = tidy_string(v)
-                return None if s == "" else s
-            return v
-
-        snake_changes = {camel_to_snake(k): clean(v) for k, v in changes.items()}
-        patch_body = {snake_to_camel(k): v for k, v in snake_changes.items()}
+        # Build payload from current object; include None to allow clearing fields.
+        payload = self.to_dict(
+            drop_none=False,  # include None (as JSON null)
+            exclude={"id", "provider_node", "consumer_node"},
+        )
 
         url = f"{client._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{self.id}"
-        resp: requests.Response = client.session.patch(url, json=patch_body)
+        resp: requests.Response = client.session.patch(url, json=payload)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 

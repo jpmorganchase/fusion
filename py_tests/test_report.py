@@ -143,9 +143,8 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     assert reports[0].publisher_node["publisher_node_identifier"] == "pid-99"
 
 
-
-def test_report_patch_rejects_id() -> None:
-    """PATCH must not allow changing 'id' in the body."""
+def test_report_update_fields_excludes_id_and_uses_path() -> None:
+    """PATCH should not send 'id' in body and must use /reports/{id} path."""
     report = Report(
         id="r-1",
         title="t",
@@ -159,13 +158,41 @@ def test_report_patch_rejects_id() -> None:
         publisher_node={"name": "pub", "type": "Intelligent Solutions"},
     )
 
-    class _Dummy:
-        pass
+    class _Resp:
+        status_code = 200
+        ok = True
+        text = ""
+        content = b""
 
-    report.client = cast(Fusion, _Dummy())
+        def raise_for_status(self) -> None:
+            return None
 
-    with pytest.raises(ValueError, match="Cannot patch 'id'"):
-        report.update_fields({"id": "other"})
+    class _Sess:
+        def __init__(self) -> None:
+            self.last_url: Optional[str] = None
+            self.last: Optional[dict[str, Any]] = None
+
+        def patch(self, url: str, json: dict[str, Any]) -> _Resp:
+            self.last_url = url
+            self.last = json
+            return _Resp()
+
+    class _Fusion:
+        def __init__(self) -> None:
+            self.session = _Sess()
+
+        def _get_new_root_url(self) -> str:
+            return "http://unit.test"
+
+    client = _Fusion()
+    report.client = cast(Fusion, client)
+
+    report.update_fields()
+
+    assert client.session.last is not None
+    assert "id" not in client.session.last  # must not be in PATCH body
+    assert client.session.last_url is not None
+    assert client.session.last_url.endswith("/api/corelineage-service/v1/reports/r-1")
 
 
 def test_report_create_excludes_id_and_sets_id() -> None:
@@ -189,7 +216,7 @@ def test_report_create_excludes_id_and_sets_id() -> None:
         text = ""
         content = b""
 
-        def raise_for_status(self) -> None:  
+        def raise_for_status(self) -> None:
             return None
 
         def json(self) -> dict[str, Any]:
@@ -200,7 +227,7 @@ def test_report_create_excludes_id_and_sets_id() -> None:
             self.last_url: Optional[str] = None
             self.last: Optional[dict[str, Any]] = None
 
-        def post(self, url: str, json: dict[str, Any]) -> _Resp: 
+        def post(self, url: str, json: dict[str, Any]) -> _Resp:
             self.last_url = url
             self.last = json
             return _Resp()
@@ -218,10 +245,10 @@ def test_report_create_excludes_id_and_sets_id() -> None:
     report.create()
 
     assert client.session.last is not None
-    assert "id" not in client.session.last  
+    assert "id" not in client.session.last  # id removed from POST body
     assert client.session.last_url is not None
     assert client.session.last_url.endswith("/api/corelineage-service/v1/reports")
-    assert report.id == "new-123" 
+    assert report.id == "new-123"
 
 
 def test_report_update_excludes_id_in_body_and_uses_path() -> None:
@@ -245,7 +272,7 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
         text = ""
         content = b""
 
-        def raise_for_status(self) -> None:  
+        def raise_for_status(self) -> None:
             return None
 
     class _Sess:
@@ -253,7 +280,7 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
             self.last_url: Optional[str] = None
             self.last: Optional[dict[str, Any]] = None
 
-        def put(self, url: str, json: dict[str, Any]) -> _Resp:  
+        def put(self, url: str, json: dict[str, Any]) -> _Resp:
             self.last_url = url
             self.last = json
             return _Resp()
@@ -271,6 +298,6 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
     report.update()
 
     assert client.session.last is not None
-    assert "id" not in client.session.last  
+    assert "id" not in client.session.last  # id removed from PUT body
     assert client.session.last_url is not None
     assert client.session.last_url.endswith("/api/corelineage-service/v1/reports/abc-999")
