@@ -651,7 +651,9 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
 
 
 def get_session(
-    credentials: FusionCredentials, root_url: str, get_retries: int | Retry | None = None
+    credentials: FusionCredentials, root_url: str,
+    get_retries: int | Retry | None = None,
+    headers: dict[str, str] | None = None,
 ) -> requests.Session:
     """Create a new http session and set parameters.
 
@@ -674,7 +676,7 @@ def get_session(
         mount_url = _get_canonical_root_url(root_url)
     except Exception:  # noqa: BLE001
         mount_url = "https://"
-    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url)
+    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url, headers=headers)
     session.mount(mount_url, auth_handler)
     return session
 
