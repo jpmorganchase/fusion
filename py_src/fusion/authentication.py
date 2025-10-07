@@ -55,6 +55,7 @@ class FusionOAuthAdapter(HTTPAdapter):
         refresh_within_seconds: int = 5,
         auth_retries: Optional[Union[int, Retry]] = None,
         mount_url: str = "",
+        headers: Optional[dict[str, str]] = None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -91,6 +92,11 @@ class FusionOAuthAdapter(HTTPAdapter):
         else:
             self.auth_retries = Retry.from_int(auth_retries)
 
+        if headers is not None and isinstance(headers, dict):
+            self.headers = headers
+        else:
+            self.headers = {}
+
     def send(  # noqa: PLR0915
         self,
         request: requests.PreparedRequest,
@@ -114,6 +120,9 @@ class FusionOAuthAdapter(HTTPAdapter):
             raise APIResponseError(
                 original_exception=e, message="Failed to generate Fusion token headers", status_code=status_code
             ) from e
+
+        if self.headers:
+            request.headers.update(self.headers)
 
         try:
             response = super().send(request, **kwargs)
