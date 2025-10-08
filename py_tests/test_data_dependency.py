@@ -101,14 +101,14 @@ def test_delete_logical_data_element_to_glossary_term(
     requests_mock: requests_mock.Mocker, fusion_obj: Fusion
 ) -> None:
     """Test delete LogicalDataElementToGlossaryTerm method."""
-    url = f"{fusion_obj.root_url}/api/corelineage-service/v1/datadependencies/elements/terms"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/datadependencies/elements/terms"
     requests_mock.delete(url, status_code=200)
 
     element = DataElement("Dataset", "dataset1", "colA", data_space="Finance")
     term = {"id": "term_id"}
 
     resp = fusion_obj.data_dependency().logical_data_element_to_glossary_term.delete(
-        logical_data_element=element, term=term, is_kde=True
+        logical_data_element=element, term=term
     )
     assert isinstance(resp, requests.Response)
     assert resp.status_code == 200

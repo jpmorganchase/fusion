@@ -22,13 +22,13 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class DataElement:
-    """Represents a single source or target element in a data dependency.
+class DataAttribute:
+    """Represents a single source or target Attribute in a data dependency.
 
     Attributes:
         entity_type (str): Type of entity, e.g., "Dataset" or "Report".
-        entity_identifier (str): Identifier of the entity, e.g., dataset name.
-        element_identifier (str): Identifier of the element, e.g., column name.
+        entity_identifier (str): Identifier of the entity.
+        attribute_identifier (str): Identifier of the attribute.
         data_space (Optional[str]): Required if entity_type is "Dataset".
         _client (Optional[Fusion]): Optional Fusion client.
 
@@ -37,23 +37,23 @@ class DataElement:
 
     Examples:
         >>> from fusion import Fusion
-        >>> from fusion.data_dependency import DataElement
+        >>> from fusion.data_dependency import DataAttribute
         >>> fusion = Fusion()
 
-        # Dataset element
-        >>> de = DataElement("Dataset", "dataset1", "colA", data_space="Finance")
+        # Dataset
+        >>> de = DataAttribute("Dataset", "dataset1", "colA", data_space="test")
         >>> de.to_dict()
-        {'entityType': 'Dataset', 'entityIdentifier': 'dataset1', 'elementIdentifier': 'colA', 'dataSpace': 'Finance'}
+        {'entityType': 'Dataset', 'entityIdentifier': 'dataset1', 'attributeIdentifier': 'colA', 'dataSpace': 'test1'}
 
-        # Report element
-        >>> de2 = DataElement("Report", "report1", "fieldX")
+        # Report
+        >>> de2 = DataAttribute("Report", "report1", "fieldX")
         >>> de2.to_dict()
-        {'entityType': 'Report', 'entityIdentifier': 'report1', 'elementIdentifier': 'fieldX'}
+        {'entityType': 'Report', 'entityIdentifier': 'report1', 'attributeIdentifier': 'fieldX'}
     """
 
     entity_type: str
     entity_identifier: str
-    element_identifier: str
+    attribute_identifier: str
     data_space: Optional[str] = None
     _client: Fusion | None = None
 
@@ -63,13 +63,17 @@ class DataElement:
             raise ValueError("data_space is required when entity_type is 'Dataset'")
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert DataElement instance to dictionary.
+        """Convert DataAttribute instance to dictionary.
 
         Returns:
-            dict[str, Any]: Dictionary representation of the element.
+            dict[str, Any]: Dictionary representation of the Data Attribute.
         """
-        dataset_dict = {snake_to_camel(k): v for k, v in self.__dict__.items() if not k.startswith("_")}
-        return dataset_dict
+        attribute_dict = {
+            snake_to_camel(k): v
+            for k, v in self.__dict__.items()
+            if not k.startswith("_") and v is not None
+        }
+        return attribute_dict
 
     @property
     def client(self) -> Fusion | None:
@@ -83,19 +87,22 @@ class DataElement:
 
 
 class LogicalDataElements:
-    """Manager for logical element-to-element dependencies."""
+    """Manager for logical Attribute-to-Attribute dependencies."""
 
     def __init__(self, client: Fusion):
         self._client = client
 
     def create(
-        self, source_element: DataElement, target_element: DataElement, return_resp_obj: bool = False
-    ) -> requests.Response | None:
-        """Create a logical Element-to-Element dependency.
+    self,
+    dependencies: list[dict[str, list[DataAttribute] | DataAttribute]],
+    return_resp_obj: bool = False
+) -> requests.Response | None:
+        """Create logical Element-to-Element dependencies (supports multiple source elements).
 
         Args:
-            source_element (DataElement): Source element.
-            target_element (DataElement): Target element.
+            dependencies (list[dict]): List of dependency mappings. Each dict should have:
+                - "sourceAttributes": list of DataAttribute instances
+                - "targetAttribute": a single DataAttribute instance
             return_resp_obj (bool): If True, returns the requests.Response object.
 
         Returns:
@@ -106,13 +113,26 @@ class LogicalDataElements:
             >>> from fusion.data_dependency import DataElement
             >>> fusion = Fusion()
             >>> logical_deps = fusion.data_dependency().logical_data_elements
-            >>> src = DataElement("Dataset", "dataset1", "colA", data_space="Finance")
-            >>> tgt = DataElement("Dataset", "dataset2", "colB", data_space="Finance")
-            >>> logical_deps.create(src, tgt)
+            >>> deps = [
+            ...     {
+            ...         "sourceElements": [DataElement("Dataset", "dataset1", "colA", data_space="Finance")],
+            ...         "targetElement": DataElement("Dataset", "dataset2", "colB", data_space="Finance")
+            ...     }
+            ... ]
+            >>> logical_deps.create(deps)
         """
-        url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/datadependencies/elements"
-        payload = {"sourceElement": source_element.to_dict(), "targetElement": target_element.to_dict()}
-        return self._client.post(url, json=payload)
+        url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/attributes"
+
+        # Convert DataElement objects to dictionaries
+        payload = []
+        for dep in dependencies:
+            payload.append({
+                "sourceElements": [el.to_dict() for el in dep["sourceElements"]],
+                "targetElement": dep["targetElement"].to_dict()
+            })
+
+        resp = self._client.session.post(url, json=payload)
+        return resp if return_resp_obj else None
 
     def delete(self, source_element: DataElement, target_element: DataElement) -> dict[str, Any]:
         """Delete a logical Element-to-Element dependency.
@@ -133,9 +153,9 @@ class LogicalDataElements:
             >>> tgt = DataElement("Dataset", "dataset2", "colB", data_space="Finance")
             >>> logical_deps.delete(src, tgt)
         """
-        url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/datadependencies/elements"
+        url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/attributes"
         payload = {"sourceElement": source_element.to_dict(), "targetElement": target_element.to_dict()}
-        return self._client.delete(url, json=payload)
+        return self._client.session.delete(url, json=payload)
 
 
 class LogicalDataElementToGlossaryTerm:
@@ -165,7 +185,7 @@ class LogicalDataElementToGlossaryTerm:
         """
         url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/datadependencies/elements/terms"
         payload = {"logicalDataElement": logical_data_element.to_dict(), "term": term, "isKDE": is_kde}
-        return self._client.post(url, json=payload)
+        return self._client.session.post(url, json=payload)
 
     def update(self, logical_data_element: DataElement, term: dict[str, str], is_kde: bool) -> dict[str, Any]:
         """Update a logical Element-to-Glossary-Term dependency.
@@ -188,7 +208,7 @@ class LogicalDataElementToGlossaryTerm:
         """
         url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/datadependencies/elements/terms"
         payload = {"logicalDataElement": logical_data_element.to_dict(), "term": term, "isKDE": is_kde}
-        return self._client.patch(url, json=payload)
+        return self._client.session.patch(url, json=payload)
 
     def delete(self, logical_data_element: DataElement, term: dict[str, str]) -> dict[str, Any]:
         """Delete a logical Element-to-Glossary-Term dependency.
@@ -210,7 +230,7 @@ class LogicalDataElementToGlossaryTerm:
         """
         url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/datadependencies/elements/terms"
         payload = {"logicalDataElement": logical_data_element.to_dict(), "term": term}
-        return self._client.delete(url, json=payload)
+        return self._client.session.delete(url, json=payload)
 
 
 class DataDependency:
