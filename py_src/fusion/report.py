@@ -495,7 +495,7 @@ class Reports:
             if isinstance(reports, list):
                 for r in reports:
                     if hasattr(r, "client"):
-                        r.client = value  # type: ignore[assignment]
+                        r.client = value 
         else:
             object.__setattr__(self, name, value)
 
@@ -533,7 +533,7 @@ class Reports:
         obj.client = client
         return obj
 
-    def create_all(  # CHANGED SIG
+    def create_all(
         self,
         *,
         client: Fusion | None = None,
@@ -549,10 +549,12 @@ class Reports:
         resps: list[requests.Response] = []
         for report in self.reports:
             if report.client is None:
-                report.client = use_client  
-            resp = report.create(return_resp_obj=True)  
-            resps.append(resp)
+                report.client = use_client
+            resp = report.create(return_resp_obj=True)
+            if resp is not None:           
+                resps.append(resp)
         return resps if return_resp_obj else None
+
 
     @classmethod
     def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None) -> Reports:
