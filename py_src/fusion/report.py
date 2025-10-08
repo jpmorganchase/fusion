@@ -487,6 +487,19 @@ class Reports:
         self.reports = reports or []
         self._client: Fusion | None = None
 
+    def __setattr__(self, name: str, value: Any) -> None:  
+        if name == "_client":
+            object.__setattr__(self, name, value)
+            reports = getattr(self, "reports", None)
+            if isinstance(reports, list):
+                for r in reports:
+                    try:
+                        r.client = value
+                    except Exception:
+                        pass
+        else:
+            object.__setattr__(self, name, value)
+
     def __getitem__(self, index: int) -> Report:
         return self.reports[index]
 
@@ -520,9 +533,26 @@ class Reports:
         obj.client = client
         return obj
 
-    def create_all(self) -> None:
+    def create_all(  # CHANGED SIG
+        self,
+        *,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> list[requests.Response] | None:
+        """
+        Create all reports. Uses provided client or the container's _client (set by CDAO).
+        """
+        use_client = client or self._client
+        if use_client is None:
+            raise ValueError("A Fusion client object is required (container _client is not set).")
+
+        resps: list[requests.Response] = []
         for report in self.reports:
-            report.create()
+            if report.client is None:
+                report.client = use_client  
+            resp = report.create(return_resp_obj=True)  
+            resps.append(resp)
+        return resps if return_resp_obj else None
 
     @classmethod
     def from_object(cls, source: pd.DataFrame | list[dict[str, Any]] | str, client: Fusion | None = None) -> Reports:

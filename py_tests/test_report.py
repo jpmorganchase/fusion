@@ -190,7 +190,7 @@ def test_report_update_fields_excludes_id_and_uses_path() -> None:
     report.update_fields()
 
     assert client.session.last is not None
-    assert "id" not in client.session.last  
+    assert "id" not in client.session.last  # ensure id not in PATCH payload
     assert client.session.last_url is not None
     assert client.session.last_url.endswith("/api/corelineage-service/v1/reports/r-1")
 
@@ -219,7 +219,6 @@ def test_report_create_excludes_id_and_sets_id() -> None:
         def raise_for_status(self) -> None:
             return None
 
-       
         def json(self) -> dict[str, Any]:
             return {"id": "new-123"}
 
@@ -246,10 +245,9 @@ def test_report_create_excludes_id_and_sets_id() -> None:
     report.create()
 
     assert client.session.last is not None
-    assert "id" not in client.session.last  
+    assert "id" not in client.session.last  # ensure id not in POST payload
     assert client.session.last_url is not None
     assert client.session.last_url.endswith("/api/corelineage-service/v1/reports")
-
 
 
 def test_report_update_excludes_id_in_body_and_uses_path() -> None:
@@ -299,6 +297,6 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
     report.update()
 
     assert client.session.last is not None
-    assert "id" not in client.session.last 
+    assert "id" not in client.session.last  # ensure id not in PUT payload
     assert client.session.last_url is not None
     assert client.session.last_url.endswith("/api/corelineage-service/v1/reports/abc-999")
