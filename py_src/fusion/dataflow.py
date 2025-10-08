@@ -154,7 +154,7 @@ class Dataflow(metaclass=CamelCaseMeta):
 
 
     @classmethod
-    def _from_dict(cls: type["Dataflow"], data: dict[str, Any]) -> "Dataflow":
+    def _from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
         """Instantiate a Dataflow object from a dictionary (private)."""
         keys = {f.name for f in fields(cls)}
         mapped = {camel_to_snake(k): v for k, v in data.items()}
@@ -164,7 +164,7 @@ class Dataflow(metaclass=CamelCaseMeta):
 
 
     @classmethod
-    def _from_series(cls: type["Dataflow"], series: pd.Series) -> "Dataflow":  # type: ignore[type-arg]
+    def _from_series(cls: type[Dataflow], series: pd.Series) -> Dataflow:  # type: ignore[type-arg]
         """Instantiate a single Dataflow from a pandas Series."""
         return cls._from_dict(series.to_dict())
 

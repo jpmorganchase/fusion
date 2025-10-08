@@ -122,6 +122,7 @@ class Report(metaclass=CamelCaseMeta):
             snake_name = camel_to_snake(name)
             self.__dict__[snake_name] = value
 
+
     @property
     def client(self) -> Fusion | None:
         """Returns the bound Fusion client"""
@@ -487,18 +488,17 @@ class Reports:
         self.reports = reports or []
         self._client: Fusion | None = None
 
-    def __setattr__(self, name: str, value: Any) -> None:  
+    def __setattr__(self, name: str, value: Any) -> None:
         if name == "_client":
             object.__setattr__(self, name, value)
             reports = getattr(self, "reports", None)
             if isinstance(reports, list):
                 for r in reports:
-                    try:
-                        r.client = value
-                    except Exception:
-                        pass
+                    if hasattr(r, "client"):
+                        r.client = value  # type: ignore[assignment]
         else:
             object.__setattr__(self, name, value)
+
 
     def __getitem__(self, index: int) -> Report:
         return self.reports[index]
