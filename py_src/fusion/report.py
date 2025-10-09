@@ -578,17 +578,3 @@ class Reports:
 
         raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
 
-
-class ReportsWrapper(Reports):
-    def __init__(self, client: Fusion) -> None:
-        super().__init__([])
-        self.client = client
-
-    def from_csv(self, file_path: str) -> Reports:  # type: ignore[override]
-        return Reports.from_csv(file_path, client=self.client)
-
-    def from_dataframe(self, df: pd.DataFrame) -> Reports:  # type: ignore[override]
-        return Reports.from_dataframe(df, client=self.client)
-
-    def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports:  # type: ignore[override]
-        return Reports.from_object(source, client=self.client)
