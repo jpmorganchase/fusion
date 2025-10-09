@@ -5,11 +5,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, Optional, TypedDict
 
 import numpy as np
 import pandas as pd
 
+from .data_dependency import DataAttribute
 from .utils import (
     CamelCaseMeta,
     camel_to_snake,
@@ -431,23 +432,43 @@ class Report(metaclass=CamelCaseMeta):
         return resp if return_resp_obj else None
 
     class AttributeTermMapping(TypedDict):
-        attribute: dict[str, str]
+        attribute: DataAttribute
         term: dict[str, str]
         isKDE: bool
 
     @classmethod
     def link_attributes_to_terms(
         cls,
-        report_id: str,
         mappings: list[Report.AttributeTermMapping],
         client: Fusion,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """Link attributes to business terms for a report."""
-        url = (
-            f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements/businessTerms"
-        )
-        resp = client.session.post(url, json=mappings)
+        """Link attributes to business terms using data mapping API.
+
+        Args:
+            mappings (list[Report.AttributeTermMapping]): List of attribute-to-term mappings.
+                Each mapping contains:
+                - attribute: DataAttribute object with entity details
+                - term: dict with term information
+                - isKDE: bool indicating if it's a KDE term
+            client (Fusion): Fusion client for API requests.
+            return_resp_obj (bool): Whether to return the raw response object.
+
+        Returns:
+            requests.Response | None: API response if return_resp_obj is True, otherwise None.
+        """
+        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/data-mapping/attributes/terms"
+        
+        payload = []
+        for mapping in mappings:
+            payload_item = {
+                "attribute": mapping["attribute"].to_dict(),
+                "term": mapping["term"],
+                "isKDE": mapping["isKDE"]
+            }
+            payload.append(payload_item)
+        
+        resp = client.session.post(url, json=payload)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
 
@@ -483,9 +504,12 @@ Report.COLUMN_MAPPING = {  # type: ignore[attr-defined]
 class Reports:
     """Container for a list of Report objects with convenience loaders."""
 
-    def __init__(self, reports: list[Report] | None = None) -> None:
+    def __init__(self, reports: list[Report] | None = None, client: Fusion | None = None) -> None:
         self.reports = reports or []
-        self._client: Fusion | None = None
+        self._client: Fusion | None = client
+        if client:
+            for report in self.reports:
+                report.client = client
 
     def __getitem__(self, index: int) -> Report:
         return self.reports[index]
@@ -506,6 +530,12 @@ class Reports:
         for report in self.reports:
             report.client = client
 
+    def _use_client(self, client: Fusion | None) -> Fusion:
+        res = self._client if client is None else client
+        if res is None:
+            raise ValueError("A Fusion client object is required.")
+        return res
+
     @classmethod
     def from_csv(cls, file_path: str, client: Fusion | None = None) -> Reports:
         """Load Reports from a CSV file path."""
@@ -516,9 +546,7 @@ class Reports:
     def from_dataframe(cls, df: pd.DataFrame, client: Fusion | None = None) -> Reports:
         """Load Reports from a pandas DataFrame."""
         report_objs = Report.from_dataframe(df, client=client)
-        obj = cls(report_objs)
-        obj.client = client
-        return obj
+        return cls(report_objs, client=client)
 
     def create_all(self) -> None:
         for report in self.reports:
@@ -545,18 +573,3 @@ class Reports:
                 raise ValueError("Unsupported string input — must be .csv path or JSON array string")
 
         raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
-
-
-class ReportsWrapper(Reports):
-    def __init__(self, client: Fusion) -> None:
-        super().__init__([])
-        self.client = client
-
-    def from_csv(self, file_path: str) -> Reports:  # type: ignore[override]
-        return Reports.from_csv(file_path, client=self.client)
-
-    def from_dataframe(self, df: pd.DataFrame) -> Reports:  # type: ignore[override]
-        return Reports.from_dataframe(df, client=self.client)
-
-    def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports:  # type: ignore[override]
-        return Reports.from_object(source, client=self.client)

@@ -22,11 +22,12 @@ from tqdm import tqdm
 
 from fusion.attributes import Attribute, Attributes
 from fusion.credentials import FusionCredentials
+from fusion.data_dependency import DataAttribute
 from fusion.dataflow import Dataflow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
-from fusion.report import Report, ReportsWrapper
+from fusion.report import Report, Reports
 from fusion.report_attributes import ReportAttribute, ReportAttributes
 
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
@@ -556,13 +557,22 @@ class Fusion:
         display_all_columns: bool = False,
     ) -> pd.DataFrame:
         """Retrieve the attributes (report elements) of a specific report."""
-        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
         resp = self.session.get(url)
 
         if resp.status_code == HTTPStatus.OK:
             rep_df = pd.json_normalize(resp.json())
             if not display_all_columns:
-                key_columns = ["id", "path", "status", "dataType", "isMandatory", "description", "createdBy", "name"]
+                key_columns = [
+                    "id",
+                    "title",
+                    "description",
+                    "sourceIdentifier",
+                    "technicalDataType",
+                    "path",
+                    "reportId",
+                    "createdBy",
+                ]
                 rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
             if output:
                 pass
@@ -570,7 +580,16 @@ class Fusion:
         else:
             resp.raise_for_status()
         return pd.DataFrame(
-            columns=["id", "path", "status", "dataType", "isMandatory", "description", "createdBy", "name"]
+            columns=[
+                "id",
+                "title",
+                "description",
+                "sourceIdentifier",
+                "technicalDataType",
+                "path",
+                "reportId",
+                "createdBy",
+            ]
         )
 
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
@@ -2357,34 +2376,30 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
 
-    def reports(self) -> ReportsWrapper:
-        """Instantiate a ReportsWrapper collection with this client, providing access to
+    def reports(self) -> Reports:
+        """Instantiate a Reports collection with this client, providing access to
         report-related operations such as creation, retrieval, and bulk manipulation.
 
         Returns:
-            ReportsWrapper: A ReportsWrapper collection object with the client context attached.
+            Reports: A Reports collection object with the client context attached.
 
         Example:
             >>> fusion = Fusion()
             >>> reports = fusion.reports()
-            >>> new_report = reports.create(
+            >>> reports_from_csv = reports.from_csv("reports.csv")
+            >>> reports_from_csv.create_all()
+            >>> # Or create individual reports:
+            >>> new_report = fusion.report(
             ...     title="Monthly Risk Report",
             ...     description="Summary of monthly risk metrics",
             ...     frequency="Monthly",
             ...     category="Risk",
             ...     sub_category="Credit Risk",
-            ...     business_domain="CDAO Office",
-            ...     regulatory_related=True,
-            ...     owner_node={"name": "APP-123", "type": "Application (SEAL)"},
-            ...     publisher_node={
-            ...         "name": "DASH-01",
-            ...         "type": "Intelligent Solutions",
-            ...         "publisher_node_identifier": "seal:app:APP-123"
-            ...     },
+            ...     business_domain="CDAO Office"
             ... )
             >>> new_report.create()
         """
-        return ReportsWrapper(client=self)
+        return Reports(client=self)
     
     def delete_datasetmembers(
         self,
@@ -2780,19 +2795,33 @@ class Fusion:
 
     def link_attributes_to_terms(
         self,
-        report_id: str,
         mappings: list[Report.AttributeTermMapping],
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
         """Link attributes to business terms for a report.
 
         Args:
-            report_id (str): ID of the report to link terms to.
-            mappings (list): List of attribute-to-term mappings.
+            mappings (list[Report.AttributeTermMapping]): List of attribute-to-term mappings.
+                Each mapping should contain:
+                - attribute: DataAttribute object with entity details (entity_type, entity_identifier, attribute_identifier, data_space)
+                - term: dict with term information  
+                - isKDE: bool indicating if it's a KDE term
             return_resp_obj (bool): Whether to return the raw response object.
 
         Returns:
             requests.Response | None: API response
+
+        Example:
+            >>> from fusion import Fusionf
+            >>> from fusion.data_dependency import DataAttribute
+            >>> fusion = Fusion()
+            >>> attr = DataAttribute("Report", "report_123", "field_name")
+            >>> mappings = [{
+            ...     "attribute": attr,
+            ...     "term": {"id": "term_123", "name": "Business Term"},
+            ...     "isKDE": True
+            ... }]
+            >>> fusion.link_attributes_to_terms(mappings)
         """
 
         processed_mappings = []
@@ -2803,7 +2832,7 @@ class Fusion:
             processed_mappings.append(new_mapping)
 
         return Report.link_attributes_to_terms( 
-            report_id=report_id, mappings=processed_mappings, client=self, return_resp_obj=return_resp_obj
+            mappings=processed_mappings, client=self, return_resp_obj=return_resp_obj
         )
     
     def list_distribution_files(

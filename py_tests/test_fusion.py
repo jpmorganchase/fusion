@@ -3429,27 +3429,28 @@ def test_list_reports_by_id(fusion_obj: Fusion, requests_mock: requests_mock.Moc
     assert isinstance(df, pd.DataFrame)
     assert df.iloc[0]["id"] == "rep1"
 
-
 def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
-    report_id = "rep1"
-    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
+    report_id = "6789"
+    attribute_id = 12
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
     mock_data = [
         {
-            "id": "attr1",
-            "path": "/data/value",
-            "status": "active",
-            "dataType": "string",
-            "isMandatory": True,
+            "id": 12,
+            "title": "Attribute 1",
             "description": "Field desc",
+            "sourceIdentifier": "Source 1",
+            "technicalDataType": "string",
+            "path": "/data/value",
+            "reportId": 12345,
             "createdBy": "user1",
-            "name": "value",
         }
     ]
     requests_mock.get(url, json=mock_data)
     df = fusion_obj.list_report_attributes(report_id=report_id)  # noqa
     assert isinstance(df, pd.DataFrame)
     assert "id" in df.columns
-    assert df.iloc[0]["id"] == "attr1"
+    assert df.iloc[0]["id"] == attribute_id
+
 
 def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
     report = fusion_obj.report(

@@ -165,7 +165,7 @@ def test_report_attributes_use_client_value_error() -> None:
 def test_report_attributes_create(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     HTTP_OK = 200
     report_id = "report_123"
-    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/report-elements"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
 
     expected_payload = [
         {
@@ -192,7 +192,7 @@ def test_report_attributes_update(requests_mock: requests_mock.Mocker, fusion_ob
     """Test the update method (PUT operation)."""
     HTTP_OK = 200
     report_id = "report_123"
-    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/report-elements"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
 
     expected_payload = [
         {
@@ -239,7 +239,7 @@ def test_report_attributes_update_fields(requests_mock: requests_mock.Mocker, fu
     """Test the update_fields method (PATCH operation)."""
     HTTP_OK = 200
     report_id = "report_123"
-    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/report-elements"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
 
     expected_payload = [
         {
@@ -284,7 +284,7 @@ def test_report_attributes_delete(requests_mock: requests_mock.Mocker, fusion_ob
     """Test the delete method (DELETE operation)."""
     HTTP_OK = 200
     report_id = "report_123"
-    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/report-elements"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
 
     expected_payload = [{"id": 456}]
     requests_mock.delete(url, json=expected_payload, status_code=HTTP_OK)
@@ -306,7 +306,7 @@ def test_report_attributes_delete_multiple(requests_mock: requests_mock.Mocker, 
     """Test the delete method with multiple attributes."""
     HTTP_OK = 200
     report_id = "report_123"
-    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/report-elements"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
 
     expected_payload = [{"id": 456}, {"id": 789}]
     requests_mock.delete(url, json=expected_payload, status_code=HTTP_OK)
