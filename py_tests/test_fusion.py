@@ -3501,12 +3501,14 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
 
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fusion) -> None:
+    from fusion.data_dependency import DependencyAttribute
+    
     mappings: list[Report.AttributeTermMapping] = [
-        {"attribute": {"id": "attr1"}, "term": {"id": "term1"}, "isKDE": True},
-        {"attribute": {"id": "attr2"}, "term": {"id": "term2"}, "isKDE": False},
+        {"attribute": DependencyAttribute("Report", "rep1", "attr1"), "term": {"id": "term1"}, "isKDE": True},
+        {"attribute": DependencyAttribute("Report", "rep2", "attr2"), "term": {"id": "term2"}, "isKDE": False},
     ]
 
-    fusion_obj.link_attributes_to_terms(report_id="rep123", mappings=mappings)
+    fusion_obj.link_attributes_to_terms(mappings=mappings)
 
     args, kwargs = mock_link.call_args
     sent_mappings = kwargs["mappings"]
@@ -3517,14 +3519,16 @@ def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fus
 
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fusion_obj: Fusion) -> None:
+    from fusion.data_dependency import DependencyAttribute
+    
     mock_resp = MagicMock()
     mock_link.return_value = mock_resp
 
     mappings: list[Report.AttributeTermMapping] = [
-        {"attribute": {"id": "a"}, "term": {"id": "t"}, "isKDE": True},
+        {"attribute": DependencyAttribute("Report", "r", "a"), "term": {"id": "t"}, "isKDE": True},
     ]
 
-    resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
+    resp = fusion_obj.link_attributes_to_terms(mappings, return_resp_obj=True)
 
     assert resp is mock_resp
 

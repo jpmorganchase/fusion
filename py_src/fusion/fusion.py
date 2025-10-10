@@ -2803,7 +2803,8 @@ class Fusion:
         Args:
             mappings (list[Report.AttributeTermMapping]): List of attribute-to-term mappings.
                 Each mapping should contain:
-                - attribute: DataAttribute object with entity details (entity_type, entity_identifier, attribute_identifier, data_space)
+                - attribute: DependencyAttribute object with entity details 
+                  (entity_type, entity_identifier, attribute_identifier, data_space)
                 - term: dict with term information  
                 - isKDE: bool indicating if it's a KDE term
             return_resp_obj (bool): Whether to return the raw response object.
@@ -2812,13 +2813,16 @@ class Fusion:
             requests.Response | None: API response
 
         Example:
-            >>> from fusion import Fusionf
-            >>> from fusion.data_dependency import DataAttribute
+            >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> attr = DataAttribute("Report", "report_123", "field_name")
+            >>> attr = fusion.dependency_attribute(
+            ...     entity_type="Report",
+            ...     entity_identifier="report_123",
+            ...     attribute_identifier="field_name"
+            ... )
             >>> mappings = [{
             ...     "attribute": attr,
-            ...     "term": {"id": "term_123", "name": "Business Term"},
+            ...     "term": {"id": "term_123"},
             ...     "isKDE": True
             ... }]
             >>> fusion.link_attributes_to_terms(mappings)

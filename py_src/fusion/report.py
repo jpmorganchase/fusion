@@ -5,12 +5,11 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import numpy as np
 import pandas as pd
 
-from .data_dependency import DataAttribute
 from .utils import (
     CamelCaseMeta,
     camel_to_snake,
@@ -26,6 +25,8 @@ if TYPE_CHECKING:
     import requests
 
     from fusion import Fusion
+
+    from .data_dependency import DependencyAttribute
 
 logger = logging.getLogger(__name__)
 
@@ -432,7 +433,7 @@ class Report(metaclass=CamelCaseMeta):
         return resp if return_resp_obj else None
 
     class AttributeTermMapping(TypedDict):
-        attribute: DataAttribute
+        attribute: DependencyAttribute
         term: dict[str, str]
         isKDE: bool
 
@@ -448,7 +449,7 @@ class Report(metaclass=CamelCaseMeta):
         Args:
             mappings (list[Report.AttributeTermMapping]): List of attribute-to-term mappings.
                 Each mapping contains:
-                - attribute: DataAttribute object with entity details
+                - attribute: DependencyAttribute object with entity details
                 - term: dict with term information
                 - isKDE: bool indicating if it's a KDE term
             client (Fusion): Fusion client for API requests.
