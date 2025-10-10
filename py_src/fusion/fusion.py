@@ -22,6 +22,7 @@ from tqdm import tqdm
 
 from fusion.attributes import Attribute, Attributes
 from fusion.credentials import FusionCredentials
+from fusion.data_dependency import DataDependency, DataMapping, DependencyAttribute
 from fusion.dataflow import Dataflow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
@@ -2865,4 +2866,52 @@ class Fusion:
 
         # fallback empty frame if something unexpected happens
         return pd.DataFrame()
+    
+    def dependency_attribute(
+        self,
+        entity_type: str,
+        entity_identifier: str,
+        attribute_identifier: str,
+        data_space: str | None = None,
+    ) -> DependencyAttribute:
+        """
+        Instantiate a DependencyAttribute object with the current Fusion client attached.
+
+        Args:
+            entity_type (str): Type of entity, e.g., "Dataset" or "Report".
+            entity_identifier (str): Identifier of the entity (dataset name or report ID).
+            attribute_identifier (str): Identifier of the specific attribute.
+            data_space (str, optional): Required if entity_type is "Dataset". Specifies the data space.
+
+        Returns:
+            DependencyAttribute: A DependencyAttribute object ready for API operations.
+        """
+        attr_obj = DependencyAttribute(
+            entity_type=entity_type,
+            entity_identifier=entity_identifier,
+            attribute_identifier=attribute_identifier,
+            data_space=data_space,
+        )
+        attr_obj.client = self
+        return attr_obj
+
+    def data_dependency(self) -> DataDependency:
+        """
+        Instantiate a DataDependency object with the current Fusion client attached.
+
+        Returns:
+            DataDependency: A DataDependency object ready for linking/unlinking attributes.
+        """
+        dep_obj = DataDependency(client=self)
+        return dep_obj
+
+    def data_mapping(self) -> DataMapping:
+        """
+        Instantiate a DataMapping object with the current Fusion client attached.
+
+        Returns:
+            DataMapping: A DataMapping object ready for mapping/unmapping attributes to business terms.
+        """
+        mapping_obj = DataMapping(client=self)
+        return mapping_obj
 
