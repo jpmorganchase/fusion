@@ -1,60 +1,59 @@
 """Fusion Data Dependency module.
 
-This module defines classes to manage logical dependencies between metadata objects
-like Datasets, Reports, and Business Terms in Fusion.
+This module defines classes to manage dependencies and mappings between
+attributes and business terms in Fusion.
 
 Classes:
-    DataElement: Represents a single source or target element in a data dependency.
-    DataDependency: Entry point for managing logical data dependencies.
-    LogicalDataElements: Manages element-to-element dependencies.
-    LogicalDataElementToGlossaryTerm: Manages element-to-term dependencies.
+    DependencyAttribute: Represents an attribute participating in dependency or mapping relationships.
+    DataDependency: Manages attribute-to-attribute dependencies.
+    DataMapping: Manages attribute-to-term mappings.
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, Any
+from typing import TYPE_CHECKING, Any
 
 from fusion.utils import snake_to_camel
 
 if TYPE_CHECKING:
     import requests
+
     from fusion import Fusion
 
 
 @dataclass
-class DataAttribute:
-    """Represents a single source or target Attribute in a data dependency.
+class DependencyAttribute:
+    """Represents a source or target Attribute in a dependency or mapping relationship.
 
     Attributes:
-        entity_type (str): Type of entity, e.g., "Dataset" or "Report".
-        entity_identifier (str): Identifier of the entity.
-        attribute_identifier (str): Identifier of the attribute.
-        data_space (Optional[str]): Required if entity_type is "Dataset".
-        _client (Optional[Fusion]): Optional Fusion client.
+        entity_type (str): The type of entity (e.g., "Dataset" or "Report").
+        entity_identifier (str): Identifier of the entity (e.g., dataset name or report ID).
+        attribute_identifier (str): Identifier of the specific attribute.
+        data_space (Optional[str]): Data space for the attribute. Required if entity_type is "Dataset".
+        _client (Optional[Fusion]): Optional Fusion client for API calls.
 
     Raises:
-        ValueError: If entity_type is "Dataset" and data_space is not provided.
+        ValueError: If `entity_type` is "Dataset" and `data_space` is not provided.
 
     Examples:
         >>> from fusion import Fusion
-        >>> from fusion.data_dependency import DataAttribute
         >>> fusion = Fusion()
-
-        # Dataset
-        >>> de = DataAttribute("Dataset", "dataset1", "colA", data_space="test")
-        >>> de.to_dict()
-        {'entityType': 'Dataset', 'entityIdentifier': 'dataset1', 'attributeIdentifier': 'colA', 'dataSpace': 'test1'}
-
-        # Report
-        >>> de2 = DataAttribute("Report", "report1", "fieldX")
-        >>> de2.to_dict()
-        {'entityType': 'Report', 'entityIdentifier': 'report1', 'attributeIdentifier': 'fieldX'}
+        >>> src = fusion.dependency_attribute(
+        ...     entity_type="Dataset",
+        ...     entity_identifier="dataset1",
+        ...     attribute_identifier="columnA",
+        ...     data_space="Finance"
+        ... )
+        >>> src.to_dict()
+        {'entityType': 'Dataset', 'entityIdentifier': 'dataset1',
+         'attributeIdentifier': 'columnA', 'dataSpace': 'Finance'}
     """
 
     entity_type: str
     entity_identifier: str
     attribute_identifier: str
-    data_space: Optional[str] = None
+    data_space: str | None = None
     _client: Fusion | None = None
 
     def __post_init__(self) -> None:
@@ -63,190 +62,252 @@ class DataAttribute:
             raise ValueError("data_space is required when entity_type is 'Dataset'")
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert DataAttribute instance to dictionary.
+        """Convert DependencyAttribute instance to dictionary.
 
         Returns:
-            dict[str, Any]: Dictionary representation of the Data Attribute.
+            dict[str, Any]: Dictionary representation of the attribute, with keys in camelCase.
+
+        Examples:
+            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> attr.to_dict()
+            {'entityType': 'Dataset', 'entityIdentifier': 'dataset1',
+             'attributeIdentifier': 'colA', 'dataSpace': 'Finance'}
         """
-        attribute_dict = {
+        return {
             snake_to_camel(k): v
             for k, v in self.__dict__.items()
             if not k.startswith("_") and v is not None
         }
-        return attribute_dict
 
     @property
     def client(self) -> Fusion | None:
-        """Return the Fusion client."""
+        """Return the Fusion client.
+
+        Returns:
+            Fusion | None: The Fusion client associated with this attribute.
+        """
         return self._client
 
     @client.setter
     def client(self, client: Fusion) -> None:
-        """Set the Fusion client."""
-        self._client = client
-
-
-class LogicalDataElements:
-    """Manager for logical Attribute-to-Attribute dependencies."""
-
-    def __init__(self, client: Fusion):
-        self._client = client
-
-    def create(
-    self,
-    dependencies: list[dict[str, list[DataAttribute] | DataAttribute]],
-    return_resp_obj: bool = False
-) -> requests.Response | None:
-        """Create logical Element-to-Element dependencies (supports multiple source elements).
+        """Set the Fusion client.
 
         Args:
-            dependencies (list[dict]): List of dependency mappings. Each dict should have:
-                - "sourceAttributes": list of DataAttribute instances
-                - "targetAttribute": a single DataAttribute instance
-            return_resp_obj (bool): If True, returns the requests.Response object.
-
-        Returns:
-            requests.Response | None: Response from the Fusion API if return_resp_obj=True, else None.
+            client (Fusion): The Fusion client instance to associate with this attribute.
 
         Examples:
-            >>> from fusion import Fusion
-            >>> from fusion.data_dependency import DataElement
-            >>> fusion = Fusion()
-            >>> logical_deps = fusion.data_dependency().logical_data_elements
-            >>> deps = [
-            ...     {
-            ...         "sourceElements": [DataElement("Dataset", "dataset1", "colA", data_space="Finance")],
-            ...         "targetElement": DataElement("Dataset", "dataset2", "colB", data_space="Finance")
-            ...     }
-            ... ]
-            >>> logical_deps.create(deps)
+            >>> attr = DependencyAttribute("Dataset", "dataset1", "colA", "Finance")
+            >>> attr.client = fusion
+        """
+        self._client = client
+
+class DataDependency:
+    """Manages attribute-to-attribute dependencies.
+
+    This class provides methods to:
+        - Link source attributes to a target attribute
+        - Unlink source attributes from a target attribute
+
+    Examples:
+        >>> from fusion import Fusion
+        >>> fusion = Fusion()
+        >>> src = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+        >>> tgt = fusion.dependency_attribute("Dataset", "dataset2", "colB", "Finance")
+        >>> fusion.data_dependency().link_attributes([src], tgt)
+        >>> fusion.data_dependency().unlink_attributes([src], tgt)
+    """
+
+    def __init__(self, client: Fusion) -> None:
+        """Initialize DataDependency with a Fusion client.
+
+        Args:
+            client (Fusion): The Fusion client instance.
+        """
+        self._client = client
+
+    def link_attributes(
+        self,
+        source_attributes: list[DependencyAttribute],
+        target_attribute: DependencyAttribute,
+        return_resp_obj: bool = False
+    ) -> requests.Response | None:
+        """Link one or more source attributes to a target attribute.
+
+        Args:
+            source_attributes (list[DependencyAttribute]): List of source attributes to be linked.
+            target_attribute (DependencyAttribute): The target attribute to which the sources will be linked.
+            return_resp_obj (bool, optional): If True, returns the `requests.Response` object. Defaults to False.
+
+        Returns:
+            requests.Response | None: The HTTP response object if `return_resp_obj=True`, else None.
+
+        Examples:
+            >>> src = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> tgt = fusion.dependency_attribute("Dataset", "dataset2", "colB", "Finance")
+            >>> fusion.data_dependency().link_attributes([src], tgt)
         """
         url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/attributes"
-
-        # Convert DataElement objects to dictionaries
-        payload = []
-        for dep in dependencies:
-            payload.append({
-                "sourceElements": [el.to_dict() for el in dep["sourceElements"]],
-                "targetElement": dep["targetElement"].to_dict()
-            })
-
+        payload = [
+            {
+                "sourceAttributes": [attr.to_dict() for attr in source_attributes],
+                "targetAttribute": target_attribute.to_dict(),
+            }
+        ]
         resp = self._client.session.post(url, json=payload)
         return resp if return_resp_obj else None
 
-    def delete(self, source_element: DataElement, target_element: DataElement) -> dict[str, Any]:
-        """Delete a logical Element-to-Element dependency.
+    def unlink_attributes(
+        self,
+        source_attributes: list[DependencyAttribute],
+        target_attribute: DependencyAttribute,
+        return_resp_obj: bool = False
+    ) -> requests.Response | None:
+        """Unlink one or more source attributes from a target attribute.
 
         Args:
-            source_element (DataElement): Source element.
-            target_element (DataElement): Target element.
+            source_attributes (list[DependencyAttribute]): List of source attributes to be unlinked.
+            target_attribute (DependencyAttribute): The target attribute from which the sources will be unlinked.
+            return_resp_obj (bool, optional): If True, returns the `requests.Response` object. Defaults to False.
 
         Returns:
-            dict[str, Any]: Response from the Fusion API.
+            requests.Response | None: The HTTP response object if `return_resp_obj=True`, else None.
 
         Examples:
-            >>> from fusion import Fusion
-            >>> from fusion.data_dependency import DataElement
-            >>> fusion = Fusion()
-            >>> logical_deps = fusion.data_dependency().logical_data_elements
-            >>> src = DataElement("Dataset", "dataset1", "colA", data_space="Finance")
-            >>> tgt = DataElement("Dataset", "dataset2", "colB", data_space="Finance")
-            >>> logical_deps.delete(src, tgt)
+            >>> src = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> tgt = fusion.dependency_attribute("Dataset", "dataset2", "colB", "Finance")
+            >>> fusion.data_dependency().unlink_attributes([src], tgt)
         """
         url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/attributes"
-        payload = {"sourceElement": source_element.to_dict(), "targetElement": target_element.to_dict()}
-        return self._client.session.delete(url, json=payload)
+        payload = [
+            {
+                "sourceAttributes": [attr.to_dict() for attr in source_attributes],
+                "targetAttribute": target_attribute.to_dict(),
+            }
+        ]
+        resp = self._client.session.delete(url, json=payload)
+        return resp if return_resp_obj else None
 
+class DataMapping:
+    """Manages attribute-to-term mappings.
 
-class LogicalDataElementToGlossaryTerm:
-    """Manager for logical element-to-business-term dependencies."""
+    This class provides methods to:
+        - Link an attribute to a business term
+        - Unlink an attribute from a business term
+        - Update KDE (Key Data Element) status for a mapping
 
-    def __init__(self, client: Fusion):
-        self._client = client
-
-    def create(self, logical_data_element: DataElement, term: dict[str, str], is_kde: bool) -> dict[str, Any]:
-        """Create a logical Element-to-Glossary-Term dependency.
-
-        Args:
-            logical_data_element (DataElement): Logical data element.
-            term (dict[str, str]): Business term dictionary with 'id'.
-            is_kde (bool): Whether this is a Key Data Element.
-
-        Returns:
-            dict[str, Any]: Response from the Fusion API.
-
-        Examples:
-            >>> from fusion import Fusion
-            >>> from fusion.data_dependency import DataElement
-            >>> fusion = Fusion()
-            >>> element = DataElement("Dataset", "dataset1", "colA", data_space="Finance")
-            >>> term_dict = {"id": "Revenue"}
-            >>> fusion.data_dependency().logical_data_element_to_glossary_term.create(element, term_dict, True)
-        """
-        url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/datadependencies/elements/terms"
-        payload = {"logicalDataElement": logical_data_element.to_dict(), "term": term, "isKDE": is_kde}
-        return self._client.session.post(url, json=payload)
-
-    def update(self, logical_data_element: DataElement, term: dict[str, str], is_kde: bool) -> dict[str, Any]:
-        """Update a logical Element-to-Glossary-Term dependency.
-
-        Args:
-            logical_data_element (DataElement): Logical data element.
-            term (dict[str, str]): Business term dictionary with 'id'.
-            is_kde (bool): Whether this is a Key Data Element.
-
-        Returns:
-            dict[str, Any]: Response from the Fusion API.
-
-        Examples:
-            >>> from fusion import Fusion
-            >>> from fusion.data_dependency import DataElement
-            >>> fusion = Fusion()
-            >>> element = DataElement("Dataset", "dataset1", "colA", data_space="Finance")
-            >>> term_dict = {"id": "Revenue"}
-            >>> fusion.data_dependency().logical_data_element_to_glossary_term.update(element, term_dict, False)
-        """
-        url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/datadependencies/elements/terms"
-        payload = {"logicalDataElement": logical_data_element.to_dict(), "term": term, "isKDE": is_kde}
-        return self._client.session.patch(url, json=payload)
-
-    def delete(self, logical_data_element: DataElement, term: dict[str, str]) -> dict[str, Any]:
-        """Delete a logical Element-to-Glossary-Term dependency.
-
-        Args:
-            logical_data_element (DataElement): Logical data element.
-            term (dict[str, str]): Business term dictionary with 'id'.
-
-        Returns:
-            dict[str, Any]: Response from the Fusion API.
-
-        Examples:
-            >>> from fusion import Fusion
-            >>> from fusion.data_dependency import DataElement
-            >>> fusion = Fusion()
-            >>> element = DataElement("Dataset", "dataset1", "colA", data_space="Finance")
-            >>> term_dict = {"id": "Revenue"}
-            >>> fusion.data_dependency().logical_data_element_to_glossary_term.delete(element, term_dict)
-        """
-        url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/datadependencies/elements/terms"
-        payload = {"logicalDataElement": logical_data_element.to_dict(), "term": term}
-        return self._client.session.delete(url, json=payload)
-
-
-class DataDependency:
-    """Fusion Data Dependency class for managing logical dependencies.
-
-    Provides interfaces to manage:
-        - Logical Data Element to Data Element dependencies
-        - Logical Data Element to Business Term dependencies
-
-    Accessed via:
+    Examples:
         >>> from fusion import Fusion
         >>> fusion = Fusion()
-        >>> data_dependency = fusion.data_dependency()
+        >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+        >>> term = {"id": "term_123"}
+        >>> fusion.data_mapping().link_attribute_to_term(attr, term, True)
+        >>> fusion.data_mapping().update_attribute_to_term_kde_status(attr, term, False)
+        >>> fusion.data_mapping().unlink_attribute_from_term(attr, term)
     """
 
-    def __init__(self, client: Fusion):
+    def __init__(self, client: Fusion) -> None:
+        """Initialize DataMapping with a Fusion client.
+
+        Args:
+            client (Fusion): The Fusion client instance.
+        """
         self._client = client
-        self.logical_data_elements = LogicalDataElements(client)
-        self.logical_data_element_to_glossary_term = LogicalDataElementToGlossaryTerm(client)
+
+    def link_attribute_to_term(
+        self,
+        attribute: DependencyAttribute,
+        term: dict[str, str],
+        is_kde: bool,
+        return_resp_obj: bool = False
+    ) -> requests.Response | None:
+        """Link an attribute to a business term.
+
+        Args:
+            attribute (DependencyAttribute): The attribute object to link.
+            term (dict[str, str]): The business term dictionary containing the term `id`.
+            is_kde (bool): Whether the attribute is designated as a Key Data Element (KDE).
+            return_resp_obj (bool, optional): If True, returns the `requests.Response` object. Defaults to False.
+
+        Returns:
+            requests.Response | None: The HTTP response object if `return_resp_obj=True`, else None.
+
+        Examples:
+            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> term = {"id": "term_123"}
+            >>> fusion.data_mapping().link_attribute_to_term(attr, term, True)
+        """
+        url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/data-mapping/attributes/terms"
+        payload = [
+            {
+                "attribute": attribute.to_dict(),
+                "term": term,
+                "isKDE": is_kde
+            }
+        ]
+        resp = self._client.session.post(url, json=payload)
+        return resp if return_resp_obj else None
+
+    def unlink_attribute_from_term(
+        self,
+        attribute: DependencyAttribute,
+        term: dict[str, str],
+        return_resp_obj: bool = False
+    ) -> requests.Response | None:
+        """Unlink an attribute from a business term.
+
+        Args:
+            attribute (DependencyAttribute): The attribute object to unlink.
+            term (dict[str, str]): The business term dictionary containing the term `id`.
+            return_resp_obj (bool, optional): If True, returns the `requests.Response` object. Defaults to False.
+
+        Returns:
+            requests.Response | None: The HTTP response object if `return_resp_obj=True`, else None.
+
+        Examples:
+            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> term = {"id": "term_123"}
+            >>> fusion.data_mapping().unlink_attribute_from_term(attr, term)
+        """
+        url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/data-mapping/attributes/terms"
+        payload = [
+            {
+                "attribute": attribute.to_dict(),
+                "term": term
+            }
+        ]
+        resp = self._client.session.delete(url, json=payload)
+        return resp if return_resp_obj else None
+
+    def update_attribute_to_term_kde_status(
+        self,
+        attribute: DependencyAttribute,
+        term: dict[str, str],
+        is_kde: bool,
+        return_resp_obj: bool = False
+    ) -> requests.Response | None:
+        """Update the KDE (Key Data Element) status for an attribute-to-term mapping.
+
+        Args:
+            attribute (DependencyAttribute): The attribute object.
+            term (dict[str, str]): The business term dictionary containing the term `id`.
+            is_kde (bool): The KDE status to set (True for KDE, False for non-KDE).
+            return_resp_obj (bool, optional): If True, returns the `requests.Response` object. Defaults to False.
+
+        Returns:
+            requests.Response | None: The HTTP response object if `return_resp_obj=True`, else None.
+
+        Examples:
+            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> term = {"id": "term_123"}
+            >>> fusion.data_mapping().update_attribute_to_term_kde_status(attr, term, False)
+        """
+        url = f"{self._client._get_new_root_url()}/api/corelineage-service/v1/data-mapping/attributes/terms"
+        payload = [
+            {
+                "attribute": attribute.to_dict(),
+                "term": term,
+                "isKDE": is_kde
+            }
+        ]
+        resp = self._client.session.patch(url, json=payload)
+        return resp if return_resp_obj else None

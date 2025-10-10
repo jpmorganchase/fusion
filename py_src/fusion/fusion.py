@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile
 
-from fusion.data_dependency import DataDependency
 import pandas as pd
 import pyarrow as pa
 from rich.progress import Progress
@@ -23,6 +22,7 @@ from tabulate import tabulate
 
 from fusion.attributes import Attribute, Attributes
 from fusion.credentials import FusionCredentials
+from fusion.data_dependency import DataDependency, DataMapping, DependencyAttribute
 from fusion.dataflow import Dataflow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
@@ -2844,59 +2844,51 @@ class Fusion:
         # fallback empty frame if something unexpected happens
         return pd.DataFrame()
     
-    def data_dependency(self, **kwargs: Any) -> DataDependency:
-        """Instantiate a DataDependency object with this client for managing
-        relationships between metadata objects (e.g., Dataset, Report) and business domains.
+    def dependency_attribute(
+        self,
+        entity_type: str,
+        entity_identifier: str,
+        attribute_identifier: str,
+        data_space: str | None = None,
+    ) -> DependencyAttribute:
+        """
+        Instantiate a DependencyAttribute object with the current Fusion client attached.
 
         Args:
-            **kwargs (Any): Additional keyword arguments (reserved for future extensions).
+            entity_type (str): Type of entity, e.g., "Dataset" or "Report".
+            entity_identifier (str): Identifier of the entity (dataset name or report ID).
+            attribute_identifier (str): Identifier of the specific attribute.
+            data_space (str, optional): Required if entity_type is "Dataset". Specifies the data space.
 
         Returns:
-            DataDependency: Fusion DataDependency class for creating, updating, and deleting
-            dependencies such as:
-                - logical_data_elements
-                - logical_data_element_to_glossary_term
-
-        Examples:
-            >>> from fusion import Fusion
-            >>> from fusion.data_dependency import DataElement
-            >>> fusion = Fusion()
-            >>> data_dependency = fusion.data_dependency()
-
-            # Create an element-to-element dependency
-            >>> source = DataElement(
-            ...     data_space="Finance",
-            ...     entity_type="Dataset",
-            ...     entity_identifier="dataset1",
-            ...     element_identifier="colA"
-            ... )
-            >>> target = DataElement(
-            ...     data_space="Finance",
-            ...     entity_type="Dataset",
-            ...     entity_identifier="dataset2",
-            ...     element_identifier="colB"
-            ... )
-            >>> data_dependency.logical_data_elements.create(source, target)
-
-            # Create a logical data element to glossary term dependency
-            >>> element = DataElement(
-            ...     data_space="Finance",
-            ...     entity_type="Dataset",
-            ...     entity_identifier="dataset1",
-            ...     element_identifier="colA"
-            ... )
-            >>> data_dependency.logical_data_element_to_glossary_term.create(
-            ...     element=element,
-            ...     glossary_term="Revenue",
-            ...     is_authoritative=True
-            ... )
-
-        Note:
-            `DataDependency` does not represent metadata itself. It manages
-            **relationships** between metadata objects (datasets, reports, etc.)
-            and business terms or other logical elements.
+            DependencyAttribute: A DependencyAttribute object ready for API operations.
         """
-        dependency_obj = DataDependency(self, **kwargs)
-        dependency_obj.client = self
-        return dependency_obj
+        attr_obj = DependencyAttribute(
+            entity_type=entity_type,
+            entity_identifier=entity_identifier,
+            attribute_identifier=attribute_identifier,
+            data_space=data_space,
+        )
+        attr_obj.client = self
+        return attr_obj
+
+    def data_dependency(self) -> DataDependency:
+        """
+        Instantiate a DataDependency object with the current Fusion client attached.
+
+        Returns:
+            DataDependency: A DataDependency object ready for linking/unlinking attributes.
+        """
+        dep_obj = DataDependency(client=self)
+        return dep_obj
+
+    def data_mapping(self) -> DataMapping:
+        """
+        Instantiate a DataMapping object with the current Fusion client attached.
+
+        Returns:
+            DataMapping: A DataMapping object ready for mapping/unmapping attributes to business terms.
+        """
+        mapping_obj = DataMapping(client=self)
+        return mapping_obj
 
