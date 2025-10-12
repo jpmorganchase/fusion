@@ -16,6 +16,13 @@ from pytest_mock import MockerFixture
 
 from fusion.attributes import Attribute
 from fusion.credentials import FusionCredentials
+from fusion.data_dependency import (
+    AttributeTermMapping,
+    DataDependency,
+    DataMapping,
+    DependencyAttribute,
+    DependencyMapping,
+)
 from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
@@ -3650,3 +3657,170 @@ def test_list_dataflows_http_error(requests_mock: requests_mock.Mocker, fusion_o
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_dataflows(flow_id)
+
+def test_dependency_attribute(fusion_obj: Fusion) -> None:
+    """Fusion.dependency_attribute should return a DependencyAttribute with client set."""
+    attr = fusion_obj.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+    assert isinstance(attr, DependencyAttribute)
+    assert attr.entity_type == "Dataset"
+    assert attr.entity_identifier == "dataset1"
+    assert attr.attribute_identifier == "colA"
+    assert attr.data_space == "Finance"  
+
+def test_dependency_mapping(fusion_obj: Fusion) -> None:
+    """Fusion.dependency_mapping should return a DependencyMapping with client set."""
+    src = fusion_obj.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+    tgt = fusion_obj.dependency_attribute("Dataset", "dataset2", "colB", "Finance")
+    mapping = fusion_obj.dependency_mapping([src], tgt)
+    assert isinstance(mapping, DependencyMapping)
+    assert mapping.source_attributes[0] == src
+    assert mapping.target_attribute == tgt
+    
+def test_attribute_term_mapping(fusion_obj: Fusion) -> None:
+    """Fusion.attribute_term_mapping should return AttributeTermMapping with client set."""
+    attr = fusion_obj.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+    term = {"id": "term_123"}
+    mapping = fusion_obj.attribute_term_mapping(attr, term, is_kde=True)
+    assert isinstance(mapping, AttributeTermMapping)
+    assert mapping.attribute == attr
+    assert mapping.term == term
+    assert mapping.is_kde is True   
+
+def test_data_dependency_sets_client(fusion_obj: Fusion) -> None:
+    """Fusion.data_dependency should return DataDependency with client set."""
+    dep = fusion_obj.data_dependency()
+    assert isinstance(dep, DataDependency)
+    assert dep.client == fusion_obj
+
+
+def test_data_mapping_sets_client(fusion_obj: Fusion) -> None:
+    """Fusion.data_mapping should return DataMapping with client set."""
+    mapping = fusion_obj.data_mapping()
+    assert isinstance(mapping, DataMapping)
+    assert mapping.client == fusion_obj
+
+
+def test_list_attribute_lineage_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_attribute_lineage returns dataframe when API responds 200."""
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/source-attributes/query"
+    server_json = [
+        {"entityType": "Dataset", "entityIdentifier": "dataset1", "attributeIdentifier": "colA"}
+    ]
+    requests_mock.post(url, json=server_json, status_code=200)
+
+    lineage_df = fusion_obj.list_attribute_lineage(
+        entity_type="Dataset",
+        entity_identifier="dataset2",
+        attribute_identifier="colB",
+        data_space="Finance",
+    )
+    assert isinstance(lineage_df, pd.DataFrame)
+    assert len(lineage_df) == 1
+    assert "entityType" in lineage_df.columns
+    assert lineage_df.loc[0, "entityIdentifier"] == "dataset1"
+
+
+def test_list_attribute_lineage_raises_value_error(fusion_obj: Fusion) -> None:
+    """list_attribute_lineage should raise ValueError if data_space is missing for Dataset."""
+    with pytest.raises(ValueError, match="`data_space` is required when `entity_type` is 'Dataset'"):
+        fusion_obj.list_attribute_lineage(
+            entity_type="Dataset",
+            entity_identifier="dataset2",
+            attribute_identifier="colB",
+        )
+
+
+def test_list_attribute_lineage_http_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_attribute_lineage should raise HTTPError for non-200 responses."""
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/source-attributes/query"
+    requests_mock.post(url, status_code=404)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_attribute_lineage(
+            entity_type="Dataset",
+            entity_identifier="dataset2",
+            attribute_identifier="colB",
+            data_space="Finance",
+        )
+
+
+def test_list_business_terms_for_attribute_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_business_terms_for_attribute returns dataframe when API responds 200."""
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-mapping/term/query"
+    server_json = [
+        {"entityType": "Dataset", "entityIdentifier": "dataset1", "attributeIdentifier": "colA", "termId": "t123"}
+    ]
+    requests_mock.post(url, json=server_json, status_code=200)
+
+    terms_df = fusion_obj.list_business_terms_for_attribute(
+        entity_type="Dataset",
+        entity_identifier="dataset1",
+        attribute_identifier="colA",
+        data_space="Finance",
+    )
+    assert isinstance(terms_df, pd.DataFrame)
+    assert len(terms_df) == 1
+    assert "termId" in terms_df.columns
+    assert terms_df.loc[0, "termId"] == "t123"
+
+
+def test_list_business_terms_for_attribute_raises_value_error(fusion_obj: Fusion) -> None:
+    """list_business_terms_for_attribute should raise ValueError if data_space is missing for Dataset."""
+    with pytest.raises(ValueError, match="`data_space` is required when `entity_type` is 'Dataset'"):
+        fusion_obj.list_business_terms_for_attribute(
+            entity_type="Dataset",
+            entity_identifier="dataset1",
+            attribute_identifier="colA",
+        )
+
+
+def test_list_business_terms_for_attribute_http_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_business_terms_for_attribute should raise HTTPError for non-200 responses."""
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-mapping/term/query"
+    requests_mock.post(url, status_code=500)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_business_terms_for_attribute(
+            entity_type="Dataset",
+            entity_identifier="dataset1",
+            attribute_identifier="colA",
+            data_space="Finance",
+        )
+
+def test_list_attribute_lineage_no_data_found(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list_attribute_lineage raises APIResponseError when API returns an empty list."""
+
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/source-attributes/query"
+
+    # Mocking the POST call to return empty list
+    requests_mock.post(url, json=[], status_code=200)
+
+    with pytest.raises(APIResponseError) as excinfo:
+        fusion_obj.list_attribute_lineage(
+            entity_type="Dataset",
+            entity_identifier="data_asset_1",
+            attribute_identifier="attribute_1",
+            data_space="34564i",
+        )
+
+    assert "No data found" in str(excinfo.value)
+
+def test_list_business_terms_for_attribute_no_data_found(
+    requests_mock: requests_mock.Mocker, fusion_obj: Fusion
+) -> None:
+    """Test list_business_terms_for_attribute raises APIResponseError when API returns an empty list."""
+
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-mapping/term/query"
+
+    # Mock the POST request to return an empty list
+    requests_mock.post(url, json=[], status_code=200)
+
+    with pytest.raises(APIResponseError) as excinfo:
+        fusion_obj.list_business_terms_for_attribute(
+            entity_type="Dataset",
+            entity_identifier="data_asset_1",
+            attribute_identifier="attribute_1",
+            data_space="34564i",
+        )
+
+    assert "No data found" in str(excinfo.value)
