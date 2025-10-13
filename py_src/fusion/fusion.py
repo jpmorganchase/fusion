@@ -22,6 +22,13 @@ from tqdm import tqdm
 
 from fusion.attributes import Attribute, Attributes
 from fusion.credentials import FusionCredentials
+from fusion.data_dependency import (
+    AttributeTermMapping,
+    DataDependency,
+    DataMapping,
+    DependencyAttribute,
+    DependencyMapping,
+)
 from fusion.dataflow import Dataflow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
@@ -1951,6 +1958,317 @@ class Fusion:
             if isinstance(product, str):
                 mapping_df = mapping_df[mapping_df["product"].str.contains(product, case=False)]
         return mapping_df
+    
+    def delete_all_datasetmembers(
+        self,
+        dataset: str,
+        catalog: str | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Delete all dataset members within a dataset.
+
+        Args:
+            dataset (str): A dataset identifier
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
+
+        Returns:
+            list[requests.Response]: a list of response objects.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.delete_all_datasetmembers(dataset="dataset1")
+
+        """
+        catalog = self._use_catalog(catalog)
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+        resp = self.session.delete(url)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
+    
+    def list_datasetmembers_distributions(
+        self,
+        dataset: str,
+        catalog: str | None = None,
+    ) -> pd.DataFrame:
+        """List the distributions of dataset members.
+
+                Args:
+                    dataset (str): Dataset identifier.
+                    catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+                    
+                Returns:
+                    pd.DataFrame: A dataframe with a row for each dataset member distribution.
+
+        """
+        catalog = self._use_catalog(catalog)
+        url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+        data = handle_paginated_request(self.session, url)
+
+        datasets = data.get("datasets", [])
+        if not datasets:
+            return pd.DataFrame()
+
+        dists = datasets[0].get("distributions", [])
+        rows = []
+        MEMBER_FORMAT_INDEX = 6  # Index for member_format in values list
+        for dist in dists:
+            values = dist.get("values")
+            if values and len(values) > MEMBER_FORMAT_INDEX:
+                member_id = values[5]
+                member_format = values[MEMBER_FORMAT_INDEX]
+                rows.append((member_id, member_format))
+
+        members_df = pd.DataFrame(rows, columns=["identifier", "format"])
+        return members_df
+
+    def list_registered_attributes(
+        self,
+        catalog: str | None = None,
+        output: bool = False,
+        display_all_columns: bool = False,
+    ) -> pd.DataFrame:
+        """Returns the list of attributes in a catalog.
+
+        Args:
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+            display_all_columns (bool, optional): If True displays all columns returned by the API,
+                otherwise only the key columns are displayed
+
+        Returns:
+            class:`pandas.DataFrame`: A dataframe with a row for each attribute
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = f"{self.root_url}catalogs/{catalog}/attributes"
+        ds_attr_df = Fusion._call_for_dataframe(url, self.session).reset_index(drop=True)
+
+        if not display_all_columns:
+            ds_attr_df = ds_attr_df[
+                ds_attr_df.columns.intersection(
+                    [
+                        "identifier",
+                        "title",
+                        "dataType",
+                        "description",
+                        "publisher",
+                        "applicationId",
+                    ]
+                )
+            ]
+
+        if output:
+            pass
+
+        return ds_attr_df
+
+    def link_attributes_to_terms(
+        self,
+        report_id: str,
+        mappings: list[Report.AttributeTermMapping],
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Link attributes to business terms for a report.
+
+        Args:
+            report_id (str): ID of the report to link terms to.
+            mappings (list): List of attribute-to-term mappings.
+            return_resp_obj (bool): Whether to return the raw response object.
+
+        Returns:
+            requests.Response | None: API response
+        """
+
+        processed_mappings = []
+        for mapping in mappings:
+            new_mapping = mapping.copy()
+            if "isKDE" not in new_mapping:
+                new_mapping["isKDE"] = True
+            processed_mappings.append(new_mapping)
+
+        return Report.link_attributes_to_terms( 
+            report_id=report_id, mappings=processed_mappings, client=self, return_resp_obj=return_resp_obj
+        )
+    
+    def list_distribution_files(
+        self,
+        dataset: str,
+        series: str,
+        file_format: str | None = "parquet",
+        catalog: str | None = None,
+        output: bool = False,
+        max_results: int = -1,
+    ) -> pd.DataFrame:
+        """ List the available files for a specific dataset distribution.
+        Args:
+            dataset (str): A dataset identifier.
+            series (str): The dataset series identifier.
+            file_format (str): Format of the distribution files (e.g., "parquet", "csv"). Defaults to 'parquet'.
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True, prints the DataFrame. Defaults to False.
+            max_results (int, optional): Limit the number of rows returned in the DataFrame.
+                Defaults to -1 which returns all results.
+        Returns:
+            pandas.DataFrame: A DataFrame containing metadata for each available file
+            in the distribution.
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = (
+            f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+            f"{series}/distributions/{file_format}/files"
+        )
+        files_df = Fusion._call_for_dataframe(url, self.session)
+
+        if max_results > -1:
+            files_df = files_df.iloc[:max_results]
+
+        if output:
+            pass
+
+        return files_df
+
+    def list_dataflows(
+        self,
+        id_contains: str,
+        output: bool = False,
+    ) -> pd.DataFrame:
+        """Retrieve a single dataflow from the Fusion system."""
+
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{id_contains}"
+        resp = self.session.get(url)
+
+        if resp.status_code == HTTPStatus.OK:
+            list_df = pd.json_normalize(resp.json())
+            if output:
+                pass  
+            return list_df
+        else:
+            resp.raise_for_status()
+
+        # fallback empty frame if something unexpected happens
+        return pd.DataFrame()
+    
+    def list_attribute_lineage(
+        self,
+        entity_type: str,
+        entity_identifier: str,
+        attribute_identifier: str,
+        data_space: str | None = None,
+        output: bool = False,
+    ) -> pd.DataFrame:
+        """List source attributes linked to a given target attribute.
+
+        Args:
+            entity_type (str): Type of the entity (e.g., "Dataset").
+            entity_identifier (str): Identifier of the entity.
+            attribute_identifier (str): Identifier of the attribute.
+            data_space (str | None, optional): Required only if entity_type is "Dataset".
+            output (bool, optional): If True, prints the dataframe. Defaults to False.
+
+        Raises:
+            ValueError: If `data_space` is not provided when `entity_type` is "Dataset".
+            requests.HTTPError: If the API request fails.
+
+        Returns:
+            pd.DataFrame: A dataframe representing the full JSON response.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> df = fusion.list_attribute_lineage(
+            ...     entity_type="Dataset",
+            ...     entity_identifier="data_asset_1",
+            ...     attribute_identifier="attribute_1",
+            ...     data_space="34564i"
+            ... )
+            >>> print(df)
+        """
+        if entity_type.lower() == "dataset" and not data_space:
+            raise ValueError("`data_space` is required when `entity_type` is 'Dataset'.")
+
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/source-attributes/query"
+        payload: dict[str, Any] = {
+            "entityType": entity_type,
+            "entityIdentifier": entity_identifier,
+            "attributeIdentifier": attribute_identifier,
+        }
+        if entity_type.lower() == "dataset":
+            payload["dataSpace"] = data_space
+
+        response = self.session.post(url, json=payload)
+        requests_raise_for_status(response)
+
+        json_data = response.json()
+        if not json_data:
+            raise APIResponseError(ValueError("No data found"))
+
+        lineage_df = pd.json_normalize(response.json())
+        if output:
+            pass
+        return lineage_df
+
+    def list_business_terms_for_attribute(
+        self,
+        entity_type: str,
+        entity_identifier: str,
+        attribute_identifier: str,
+        data_space: str | None = None,
+        output: bool = False,
+    ) -> pd.DataFrame:
+        """List business terms linked to a given attribute.
+
+        Args:
+            entity_type (str): Type of the entity (e.g., "Dataset").
+            entity_identifier (str): Identifier of the entity.
+            attribute_identifier (str): Identifier of the attribute.
+            data_space (str | None, optional): Required only if entity_type is "Dataset".
+            output (bool, optional): If True, prints the dataframe. Defaults to False.
+
+        Raises:
+            ValueError: If `data_space` is not provided when `entity_type` is "Dataset".
+            requests.HTTPError: If the API request fails.
+
+        Returns:
+            pd.DataFrame: A dataframe representing the full JSON response.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> df = fusion.list_business_terms_for_attribute(
+            ...     entity_type="Dataset",
+            ...     entity_identifier="data_asset_1",
+            ...     attribute_identifier="attribute_1",
+            ...     data_space="34564i"
+            ... )
+            >>> print(df)
+        """
+        if entity_type.lower() == "dataset" and not data_space:
+            raise ValueError("`data_space` is required when `entity_type` is 'Dataset'.")
+
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/data-mapping/term/query"
+        payload: dict[str, Any] = {
+            "entityType": entity_type,
+            "entityIdentifier": entity_identifier,
+            "attributeIdentifier": attribute_identifier,
+        }
+        if entity_type.lower() == "dataset":
+            payload["dataSpace"] = data_space
+
+        response = self.session.post(url, json=payload)
+        requests_raise_for_status(response)
+
+        json_data = response.json()
+        if not json_data:
+            raise APIResponseError(ValueError("No data found"))
+
+        term_df = pd.json_normalize(json_data)
+        if output:
+            pass
+
+        return term_df
 
     def product(  # noqa: PLR0913
         self,
@@ -2430,75 +2748,6 @@ class Fusion:
             responses.append(resp)
         return responses if return_resp_obj else None
 
-    def delete_all_datasetmembers(
-        self,
-        dataset: str,
-        catalog: str | None = None,
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        """Delete all dataset members within a dataset.
-
-        Args:
-            dataset (str): A dataset identifier
-            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
-
-        Returns:
-            list[requests.Response]: a list of response objects.
-
-        Examples:
-            >>> from fusion import Fusion
-            >>> fusion = Fusion()
-            >>> fusion.delete_all_datasetmembers(dataset="dataset1")
-
-        """
-        catalog = self._use_catalog(catalog)
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
-        resp = self.session.delete(url)
-        requests_raise_for_status(resp)
-        return resp if return_resp_obj else None
-
-    def list_registered_attributes(
-        self,
-        catalog: str | None = None,
-        output: bool = False,
-        display_all_columns: bool = False,
-    ) -> pd.DataFrame:
-        """Returns the list of attributes in a catalog.
-
-        Args:
-            catalog (str, optional): A catalog identifier. Defaults to 'common'.
-            output (bool, optional): If True then print the dataframe. Defaults to False.
-            display_all_columns (bool, optional): If True displays all columns returned by the API,
-                otherwise only the key columns are displayed
-
-        Returns:
-            class:`pandas.DataFrame`: A dataframe with a row for each attribute
-        """
-        catalog = self._use_catalog(catalog)
-
-        url = f"{self.root_url}catalogs/{catalog}/attributes"
-        ds_attr_df = Fusion._call_for_dataframe(url, self.session).reset_index(drop=True)
-
-        if not display_all_columns:
-            ds_attr_df = ds_attr_df[
-                ds_attr_df.columns.intersection(
-                    [
-                        "identifier",
-                        "title",
-                        "dataType",
-                        "description",
-                        "publisher",
-                        "applicationId",
-                    ]
-                )
-            ]
-
-        if output:
-            pass
-
-        return ds_attr_df
-
     def list_indexes(
         self,
         knowledge_base: str,
@@ -2571,43 +2820,7 @@ class Fusion:
             knowledge_base=knowledge_base,
             root_url=self.root_url,
             credentials=self.credentials,
-        )
-
-    def list_datasetmembers_distributions(
-        self,
-        dataset: str,
-        catalog: str | None = None,
-    ) -> pd.DataFrame:
-        """List the distributions of dataset members.
-
-                Args:
-                    dataset (str): Dataset identifier.
-                    catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-                    
-                Returns:
-                    pd.DataFrame: A dataframe with a row for each dataset member distribution.
-
-        """
-        catalog = self._use_catalog(catalog)
-        url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
-        data = handle_paginated_request(self.session, url)
-
-        datasets = data.get("datasets", [])
-        if not datasets:
-            return pd.DataFrame()
-
-        dists = datasets[0].get("distributions", [])
-        rows = []
-        MEMBER_FORMAT_INDEX = 6  # Index for member_format in values list
-        for dist in dists:
-            values = dist.get("values")
-            if values and len(values) > MEMBER_FORMAT_INDEX:
-                member_id = values[5]
-                member_format = values[MEMBER_FORMAT_INDEX]
-                rows.append((member_id, member_format))
-
-        members_df = pd.DataFrame(rows, columns=["identifier", "format"])
-        return members_df
+        )    
 
     def report(  # noqa: PLR0913
             self,
@@ -2778,91 +2991,112 @@ class Fusion:
         df_obj.client = self
         return df_obj
 
-    def link_attributes_to_terms(
+    def dependency_attribute(
         self,
-        report_id: str,
-        mappings: list[Report.AttributeTermMapping],
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        """Link attributes to business terms for a report.
+        entity_type: str,
+        entity_identifier: str,
+        attribute_identifier: str,
+        data_space: str | None = None,
+    ) -> DependencyAttribute:
+        """Instantiate a DependencyAttribute object with this client.
 
         Args:
-            report_id (str): ID of the report to link terms to.
-            mappings (list): List of attribute-to-term mappings.
-            return_resp_obj (bool): Whether to return the raw response object.
+            entity_type (str): The type of entity, e.g., "Dataset".
+            entity_identifier (str): Identifier of the entity.
+            attribute_identifier (str): Identifier of the attribute.
+            data_space (str | None, optional): Required if entity_type is "Dataset".
 
         Returns:
-            requests.Response | None: API response
+            DependencyAttribute: DependencyAttribute instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
         """
-
-        processed_mappings = []
-        for mapping in mappings:
-            new_mapping = mapping.copy()
-            if "isKDE" not in new_mapping:
-                new_mapping["isKDE"] = True
-            processed_mappings.append(new_mapping)
-
-        return Report.link_attributes_to_terms( 
-            report_id=report_id, mappings=processed_mappings, client=self, return_resp_obj=return_resp_obj
+        return DependencyAttribute(
+            entity_type=entity_type,
+            entity_identifier=entity_identifier,
+            attribute_identifier=attribute_identifier,
+            data_space=data_space,
         )
-    
-    def list_distribution_files(
+
+    def dependency_mapping(
         self,
-        dataset: str,
-        series: str,
-        file_format: str | None = "parquet",
-        catalog: str | None = None,
-        output: bool = False,
-        max_results: int = -1,
-    ) -> pd.DataFrame:
-        """ List the available files for a specific dataset distribution.
+        source_attributes: list[DependencyAttribute],
+        target_attribute: DependencyAttribute,
+    ) -> DependencyMapping:
+        """Instantiate a DependencyMapping object with this client.
+
         Args:
-            dataset (str): A dataset identifier.
-            series (str): The dataset series identifier.
-            file_format (str): Format of the distribution files (e.g., "parquet", "csv"). Defaults to 'parquet'.
-            catalog (str, optional): A catalog identifier. Defaults to 'common'.
-            output (bool, optional): If True, prints the DataFrame. Defaults to False.
-            max_results (int, optional): Limit the number of rows returned in the DataFrame.
-                Defaults to -1 which returns all results.
+            source_attributes (list[DependencyAttribute]): Source attributes.
+            target_attribute (DependencyAttribute): Target attribute.
+
         Returns:
-            pandas.DataFrame: A DataFrame containing metadata for each available file
-            in the distribution.
+            DependencyMapping: DependencyMapping instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> src = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> tgt = fusion.dependency_attribute("Dataset", "dataset2", "colB", "Finance")
+            >>> mapping = fusion.dependency_mapping([src], tgt)
         """
-        catalog = self._use_catalog(catalog)
-
-        url = (
-            f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-            f"{series}/distributions/{file_format}/files"
+        return DependencyMapping(
+            source_attributes=source_attributes,
+            target_attribute=target_attribute,
         )
-        files_df = Fusion._call_for_dataframe(url, self.session)
 
-        if max_results > -1:
-            files_df = files_df.iloc[:max_results]
-
-        if output:
-            pass
-
-        return files_df
-
-
-    def list_dataflows(
+    def attribute_term_mapping(
         self,
-        id_contains: str,
-        output: bool = False,
-    ) -> pd.DataFrame:
-        """Retrieve a single dataflow from the Fusion system."""
+        attribute: DependencyAttribute,
+        term: dict[str, str],
+        is_kde: bool | None = None,
+    ) -> AttributeTermMapping:
+        """Instantiate an AttributeTermMapping object with this client.
 
-        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/lineage/dataflows/{id_contains}"
-        resp = self.session.get(url)
+        Args:
+            attribute (DependencyAttribute): Attribute object.
+            term (dict[str, str]): Term info (must include 'id').
+            is_kde (bool | None, optional): KDE flag, required for link/update operations.
 
-        if resp.status_code == HTTPStatus.OK:
-            list_df = pd.json_normalize(resp.json())
-            if output:
-                pass  
-            return list_df
-        else:
-            resp.raise_for_status()
+        Returns:
+            AttributeTermMapping: AttributeTermMapping instance with the client context attached.
 
-        # fallback empty frame if something unexpected happens
-        return pd.DataFrame()
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> term = {"id": "term_123"}
+            >>> mapping = fusion.attribute_term_mapping(attr, term, is_kde=True)
+        """
+        return AttributeTermMapping(
+            attribute=attribute,
+            term=term,
+            is_kde=is_kde,
+        )
 
+    def data_dependency(self) -> DataDependency:
+        """Instantiate a DataDependency object with this client.
+
+        Returns:
+            DataDependency: DataDependency instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> data_dep = fusion.data_dependency()
+        """
+        dep_obj = DataDependency()
+        dep_obj.client = self
+        return dep_obj
+
+    def data_mapping(self) -> DataMapping:
+        """Instantiate a DataMapping object with this client.
+
+        Returns:
+            DataMapping: DataMapping instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> data_map = fusion.data_mapping()
+        """
+        map_obj = DataMapping()
+        map_obj.client = self
+        return map_obj
