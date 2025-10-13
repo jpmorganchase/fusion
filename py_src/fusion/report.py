@@ -534,7 +534,7 @@ class Reports:
         return obj
 
     def create_all(
-        self,
+        self,   
         *,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
@@ -578,3 +578,120 @@ class Reports:
 
         raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
 
+
+
+import datetime
+from typing import Any, Optional
+
+import pandas as pd
+import pytest
+
+from cdao.api.data import data_init_reports  
+from fusion.reports import Report, Reports
+
+
+@pytest.mark.parametrize("token_callback", [None, "basic_token_callback", "dynamic_token_callback"])
+def test_fusion_reports(
+    mock_fusion_credentials,  # provided by your suite (same as in test_fusion_report)
+    request: pytest.FixtureRequest,
+    token_callback: Optional[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    End-to-end test for FusionSDK.reports() wrapper:
+    - direct `reports=` population
+    - patched from_csv / from_dataframe / from_object flows
+    - verifies fluent API (same wrapper returned) and client propagation
+    """
+
+    # Resolve optional token callback just like your other tests
+    token_callback_callable = request.getfixturevalue(token_callback) if token_callback else None
+
+    # --- helper to build two minimal Report objects (only required fields) ---
+    def _two_reports() -> list[Report]:
+        return [
+            Report(
+                title="R1",
+                description="R1 desc",
+                frequency="Monthly",
+                category="CatA",
+            ),
+            Report(
+                title="R2",
+                description="R2 desc",
+                frequency="Monthly",
+                category="CatB",
+            ),
+        ]
+
+    # 1) Start with wrapper returned by data_init_reports() (no initial reports)
+    wrapper = data_init_reports(token_callback=token_callback_callable)
+
+    # Sanity: brand-new wrapper should be truthy and have a client
+    assert wrapper is not None
+    assert getattr(wrapper, "client", None) is not None
+
+    # 2) Branch: `reports=` passed directly to client.reports(...)
+    direct_reports = _two_reports()
+    wrapper_direct = data_init_reports(reports=direct_reports, token_callback=token_callback_callable)
+
+    # Same wrapper object returned from the function
+    assert wrapper_direct is not None
+    # Client should be attached to each Report
+    for r in wrapper_direct.reports:
+        assert getattr(r, "client", None) is wrapper_direct.client
+
+    # 3) Patch Reports.from_csv / from_dataframe / from_object so we don't do any I/O
+    def _stub_from_csv(*args: Any, **kwargs: Any) -> Reports:
+        return Reports(reports=_two_reports())
+
+    def _stub_from_dataframe(*args: Any, **kwargs: Any) -> Reports:
+        return Reports(reports=_two_reports())
+
+    def _stub_from_object(*args: Any, **kwargs: Any) -> Reports:
+        return Reports(reports=_two_reports())
+
+    monkeypatch.setattr(Reports, "from_csv", staticmethod(_stub_from_csv))
+    monkeypatch.setattr(Reports, "from_dataframe", staticmethod(_stub_from_dataframe))
+    monkeypatch.setattr(Reports, "from_object", staticmethod(_stub_from_object))
+
+    # 4) Branch: wrapper.from_csv(...)
+    same_wrapper_csv = wrapper.from_csv("dummy.csv")
+    # Fluent API: must return the SAME wrapper object
+    assert same_wrapper_csv is wrapper
+    assert len(wrapper.reports) == 2
+    # Client propagation
+    for r in wrapper.reports:
+        assert getattr(r, "client", None) is wrapper.client
+
+    # 5) Branch: wrapper.from_dataframe(...)
+    df = pd.DataFrame(
+        [
+            {"title": "DF R1", "description": "d1", "frequency": "Monthly", "category": "CatX"},
+            {"title": "DF R2", "description": "d2", "frequency": "Monthly", "category": "CatY"},
+        ]
+    )
+    same_wrapper_df = wrapper.from_dataframe(df)
+    assert same_wrapper_df is wrapper
+    assert len(wrapper.reports) == 2
+    for r in wrapper.reports:
+        assert getattr(r, "client", None) is wrapper.client
+
+    # 6) Branch: wrapper.from_object(...) with list[dict]
+    src_list_dict = [
+        {"title": "O1", "description": "x", "frequency": "Monthly", "category": "C1"},
+        {"title": "O2", "description": "y", "frequency": "Monthly", "category": "C2"},
+    ]
+    same_wrapper_obj = wrapper.from_object(src_list_dict)
+    assert same_wrapper_obj is wrapper
+    assert len(wrapper.reports) == 2
+    for r in wrapper.reports:
+        assert getattr(r, "client", None) is wrapper.client
+
+    # 7) Branch: wrapper.from_object(...) with list[Report]
+    src_list_report = _two_reports()
+    same_wrapper_obj2 = wrapper.from_object(src_list_report)
+    assert same_wrapper_obj2 is wrapper
+    assert len(wrapper.reports) == 2
+    for r in wrapper.reports:
+        assert getattr(r, "client", None) is wrapper.client
