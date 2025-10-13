@@ -6,7 +6,7 @@ from typing import Any, Optional, cast
 import pytest
 
 from fusion.fusion import Fusion
-from fusion.report import Report, Reports, ReportsWrapper
+from fusion.report import Report, Reports
 
 
 def test_report_basic_fields() -> None:
@@ -103,8 +103,7 @@ def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     file_path = tmp_path / "test_report.csv"
     file_path.write_text(csv_data)
 
-    wrapper = ReportsWrapper(client=fusion_obj)
-    reports = wrapper.from_csv(str(file_path))
+    reports = Reports.from_csv(str(file_path), client=fusion_obj)
     assert isinstance(reports, Reports)
     assert len(reports) == 1
     assert reports[0].title == "TestReport"
@@ -132,8 +131,7 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
             "Regulatory Designated": "No",
         }
     ]
-    wrapper = ReportsWrapper(client=fusion_obj)
-    reports = wrapper.from_object(source)
+    reports = Reports.from_object(source, client=fusion_obj)
     assert isinstance(reports, Reports)
     assert reports[0].title == "ObjReport"
     assert reports[0].regulatory_related is False
