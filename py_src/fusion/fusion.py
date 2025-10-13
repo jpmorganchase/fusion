@@ -22,7 +22,13 @@ from tqdm import tqdm
 
 from fusion.attributes import Attribute, Attributes
 from fusion.credentials import FusionCredentials
-from fusion.data_dependency import DataDependency, DataMapping, DependencyAttribute
+from fusion.data_dependency import (
+    AttributeTermMapping,
+    DataDependency,
+    DataMapping,
+    DependencyAttribute,
+    DependencyMapping,
+)
 from fusion.dataflow import Dataflow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
@@ -2874,44 +2880,225 @@ class Fusion:
         attribute_identifier: str,
         data_space: str | None = None,
     ) -> DependencyAttribute:
-        """
-        Instantiate a DependencyAttribute object with the current Fusion client attached.
+        """Instantiate a DependencyAttribute object with this client.
 
         Args:
-            entity_type (str): Type of entity, e.g., "Dataset" or "Report".
-            entity_identifier (str): Identifier of the entity (dataset name or report ID).
-            attribute_identifier (str): Identifier of the specific attribute.
-            data_space (str, optional): Required if entity_type is "Dataset". Specifies the data space.
+            entity_type (str): The type of entity, e.g., "Dataset".
+            entity_identifier (str): Identifier of the entity.
+            attribute_identifier (str): Identifier of the attribute.
+            data_space (str | None, optional): Required if entity_type is "Dataset".
 
         Returns:
-            DependencyAttribute: A DependencyAttribute object ready for API operations.
+            DependencyAttribute: DependencyAttribute instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
         """
-        attr_obj = DependencyAttribute(
+        attribute_obj = DependencyAttribute(
             entity_type=entity_type,
             entity_identifier=entity_identifier,
             attribute_identifier=attribute_identifier,
             data_space=data_space,
         )
-        attr_obj.client = self
-        return attr_obj
+        attribute_obj.client = self
+        return attribute_obj
 
-    def data_dependency(self) -> DataDependency:
-        """
-        Instantiate a DataDependency object with the current Fusion client attached.
+    def dependency_mapping(
+        self,
+        source_attributes: list[DependencyAttribute],
+        target_attribute: DependencyAttribute,
+    ) -> DependencyMapping:
+        """Instantiate a DependencyMapping object with this client.
+
+        Args:
+            source_attributes (list[DependencyAttribute]): Source attributes.
+            target_attribute (DependencyAttribute): Target attribute.
 
         Returns:
-            DataDependency: A DataDependency object ready for linking/unlinking attributes.
+            DependencyMapping: DependencyMapping instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> src = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> tgt = fusion.dependency_attribute("Dataset", "dataset2", "colB", "Finance")
+            >>> mapping = fusion.dependency_mapping([src], tgt)
         """
-        dep_obj = DataDependency(client=self)
+        mapping_obj = DependencyMapping(
+            source_attributes=source_attributes,
+            target_attribute=target_attribute,
+        )
+        mapping_obj.client = self
+        return mapping_obj
+
+    def attribute_term_mapping(
+        self,
+        attribute: DependencyAttribute,
+        term: dict[str, str],
+        is_kde: bool | None = None,
+    ) -> AttributeTermMapping:
+        """Instantiate an AttributeTermMapping object with this client.
+
+        Args:
+            attribute (DependencyAttribute): Attribute object.
+            term (dict[str, str]): Term info (must include 'id').
+            is_kde (bool | None, optional): KDE flag, required for link/update operations.
+
+        Returns:
+            AttributeTermMapping: AttributeTermMapping instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> term = {"id": "term_123"}
+            >>> mapping = fusion.attribute_term_mapping(attr, term, is_kde=True)
+        """
+        mapping_obj = AttributeTermMapping(attribute=attribute, term=term, is_kde=is_kde)
+        mapping_obj.client = self
+        return mapping_obj
+
+    def data_dependency(self) -> DataDependency:
+        """Instantiate a DataDependency object with this client.
+
+        Returns:
+            DataDependency: DataDependency instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> data_dep = fusion.data_dependency()
+        """
+        dep_obj = DataDependency()
+        dep_obj.client = self
         return dep_obj
 
     def data_mapping(self) -> DataMapping:
-        """
-        Instantiate a DataMapping object with the current Fusion client attached.
+        """Instantiate a DataMapping object with this client.
 
         Returns:
-            DataMapping: A DataMapping object ready for mapping/unmapping attributes to business terms.
+            DataMapping: DataMapping instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> data_map = fusion.data_mapping()
         """
-        mapping_obj = DataMapping(client=self)
-        return mapping_obj
+        map_obj = DataMapping()
+        map_obj.client = self
+        return map_obj
+
+    
+    def list_attribute_lineage(
+        self,
+        entity_type: str,
+        entity_identifier: str,
+        attribute_identifier: str,
+        data_space: str | None = None,
+        output: bool = False,
+    ) -> pd.DataFrame:
+        """List source attributes linked to a given target attribute.
+
+        Args:
+            entity_type (str): Type of the entity (e.g., "Dataset").
+            entity_identifier (str): Identifier of the entity.
+            attribute_identifier (str): Identifier of the attribute.
+            data_space (str | None, optional): Required only if entity_type is "Dataset".
+            output (bool, optional): If True, prints the dataframe. Defaults to False.
+
+        Raises:
+            ValueError: If `data_space` is not provided when `entity_type` is "Dataset".
+            requests.HTTPError: If the API request fails.
+
+        Returns:
+            pd.DataFrame: A dataframe representing the full JSON response.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> df = fusion.list_attribute_lineage(
+            ...     entity_type="Dataset",
+            ...     entity_identifier="data_asset_1",
+            ...     attribute_identifier="attribute_1",
+            ...     data_space="34564i"
+            ... )
+            >>> print(df)
+        """
+        if entity_type.lower() == "dataset" and not data_space:
+            raise ValueError("`data_space` is required when `entity_type` is 'Dataset'.")
+
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/source-attributes/query"
+        payload: dict[str, Any] = {
+            "entityType": entity_type,
+            "entityIdentifier": entity_identifier,
+            "attributeIdentifier": attribute_identifier,
+        }
+        if entity_type.lower() == "dataset":
+            payload["dataSpace"] = data_space
+
+        response = self.session.post(url, json=payload)
+        requests_raise_for_status(response)
+
+        if response.status_code == HTTPStatus.OK:
+            list_df = pd.json_normalize(response.json())
+            if output:
+                pass
+            return list_df
+        else:
+            requests_raise_for_status(response)
+
+    def list_business_terms_for_attribute(
+        self,
+        entity_type: str,
+        entity_identifier: str,
+        attribute_identifier: str,
+        data_space: str | None = None,
+        output: bool = False,
+    ) -> pd.DataFrame:
+        """List business terms linked to a given attribute.
+
+        Args:
+            entity_type (str): Type of the entity (e.g., "Dataset").
+            entity_identifier (str): Identifier of the entity.
+            attribute_identifier (str): Identifier of the attribute.
+            data_space (str | None, optional): Required only if entity_type is "Dataset".
+            output (bool, optional): If True, prints the dataframe. Defaults to False.
+
+        Raises:
+            ValueError: If `data_space` is not provided when `entity_type` is "Dataset".
+            requests.HTTPError: If the API request fails.
+
+        Returns:
+            pd.DataFrame: A dataframe representing the full JSON response.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> df = fusion.list_business_terms_for_attribute(
+            ...     entity_type="Dataset",
+            ...     entity_identifier="data_asset_1",
+            ...     attribute_identifier="attribute_1",
+            ...     data_space="34564i"
+            ... )
+            >>> print(df)
+        """
+        if entity_type.lower() == "dataset" and not data_space:
+            raise ValueError("`data_space` is required when `entity_type` is 'Dataset'.")
+
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/data-mapping/term/query"
+        payload: dict[str, Any] = {
+            "entityType": entity_type,
+            "entityIdentifier": entity_identifier,
+            "attributeIdentifier": attribute_identifier,
+        }
+        if entity_type.lower() == "dataset":
+            payload["dataSpace"] = data_space
+
+        response = self.session.post(url, json=payload)
+        requests_raise_for_status(response)
+
+        if response.status_code == HTTPStatus.OK:
+            list_df = pd.json_normalize(response.json())
+            if output:
+                pass
+            return list_df
+        else:
+            requests_raise_for_status(response)
 
