@@ -199,67 +199,7 @@ class ReportAttributes:
 
     def _build_api_url(self, client: Fusion, report_id: str) -> str:
         """This is a private method, use it to build the API URL for report attributes operations."""
-        return f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/report-elements"
-
-    def _build_payload(self, operation: str) -> list[dict[str, Any]]:
-        """This is a private method to build payload for different CRUD operations with appropriate field exclusions.
-
-        Args:
-            operation (str): The operation type ('create', 'update', 'update_fields', 'delete')
-
-        Returns:
-            list[dict[str, Any]]: Payload with appropriate fields for the operation
-        """
-        payload = []
-
-        for attr in self.attributes:
-            if operation == "delete":
-                payload.append({"id": attr.id})
-            elif operation == "create":
-                attr_dict = {
-                    field_name: field_value
-                    for field_name, field_value in attr.to_dict().items()
-                    if field_value is not None and field_name != "id"
-                }
-                payload.append(attr_dict)
-            elif operation == "update_fields":
-                attr_dict = {
-                    field_name: field_value
-                    for field_name, field_value in attr.to_dict().items()
-                    if field_value is not None and field_name != "title"
-                }
-                payload.append(attr_dict)
-            elif operation == "update":
-                attr_dict = attr.to_dict()
-                attr_dict.pop("title", None)
-                payload.append(attr_dict)
-
-        return payload
-
-    def _send_request(
-        self,
-        client: Fusion,
-        url: str,
-        payload: list[dict[str, Any]] | None = None,
-        method: str = "GET",
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        """This is a private method, use it to send HTTP request and handle response."""
-        if method.upper() == "GET":
-            resp = client.session.get(url)
-        elif method.upper() == "POST":
-            resp = client.session.post(url, json=payload)
-        elif method.upper() == "PUT":
-            resp = client.session.put(url, json=payload)
-        elif method.upper() == "PATCH":
-            resp = client.session.patch(url, json=payload)
-        elif method.upper() == "DELETE":
-            resp = client.session.delete(url, json=payload)
-        else:
-            raise ValueError(f"Unsupported HTTP method: {method}")
-
-        requests_raise_for_status(resp)
-        return resp if return_resp_obj else None
+        return f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
 
     def create(
         self,
@@ -292,9 +232,18 @@ class ReportAttributes:
         """
         client = self._use_client(client)
         url = self._build_api_url(client, report_id)
-        payload = self._build_payload("create")
+        payload = []
+        for attr in self.attributes:
+            attr_dict = {
+                field_name: field_value
+                for field_name, field_value in attr.to_dict().items()
+                if field_value is not None and field_name != "id"
+            }
+            payload.append(attr_dict)
 
-        return self._send_request(client, url, payload, "POST", return_resp_obj)
+        resp = client.session.post(url, json=payload)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
 
     def update(
         self,
@@ -338,8 +287,15 @@ class ReportAttributes:
                 raise ValueError(f"ReportAttribute must have an 'id' field for update")
 
         url = self._build_api_url(client, report_id)
-        payload = self._build_payload("update")
-        return self._send_request(client, url, payload, "PUT", return_resp_obj)
+        payload = []
+        for attr in self.attributes:
+            attr_dict = attr.to_dict()
+            attr_dict.pop("title", None)
+            payload.append(attr_dict)
+
+        resp = client.session.put(url, json=payload)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
 
     def update_fields(
         self,
@@ -381,8 +337,18 @@ class ReportAttributes:
                 raise ValueError(f"ReportAttribute must have an 'id' field for update_fields")
 
         url = self._build_api_url(client, report_id)
-        payload = self._build_payload("update_fields")
-        return self._send_request(client, url, payload, "PATCH", return_resp_obj)
+        payload = []
+        for attr in self.attributes:
+            attr_dict = {
+                field_name: field_value
+                for field_name, field_value in attr.to_dict().items()
+                if field_value is not None and field_name != "title"
+            }
+            payload.append(attr_dict)
+
+        resp = client.session.patch(url, json=payload)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
 
     def delete(
         self,
@@ -418,12 +384,12 @@ class ReportAttributes:
 
         """
         client = self._use_client(client)
-
         for attr in self.attributes:
             if attr.id is None:
                 raise ValueError(f"ReportAttribute must have an 'id' field for deletion")
 
         url = self._build_api_url(client, report_id)
-        payload = self._build_payload("delete")
-
-        return self._send_request(client, url, payload, "DELETE", return_resp_obj)
+        payload = [{"id": attr.id} for attr in self.attributes]
+        resp = client.session.delete(url, json=payload)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None

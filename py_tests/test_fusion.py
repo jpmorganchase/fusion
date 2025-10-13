@@ -4,7 +4,7 @@ import logging
 import re
 from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -26,11 +26,7 @@ from fusion.data_dependency import (
 from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
-from fusion.report import Report
 from fusion.utils import _normalise_dt_param, distribution_to_url
-
-if TYPE_CHECKING:
-    from fusion.report import Report
 
 
 def test__get_canonical_root_url() -> None:
@@ -3436,27 +3432,28 @@ def test_list_reports_by_id(fusion_obj: Fusion, requests_mock: requests_mock.Moc
     assert isinstance(df, pd.DataFrame)
     assert df.iloc[0]["id"] == "rep1"
 
-
 def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
-    report_id = "rep1"
-    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
+    report_id = "6789"
+    attribute_id = 12
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
     mock_data = [
         {
-            "id": "attr1",
-            "path": "/data/value",
-            "status": "active",
-            "dataType": "string",
-            "isMandatory": True,
+            "id": 12,
+            "title": "Attribute 1",
             "description": "Field desc",
+            "sourceIdentifier": "Source 1",
+            "technicalDataType": "string",
+            "path": "/data/value",
+            "reportId": 12345,
             "createdBy": "user1",
-            "name": "value",
         }
     ]
     requests_mock.get(url, json=mock_data)
     df = fusion_obj.list_report_attributes(report_id=report_id)  # noqa
     assert isinstance(df, pd.DataFrame)
     assert "id" in df.columns
-    assert df.iloc[0]["id"] == "attr1"
+    assert df.iloc[0]["id"] == attribute_id
+
 
 def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
     report = fusion_obj.report(
@@ -3507,30 +3504,34 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
 
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fusion) -> None:
-    mappings: list[Report.AttributeTermMapping] = [
-        {"attribute": {"id": "attr1"}, "term": {"id": "term1"}, "isKDE": True},
-        {"attribute": {"id": "attr2"}, "term": {"id": "term2"}, "isKDE": False},
+    from fusion.data_dependency import DependencyAttribute
+    
+    mappings: list[AttributeTermMapping] = [
+        AttributeTermMapping(DependencyAttribute("Report", "rep1", "attr1"), {"id": "term1"}, is_kde=True),
+        AttributeTermMapping(DependencyAttribute("Report", "rep2", "attr2"), {"id": "term2"}, is_kde=False),
     ]
 
-    fusion_obj.link_attributes_to_terms(report_id="rep123", mappings=mappings)
+    fusion_obj.link_attributes_to_terms(mappings=mappings)
 
     args, kwargs = mock_link.call_args
     sent_mappings = kwargs["mappings"]
-    assert sent_mappings[0]["isKDE"] is True
-    assert sent_mappings[1]["isKDE"] is False
+    assert sent_mappings[0].is_kde is True
+    assert sent_mappings[1].is_kde is False
     assert kwargs["client"] is fusion_obj
 
 
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fusion_obj: Fusion) -> None:
+    from fusion.data_dependency import DependencyAttribute
+    
     mock_resp = MagicMock()
     mock_link.return_value = mock_resp
 
-    mappings: list[Report.AttributeTermMapping] = [
-        {"attribute": {"id": "a"}, "term": {"id": "t"}, "isKDE": True},
+    mappings: list[AttributeTermMapping] = [
+        AttributeTermMapping(DependencyAttribute("Report", "r", "a"), {"id": "t"}, is_kde=True),
     ]
 
-    resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
+    resp = fusion_obj.link_attributes_to_terms(mappings, return_resp_obj=True)
 
     assert resp is mock_resp
 

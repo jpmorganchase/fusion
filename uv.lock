@@ -3208,7 +3208,7 @@ wheels = [
 
 [[package]]
 name = "pyfusion"
-version = "3.0.2.dev1"
+version = "3.0.2-dev2"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -3243,6 +3243,7 @@ all = [
     { name = "notebook" },
     { name = "opensearch-py" },
     { name = "polars" },
+    { name = "s3fs" },
     { name = "sseclient" },
 ]
 aws = [
