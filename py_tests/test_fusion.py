@@ -1946,10 +1946,10 @@ def test_download_invalid_dt_str_format(requests_mock: requests_mock.Mocker, fus
 def test_download_valid_dt_str_format_not_in_datasetseries(
     requests_mock: requests_mock.Mocker, fusion_obj: Fusion
 ) -> None:
-    """Test download method when dt_str is a valid date time format but not available in datasetseries."""
+    """Test download method when dt_str is a valid date range format but not available in datasetseries."""
     catalog = "my_catalog"
     dataset = "TEST_DATASET"
-    dt_str = "2020-01-01"  # Valid date format but not available
+    dt_str = "2020-01-01:2020-01-01"  # Valid date range format but not available
     file_format = "csv"
 
     # Mock dataset access check
