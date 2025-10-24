@@ -1,0 +1,1406 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://jpmorganchase.github.io/fusion/3.0.2/quickstart/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
+    
+    
+      
+        <title>Getting Started - fusion</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.a40c8224.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#installation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="fusion" class="md-header__button md-logo" aria-label="fusion" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            fusion
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Getting Started
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="black"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="black"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/jpmorganchase/jpmorganchase.github.io" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jpmorganchase/fusion
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api/" class="md-tabs__link">
+        
+  
+    
+  
+  Fusion Client
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../download/" class="md-tabs__link">
+        
+  
+    
+  
+  Download
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../upload/" class="md-tabs__link">
+        
+  
+    
+  
+  Upload
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../attributes/" class="md-tabs__link">
+          
+  
+  Metadata Creation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../fsync/" class="md-tabs__link">
+        
+  
+    
+  
+  fsync
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../get_started/" class="md-tabs__link">
+          
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="fusion" class="md-nav__button md-logo" aria-label="fusion" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    fusion
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/jpmorganchase/jpmorganchase.github.io" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jpmorganchase/fusion
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stable-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stable release
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      From source
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storing-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      Storing Credentials
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storing Credentials">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#formatting-credentials-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Formatting Credentials File
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#import-fusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Import Fusion
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fusion-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fusion Object
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#view-available-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      View Available Methods
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executing-available-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executing Available Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Executing Available Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retrieve-your-available-catalogs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Retrieve your available catalogs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browse-products-available-within-a-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      Browse products available within a catalog
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browse-datasets-available-within-a-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      Browse datasets available within a catalog
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browse-datasets-associated-with-a-product" class="md-nav__link">
+    <span class="md-ellipsis">
+      Browse datasets associated with a product
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#display-all-metadata-for-datasets-available-within-a-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      Display all metadata for datasets available within a catalog
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retrieve-attributes-for-a-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      Retrieve attributes for a dataset
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional Resources
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Fusion Client
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../download/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Download
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upload/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Upload
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Metadata Creation
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            Metadata Creation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attributes/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Attributes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../datasets/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Datasets
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../products/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Products
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fsync/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    fsync
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../get_started/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Fusion - get started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metadata_creation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Fusion - Metadata Creation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Installation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stable-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stable release
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#from-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      From source
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storing-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      Storing Credentials
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Storing Credentials">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#formatting-credentials-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Formatting Credentials File
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#import-fusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Import Fusion
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fusion-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      Fusion Object
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#view-available-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      View Available Methods
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#executing-available-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executing Available Methods
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Executing Available Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retrieve-your-available-catalogs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Retrieve your available catalogs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browse-products-available-within-a-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      Browse products available within a catalog
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browse-datasets-available-within-a-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      Browse datasets available within a catalog
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browse-datasets-associated-with-a-product" class="md-nav__link">
+    <span class="md-ellipsis">
+      Browse datasets associated with a product
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#display-all-metadata-for-datasets-available-within-a-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      Display all metadata for datasets available within a catalog
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#retrieve-attributes-for-a-dataset" class="md-nav__link">
+    <span class="md-ellipsis">
+      Retrieve attributes for a dataset
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Additional Resources
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+  <h1>Getting Started</h1>
+
+<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<h3 id="stable-release">Stable release<a class="headerlink" href="#stable-release" title="Permanent link">&para;</a></h3>
+<p>To install PyFusion, run this command in your
+terminal:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>pyfusion
+</code></pre></div>
+<p>This is the preferred method to install PyFusion, as it will always install the most recent stable release. Documentation of changes made during each release can be found in the <a href="../changelog/">Changelog</a>.</p>
+<p>If you don't have <a href="https://pip.pypa.io/en/stable/installation/">pip</a> installed, this <a href="https://docs.python-guide.org/starting/installation/">Python installation guide</a>
+can guide you through the process.</p>
+<h3 id="from-source">From source<a class="headerlink" href="#from-source" title="Permanent link">&para;</a></h3>
+<p>The source for PyFusion can be downloaded from
+the <a href="https://github.com/jpmorganchase/fusion">Github repo</a>.</p>
+<p>You can either clone the public repository:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>git<span class="w"> </span>clone<span class="w"> </span>git://github.com/jpmorganchase/fusion
+</code></pre></div>
+<p>Or download the <a href="https://www.makeuseof.com/extract-tar-gz/">tarball</a>:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>curl<span class="w"> </span>-OJL<span class="w"> </span>https://github.com/jpmorganchase/fusion/tarball/master
+</code></pre></div>
+<p>Once you have a copy of the source, you can install it with:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>.
+</code></pre></div>
+<h2 id="storing-credentials">Storing Credentials<a class="headerlink" href="#storing-credentials" title="Permanent link">&para;</a></h2>
+<p>In order to connect to the Fusion API via SDK, we recommend storing your credentials in a JSON file. This file can be generated using Fusion’s application registration page.</p>
+<p>Your credentials file should be located in a directory accessible from the location you are using the SDK.
+By default, the SDK will look for the credentials file at the path <code>'config/client_credentials.json'</code>.</p>
+<h3 id="formatting-credentials-file">Formatting Credentials File<a class="headerlink" href="#formatting-credentials-file" title="Permanent link">&para;</a></h3>
+<p>Your credentials file should be formatted as follows.</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="s2">&quot;client_id&quot;</span><span class="p">:</span> <span class="s2">&quot;YOUR_CLIENT_ID&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;client_secret&quot;</span><span class="p">:</span> <span class="s2">&quot;YOUR_CLIENT_SECRET&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;resource&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;auth_url&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;proxies&quot;</span><span class="p">:</span> <span class="p">{}</span>
+<span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><strong>client_id</strong>: Generated using Fusion's application registration page.</li>
+<li><strong>client_secret</strong>: Generated using Fusion's application registration page.</li>
+<li><strong>resource</strong>: Can be found on Fusion's calling the API page.</li>
+<li><strong>auth_url</strong>: Can be found on Fusion's calling the API page.</li>
+<li><strong>proxies</strong>: HTTP and HTTPS proxy values. Optional.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Populating Proxies</p>
+<p>If your application is running behind a proxy, for example a corporate firewall, then the <code>proxies</code> value will also need to be defined. For example:
+    <code>"proxies" : {"http": "http://proxy.myfirm.com:8080", "https": "https://proxy.myfirm.com:8080"}</code></p>
+<p>If you do not require proxies, either remove this argument or leave it as an empty dictionary <code>{}</code>.</p>
+</div>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
+<h3 id="import-fusion">Import Fusion<a class="headerlink" href="#import-fusion" title="Permanent link">&para;</a></h3>
+<p>To begin using pyfusion, simply execute the import below.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">fusion</span><span class="w"> </span><span class="kn">import</span> <span class="n">Fusion</span>
+</code></pre></div>
+<h3 id="fusion-object">Fusion Object<a class="headerlink" href="#fusion-object" title="Permanent link">&para;</a></h3>
+<p>Connection to the Fusion platform can be easily established by instantiating a <code>Fusion()</code> object.</p>
+<p>This object will act as a Fusion client, managing your credentials and connectivity to the API. This client also provides an extensive list of methods for browsing, retrieving, and creating metadata and data.</p>
+<p>If your credenitals are stored in <code>'config/client_credentials.json'</code>, you can instantiate your client as follow:</p>
+<div class="highlight"><pre><span></span><code><span class="n">fusion</span> <span class="o">=</span> <span class="n">Fusion</span><span class="p">()</span>
+</code></pre></div>
+<p>If your credentials are stored in an alternative location, you can provide the appropriate path as the <code>credentials</code> argument:</p>
+<div class="highlight"><pre><span></span><code><span class="n">fusion</span> <span class="o">=</span> <span class="n">Fusion</span><span class="p">(</span><span class="n">credentials</span><span class="o">=</span><span class="s2">&quot;path/to/my/credentials.json&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Alternatively, if you wish to provide your credentials directly to the client, you can utilize the <code>FusionCredentials</code> object:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">fusion</span><span class="w"> </span><span class="kn">import</span> <span class="n">FusionCredentials</span>
+
+<span class="n">credentials</span> <span class="o">=</span> <span class="n">FusionCredentials</span><span class="p">(</span>
+    <span class="n">client_id</span><span class="o">=</span><span class="s2">&quot;&lt;CLIENT_ID&gt;&quot;</span><span class="p">,</span>
+    <span class="n">client_secret</span><span class="o">=</span><span class="s2">&quot;&lt;CLIENT_SECRET&gt;&quot;</span><span class="p">,</span>
+    <span class="n">resource</span><span class="o">=</span><span class="s2">&quot;&lt;RESOURCE&gt;&quot;</span>
+<span class="p">)</span>
+
+<span class="n">fusion</span> <span class="o">=</span> <span class="n">Fusion</span><span class="p">(</span><span class="n">credentials</span><span class="o">=</span><span class="n">credentials</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="view-available-methods">View Available Methods<a class="headerlink" href="#view-available-methods" title="Permanent link">&para;</a></h3>
+<p>Once you have instantiated the client <code>fusion</code>, running the following cell will display its available methods:</p>
+<p><div class="highlight"><pre><span></span><code><span class="n">fusion</span>
+</code></pre></div>
+The output will be a table containing the available methods along with a short description:
+<div class="highlight"><pre><span></span><code>Fusion object 
+Available methods:
++--------------------------------------+--------------------------------------------------------------------------------------------------------------+
+| attribute                            | Instantiate an Attribute object with this client for metadata creation.                                      |
+| attributes                           | Instantiate an Attributes object with this client for metadata creation.                                     |
+| catalog_resources                    | List the resources contained within the catalog, for example products and datasets.                          |
+| create_dataset_lineage               | Upload lineage to a dataset.                                                                                 |
+| dataset                              | Instantiate a Dataset object with this client for metadata creation.                                         |
+| dataset_resources                    | List the resources available for a dataset, currently this will always be a datasetseries.                   |
+| datasetmember_resources              | List the available resources for a datasetseries member.                                                     |
+| delete_all_datasetmembers            | Delete all dataset members within a dataset.                                                                 |
+| delete_datasetmembers                | Delete dataset members.                                                                                      |
+| download                             | Downloads the requested distributions of a dataset to disk.                                                  |
+| from_bytes                           | Uploads data from an object in memory.                                                                       |
+| get_async_fusion_vector_store_client | Returns Fusion Embeddings Search client.                                                                     |
+| get_events                           | Run server sent event listener and print out the new events. Keyboard terminate to stop.                     |
+| get_fusion_filesystem                | Retrieve Fusion file system instance.                                                                        |
+| get_fusion_vector_store_client       | Returns Fusion Embeddings Search client.                                                                     |
+| input_dataflow                       | Instantiate an Input Dataflow object with this client for metadata creation.                                 |
+| list_catalogs                        | Lists the catalogs available to the API account.                                                             |
+| list_dataset_attributes              | Returns the list of attributes that are in the dataset.                                                      |
+| list_dataset_lineage                 | List the upstream and downstream lineage of the dataset.                                                     |
+| list_datasetmembers                  | List the available members in the dataset series.                                                            |
+| list_datasetmembers_distributions    | List the distributions of dataset members.                                                                   |
+| list_datasets                        | Get the datasets contained in a catalog.                                                                     |
+| list_distributions                   | List the available distributions (downloadable instances of the dataset with a format type).                 |
+| list_indexes                         | List the indexes in a knowledge base.                                                                        |
+| list_product_dataset_mapping         | get the product to dataset linking contained in  a catalog. A product is a grouping of datasets.             |
+| list_products                        | Get the products contained in a catalog. A product is a grouping of datasets.                                |
+| list_registered_attributes           | Returns the list of attributes in a catalog.                                                                 |
+| listen_to_events                     | Run server sent event listener in the background. Retrieve results by running get_events.                    |
+| output_dataflow                      | Instantiate an Output Dataflow object with this client for metadata creation.                                |
+| product                              | Instantiate a Product object with this client for metadata creation.                                         |
+| report                               | Instantiate Report object with this client for metadata creation for managing regulatory reporting metadata. |
+| to_bytes                             | Returns an instance of dataset (the distribution) as a bytes object.                                         |
+| to_df                                | Gets distributions for a specified date or date range and returns the data as a dataframe.                   |
+| to_table                             | Gets distributions for a specified date or date range and returns the data as an arrow table.                |
+| upload                               | Uploads the requested files/files to Fusion.                                                                 |
+| default_catalog                      | Returns the default catalog.                                                                                 |
++--------------------------------------+--------------------------------------------------------------------------------------------------------------+
+</code></pre></div></p>
+<h3 id="executing-available-methods">Executing Available Methods<a class="headerlink" href="#executing-available-methods" title="Permanent link">&para;</a></h3>
+<p>While detailed documentation for each function is located on the <a href="../api/">Modules</a> page, below are a few examples to get you started.</p>
+<h4 id="retrieve-your-available-catalogs">Retrieve your available catalogs<a class="headerlink" href="#retrieve-your-available-catalogs" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="n">fusion</span><span class="o">.</span><span class="n">list_catalogs</span><span class="p">()</span>
+</code></pre></div>
+<h4 id="browse-products-available-within-a-catalog">Browse products available within a catalog<a class="headerlink" href="#browse-products-available-within-a-catalog" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="n">fusion</span><span class="o">.</span><span class="n">list_products</span><span class="p">(</span><span class="n">catalog</span><span class="o">=</span><span class="s2">&quot;&lt;CATALOG_ID&gt;&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="browse-datasets-available-within-a-catalog">Browse datasets available within a catalog<a class="headerlink" href="#browse-datasets-available-within-a-catalog" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="n">fusion</span><span class="o">.</span><span class="n">list_datasets</span><span class="p">(</span><span class="n">catalog</span><span class="o">=</span><span class="s2">&quot;&lt;CATALOG_ID&gt;&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="browse-datasets-associated-with-a-product">Browse datasets associated with a product<a class="headerlink" href="#browse-datasets-associated-with-a-product" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="n">fusion</span><span class="o">.</span><span class="n">list_datasets</span><span class="p">(</span><span class="n">catalog</span><span class="o">=</span><span class="s2">&quot;&lt;CATALOG_ID&gt;&quot;</span><span class="p">,</span> <span class="n">product</span><span class="o">=</span><span class="s2">&quot;&lt;PRODUCT_ID&gt;&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="display-all-metadata-for-datasets-available-within-a-catalog">Display all metadata for datasets available within a catalog<a class="headerlink" href="#display-all-metadata-for-datasets-available-within-a-catalog" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="n">fusion</span><span class="o">.</span><span class="n">list_datasets</span><span class="p">(</span><span class="n">catalog</span><span class="o">=</span><span class="s2">&quot;&lt;CATALOG_ID&gt;&quot;</span><span class="p">,</span> <span class="n">display_all_columns</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+<h4 id="retrieve-attributes-for-a-dataset">Retrieve attributes for a dataset<a class="headerlink" href="#retrieve-attributes-for-a-dataset" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><span class="n">fusion</span><span class="o">.</span><span class="n">list_dataset_attributes</span><span class="p">(</span><span class="n">dataset</span><span class="o">=</span><span class="s2">&quot;&lt;DATASET_ID&gt;&quot;</span><span class="p">,</span> <span class="n">catalog</span><span class="o">=</span><span class="s2">&quot;&lt;CATALOG_ID&gt;&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="additional-resources">Additional Resources<a class="headerlink" href="#additional-resources" title="Permanent link">&para;</a></h2>
+<p>Now that you are set up with the SDK, you can start exploring our pages on <a href="../download/">downloading</a> and <a href="../upload/">uploading</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/jpmorganchase/fusion" target="_blank" rel="noopener" title="Github" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="mailto:fusion_developers@jpmorgan.com" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m20 8-8 5-8-5V6l8 5 8-5m0-2H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.tabs", "navigation.instant", "navigation.tabs.sticky", "navigation.tracking"], "search": "../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.60a45f97.min.js"></script>
+      
+    
+  </body>
+</html>
