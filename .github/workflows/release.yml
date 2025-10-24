@@ -143,3 +143,12 @@ jobs:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_API_FUSIONDEVS }}
       run: uv run twine upload dist/*
+
+    - name: publish to Test PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TEST_API_FUSIONDEVS }}
+      run: uv run twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+    
+
+    

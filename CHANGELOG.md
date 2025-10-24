@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.2] - 2025-10-24
+* Download bug fix for multi part file
+* User agent header fix
+* Pagination enhancement for Product, Dataset and attributes
+
 ## [3.0.1] - 2025-09-05
 * Revert the License
 
@@ -13,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Rust code conversion to python
 * Python 3.13 support
 * Download date time logic fix
-* BCBS Reports
+* Reports
 
 ## [2.0.17] - 2025-08-19
 * Enhance and reorganize documentation site.
@@ -23,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Handle the changes API returning empty list for the dataset distributions during download.
 
 ## [2.0.15] - 2025-07-25
-* Added various BCBS related functions for Reports, Report Attributes and Linkage of terms to Report Attrributes
+* Added various functions for Reports, Report Attributes and Linkage of terms to Report Attrributes
 * Includes fix for date format in bulk upload of file
 * Added fusions logging to the existing loggers if present; which will remove forced use of fusions loggers.
 
@@ -69,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Embeddings API functionality
 
 ## [2.0.6] - 2025-01-16
-* BCBS functionality
+* Reports and dataflows functionality
 
 ## [2.0.5] - 2024-12-12
 * Application ID handling in dataset creation
