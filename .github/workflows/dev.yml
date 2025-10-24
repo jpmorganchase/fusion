@@ -1,8 +1,11 @@
-name: Build and Test
+name: Build, Test & Publish to Test PyPi
 
 on:
   push:
-    branches: [ master, main ]
+    branches: 
+      - master
+      - main
+      - 'feature/UAT*'   # only publish to TestPyPI for these
   pull_request:
     branches: [ master, main ]
   workflow_dispatch:
@@ -83,3 +86,13 @@ jobs:
           path: |
             dist/*.tar.gz
             dist/*.whl
+
+      # Only publish when branch starts with feature/UAT
+      - name: Publish to TestPyPI
+        if: startsWith(github.ref, 'refs/heads/feature/UAT')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_TEST_API_FUSIONDEVS }}
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true

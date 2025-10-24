@@ -19,10 +19,11 @@ if TYPE_CHECKING:
 
 @dataclass
 class ReportAttribute(metaclass=CamelCaseMeta):
-    title: str
-    sourceIdentifier: str | None = None
+    title: str | None = None
+    id: int | None = None
+    source_identifier: str | None = None
     description: str | None = None
-    technicalDataType: str | None = None
+    technical_data_type: str | None = None
     path: str | None = None
 
     _client: Fusion | None = field(init=False, repr=False, compare=False, default=None)
@@ -57,10 +58,11 @@ class ReportAttribute(metaclass=CamelCaseMeta):
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "sourceIdentifier": self.sourceIdentifier,
+            "id": self.id,
+            "sourceIdentifier": self.source_identifier,
             "title": self.title,
             "description": self.description,
-            "technicalDataType": self.technicalDataType,
+            "technicalDataType": self.technical_data_type,
             "path": self.path,
         }
 
@@ -110,7 +112,7 @@ class ReportAttributes:
 
     def get_attribute(self, name: str) -> ReportAttribute | None:
         for attr in self.attributes:
-            if attr.name == name:
+            if attr.title == name:
                 return attr
         return None
 
@@ -136,7 +138,7 @@ class ReportAttributes:
 
         # Only keep relevant columns
         column_map = {
-            "Local Data Element Reference ID": "sourceIdentifier",
+            "Local Data Element Reference ID": "source_identifier",
             "Data Element Name": "title",
             "Data Element Description": "description",
         }
@@ -148,7 +150,7 @@ class ReportAttributes:
         df = df.rename(columns=column_map)  # noqa
 
         # Add any missing required fields with default None
-        for col in ["technicalDataType", "path"]:
+        for col in ["technical_data_type", "path"]:
             if col not in df:
                 df[col] = None
 
@@ -195,14 +197,17 @@ class ReportAttributes:
         data = [attr.to_dict() for attr in self.attributes]
         return pd.DataFrame(data)
 
+    def _build_api_url(self, client: Fusion, report_id: str) -> str:
+        """This is a private method, use it to build the API URL for report attributes operations."""
+        return f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
+
     def create(
         self,
         report_id: str,
         client: Fusion | None = None,
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
-        """
-        Create the ReportAttributes to the core-lineage API.
+        """Create the ReportAttributes.
 
         Args:
             report_id (str): The identifier of the report.
@@ -211,14 +216,180 @@ class ReportAttributes:
 
         Returns:
             requests.Response | None: API response object if return_resp_obj is True.
+
+        Example:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attr = fusion.report_attribute(
+            ...     title="Revenue",
+            ...     source_identifier="rev_001",
+            ...     description="Revenue field for reporting",
+            ...     technical_data_type="decimal",
+            ...     path="/data/revenue"
+            ... )
+            >>> report_attrs = fusion.report_attributes([attr])
+            >>> report_attrs.create(report_id="report_1")
         """
         client = self._use_client(client)
-
-        url = f"{client._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
-
-        payload = [attr.to_dict() for attr in self.attributes]
+        url = self._build_api_url(client, report_id)
+        payload = []
+        for attr in self.attributes:
+            attr_dict = {
+                field_name: field_value
+                for field_name, field_value in attr.to_dict().items()
+                if field_value is not None and field_name != "id"
+            }
+            payload.append(attr_dict)
 
         resp = client.session.post(url, json=payload)
         requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
 
+    def update(
+        self,
+        report_id: str,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Replace report attributes.
+
+        This method performs a complete replacement of each report attribute.
+        Any properties not specified will be assigned null or default values.
+        Note: title is immutable and cannot be modified.
+
+        Args:
+            report_id (str): The identifier of the report.
+            client (Fusion, optional): Fusion client for auth and config. Uses self._client if not passed.
+            return_resp_obj (bool, optional): If True, returns the response object. Otherwise, returns None.
+
+        Returns:
+            requests.Response | None: API response object if return_resp_obj is True.
+
+        Raises:
+            ValueError: If required fields are missing or invalid.
+
+        Example:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attr = fusion.report_attribute(
+            ...     id=456,
+            ...     source_identifier="rev_001",
+            ...     description="Updated revenue field",
+            ...     technical_data_type="decimal"
+            ... )
+            >>> report_attrs = fusion.report_attributes([attr])
+            >>> report_attrs.update(report_id="report_1")
+
+        """
+        client = self._use_client(client)
+        for attr in self.attributes:
+            if attr.id is None:
+                raise ValueError(f"ReportAttribute must have an 'id' field for update")
+
+        url = self._build_api_url(client, report_id)
+        payload = []
+        for attr in self.attributes:
+            attr_dict = attr.to_dict()
+            attr_dict.pop("title", None)
+            payload.append(attr_dict)
+
+        resp = client.session.put(url, json=payload)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
+
+    def update_fields(
+        self,
+        report_id: str,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Update specific fields of report attributes.
+
+        This method performs a partial update of each report attribute.
+        Only the specified properties will be updated while all other properties remain unchanged.
+        Note: title is immutable and cannot be modified. At least one property must be provided.
+
+        Args:
+            report_id (str): The identifier of the report.
+            client (Fusion, optional): Fusion client for auth and config. Uses self._client if not passed.
+            return_resp_obj (bool, optional): If True, returns the response object. Otherwise, returns None.
+
+        Returns:
+            requests.Response | None: API response object if return_resp_obj is True.
+
+        Raises:
+            ValueError: If required fields are missing or invalid, or if no updatable fields are provided.
+
+        Example:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attr = fusion.report_attribute(
+            ...     id=456,
+            ...     description="Updated revenue field"  # only this will be updated
+            ... )
+            >>> report_attrs = fusion.report_attributes([attr])
+            >>> report_attrs.update_fields(report_id="report_1")
+
+        """
+        client = self._use_client(client)
+        for attr in self.attributes:
+            if attr.id is None:
+                raise ValueError(f"ReportAttribute must have an 'id' field for update_fields")
+
+        url = self._build_api_url(client, report_id)
+        payload = []
+        for attr in self.attributes:
+            attr_dict = {
+                field_name: field_value
+                for field_name, field_value in attr.to_dict().items()
+                if field_value is not None and field_name != "title"
+            }
+            payload.append(attr_dict)
+
+        resp = client.session.patch(url, json=payload)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
+
+    def delete(
+        self,
+        report_id: str,
+        client: Fusion | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Soft delete report attributes.
+
+        This method performs a soft delete of each report attribute.
+        Once soft deleted, the report attributes can still be viewed but cannot be modified.
+        Note: Throws an error if report attribute is already deleted.
+
+        Args:
+            report_id (str): The identifier of the report.
+            client (Fusion, optional): Fusion client for auth and config. Uses self._client if not passed.
+            return_resp_obj (bool, optional): If True, returns the response object. Otherwise, returns None.
+
+        Returns:
+            requests.Response | None: API response object if return_resp_obj is True.
+
+        Raises:
+            ValueError: If required fields are missing or if attributes are already deleted.
+
+        Example:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> attr = fusion.report_attribute(
+            ...     id=456  # only id is needed for deletion
+            ... )
+            >>> report_attrs = fusion.report_attributes([attr])
+            >>> report_attrs.delete(report_id="report_1")
+
+        """
+        client = self._use_client(client)
+        for attr in self.attributes:
+            if attr.id is None:
+                raise ValueError(f"ReportAttribute must have an 'id' field for deletion")
+
+        url = self._build_api_url(client, report_id)
+        payload = [{"id": attr.id} for attr in self.attributes]
+        resp = client.session.delete(url, json=payload)
+        requests_raise_for_status(resp)
         return resp if return_resp_obj else None

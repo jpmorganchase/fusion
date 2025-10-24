@@ -16,10 +16,16 @@ from pytest_mock import MockerFixture
 
 from fusion.attributes import Attribute
 from fusion.credentials import FusionCredentials
+from fusion.data_dependency import (
+    AttributeTermMapping,
+    DataDependency,
+    DataMapping,
+    DependencyAttribute,
+    DependencyMapping,
+)
 from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
-from fusion.report import Report
 from fusion.utils import _normalise_dt_param, distribution_to_url
 
 
@@ -1359,17 +1365,17 @@ def test_to_bytes_multiple_files(requests_mock: requests_mock.Mocker, fusion_obj
                 "fileExtension": ".parquet",
                 "identifier": "file1",
                 "title": "File 1",
-                "@id": "file1"
+                "@id": "file1",
             },
             {
                 "description": "Sample file 2",
                 "fileExtension": ".parquet",
                 "identifier": "file2",
                 "title": "File 2",
-                "@id": "file2"
-            }
+                "@id": "file2",
+            },
         ]
-    }  
+    }
 
     distri_files_url = (
         f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
@@ -1378,22 +1384,22 @@ def test_to_bytes_multiple_files(requests_mock: requests_mock.Mocker, fusion_obj
 
     requests_mock.get(distri_files_url, json=mock_data)
     file1_url = distribution_to_url(
-    fusion_obj.root_url,
-    dataset,
-    datasetseries,
-    file_format,
-    catalog,
-    is_download=True,
-    file_name="file1",
+        fusion_obj.root_url,
+        dataset,
+        datasetseries,
+        file_format,
+        catalog,
+        is_download=True,
+        file_name="file1",
     )
     file2_url = distribution_to_url(
-    fusion_obj.root_url,
-    dataset,
-    datasetseries,
-    file_format,
-    catalog,
-    is_download=True,
-    file_name="file2",
+        fusion_obj.root_url,
+        dataset,
+        datasetseries,
+        file_format,
+        catalog,
+        is_download=True,
+        file_name="file2",
     )
     expected_data = b"some binary data"
     requests_mock.get(file1_url, content=expected_data)
@@ -1407,6 +1413,7 @@ def test_to_bytes_multiple_files(requests_mock: requests_mock.Mocker, fusion_obj
         for d in data:
             assert d.getvalue() == expected_data
 
+
 def test_to_bytes_single_file(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     catalog = "my_catalog"
     dataset = "my_dataset"
@@ -1419,10 +1426,10 @@ def test_to_bytes_single_file(requests_mock: requests_mock.Mocker, fusion_obj: F
                 "fileExtension": ".parquet",
                 "identifier": "file1",
                 "title": "File 1",
-                "@id": "file1"
+                "@id": "file1",
             }
         ]
-    }  
+    }
 
     distri_files_url = (
         f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
@@ -1431,13 +1438,13 @@ def test_to_bytes_single_file(requests_mock: requests_mock.Mocker, fusion_obj: F
 
     requests_mock.get(distri_files_url, json=mock_data)
     file1_url = distribution_to_url(
-    fusion_obj.root_url,
-    dataset,
-    datasetseries,
-    file_format,
-    catalog,
-    is_download=True,
-    file_name="file1",
+        fusion_obj.root_url,
+        dataset,
+        datasetseries,
+        file_format,
+        catalog,
+        is_download=True,
+        file_name="file1",
     )
     expected_data = b"some binary data"
     requests_mock.get(file1_url, content=expected_data)
@@ -1448,19 +1455,14 @@ def test_to_bytes_single_file(requests_mock: requests_mock.Mocker, fusion_obj: F
     if isinstance(data, BytesIO):
         assert data.getbuffer() == expected_data
 
+
 def test_to_bytes_with_filename(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     catalog = "my_catalog"
     dataset = "my_dataset"
     datasetseries = "2020-04-04"
-    file_format = "csv"  
+    file_format = "csv"
     file1_url = distribution_to_url(
-    fusion_obj.root_url,
-    dataset,
-    datasetseries,
-    file_format,
-    catalog,
-    is_download=True,
-    file_name="file1"
+        fusion_obj.root_url, dataset, datasetseries, file_format, catalog, is_download=True, file_name="file1"
     )
     expected_data = b"some binary data"
     requests_mock.get(file1_url, content=expected_data)
@@ -1470,6 +1472,7 @@ def test_to_bytes_with_filename(requests_mock: requests_mock.Mocker, fusion_obj:
     # Check if the data is returned correctly
     if isinstance(data, BytesIO):
         assert data.getbuffer() == expected_data
+
 
 @pytest.mark.skip(reason="MUST FIX")
 def test_download_main(mocker: MockerFixture, fusion_obj: Fusion) -> None:
@@ -1943,10 +1946,10 @@ def test_download_invalid_dt_str_format(requests_mock: requests_mock.Mocker, fus
 def test_download_valid_dt_str_format_not_in_datasetseries(
     requests_mock: requests_mock.Mocker, fusion_obj: Fusion
 ) -> None:
-    """Test download method when dt_str is a valid date time format but not available in datasetseries."""
+    """Test download method when dt_str is a valid date range format but not available in datasetseries."""
     catalog = "my_catalog"
     dataset = "TEST_DATASET"
-    dt_str = "2020-01-01"  # Valid date format but not available
+    dt_str = "2020-01-01:2020-01-01"  # Valid date range format but not available
     file_format = "csv"
 
     # Mock dataset access check
@@ -3007,6 +3010,7 @@ def test_list_registered_attributes_paginated_fail(requests_mock: requests_mock.
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_registered_attributes(catalog=catalog)
 
+
 def test_fusion_report(fusion_obj: Fusion) -> None:
     """Test Fusion Report object creation using required and optional arguments."""
     report = fusion_obj.report(
@@ -3015,25 +3019,17 @@ def test_fusion_report(fusion_obj: Fusion) -> None:
         frequency="Quarterly",
         category="Risk Management",
         sub_category="Operational Risk",
-        data_node_id={"name": "ComplianceTable", "dataNodeType": "Table"},
+        owner_node={"name": "ComplianceTable", "type": "User Tool"},
+        publisher_node={"name": "ComplianceDash", "type": "Intelligent Solutions"},
+        business_domain="Risk",
         regulatory_related=True,
-        domain={"name": "Risk"},
-        tier_type="Tier 1",
         lob="Global Markets",
         is_bcbs239_program=True,
         sap_code="SAP123",
         region="EMEA",
     )
-
-    assert isinstance(report, Report)
-    assert report.title == "Quarterly Risk Report"
-    assert report.description == "Q1 Risk report for compliance"
-    assert report.client == fusion_obj
-    assert report.domain == {"name": "Risk"}
-    assert report.tier_type == "Tier 1"
-    assert report.is_bcbs239_program is True
-    assert report.region == "EMEA"
-    assert report.data_node_id["name"] == "ComplianceTable"
+    assert report.regulatory_related is True
+    assert report.business_domain == "Risk"
 
 
 def test_list_indexes_summary(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -3436,27 +3432,27 @@ def test_list_reports_by_id(fusion_obj: Fusion, requests_mock: requests_mock.Moc
     assert isinstance(df, pd.DataFrame)
     assert df.iloc[0]["id"] == "rep1"
 
-
 def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
-    report_id = "rep1"
-    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
+    report_id = "6789"
+    attribute_id = 12
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
     mock_data = [
         {
-            "id": "attr1",
-            "path": "/data/value",
-            "status": "active",
-            "dataType": "string",
-            "isMandatory": True,
+            "id": 12,
+            "title": "Attribute 1",
             "description": "Field desc",
+            "sourceIdentifier": "Source 1",
+            "technicalDataType": "string",
+            "path": "/data/value",
+            "reportId": 12345,
             "createdBy": "user1",
-            "name": "value",
         }
     ]
     requests_mock.get(url, json=mock_data)
     df = fusion_obj.list_report_attributes(report_id=report_id)  # noqa
     assert isinstance(df, pd.DataFrame)
     assert "id" in df.columns
-    assert df.iloc[0]["id"] == "attr1"
+    assert df.iloc[0]["id"] == attribute_id
 
 
 def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
@@ -3466,13 +3462,13 @@ def test_fusion_report_required_only(fusion_obj: Fusion) -> None:
         frequency="Monthly",
         category="Finance",
         sub_category="Market",
-        data_node_id={"name": "Node1", "dataNodeType": "Table"},
+        owner_node={"name": "Node1", "type": "User Tool"},
+        publisher_node={"name": "Dash-A", "type": "Intelligent Solutions"},
+        business_domain="Risk",
         regulatory_related=True,
-        domain={"name": "Risk"},
     )
-    assert isinstance(report, Report)
     assert report.title == "Test Report"
-    assert report.client is fusion_obj
+    assert report.business_domain == "Risk"
 
 
 def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
@@ -3482,12 +3478,15 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         frequency="Quarterly",
         category="Credit",
         sub_category="Wholesale",
-        data_node_id={"name": "NodeX", "dataNodeType": "View"},
+        owner_node={"name": "NodeX", "type": "User Tool"},
+        publisher_node={
+            "name": "DashX",
+            "type": "Intelligent Solutions",
+            "publisher_node_identifier": "pub-001", 
+        },
+        business_domain="Ops",
         regulatory_related=False,
-        domain={"name": "Ops"},
-        tier_type="Tier 1",
         lob="Banking",
-        alternative_id={"system": "ABC"},
         sub_lob="Retail",
         is_bcbs239_program=True,
         risk_area="Liquidity",
@@ -3495,38 +3494,47 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         sap_code="SAP001",
         region="EMEA",
     )
-    assert report.lob == "Banking"
-    assert report.client is fusion_obj
+    assert report.business_domain == "Ops"
+    assert report.owner_node is not None
+    assert report.owner_node["name"] == "NodeX"
+    assert report.publisher_node is not None
+    assert report.publisher_node["publisher_node_identifier"] == "pub-001"
+
 
 
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fusion) -> None:
-    mappings: list[Report.AttributeTermMapping] = [
-        {"attribute": {"id": "attr1"}, "term": {"id": "term1"}, "isKDE": True},
-        {"attribute": {"id": "attr2"}, "term": {"id": "term2"}, "isKDE": False},
+    from fusion.data_dependency import DependencyAttribute
+    
+    mappings: list[AttributeTermMapping] = [
+        AttributeTermMapping(DependencyAttribute("Report", "rep1", "attr1"), {"id": "term1"}, is_kde=True),
+        AttributeTermMapping(DependencyAttribute("Report", "rep2", "attr2"), {"id": "term2"}, is_kde=False),
     ]
 
-    fusion_obj.link_attributes_to_terms(report_id="rep123", mappings=mappings)
+    fusion_obj.link_attributes_to_terms(mappings=mappings)
 
     args, kwargs = mock_link.call_args
     sent_mappings = kwargs["mappings"]
-    assert sent_mappings[0]["isKDE"] is True
-    assert sent_mappings[1]["isKDE"] is False
+    assert sent_mappings[0].is_kde is True
+    assert sent_mappings[1].is_kde is False
     assert kwargs["client"] is fusion_obj
 
 
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fusion_obj: Fusion) -> None:
+    from fusion.data_dependency import DependencyAttribute
+    
     mock_resp = MagicMock()
     mock_link.return_value = mock_resp
 
-    mappings: list[Report.AttributeTermMapping] = [
-        {"attribute": {"id": "a"}, "term": {"id": "t"}, "isKDE": True},
+    mappings: list[AttributeTermMapping] = [
+        AttributeTermMapping(DependencyAttribute("Report", "r", "a"), {"id": "t"}, is_kde=True),
     ]
 
-    resp = fusion_obj.link_attributes_to_terms("r", mappings, return_resp_obj=True)
+    resp = fusion_obj.link_attributes_to_terms(mappings, return_resp_obj=True)
 
     assert resp is mock_resp
+
 
 def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     mock_data = {
@@ -3536,15 +3544,15 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
                 "fileExtension": ".parquet",
                 "identifier": "file1",
                 "title": "File 1",
-                "@id": "file1"
+                "@id": "file1",
             },
             {
                 "description": "Sample file 2",
                 "fileExtension": ".parquet",
                 "identifier": "file2",
                 "title": "File 2",
-                "@id": "file2"
-            }
+                "@id": "file2",
+            },
         ]
     }
 
@@ -3562,11 +3570,7 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
 
     # Case 1: Default (max_results = -1) → return all rows
     df_all = fusion_obj.list_distribution_files(
-        dataset=dataset,
-        series=series,
-        file_format=file_format,
-        catalog=catalog,
-        max_results=-1
+        dataset=dataset, series=series, file_format=file_format, catalog=catalog, max_results=-1
     )
     assert isinstance(df_all, pd.DataFrame)
     TOTAL_FILES = 2
@@ -3575,13 +3579,9 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
     assert df_all["@id"].tolist() == ["file1", "file2"]
 
     # Case 2: Limit to max_results = 1
-    MAX_RESULTS=1
+    MAX_RESULTS = 1
     df_limited = fusion_obj.list_distribution_files(
-        dataset=dataset,
-        series=series,
-        file_format=file_format,
-        catalog=catalog,
-        max_results=MAX_RESULTS
+        dataset=dataset, series=series, file_format=file_format, catalog=catalog, max_results=MAX_RESULTS
     )
 
     assert len(df_limited) == MAX_RESULTS
@@ -3589,15 +3589,10 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
 
     # Case 3: Limit higher than available rows → returns all
     df_over_limit = fusion_obj.list_distribution_files(
-        dataset=dataset,
-        series=series,
-        file_format=file_format,
-        catalog=catalog,
-        max_results=10
+        dataset=dataset, series=series, file_format=file_format, catalog=catalog, max_results=10
     )
     assert len(df_over_limit) == TOTAL_FILES
     assert df_over_limit["@id"].tolist() == ["file1", "file2"]
-
 
 def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
     """ID-only path: instantiate with just an id; nodes remain None."""
@@ -3610,8 +3605,8 @@ def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
 
 def test_fusion_dataflow_full(fusion_obj: Fusion) -> None:
     """Full constructor path: provider/consumer plus optional fields."""
-    provider = {"name": "CRM_DB", "nodeType": "Database"}
-    consumer = {"name": "DWH", "nodeType": "Database"}
+    provider = {"name": "CRM_DB", "type": "Database"}     
+    consumer = {"name": "DWH", "type": "Database"}          
     flow = fusion_obj.dataflow(
         provider_node=provider,
         consumer_node=consumer,
@@ -3636,8 +3631,8 @@ def test_list_dataflows_success(requests_mock: requests_mock.Mocker, fusion_obj:
     server_json = {
         "id": flow_id,
         "description": "sample flow",
-        "providerNode": {"name": "A", "nodeType": "DB"},
-        "consumerNode": {"name": "B", "nodeType": "DB"},
+        "providerNode": {"name": "A", "type": "DB"},      
+        "consumerNode": {"name": "B", "type": "DB"},      
         "frequency": "Daily",
     }
     requests_mock.get(url, json=server_json, status_code=200)
@@ -3663,3 +3658,170 @@ def test_list_dataflows_http_error(requests_mock: requests_mock.Mocker, fusion_o
 
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_dataflows(flow_id)
+
+def test_dependency_attribute(fusion_obj: Fusion) -> None:
+    """Fusion.dependency_attribute should return a DependencyAttribute with client set."""
+    attr = fusion_obj.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+    assert isinstance(attr, DependencyAttribute)
+    assert attr.entity_type == "Dataset"
+    assert attr.entity_identifier == "dataset1"
+    assert attr.attribute_identifier == "colA"
+    assert attr.data_space == "Finance"  
+
+def test_dependency_mapping(fusion_obj: Fusion) -> None:
+    """Fusion.dependency_mapping should return a DependencyMapping with client set."""
+    src = fusion_obj.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+    tgt = fusion_obj.dependency_attribute("Dataset", "dataset2", "colB", "Finance")
+    mapping = fusion_obj.dependency_mapping([src], tgt)
+    assert isinstance(mapping, DependencyMapping)
+    assert mapping.source_attributes[0] == src
+    assert mapping.target_attribute == tgt
+    
+def test_attribute_term_mapping(fusion_obj: Fusion) -> None:
+    """Fusion.attribute_term_mapping should return AttributeTermMapping with client set."""
+    attr = fusion_obj.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+    term = {"id": "term_123"}
+    mapping = fusion_obj.attribute_term_mapping(attr, term, is_kde=True)
+    assert isinstance(mapping, AttributeTermMapping)
+    assert mapping.attribute == attr
+    assert mapping.term == term
+    assert mapping.is_kde is True   
+
+def test_data_dependency_sets_client(fusion_obj: Fusion) -> None:
+    """Fusion.data_dependency should return DataDependency with client set."""
+    dep = fusion_obj.data_dependency()
+    assert isinstance(dep, DataDependency)
+    assert dep.client == fusion_obj
+
+
+def test_data_mapping_sets_client(fusion_obj: Fusion) -> None:
+    """Fusion.data_mapping should return DataMapping with client set."""
+    mapping = fusion_obj.data_mapping()
+    assert isinstance(mapping, DataMapping)
+    assert mapping.client == fusion_obj
+
+
+def test_list_attribute_lineage_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_attribute_lineage returns dataframe when API responds 200."""
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/source-attributes/query"
+    server_json = [
+        {"entityType": "Dataset", "entityIdentifier": "dataset1", "attributeIdentifier": "colA"}
+    ]
+    requests_mock.post(url, json=server_json, status_code=200)
+
+    lineage_df = fusion_obj.list_attribute_lineage(
+        entity_type="Dataset",
+        entity_identifier="dataset2",
+        attribute_identifier="colB",
+        data_space="Finance",
+    )
+    assert isinstance(lineage_df, pd.DataFrame)
+    assert len(lineage_df) == 1
+    assert "entityType" in lineage_df.columns
+    assert lineage_df.loc[0, "entityIdentifier"] == "dataset1"
+
+
+def test_list_attribute_lineage_raises_value_error(fusion_obj: Fusion) -> None:
+    """list_attribute_lineage should raise ValueError if data_space is missing for Dataset."""
+    with pytest.raises(ValueError, match="`data_space` is required when `entity_type` is 'Dataset'"):
+        fusion_obj.list_attribute_lineage(
+            entity_type="Dataset",
+            entity_identifier="dataset2",
+            attribute_identifier="colB",
+        )
+
+
+def test_list_attribute_lineage_http_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_attribute_lineage should raise HTTPError for non-200 responses."""
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/source-attributes/query"
+    requests_mock.post(url, status_code=404)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_attribute_lineage(
+            entity_type="Dataset",
+            entity_identifier="dataset2",
+            attribute_identifier="colB",
+            data_space="Finance",
+        )
+
+
+def test_list_business_terms_for_attribute_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_business_terms_for_attribute returns dataframe when API responds 200."""
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-mapping/term/query"
+    server_json = [
+        {"entityType": "Dataset", "entityIdentifier": "dataset1", "attributeIdentifier": "colA", "termId": "t123"}
+    ]
+    requests_mock.post(url, json=server_json, status_code=200)
+
+    terms_df = fusion_obj.list_business_terms_for_attribute(
+        entity_type="Dataset",
+        entity_identifier="dataset1",
+        attribute_identifier="colA",
+        data_space="Finance",
+    )
+    assert isinstance(terms_df, pd.DataFrame)
+    assert len(terms_df) == 1
+    assert "termId" in terms_df.columns
+    assert terms_df.loc[0, "termId"] == "t123"
+
+
+def test_list_business_terms_for_attribute_raises_value_error(fusion_obj: Fusion) -> None:
+    """list_business_terms_for_attribute should raise ValueError if data_space is missing for Dataset."""
+    with pytest.raises(ValueError, match="`data_space` is required when `entity_type` is 'Dataset'"):
+        fusion_obj.list_business_terms_for_attribute(
+            entity_type="Dataset",
+            entity_identifier="dataset1",
+            attribute_identifier="colA",
+        )
+
+
+def test_list_business_terms_for_attribute_http_error(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """list_business_terms_for_attribute should raise HTTPError for non-200 responses."""
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-mapping/term/query"
+    requests_mock.post(url, status_code=500)
+
+    with pytest.raises(requests.exceptions.HTTPError):
+        fusion_obj.list_business_terms_for_attribute(
+            entity_type="Dataset",
+            entity_identifier="dataset1",
+            attribute_identifier="colA",
+            data_space="Finance",
+        )
+
+def test_list_attribute_lineage_no_data_found(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
+    """Test list_attribute_lineage raises APIResponseError when API returns an empty list."""
+
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/source-attributes/query"
+
+    # Mocking the POST call to return empty list
+    requests_mock.post(url, json=[], status_code=200)
+
+    with pytest.raises(APIResponseError) as excinfo:
+        fusion_obj.list_attribute_lineage(
+            entity_type="Dataset",
+            entity_identifier="data_asset_1",
+            attribute_identifier="attribute_1",
+            data_space="34564i",
+        )
+
+    assert "No data found" in str(excinfo.value)
+
+def test_list_business_terms_for_attribute_no_data_found(
+    requests_mock: requests_mock.Mocker, fusion_obj: Fusion
+) -> None:
+    """Test list_business_terms_for_attribute raises APIResponseError when API returns an empty list."""
+
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-mapping/term/query"
+
+    # Mock the POST request to return an empty list
+    requests_mock.post(url, json=[], status_code=200)
+
+    with pytest.raises(APIResponseError) as excinfo:
+        fusion_obj.list_business_terms_for_attribute(
+            entity_type="Dataset",
+            entity_identifier="data_asset_1",
+            attribute_identifier="attribute_1",
+            data_space="34564i",
+        )
+
+    assert "No data found" in str(excinfo.value)
