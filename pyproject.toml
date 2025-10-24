@@ -1,6 +1,6 @@
 [project]
 name = "pyfusion"
-version = "3.0.1"
+version = "3.0.2-dev3"
 
 description = "JPMC Fusion Developer Tools"
 authors = [
@@ -31,6 +31,7 @@ dependencies = [
     "pyarrow >= 11",
     "fsspec >= 2021",
     "aiohttp >= 3.7.1",
+    "tqdm >= 4.48.0",
     "rich >= 11.0.0",
     "certifi",
     "pyjwt>=2.10.1",
@@ -234,7 +235,7 @@ html.skip_covered = false
 parallel = true
 
 [tool.coverage.report]
-fail_under = 78
+fail_under = 79
 omit = [
     "py_src/fusion/_legacy/authentication.py",
     "py_src/fusion/_legacy/__init__.py"
@@ -246,7 +247,7 @@ exclude_lines = [
 
 
 [tool.bumpversion]
-current_version = "3.0.1"
+current_version = "3.0.2-dev3"
 parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[a-z]+)(?P<candidate>\d+))?'
 serialize = [
     '{major}.{minor}.{patch}-{release}{candidate}',

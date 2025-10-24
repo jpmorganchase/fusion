@@ -40,6 +40,8 @@ from rich.progress import (
 )
 from urllib3.util.retry import Retry
 
+from fusion.exceptions import APIResponseError
+
 from .authentication import FusionAiohttpSession, FusionOAuthAdapter
 
 if TYPE_CHECKING:
@@ -541,9 +543,9 @@ def distribution_to_filename(
     if file_name and file_name != file_format:
         # Use explicit filename directly
         final_name = f"{file_name}.{file_format}"
-    elif partitioning == "hive":        
+    elif partitioning == "hive":
         final_name = f"{dataset}.{file_format}"
-    else:        
+    else:
         final_name = f"{dataset}__{catalog}__{datasetseries}.{file_format}"
 
     sep = "/"
@@ -596,7 +598,7 @@ def distribution_to_url(
         return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/{file_format}"
     if is_download:
         return (
-             f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
+            f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
             f"{datasetseries}/distributions/{file_format}/files/operationType/download?file={file_name}"
         )
     return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
@@ -649,7 +651,9 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
 
 
 def get_session(
-    credentials: FusionCredentials, root_url: str, get_retries: int | Retry | None = None
+    credentials: FusionCredentials, root_url: str,
+    get_retries: int | Retry | None = None,
+    headers: dict[str, str] | None = None,
 ) -> requests.Session:
     """Create a new http session and set parameters.
 
@@ -672,7 +676,7 @@ def get_session(
         mount_url = _get_canonical_root_url(root_url)
     except Exception:  # noqa: BLE001
         mount_url = "https://"
-    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url)
+    auth_handler = FusionOAuthAdapter(credentials, max_retries=get_retries, mount_url=mount_url, headers=headers)
     session.mount(mount_url, auth_handler)
     return session
 
@@ -1025,3 +1029,9 @@ def _merge_responses(responses: list[dict[str, Any]]) -> dict[str, Any]:
                 merged[key].extend(response[key])
 
     return merged
+
+
+def ensure_resources(resp: dict[str, Any]) -> None:
+    """Raise APIResponseError if 'resources' key is missing or empty in the response."""
+    if "resources" not in resp or not resp["resources"]:
+        raise APIResponseError(ValueError("No data found"))

@@ -3208,7 +3208,7 @@ wheels = [
 
 [[package]]
 name = "pyfusion"
-version = "3.0.1"
+version = "3.0.2-dev3"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -3221,6 +3221,7 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
     { name = "tabulate" },
+    { name = "tqdm" },
 ]
 
 [package.optional-dependencies]
@@ -3242,6 +3243,7 @@ all = [
     { name = "notebook" },
     { name = "opensearch-py" },
     { name = "polars" },
+    { name = "s3fs" },
     { name = "sseclient" },
 ]
 aws = [
@@ -3355,6 +3357,7 @@ requires-dist = [
     { name = "s3fs", marker = "extra == 'aws'" },
     { name = "sseclient", marker = "extra == 'events'" },
     { name = "tabulate", specifier = ">=0.8" },
+    { name = "tqdm", specifier = ">=4.48.0" },
 ]
 provides-extras = ["all", "doc", "aws", "gcs", "azr", "polars", "events", "embeddings"]
 
@@ -4499,6 +4502,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/04/bf/54eb1587160d1a7ee16074b40544168fa93b2eab510007b24d6427b85e5c/tox_uv-1.20.2.tar.gz", hash = "sha256:a0326b9a9538b0b07a806de838e287df323432447f2ecd2e6e5403c3f0215fbc", size = 18908, upload-time = "2025-01-28T18:10:22.897Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bf/c2/610b0bb0e91394fcd2166a04bc8699441d1d5e965957840788b9286d0bb7/tox_uv-1.20.2-py3-none-any.whl", hash = "sha256:f50f8e7b1f0f583061eb610e3c9cbeee18938e76e10c4ba837869d488bcbdb87", size = 14540, upload-time = "2025-01-28T18:10:20.785Z" },
+]
+
+[[package]]
+name = "tqdm"
+version = "4.67.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540, upload-time = "2024-11-24T20:12:19.698Z" },
 ]
 
 [[package]]

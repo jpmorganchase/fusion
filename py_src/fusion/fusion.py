@@ -17,16 +17,23 @@ from zipfile import ZipFile
 
 import pandas as pd
 import pyarrow as pa
-from rich.progress import Progress
 from tabulate import tabulate
+from tqdm import tqdm
 
 from fusion.attributes import Attribute, Attributes
 from fusion.credentials import FusionCredentials
+from fusion.data_dependency import (
+    AttributeTermMapping,
+    DataDependency,
+    DataMapping,
+    DependencyAttribute,
+    DependencyMapping,
+)
 from fusion.dataflow import Dataflow
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
-from fusion.report import Report, ReportsWrapper
+from fusion.report import Report, Reports
 from fusion.report_attributes import ReportAttribute, ReportAttributes
 
 from .embeddings_utils import _format_full_index_response, _format_summary_index_response
@@ -38,6 +45,7 @@ from .utils import (
     csv_to_table,
     distribution_to_filename,
     distribution_to_url,
+    ensure_resources,
     file_name_to_url,
     get_default_fs,
     get_session,
@@ -85,10 +93,7 @@ class Fusion:
             pandas.DataFrame: a dataframe containing the requested data.
         """
         response_data = handle_paginated_request(session, url)
-        if "resources" not in response_data or not response_data["resources"]:
-            raise APIResponseError(
-                ValueError("No data found"),
-            )
+        ensure_resources(response_data)
 
         ret_df = pd.DataFrame(response_data["resources"]).reset_index(drop=True)
         return ret_df
@@ -558,13 +563,22 @@ class Fusion:
         display_all_columns: bool = False,
     ) -> pd.DataFrame:
         """Retrieve the attributes (report elements) of a specific report."""
-        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/reportElements"
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
         resp = self.session.get(url)
 
         if resp.status_code == HTTPStatus.OK:
             rep_df = pd.json_normalize(resp.json())
             if not display_all_columns:
-                key_columns = ["id", "path", "status", "dataType", "isMandatory", "description", "createdBy", "name"]
+                key_columns = [
+                    "id",
+                    "title",
+                    "description",
+                    "sourceIdentifier",
+                    "technicalDataType",
+                    "path",
+                    "reportId",
+                    "createdBy",
+                ]
                 rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
             if output:
                 pass
@@ -572,7 +586,16 @@ class Fusion:
         else:
             resp.raise_for_status()
         return pd.DataFrame(
-            columns=["id", "path", "status", "dataType", "isMandatory", "description", "createdBy", "name"]
+            columns=[
+                "id",
+                "title",
+                "description",
+                "sourceIdentifier",
+                "technicalDataType",
+                "path",
+                "reportId",
+                "createdBy",
+            ]
         )
 
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
@@ -919,9 +942,7 @@ class Fusion:
         valid_date_range = re.compile(
             r"^("
             r"(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?"
-            r"(:(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?)?"
-            r"|"
-            r"(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?"
+            r"(:(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?)"
             r")$"
         )
 
@@ -1022,22 +1043,23 @@ class Fusion:
             VERBOSE_LVL,
             f"Beginning {len(download_spec)} downloads in batches of {n_par}",
         )
+        res = [None] * len(download_spec)
+
         if show_progress:
-            with Progress() as p:
-                task = p.add_task("Downloading", total=len(download_spec))
-                res = []
-                for spec in download_spec:
+            with tqdm(total=len(download_spec), desc="Downloading") as p:
+                for i, spec in enumerate(download_spec):
                     r = self.get_fusion_filesystem().download(**spec)
-                    res.append(r)
-                    p.update(task, advance=1)
+                    res[i] = r
+                    if r[0] is True:
+                        p.update(1)
         else:
             res = [self.get_fusion_filesystem().download(**spec) for spec in download_spec]
 
-        if (len(res) > 0) and (not all(r[0] for r in res)):
+        if (len(res) > 0) and (not all(r[0] for r in res)):  # type: ignore
             for r in res:
                 if not r[0]:
                     warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
-        return res if return_paths else None
+        return res if return_paths else None  # type: ignore
 
     def _validate_format(
         self,
@@ -1952,6 +1974,236 @@ class Fusion:
             if isinstance(product, str):
                 mapping_df = mapping_df[mapping_df["product"].str.contains(product, case=False)]
         return mapping_df
+    
+    def delete_all_datasetmembers(
+        self,
+        dataset: str,
+        catalog: str | None = None,
+        return_resp_obj: bool = False,
+    ) -> requests.Response | None:
+        """Delete all dataset members within a dataset.
+
+        Args:
+            dataset (str): A dataset identifier
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
+
+        Returns:
+            list[requests.Response]: a list of response objects.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> fusion.delete_all_datasetmembers(dataset="dataset1")
+
+        """
+        catalog = self._use_catalog(catalog)
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
+        resp = self.session.delete(url)
+        requests_raise_for_status(resp)
+        return resp if return_resp_obj else None
+    
+    def list_datasetmembers_distributions(
+        self,
+        dataset: str,
+        catalog: str | None = None,
+    ) -> pd.DataFrame:
+        """List the distributions of dataset members.
+
+                Args:
+                    dataset (str): Dataset identifier.
+                    catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+                    
+                Returns:
+                    pd.DataFrame: A dataframe with a row for each dataset member distribution.
+
+        """
+        catalog = self._use_catalog(catalog)
+        url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
+        data = handle_paginated_request(self.session, url)
+
+        datasets = data.get("datasets", [])
+        if not datasets:
+            return pd.DataFrame()
+
+        dists = datasets[0].get("distributions", [])
+        rows = []
+        MEMBER_FORMAT_INDEX = 6  # Index for member_format in values list
+        for dist in dists:
+            values = dist.get("values")
+            if values and len(values) > MEMBER_FORMAT_INDEX:
+                member_id = values[5]
+                member_format = values[MEMBER_FORMAT_INDEX]
+                rows.append((member_id, member_format))
+
+        members_df = pd.DataFrame(rows, columns=["identifier", "format"])
+        return members_df
+
+    def list_registered_attributes(
+        self,
+        catalog: str | None = None,
+        output: bool = False,
+        display_all_columns: bool = False,
+    ) -> pd.DataFrame:
+        """Returns the list of attributes in a catalog.
+
+        Args:
+            catalog (str, optional): A catalog identifier. Defaults to 'common'.
+            output (bool, optional): If True then print the dataframe. Defaults to False.
+            display_all_columns (bool, optional): If True displays all columns returned by the API,
+                otherwise only the key columns are displayed
+
+        Returns:
+            class:`pandas.DataFrame`: A dataframe with a row for each attribute
+        """
+        catalog = self._use_catalog(catalog)
+
+        url = f"{self.root_url}catalogs/{catalog}/attributes"
+        ds_attr_df = Fusion._call_for_dataframe(url, self.session).reset_index(drop=True)
+
+        if not display_all_columns:
+            ds_attr_df = ds_attr_df[
+                ds_attr_df.columns.intersection(
+                    [
+                        "identifier",
+                        "title",
+                        "dataType",
+                        "description",
+                        "publisher",
+                        "applicationId",
+                    ]
+                )
+            ]
+
+        if output:
+            pass
+
+        return ds_attr_df
+    
+    def list_attribute_lineage(
+        self,
+        entity_type: str,
+        entity_identifier: str,
+        attribute_identifier: str,
+        data_space: str | None = None,
+        output: bool = False,
+    ) -> pd.DataFrame:
+        """List source attributes linked to a given target attribute.
+
+        Args:
+            entity_type (str): Type of the entity (e.g., "Dataset").
+            entity_identifier (str): Identifier of the entity.
+            attribute_identifier (str): Identifier of the attribute.
+            data_space (str | None, optional): Required only if entity_type is "Dataset".
+            output (bool, optional): If True, prints the dataframe. Defaults to False.
+
+        Raises:
+            ValueError: If `data_space` is not provided when `entity_type` is "Dataset".
+            requests.HTTPError: If the API request fails.
+
+        Returns:
+            pd.DataFrame: A dataframe representing the full JSON response.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> df = fusion.list_attribute_lineage(
+            ...     entity_type="Dataset",
+            ...     entity_identifier="data_asset_1",
+            ...     attribute_identifier="attribute_1",
+            ...     data_space="34564i"
+            ... )
+            >>> print(df)
+        """
+        if entity_type.lower() == "dataset" and not data_space:
+            raise ValueError("`data_space` is required when `entity_type` is 'Dataset'.")
+
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/source-attributes/query"
+        payload: dict[str, Any] = {
+            "entityType": entity_type,
+            "entityIdentifier": entity_identifier,
+            "attributeIdentifier": attribute_identifier,
+        }
+        if entity_type.lower() == "dataset":
+            payload["dataSpace"] = data_space
+
+        response = self.session.post(url, json=payload)
+        requests_raise_for_status(response)
+
+        if not response.content:
+            raise APIResponseError(ValueError("No data found"))
+
+        json_data = response.json()
+        if not json_data:
+            raise APIResponseError(ValueError("No data found"))
+
+        lineage_df = pd.json_normalize(response.json())
+        if output:
+            pass
+        return lineage_df
+
+    def list_business_terms_for_attribute(
+        self,
+        entity_type: str,
+        entity_identifier: str,
+        attribute_identifier: str,
+        data_space: str | None = None,
+        output: bool = False,
+    ) -> pd.DataFrame:
+        """List business terms linked to a given attribute.
+
+        Args:
+            entity_type (str): Type of the entity (e.g., "Dataset").
+            entity_identifier (str): Identifier of the entity.
+            attribute_identifier (str): Identifier of the attribute.
+            data_space (str | None, optional): Required only if entity_type is "Dataset".
+            output (bool, optional): If True, prints the dataframe. Defaults to False.
+
+        Raises:
+            ValueError: If `data_space` is not provided when `entity_type` is "Dataset".
+            requests.HTTPError: If the API request fails.
+
+        Returns:
+            pd.DataFrame: A dataframe representing the full JSON response.
+
+        Examples:
+            >>> from fusion import Fusion
+            >>> fusion = Fusion()
+            >>> df = fusion.list_business_terms_for_attribute(
+            ...     entity_type="Dataset",
+            ...     entity_identifier="data_asset_1",
+            ...     attribute_identifier="attribute_1",
+            ...     data_space="34564i"
+            ... )
+            >>> print(df)
+        """
+        if entity_type.lower() == "dataset" and not data_space:
+            raise ValueError("`data_space` is required when `entity_type` is 'Dataset'.")
+
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/data-mapping/term/query"
+        payload: dict[str, Any] = {
+            "entityType": entity_type,
+            "entityIdentifier": entity_identifier,
+            "attributeIdentifier": attribute_identifier,
+        }
+        if entity_type.lower() == "dataset":
+            payload["dataSpace"] = data_space
+
+        response = self.session.post(url, json=payload)
+        requests_raise_for_status(response)
+
+        if not response.content:
+            raise APIResponseError(ValueError("No data found"))
+
+        json_data = response.json()
+        if not json_data:
+            raise APIResponseError(ValueError("No data found"))
+
+        term_df = pd.json_normalize(json_data)
+        if output:
+            pass
+
+        return term_df
 
     def product(  # noqa: PLR0913
         self,
@@ -2290,22 +2542,24 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
 
-
     def report_attribute(
         self,
-        title: str,
-        sourceIdentifier: str | None = None,
+        title: str | None = None,
+        id: int | None = None,  # noqa: A002
+        source_identifier: str | None = None,
         description: str | None = None,
-        technicalDataType: str | None = None,
+        technical_data_type: str | None = None,
         path: str | None = None,
     ) -> ReportAttribute:
         """Instantiate a ReportAttribute object with this client for metadata creation.
 
         Args:
-            title (str): The display title of the attribute (required).
-            sourceIdentifier (str | None, optional): A unique identifier or reference ID from the source system.
+            title (str | None, optional): The display title of the attribute.
+            id (int | None, optional): The unique identifier of the attribute. 
+                id argument is not required for 'create' operation.
+            source_identifier (str | None, optional): A unique identifier or reference ID from the source system.
             description (str | None, optional): A longer description of the attribute.
-            technicalDataType (str | None, optional): The technical data type (e.g., string, int, boolean).
+            technical_data_type (str | None, optional): The technical data type (e.g., string, int, boolean).
             path (str | None, optional): The hierarchical path or logical grouping for the attribute.
 
         Returns:
@@ -2315,17 +2569,18 @@ class Fusion:
             >>> fusion = Fusion()
             >>> attr = fusion.report_attribute(
             ...     title="Customer ID",
-            ...     sourceIdentifier="cust_id_123",
+            ...     source_identifier="cust_id_123",
             ...     description="Unique customer identifier",
-            ...     technicalDataType="String",
+            ...     technical_data_type="String",
             ...     path="Customer.Details"
             ... )
         """
         attribute_obj = ReportAttribute(
-            sourceIdentifier=sourceIdentifier,
+            source_identifier=source_identifier,
             title=title,
+            id=id,
             description=description,
-            technicalDataType=technicalDataType,
+            technical_data_type=technical_data_type,
             path=path,
         )
         attribute_obj.client = self
@@ -2355,29 +2610,31 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
 
-    def reports(self) -> ReportsWrapper:
-        """Instantiate a ReportsWrapper collection with this client, providing access to
+    def reports(self) -> Reports:
+        """Instantiate a Reports collection with this client, providing access to
         report-related operations such as creation, retrieval, and bulk manipulation.
 
         Returns:
-            ReportsWrapper: A ReportsWrapper collection object with the client context attached.
+            Reports: A Reports collection object with the client context attached.
 
         Example:
             >>> fusion = Fusion()
             >>> reports = fusion.reports()
-            >>> new_report = reports.create(
+            >>> reports_from_csv = reports.from_csv("reports.csv")
+            >>> reports_from_csv.create_all()
+            >>> # Or create individual reports:
+            >>> new_report = fusion.report(
             ...     title="Monthly Risk Report",
             ...     description="Summary of monthly risk metrics",
             ...     frequency="Monthly",
             ...     category="Risk",
             ...     sub_category="Credit Risk",
-            ...     data_node_id={"id": "node123"},
-            ...     regulatory_related=True,
-            ...     domain={"id": "domain123"}
+            ...     business_domain="CDAO Office"
             ... )
+            >>> new_report.create()
         """
-        return ReportsWrapper(client=self)
-
+        return Reports(client=self)
+    
     def delete_datasetmembers(
         self,
         dataset: str,
@@ -2421,75 +2678,6 @@ class Fusion:
             requests_raise_for_status(resp)
             responses.append(resp)
         return responses if return_resp_obj else None
-
-    def delete_all_datasetmembers(
-        self,
-        dataset: str,
-        catalog: str | None = None,
-        return_resp_obj: bool = False,
-    ) -> requests.Response | None:
-        """Delete all dataset members within a dataset.
-
-        Args:
-            dataset (str): A dataset identifier
-            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-            return_resp_obj (bool, optional): If True then return the response object. Defaults to False.
-
-        Returns:
-            list[requests.Response]: a list of response objects.
-
-        Examples:
-            >>> from fusion import Fusion
-            >>> fusion = Fusion()
-            >>> fusion.delete_all_datasetmembers(dataset="dataset1")
-
-        """
-        catalog = self._use_catalog(catalog)
-        url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries"
-        resp = self.session.delete(url)
-        requests_raise_for_status(resp)
-        return resp if return_resp_obj else None
-
-    def list_registered_attributes(
-        self,
-        catalog: str | None = None,
-        output: bool = False,
-        display_all_columns: bool = False,
-    ) -> pd.DataFrame:
-        """Returns the list of attributes in a catalog.
-
-        Args:
-            catalog (str, optional): A catalog identifier. Defaults to 'common'.
-            output (bool, optional): If True then print the dataframe. Defaults to False.
-            display_all_columns (bool, optional): If True displays all columns returned by the API,
-                otherwise only the key columns are displayed
-
-        Returns:
-            class:`pandas.DataFrame`: A dataframe with a row for each attribute
-        """
-        catalog = self._use_catalog(catalog)
-
-        url = f"{self.root_url}catalogs/{catalog}/attributes"
-        ds_attr_df = Fusion._call_for_dataframe(url, self.session).reset_index(drop=True)
-
-        if not display_all_columns:
-            ds_attr_df = ds_attr_df[
-                ds_attr_df.columns.intersection(
-                    [
-                        "identifier",
-                        "title",
-                        "dataType",
-                        "description",
-                        "publisher",
-                        "applicationId",
-                    ]
-                )
-            ]
-
-        if output:
-            pass
-
-        return ds_attr_df
 
     def list_indexes(
         self,
@@ -2563,173 +2751,153 @@ class Fusion:
             knowledge_base=knowledge_base,
             root_url=self.root_url,
             credentials=self.credentials,
-        )
-
-    def list_datasetmembers_distributions(
-        self,
-        dataset: str,
-        catalog: str | None = None,
-    ) -> pd.DataFrame:
-        """List the distributions of dataset members.
-
-                Args:
-                    dataset (str): Dataset identifier.
-                    catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-                    
-                Returns:
-                    pd.DataFrame: A dataframe with a row for each dataset member distribution.
-
-        """
-        catalog = self._use_catalog(catalog)
-        url = f"{self.root_url}catalogs/{catalog}/datasets/changes?datasets={dataset}"
-        data = handle_paginated_request(self.session, url)
-
-        datasets = data.get("datasets", [])
-        if not datasets:
-            return pd.DataFrame()
-
-        dists = datasets[0].get("distributions", [])
-        rows = []
-        MEMBER_FORMAT_INDEX = 6  # Index for member_format in values list
-        for dist in dists:
-            values = dist.get("values")
-            if values and len(values) > MEMBER_FORMAT_INDEX:
-                member_id = values[5]
-                member_format = values[MEMBER_FORMAT_INDEX]
-                rows.append((member_id, member_format))
-
-        members_df = pd.DataFrame(rows, columns=["identifier", "format"])
-        return members_df
+        )    
 
     def report(  # noqa: PLR0913
-        self,
-        description: str,
-        title: str,
-        frequency: str,
-        category: str,
-        sub_category: str,
-        data_node_id: dict[str, str],
-        regulatory_related: bool,
-        domain: dict[str, str],
-        tier_type: str | None = None,
-        lob: str | None = None,
-        alternative_id: dict[str, str] | None = None,
-        sub_lob: str | None = None,
-        is_bcbs239_program: bool | None = None,
-        risk_area: str | None = None,
-        risk_stripe: str | None = None,
-        sap_code: str | None = None,
-        **kwargs: Any,
-    ) -> Report:
-        """Instantiate a Report object with the current Fusion client attached.
+            self,
+            description: str | None = None,
+            title: str | None = None,
+            frequency: str | None = None,
+            category: str | None = None,
+            sub_category: str | None = None,
+            owner_node: dict[str, str] | None = None,
+            publisher_node: dict[str, Any] | None = None,
+            regulatory_related: bool | None = None,
+            business_domain: str | None = None,
+            lob: str | None = None,
+            sub_lob: str | None = None,
+            is_bcbs239_program: bool | None = None,
+            risk_area: str | None = None,
+            risk_stripe: str | None = None,
+            sap_code: str | None = None,
+            source_system: dict[str, Any] | None = None,
+            id: str | None = None,  # noqa: A002
+            **kwargs: Any,
+        ) -> Report:
+            """Instantiate a Report object with the current Fusion client attached.
 
-        Args:
-            description (str): Description of the report.
-            title (str): Title of the report or process.
-            frequency (str): Reporting frequency (e.g., Monthly, Quarterly).
-            category (str): Main classification of the report.
-            sub_category (str): Sub-classification under the main category.
-            data_node_id (dict[str, str]): Associated data node details. Should include "name" and "dataNodeType".
-            regulatory_related (bool): Whether the report is regulatory-designated. This is a required field.
-            tier_type (str, optional): Tier classification (e.g., "Tier 1", "Non Tier 1").
-            lob (str, optional): Line of business.
-            alternative_id (dict[str, str], optional): Alternate identifiers for the report.
-            sub_lob (str, optional): Subdivision of the line of business.
-            is_bcbs239_program (bool, optional): Whether the report is part of the BCBS 239 program.
-            risk_area (str, optional): Risk area covered by the report.
-            risk_stripe (str, optional): Stripe or classification under the risk area.
-            sap_code (str, optional): SAP financial tracking code.
-            domain (dict[str, str | bool], optional): Domain details. Typically contains a "name" key.
-            **kwargs (Any): Additional optional fields such as:
-                - tier_designation (str)
-                - region (str)
-                - mnpi_indicator (bool)
-                - country_of_reporting_obligation (str)
-                - primary_regulator (str)
+            Args:
+                description (str | None): Detailed Description of the report.
+                This is mandatory field for report creation.
+                title (str | None): Title (Display Name) of the report.
+                This is mandatory field for report creation.
+                frequency (str | None): Frequency of the report.
+                This is mandatory field for report creation.
+                category (str | None): Category of the report. 
+                This is mandatory field for report creation.
+                sub_category (str | None): Sub-classification under the main category. 
+                This is mandatory field for report creation.
+                business_domain (str): Business domain string. This field cannot be blank if provided.
+                This is mandatory field for report creation.
+                owner_node (dict[str, str] | None): Owner node associated with the report.
+                {"name","type"} for the owner node.
+                This is mandatory field for report creation.
+                publisher_node (dict[str, Any] | None): Publisher node associated with the report. 
+                {"name","type"} (+ optional {"publisher_node_identifier"}).
+                regulatory_related (bool | None): Indicated whether the report is related to regulatory requirements.
+                This is mandatory field for report creation.
+                business_domain (str | None): Business domain string. This is mandatory field for report creation.
+                lob (str | None): Line of business.
+                sub_lob (str | None): Subdivision of the line of business.
+                is_bcbs239_program (bool | None): Indicates whether the report is associated with the BCBS 239 program.
+                risk_area (str | None): Risk area.
+                risk_stripe (str | None): Risk stripe.
+                sap_code (str | None): SAP code associated with the report.
+                source_system (dict[str, Any] | None): Source system details for the report.
+                id (str | None): Server-assigned report identifier (needed for update/patch/delete if already known).
+                **kwargs (Any): 
 
-        Returns:
-            Report: A Report object ready for API upload or further manipulation.
-        """
-        report_obj = Report(
-            title=title,
-            description=description,
-            frequency=frequency,
-            category=category,
-            sub_category=sub_category,
-            data_node_id=data_node_id,
-            regulatory_related=regulatory_related,
-            tier_type=tier_type,
-            lob=lob,
-            alternative_id=alternative_id,
-            sub_lob=sub_lob,
-            is_bcbs239_program=is_bcbs239_program,
-            risk_area=risk_area,
-            risk_stripe=risk_stripe,
-            sap_code=sap_code,
-            domain=domain,
-            **kwargs,
-        )
-        report_obj.client = self
-        return report_obj
-
+            Returns:
+                Report: A Report object ready for API upload or further manipulation.
+            """
+            report_obj = Report(
+                id=id,
+                title=title,
+                description=description,
+                frequency=frequency,
+                category=category,
+                sub_category=sub_category,
+                business_domain=business_domain,
+                regulatory_related=regulatory_related,
+                owner_node=owner_node,
+                publisher_node=publisher_node,
+                lob=lob,
+                sub_lob=sub_lob,
+                is_bcbs239_program=is_bcbs239_program,
+                risk_area=risk_area,
+                risk_stripe=risk_stripe,
+                sap_code=sap_code,
+                source_system=source_system,
+                **kwargs,
+            )
+            report_obj.client = self
+            return report_obj
+    
+        
     def dataflow(  # noqa: PLR0913
-    self,
-    provider_node: dict[str, str] | None = None,
-    consumer_node: dict[str, str] | None = None,
-    description: str | None = None,
-    alternative_id: dict[str, Any] | None = None,
-    transport_type: str | None = None,
-    frequency: str | None = None,
-    start_time: str | None = None,
-    end_time: str | None = None,
-    boundary_sets: list[dict[str, Any]] | None = None,
-    data_assets: list[dict[str, Any]] | None = None,
-    id: str | None = None,  # noqa: A002
-    **kwargs: Any,  
-     ) -> Dataflow:
-        """Instantiate a Dataflow object bound to this Fusion client.
+        self,
+        provider_node: dict[str, str] | None = None,
+        consumer_node: dict[str, str] | None = None,
+        description: str | None = None,
+        transport_type: str | None = None,
+        frequency: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        datasets: list[dict[str, Any]] | None = None,
+        connection_type: str | None = None,
+        source_system: dict[str, Any] | None = None,
+        id: str | None = None,  # noqa: A002
+        **kwargs: Any,
+    ) -> Dataflow:
+        """Instantiate a Dataflow object with this client.
 
         You may instantiate with just an ``id`` (useful for ``update()``, ``update_fields()``, or ``delete()``);
-        however, **creating** a new data flow via ``create()`` requires valid provider/consumer nodes.
+        however, **creating** a new data flow via ``create()`` requires valid provider/consumer nodes and
+        a ``connection_type``.
 
         Args:
             provider_node (dict[str, str] | None, optional):
-                Provider/source node details. Expected keys: ``name`` and ``dataNodeType``.
+                Provider node of the dataflow. It must be distinct from the consumer node. Required for create().
+                Keys: ``name``, ``type``.
             consumer_node (dict[str, str] | None, optional):
-                Consumer/target node details. Expected keys: ``name`` and ``dataNodeType``.
+                Consumer node of the dataflow. It must be distinct from the provider node. Required for create().
+                Keys: ``name``, ``type``.
             description (str | None, optional):
-                Purpose/summary of the data flow (if provided, must not be blank).
-            alternative_id (dict[str, Any] | None, optional):
-                Alternative identifier object (e.g., ``{"value": "...", "domain": "...", "isSor": true}``).
+                Specifies the purpose of the data movement.
             transport_type (str | None, optional):
-                Transport mechanism (e.g., ``"API"``, ``"FILE TRANSFER"``, ``"SYNCHRONOUS MESSAGING"``).
+                Transport type  
             frequency (str | None, optional):
-                Flow cadence (e.g., ``"DAILY"``, ``"WEEKLY"``, ``"MONTHLY"``, etc.).
+                Frequency of the data flow
             start_time (str | None, optional):
-                Scheduled start time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
+                Scheduled start time of the Dataflow.
             end_time (str | None, optional):
-                Scheduled end time (e.g., ``"HH:mm:ss"`` or ISO-8601 with zone).
-            boundary_sets (list[dict[str, Any]] | None, optional):
-                Boundary set objects associated with the flow.
-            data_assets (list[dict[str, Any]] | None, optional):
-                Related data asset objects.
+                Scheduled end time of the Dataflow.
+            datasets (list[dict[str, Any]] | None, optional):
+                Specifies a list of datasets involved in the data flow, requiring a visibility license for each.
+                Maximum limit is of 100 datasets per dataflow.
+                An error will be thrown if the list contains duplicate entries. Defaults to empty list.
+            connection_type (str | None, optional):
+                Connection type for the dataflow.
+            source_system (dict[str, Any] | None, optional):
+                Source System of the data flow.
             id (str | None, optional):
                 Server-assigned identifier; required for ``update()``, ``update_fields()``, and ``delete()``.
-            **kwargs (Any):
-                Additional fields supported by the API; passed through to the Dataflow dataclass.
+            **kwargs (Any)
 
         Returns:
-            Dataflow: A Dataflow instance with this Fusion client attached.
+            Dataflow: A Dataflow instance with Fusion client attached.
 
         Examples:
-            Create a handle with full details (ready for ``create()``):
+            Create a handle ready for ``create()``:
 
             >>> flow = fusion.dataflow(
-            ...     provider_node={"name": "CRM_DB", "dataNodeType": "Database"},
-            ...     consumer_node={"name": "DWH", "dataNodeType": "Database"},
+            ...     provider_node={"name": "CRM_DB", "type": "Database"},
+            ...     consumer_node={"name": "DWH", "type": "Database"},
             ...     description="CRM → DWH nightly load",
             ...     frequency="DAILY",
             ...     transport_type="API",
+            ...     connection_type="Consumes From",
+            ...     source_system={"system": "Airflow"},
             ... )
 
             Create a handle for an existing flow by ID (for update/delete):
@@ -2738,49 +2906,60 @@ class Fusion:
             >>> flow.delete()
         """
         df_obj = Dataflow(
-            providerNode=provider_node,
-            consumerNode=consumer_node,
+            provider_node=provider_node,
+            consumer_node=consumer_node,
             description=description,
-            alternativeId=alternative_id,
-            transportType=transport_type,
+            transport_type=transport_type,
             frequency=frequency,
-            startTime=start_time,
-            endTime=end_time,
-            boundarySets=boundary_sets or [],
-            dataAssets=data_assets or [],
+            start_time=start_time,
+            end_time=end_time,
+            datasets=datasets or [],
+            connection_type=connection_type,
+            source_system=source_system,
             id=id,
             **kwargs,
         )
         df_obj.client = self
         return df_obj
 
-
     def link_attributes_to_terms(
         self,
-        report_id: str,
-        mappings: list[Report.AttributeTermMapping],
+        mappings: list[AttributeTermMapping],
         return_resp_obj: bool = False,
     ) -> requests.Response | None:
         """Link attributes to business terms for a report.
 
         Args:
-            report_id (str): ID of the report to link terms to.
-            mappings (list): List of attribute-to-term mappings.
+            mappings (list[AttributeTermMapping]): List of attribute-to-term mappings.
+                Each mapping should contain:
+                - attribute: DependencyAttribute object with entity details 
+                  (entity_type, entity_identifier, attribute_identifier, data_space)
+                - term: dict with term information  
+                - is_kde: bool indicating if it's a KDE term
             return_resp_obj (bool): Whether to return the raw response object.
 
         Returns:
             requests.Response | None: API response
+
+        Example:
+            >>> from fusion import Fusion
+            >>> from fusion.data_dependency import AttributeTermMapping
+            >>> fusion = Fusion()
+            >>> attr = fusion.dependency_attribute(
+            ...     entity_type="Report",
+            ...     entity_identifier="report_123",
+            ...     attribute_identifier="field_name"
+            ... )
+            >>> mapping = AttributeTermMapping(
+            ...     attribute=attr,
+            ...     term={"id": "term_123"},
+            ...     is_kde=True
+            ... )
+            >>> fusion.link_attributes_to_terms([mapping])
         """
 
-        processed_mappings = []
-        for mapping in mappings:
-            new_mapping = mapping.copy()
-            if "isKDE" not in new_mapping:
-                new_mapping["isKDE"] = True
-            processed_mappings.append(new_mapping)
-
         return Report.link_attributes_to_terms( 
-            report_id=report_id, mappings=processed_mappings, client=self, return_resp_obj=return_resp_obj
+            mappings=mappings, client=self, return_resp_obj=return_resp_obj
         )
     
     def list_distribution_files(
@@ -2842,4 +3021,113 @@ class Fusion:
 
         # fallback empty frame if something unexpected happens
         return pd.DataFrame()
+    
+    def dependency_attribute(
+        self,
+        entity_type: str,
+        entity_identifier: str,
+        attribute_identifier: str,
+        data_space: str | None = None,
+    ) -> DependencyAttribute:
+        """Instantiate a DependencyAttribute object with this client.
 
+        Args:
+            entity_type (str): The type of entity, e.g., "Dataset".
+            entity_identifier (str): Identifier of the entity.
+            attribute_identifier (str): Identifier of the attribute.
+            data_space (str | None, optional): Required if entity_type is "Dataset".
+
+        Returns:
+            DependencyAttribute: DependencyAttribute instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+        """
+        return DependencyAttribute(
+            entity_type=entity_type,
+            entity_identifier=entity_identifier,
+            attribute_identifier=attribute_identifier,
+            data_space=data_space,
+        )
+
+    def dependency_mapping(
+        self,
+        source_attributes: list[DependencyAttribute],
+        target_attribute: DependencyAttribute,
+    ) -> DependencyMapping:
+        """Instantiate a DependencyMapping object with this client.
+
+        Args:
+            source_attributes (list[DependencyAttribute]): Source attributes.
+            target_attribute (DependencyAttribute): Target attribute.
+
+        Returns:
+            DependencyMapping: DependencyMapping instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> src = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> tgt = fusion.dependency_attribute("Dataset", "dataset2", "colB", "Finance")
+            >>> mapping = fusion.dependency_mapping([src], tgt)
+        """
+        return DependencyMapping(
+            source_attributes=source_attributes,
+            target_attribute=target_attribute,
+        )
+
+    def attribute_term_mapping(
+        self,
+        attribute: DependencyAttribute,
+        term: dict[str, str],
+        is_kde: bool | None = None,
+    ) -> AttributeTermMapping:
+        """Instantiate an AttributeTermMapping object with this client.
+
+        Args:
+            attribute (DependencyAttribute): Attribute object.
+            term (dict[str, str]): Term info (must include 'id').
+            is_kde (bool | None, optional): KDE flag, required for link/update operations.
+
+        Returns:
+            AttributeTermMapping: AttributeTermMapping instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
+            >>> term = {"id": "term_123"}
+            >>> mapping = fusion.attribute_term_mapping(attr, term, is_kde=True)
+        """
+        return AttributeTermMapping(
+            attribute=attribute,
+            term=term,
+            is_kde=is_kde,
+        )
+
+    def data_dependency(self) -> DataDependency:
+        """Instantiate a DataDependency object with this client.
+
+        Returns:
+            DataDependency: DataDependency instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> data_dep = fusion.data_dependency()
+        """
+        dep_obj = DataDependency()
+        dep_obj.client = self
+        return dep_obj
+
+    def data_mapping(self) -> DataMapping:
+        """Instantiate a DataMapping object with this client.
+
+        Returns:
+            DataMapping: DataMapping instance with the client context attached.
+
+        Example:
+            >>> fusion = Fusion()
+            >>> data_map = fusion.data_mapping()
+        """
+        map_obj = DataMapping()
+        map_obj.client = self
+        return map_obj
