@@ -1,4 +1,5 @@
 """Fusion FileSystem."""
+
 from __future__ import annotations
 
 import asyncio
@@ -8,6 +9,7 @@ import io
 import json
 import logging
 import time
+import zlib
 from collections.abc import AsyncGenerator, Generator
 from copy import deepcopy
 from pathlib import Path
@@ -15,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, urljoin
 
 import aiohttp
+import crc32c
 import fsspec
 import fsspec.asyn
 import pandas as pd
@@ -454,7 +457,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 break
             headers["x-jpmc-next-token"] = next_token
             kw["headers"] = headers
-        
+
         if is_json:
             return json.dumps(all_data, separators=(",", ":")).encode("utf-8")
         else:
@@ -632,6 +635,140 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return True, output_file.path, None  # type: ignore
 
+    async def _download_single_file_async_with_checksum(
+        self,
+        url: str,
+        output_file: fsspec.spec.AbstractBufferedFile,
+        file_size: int,
+        expected_checksum: str,
+        checksum_algorithm: str,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        n_threads: int = 10,
+    ) -> tuple[bool, str, str | None]:
+        """Download a single file using asynchronous range requests with checksum validation.
+
+        Downloads data to memory buffer, validates checksum, then writes to disk only if valid.
+        This ensures no corrupted files are ever written to disk.
+
+        Args:
+            url (str): URL to download from.
+            output_file (fsspec.spec.AbstractBufferedFile): The filename handle for final destination.
+            file_size (int): Size of the file to download.
+            expected_checksum (str): Expected checksum value from headers.
+            checksum_algorithm (str): Checksum algorithm from headers.
+            chunk_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE.
+            n_threads (int, optional): Number of concurrent download threads. Defaults to 10.
+
+        Returns:
+            tuple: (success, path, error)
+        """
+        final_path = output_file.path
+        output_file.close()
+
+        try:
+            data_chunks: dict[int, bytes] = {}
+            coros = []
+            session = await self.set_session()
+
+            for start in range(0, file_size, chunk_size):
+                end = min(start + chunk_size, file_size)
+                task = self._fetch_range_to_memory(session, url, start, end, data_chunks)
+                coros.append(task)
+
+            out = await fsspec.asyn._run_coros_in_chunks(
+                coros, batch_size=n_threads, nofiles=True, return_exceptions=True
+            )
+
+            ex = next(filter(fsspec.asyn.is_exception, out), False)
+            if ex:
+                return False, final_path, str(ex)
+
+            file_data = bytearray(file_size)
+            for start_pos, chunk_data in data_chunks.items():
+                end_pos = start_pos + len(chunk_data)
+                file_data[start_pos:end_pos] = chunk_data
+
+            computed_checksum = self._compute_checksum_from_data(bytes(file_data), checksum_algorithm)
+
+            if not computed_checksum:
+                error_msg = f"Could not compute checksum using algorithm {checksum_algorithm}"
+                logger.warning(error_msg)
+                return False, final_path, error_msg
+
+            if computed_checksum != expected_checksum:
+                error_msg = f"Checksum validation failed. File may be corrupted or incomplete."
+                logger.warning(error_msg)
+                return False, final_path, error_msg
+
+            await asyncio.to_thread(Path(final_path).parent.mkdir, parents=True, exist_ok=True)
+
+            def write_file_data() -> None:
+                with Path(final_path).open("wb") as f:
+                    f.write(file_data)
+
+            await asyncio.to_thread(write_file_data)
+
+            logger.log(VERBOSE_LVL, f"Multi-threaded checksum validation successful, wrote to {final_path}")
+            return True, final_path, None
+
+        except Exception as ex:  # noqa: BLE001
+            return False, final_path, str(ex)
+
+    async def _fetch_range_to_memory(
+        self,
+        session: aiohttp.ClientSession,
+        url: str,
+        start: int,
+        end: int,
+        data_chunks: dict[int, bytes],
+    ) -> None:
+        """Fetch a range of bytes from a URL and store it in memory.
+
+        Args:
+            session: The aiohttp session to use.
+            url (str): URL to fetch.
+            start (int): Start byte.
+            end (int): End byte.
+            data_chunks (dict): Dictionary to store chunks keyed by start position.
+
+        Returns:
+            None: None.
+        """
+
+        async def fetch() -> None:
+            async with session.get(url + f"&downloadRange=bytes={start}-{end - 1}", **self.kwargs) as response:
+                if response.status in [200, 206]:
+                    chunk = await response.read()
+                    data_chunks[start] = chunk
+                    logger.log(
+                        VERBOSE_LVL,
+                        f"Fetched bytes {start}-{end} ({len(chunk)} bytes) to memory",
+                    )
+                else:
+                    response.raise_for_status()
+
+        retries = 5
+        for attempt in range(retries):
+            try:
+                await fetch()
+                return
+            except Exception as ex:  # noqa: BLE001, PERF203
+                if attempt < retries - 1:
+                    wait_time = 2**attempt  # Exponential backoff
+                    logger.log(
+                        VERBOSE_LVL,
+                        f"Attempt {attempt + 1} failed, retrying in {wait_time} seconds...",
+                        exc_info=True,
+                    )
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.log(
+                        VERBOSE_LVL,
+                        f"Failed to fetch range {start}-{end}.",
+                        exc_info=True,
+                    )
+                    raise ex
+
     def stream_single_file(
         self,
         url: str,
@@ -649,34 +786,119 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             tuple: A tuple
 
         """
+        session = self.sync_session
+        get_file_kwargs = self.kwargs.copy()
+        get_file_kwargs.pop("proxy", None)
 
-        def get_file() -> None:
-            session = self.sync_session
-            get_file_kwargs = self.kwargs.copy()
-            get_file_kwargs.pop("proxy", None)
+        try:
             with session.get(url, **get_file_kwargs) as r:
                 r.raise_for_status()
-                byte_cnt = 0
-                for chunk in r.iter_content(block_size):
-                    if chunk:
-                        byte_cnt += len(chunk)
-                        output_file.write(chunk)
-                output_file.close()
-            logger.log(
-                VERBOSE_LVL,
-                "Wrote %d bytes to %s",
-                byte_cnt,
-                getattr(output_file, "name", "unknown"),  # noqa: Q000
-            )
+
+                expected_checksum = r.headers.get("x-jpmc-checksum")
+                checksum_algorithm = r.headers.get("x-jpmc-checksum-algorithm")
+
+                if expected_checksum and checksum_algorithm:
+                    output_file.close()  # Close the file handle
+                    return self.stream_single_file_with_checksum_validation(
+                        url, output_file, expected_checksum, checksum_algorithm, block_size
+                    )
+                else:
+                    output_file.close()  # Close the file handle
+                    raise ValueError(
+                        "Checksum validation is required but missing checksum information. "
+                        f"Expected checksum: {expected_checksum}, Algorithm: {checksum_algorithm}"
+                    )
+        except Exception as ex:  # noqa: BLE001
+            output_file.close()
+            return False, output_file.path, str(ex)
+
+    def stream_single_file_with_checksum_validation(  # noqa: PLR0915
+        self,
+        url: str,
+        output_file: fsspec.spec.AbstractBufferedFile,
+        expected_checksum: str,
+        checksum_algorithm: str,
+        block_size: int = DEFAULT_CHUNK_SIZE,
+    ) -> tuple[bool, str, str | None]:
+        """Function to stream a single file with in-memory checksum validation.
+
+        Streams data to memory buffer, validates checksum, then writes to disk only if valid.
+        This ensures no corrupted files are ever written to disk.
+
+        Args:
+            url (str): The URL to call.
+            output_file (fsspec.spec.AbstractBufferedFile): The filename handle for final destination.
+            expected_checksum (str): Expected checksum value from headers.
+            checksum_algorithm (str): Checksum algorithm from headers.
+            block_size (int, optional): The chunk size to download data. Defaults to DEFAULT_CHUNK_SIZE.
+
+        Returns:
+            tuple: (success, path, error)
+        """
+        final_path = output_file.path
+        output_file.close()
+
+        def stream_and_validate() -> tuple[bool, str, str | None]:
+            """Stream data to memory, validate checksum, then write if valid."""
+            import io
+
+            try:
+                data_buffer = io.BytesIO()
+                session = self.sync_session
+                get_file_kwargs = self.kwargs.copy()
+                get_file_kwargs.pop("proxy", None)
+
+                with session.get(url, **get_file_kwargs) as r:
+                    r.raise_for_status()
+                    byte_cnt = 0
+
+                    for chunk in r.iter_content(block_size):
+                        if chunk:
+                            byte_cnt += len(chunk)
+                            data_buffer.write(chunk)
+
+                logger.log(
+                    VERBOSE_LVL,
+                    "Wrote %d bytes to %s",
+                    byte_cnt,
+                )
+
+                data_buffer.seek(0)
+                file_data = data_buffer.read()
+
+                computed_checksum = self._compute_checksum_from_data(file_data, checksum_algorithm)
+
+                if not computed_checksum:
+                    error_msg = f"Could not compute checksum using algorithm {checksum_algorithm}"
+                    logger.warning(error_msg)
+                    return False, final_path, error_msg
+
+                if computed_checksum != expected_checksum:
+                    error_msg = f"Checksum validation failed. File may be corrupted or incomplete."
+                    logger.warning(error_msg)
+                    return False, final_path, error_msg
+
+                Path(final_path).parent.mkdir(parents=True, exist_ok=True)
+
+                with Path(final_path).open("wb") as f:
+                    f.write(file_data)
+
+                logger.log(VERBOSE_LVL, f"Checksum validation successful, wrote to {final_path}")
+
+                return True, final_path, None
+
+            except Exception as ex:  # noqa: BLE001
+                return False, final_path, str(ex)
 
         retries = 5
         for attempt in range(retries):
             try:
-                get_file()
-                return (True, output_file.path, None)  # noqa: UP031
-            except Exception as ex:  # noqa: BLE001, PERF203
+                success, path, error = stream_and_validate()
+                if success:
+                    return success, path, error
+
                 if attempt < retries - 1:
-                    wait_time = 2**attempt  # Exponential backoff
+                    wait_time = 2**attempt
                     logger.log(
                         VERBOSE_LVL,
                         "Attempt %d failed, retrying in %d seconds...",
@@ -686,15 +908,63 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     )
                     time.sleep(wait_time)
                 else:
-                    output_file.close()
+                    return success, path, error
+
+            except Exception as ex:  # noqa: BLE001, PERF203
+                if attempt < retries - 1:
+                    wait_time = 2**attempt
                     logger.log(
                         VERBOSE_LVL,
-                        "Failed to write to %s.",
-                        output_file.path,
+                        "Attempt %d failed, retrying in %d seconds...",
+                        attempt + 1,
+                        wait_time,
                         exc_info=True,
                     )
-                    return False, output_file.path, str(ex)
-        return False, output_file.path, None
+                    time.sleep(wait_time)
+                else:
+                    error_msg = f"Failed after {retries} attempts: {ex}"
+                    logger.log(VERBOSE_LVL, error_msg, exc_info=True)
+                    return False, final_path, error_msg
+
+        return False, final_path, "Unknown error occurred"
+
+    def _compute_checksum_from_data(self, data: bytes, algorithm: str) -> str:  # noqa: PLR0911
+        """Compute checksum from raw data bytes."""
+        if algorithm == "CRC32":
+            return f"{zlib.crc32(data) & 0xFFFFFFFF:08x}"
+        elif algorithm == "CRC32C":
+            return f"{crc32c.crc32c(data):08x}"
+        elif algorithm == "CRC64NVME":
+            return self._compute_crc64nvme_from_data(data)
+        elif algorithm == "SHA-256":
+            return hashlib.sha256(data).hexdigest()
+        elif algorithm == "SHA-1":
+            return hashlib.sha1(data).hexdigest()
+        elif algorithm == "MD5":
+            return hashlib.md5(data).hexdigest()
+        else:
+            raise ValueError(f"Unsupported checksum algorithm: {algorithm}")
+
+    def _compute_crc64nvme_from_data(self, data: bytes) -> str:
+        """Compute CRC64NVME from raw data bytes."""
+        # CRC64NVME polynomial: 0xad93d23594c93659
+        poly = 0xAD93D23594C93659
+
+        table = []
+        for i in range(256):
+            crc = i
+            for _ in range(8):
+                if crc & 1:
+                    crc = (crc >> 1) ^ poly
+                else:
+                    crc >>= 1
+            table.append(crc)
+
+        crc = 0xFFFFFFFFFFFFFFFF
+        for byte in data:
+            crc = table[(crc ^ byte) & 0xFF] ^ (crc >> 8)
+
+        return f"{crc ^ 0xFFFFFFFFFFFFFFFF:016x}"
 
     def download(  # noqa: PLR0913
         self,
@@ -723,19 +993,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if not overwrite and lfs.exists(lpath) and not preserve_original_name:
             return True, lpath, None
 
-        async def get_headers() -> Any:
-            session = await self.set_session()
-            async with session.head(rpath, **self.kwargs) as r:
-                r.raise_for_status()
-                return r.headers
-
-        try:
-            headers = sync(self.loop, get_headers)            
-            if not overwrite and lfs.exists(lpath):
-                 return True, lpath, None
-        except Exception as ex:  # noqa: BLE001
-            headers = {}
-            logger.info(f"Failed to get headers for {rpath}", exc_info=ex)
+        if not overwrite and lfs.exists(lpath):
+            return True, str(lpath), None
 
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
 
@@ -747,19 +1006,20 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         is_local_fs = type(lfs).__name__ == "LocalFileSystem"
 
-        return self.get(
+        result = self.get(
             str(rpath),
             lfs.open(lpath, "wb"),
             chunk_size=chunk_size,
-            headers=headers,
             is_local_fs=is_local_fs,
             **kwargs,
         )
 
+        return result
+
     def get(  # disable: W0221
         self,
         rpath: str | io.IOBase,
-        lpath: str | io.IOBase,
+        lpath: str | io.IOBase | fsspec.spec.AbstractBufferedFile,
         chunk_size: int = 5 * 2**20,
         **kwargs: Any,
     ) -> Any:
@@ -782,23 +1042,57 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
         n_threads = cpu_count(is_threading=True)
 
-        file_size = None
-        if "headers" in kwargs and "Content-Length" in kwargs["headers"]:
-            file_size = int(kwargs["headers"].get("Content-Length"))
         is_local_fs = kwargs.get("is_local_fs", False)
-        if n_threads == 1 or not is_local_fs or file_size is None:
+
+        if n_threads == 1 or not is_local_fs:
             return self.stream_single_file(str(rpath), lpath, block_size=chunk_size)
         else:
-            rpath = str(rpath) if "operationType/download" in str(rpath) else str(rpath) + "/operationType/download"
-            return sync(
-                self.loop, self._download_single_file_async, str(rpath), lpath, file_size, chunk_size, n_threads
-            )
+            try:
+
+                async def get_content_length_and_checksum() -> tuple[int | None, str | None, str | None]:
+                    session = await self.set_session()
+                    async with session.head(rpath, **self.kwargs) as r:
+                        r.raise_for_status()
+                        file_size = int(r.headers.get("Content-Length", 0)) or None
+                        expected_checksum = r.headers.get("x-jpmc-checksum")
+                        checksum_algorithm = r.headers.get("x-jpmc-checksum-algorithm")
+                        return file_size, expected_checksum, checksum_algorithm
+
+                file_size, expected_checksum, checksum_algorithm = sync(self.loop, get_content_length_and_checksum)
+                if file_size:
+                    if "operationType/download" not in str(rpath):
+                        rpath = str(rpath) + "/operationType/download"
+
+                    if not expected_checksum or not checksum_algorithm:
+                        if hasattr(lpath, "close"):
+                            lpath.close()
+                        path_str = lpath.path if hasattr(lpath, "path") else str(lpath)
+                        error_msg = (
+                            "Checksum validation is required but missing checksum information. "
+                            f"Expected checksum: {expected_checksum}, Algorithm: {checksum_algorithm}"
+                        )
+                        return False, path_str, error_msg
+
+                    return sync(
+                        self.loop,
+                        self._download_single_file_async_with_checksum,
+                        str(rpath),
+                        lpath,
+                        file_size,
+                        expected_checksum,
+                        checksum_algorithm,
+                        chunk_size,
+                        n_threads,
+                    )
+                else:
+                    return self.stream_single_file(str(rpath), lpath, block_size=chunk_size)
+            except Exception as ex:  # noqa: BLE001
+                logger.info(f"Failed to get content length for multi-threaded download: {ex}")
+                return self.stream_single_file(str(rpath), lpath, block_size=chunk_size)
 
     @staticmethod
     def _update_kwargs(
-        kw: dict[str, Any],
-        headers: dict[str, str],
-        additional_headers: dict[str, str] | None
+        kw: dict[str, Any], headers: dict[str, str], additional_headers: dict[str, str] | None
     ) -> dict[str, Any]:
         if "File-Name" in headers:  # noqa: PLR0915
             kw.setdefault("headers", {})
@@ -895,7 +1189,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         dt_created: str,
         chunk_size: int = 5 * 2**20,
         multipart: bool = False,
-        file_name: str | None = None
+        file_name: str | None = None,
     ) -> tuple[dict[str, str], list[dict[str, str]]]:
         headers = {
             "Content-Type": "application/octet-stream",
