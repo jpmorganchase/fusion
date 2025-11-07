@@ -1,6 +1,6 @@
 [project]
 name = "pyfusion"
-version = "4.0.0-dev0"
+version = "4.0.0-dev1"
 
 description = "JPMC Fusion Developer Tools"
 authors = [
@@ -35,6 +35,7 @@ dependencies = [
     "rich >= 11.0.0",
     "certifi",
     "pyjwt>=2.10.1",
+    "awscrt>=0.16.0,<0.29.0"
 ]
 
 [build-system]
@@ -247,7 +248,7 @@ exclude_lines = [
 
 
 [tool.bumpversion]
-current_version = "4.0.0-dev0"
+current_version = "4.0.0-dev1"
 parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(?:-(?P<release>[a-z]+)(?P<candidate>\d+))?'
 serialize = [
     '{major}.{minor}.{patch}-{release}{candidate}',
