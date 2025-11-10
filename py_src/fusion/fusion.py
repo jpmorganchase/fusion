@@ -189,7 +189,7 @@ class Fusion:
 
     def __repr__(self) -> str:
         """Object representation to list all available methods."""
-        return "Fusion object \nAvailable methods:\n" + tabulate( 
+        return "Fusion object \nAvailable methods:\n" + tabulate(
             pd.DataFrame(  # type: ignore[arg-type]
                 [
                     [
@@ -527,7 +527,7 @@ class Fusion:
             "reportOwner",
             "lob",
             "description",
-        ] 
+        ]
 
         if report_id:
             url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
@@ -912,7 +912,7 @@ class Fusion:
                 >>> fusion.download(dataset="MY_DATASET", dt_str="20250428", dataset_format="csv", catalog="my_catalog")
 
             Download a range of dates:
-                >>> fusion.download(dataset="MY_DATASET", dt_str="20250428:20250430", 
+                >>> fusion.download(dataset="MY_DATASET", dt_str="20250428:20250430",
                 ...                dataset_format="csv", catalog="my_catalog")
 
             Download a range of datetimes (YYYYMMDDTHHMM format):
@@ -1002,7 +1002,7 @@ class Fusion:
 
         n_par = cpu_count(n_par)
 
-        download_spec: list[dict[str, Any]]  = [
+        download_spec: list[dict[str, Any]] = [
             {
                 "lfs": self.fs,
                 "rpath": distribution_to_url(
@@ -1028,14 +1028,19 @@ class Fusion:
             }
             for i, series in enumerate(required_series)
             for fname in (
-                [fid.rstrip("/") for fid in self.list_distribution_files(
-                    dataset=series[1],
-                    series=series[2],
-                    file_format=series[3],
-                    catalog=series[0],
-                )["@id"].tolist()]
-                if not file_name else
-                [file_name.rstrip("/")] if isinstance(file_name, str) else [f.rstrip("/") for f in file_name]
+                [
+                    fid.rstrip("/")
+                    for fid in self.list_distribution_files(
+                        dataset=series[1],
+                        series=series[2],
+                        file_format=series[3],
+                        catalog=series[0],
+                    )["@id"].tolist()
+                ]
+                if not file_name
+                else [file_name.rstrip("/")]
+                if isinstance(file_name, str)
+                else [f.rstrip("/") for f in file_name]
             )
         ]
 
@@ -1276,6 +1281,7 @@ class Fusion:
                 data_df = pd.concat(dataframes, ignore_index=True)
             if dataframe_type == "polars":
                 import polars as pl
+
                 data_df = pl.concat(dataframes, how="diagonal")  # type: ignore
 
         return data_df
@@ -1374,7 +1380,7 @@ class Fusion:
             file_name (str | list[str] | None, optional): Specific file(s) to fetch.
                 This can be a single file name or a list of file names.
                 The file name should match exactly the name of the file in the distribution with out format.
-                If not provided, fetch all available distribution files.    
+                If not provided, fetch all available distribution files.
         Returns:
             class:`pyarrow.Table`: a dataframe containing the requested data.
                 If multiple dataset instances are retrieved then these are concatenated first.
@@ -1499,7 +1505,6 @@ class Fusion:
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
 
-
         fs_fusion = self.get_fusion_filesystem()
         if self.fs.info(path)["type"] == "directory":
             validate_file_formats(self.fs, path)
@@ -1547,7 +1552,6 @@ class Fusion:
                     dt_str = pd.Timestamp("today").date().strftime("%Y%m%d")
                 elif date_identifier.match(dt_str):
                     dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
-
 
                 file_format = path.split(".")[-1]
                 file_name = [path.split("/")[-1]]
@@ -1974,7 +1978,7 @@ class Fusion:
             if isinstance(product, str):
                 mapping_df = mapping_df[mapping_df["product"].str.contains(product, case=False)]
         return mapping_df
-    
+
     def delete_all_datasetmembers(
         self,
         dataset: str,
@@ -2002,7 +2006,7 @@ class Fusion:
         resp = self.session.delete(url)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
-    
+
     def list_datasetmembers_distributions(
         self,
         dataset: str,
@@ -2010,12 +2014,12 @@ class Fusion:
     ) -> pd.DataFrame:
         """List the distributions of dataset members.
 
-                Args:
-                    dataset (str): Dataset identifier.
-                    catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-                    
-                Returns:
-                    pd.DataFrame: A dataframe with a row for each dataset member distribution.
+        Args:
+            dataset (str): Dataset identifier.
+            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
+
+        Returns:
+            pd.DataFrame: A dataframe with a row for each dataset member distribution.
 
         """
         catalog = self._use_catalog(catalog)
@@ -2079,7 +2083,7 @@ class Fusion:
             pass
 
         return ds_attr_df
-    
+
     def list_attribute_lineage(
         self,
         entity_type: str,
@@ -2555,7 +2559,7 @@ class Fusion:
 
         Args:
             title (str | None, optional): The display title of the attribute.
-            id (int | None, optional): The unique identifier of the attribute. 
+            id (int | None, optional): The unique identifier of the attribute.
                 id argument is not required for 'create' operation.
             source_identifier (str | None, optional): A unique identifier or reference ID from the source system.
             description (str | None, optional): A longer description of the attribute.
@@ -2634,7 +2638,7 @@ class Fusion:
             >>> new_report.create()
         """
         return Reports(client=self)
-    
+
     def delete_datasetmembers(
         self,
         dataset: str,
@@ -2751,89 +2755,88 @@ class Fusion:
             knowledge_base=knowledge_base,
             root_url=self.root_url,
             credentials=self.credentials,
-        )    
+        )
 
     def report(  # noqa: PLR0913
-            self,
-            description: str | None = None,
-            title: str | None = None,
-            frequency: str | None = None,
-            category: str | None = None,
-            sub_category: str | None = None,
-            owner_node: dict[str, str] | None = None,
-            publisher_node: dict[str, Any] | None = None,
-            regulatory_related: bool | None = None,
-            business_domain: str | None = None,
-            lob: str | None = None,
-            sub_lob: str | None = None,
-            is_bcbs239_program: bool | None = None,
-            risk_area: str | None = None,
-            risk_stripe: str | None = None,
-            sap_code: str | None = None,
-            source_system: dict[str, Any] | None = None,
-            id: str | None = None,  # noqa: A002
-            **kwargs: Any,
-        ) -> Report:
-            """Instantiate a Report object with the current Fusion client attached.
+        self,
+        description: str | None = None,
+        title: str | None = None,
+        frequency: str | None = None,
+        category: str | None = None,
+        sub_category: str | None = None,
+        owner_node: dict[str, str] | None = None,
+        publisher_node: dict[str, Any] | None = None,
+        regulatory_related: bool | None = None,
+        business_domain: str | None = None,
+        lob: str | None = None,
+        sub_lob: str | None = None,
+        is_bcbs239_program: bool | None = None,
+        risk_area: str | None = None,
+        risk_stripe: str | None = None,
+        sap_code: str | None = None,
+        source_system: dict[str, Any] | None = None,
+        id: str | None = None,  # noqa: A002
+        **kwargs: Any,
+    ) -> Report:
+        """Instantiate a Report object with the current Fusion client attached.
 
-            Args:
-                description (str | None): Detailed Description of the report.
-                This is mandatory field for report creation.
-                title (str | None): Title (Display Name) of the report.
-                This is mandatory field for report creation.
-                frequency (str | None): Frequency of the report.
-                This is mandatory field for report creation.
-                category (str | None): Category of the report. 
-                This is mandatory field for report creation.
-                sub_category (str | None): Sub-classification under the main category. 
-                This is mandatory field for report creation.
-                business_domain (str): Business domain string. This field cannot be blank if provided.
-                This is mandatory field for report creation.
-                owner_node (dict[str, str] | None): Owner node associated with the report.
-                {"name","type"} for the owner node.
-                This is mandatory field for report creation.
-                publisher_node (dict[str, Any] | None): Publisher node associated with the report. 
-                {"name","type"} (+ optional {"publisher_node_identifier"}).
-                regulatory_related (bool | None): Indicated whether the report is related to regulatory requirements.
-                This is mandatory field for report creation.
-                business_domain (str | None): Business domain string. This is mandatory field for report creation.
-                lob (str | None): Line of business.
-                sub_lob (str | None): Subdivision of the line of business.
-                is_bcbs239_program (bool | None): Indicates whether the report is associated with the BCBS 239 program.
-                risk_area (str | None): Risk area.
-                risk_stripe (str | None): Risk stripe.
-                sap_code (str | None): SAP code associated with the report.
-                source_system (dict[str, Any] | None): Source system details for the report.
-                id (str | None): Server-assigned report identifier (needed for update/patch/delete if already known).
-                **kwargs (Any): 
+        Args:
+            description (str | None): Detailed Description of the report.
+            This is mandatory field for report creation.
+            title (str | None): Title (Display Name) of the report.
+            This is mandatory field for report creation.
+            frequency (str | None): Frequency of the report.
+            This is mandatory field for report creation.
+            category (str | None): Category of the report.
+            This is mandatory field for report creation.
+            sub_category (str | None): Sub-classification under the main category.
+            This is mandatory field for report creation.
+            business_domain (str): Business domain string. This field cannot be blank if provided.
+            This is mandatory field for report creation.
+            owner_node (dict[str, str] | None): Owner node associated with the report.
+            {"name","type"} for the owner node.
+            This is mandatory field for report creation.
+            publisher_node (dict[str, Any] | None): Publisher node associated with the report.
+            {"name","type"} (+ optional {"publisher_node_identifier"}).
+            regulatory_related (bool | None): Indicated whether the report is related to regulatory requirements.
+            This is mandatory field for report creation.
+            business_domain (str | None): Business domain string. This is mandatory field for report creation.
+            lob (str | None): Line of business.
+            sub_lob (str | None): Subdivision of the line of business.
+            is_bcbs239_program (bool | None): Indicates whether the report is associated with the BCBS 239 program.
+            risk_area (str | None): Risk area.
+            risk_stripe (str | None): Risk stripe.
+            sap_code (str | None): SAP code associated with the report.
+            source_system (dict[str, Any] | None): Source system details for the report.
+            id (str | None): Server-assigned report identifier (needed for update/patch/delete if already known).
+            **kwargs (Any):
 
-            Returns:
-                Report: A Report object ready for API upload or further manipulation.
-            """
-            report_obj = Report(
-                id=id,
-                title=title,
-                description=description,
-                frequency=frequency,
-                category=category,
-                sub_category=sub_category,
-                business_domain=business_domain,
-                regulatory_related=regulatory_related,
-                owner_node=owner_node,
-                publisher_node=publisher_node,
-                lob=lob,
-                sub_lob=sub_lob,
-                is_bcbs239_program=is_bcbs239_program,
-                risk_area=risk_area,
-                risk_stripe=risk_stripe,
-                sap_code=sap_code,
-                source_system=source_system,
-                **kwargs,
-            )
-            report_obj.client = self
-            return report_obj
-    
-        
+        Returns:
+            Report: A Report object ready for API upload or further manipulation.
+        """
+        report_obj = Report(
+            id=id,
+            title=title,
+            description=description,
+            frequency=frequency,
+            category=category,
+            sub_category=sub_category,
+            business_domain=business_domain,
+            regulatory_related=regulatory_related,
+            owner_node=owner_node,
+            publisher_node=publisher_node,
+            lob=lob,
+            sub_lob=sub_lob,
+            is_bcbs239_program=is_bcbs239_program,
+            risk_area=risk_area,
+            risk_stripe=risk_stripe,
+            sap_code=sap_code,
+            source_system=source_system,
+            **kwargs,
+        )
+        report_obj.client = self
+        return report_obj
+
     def dataflow(  # noqa: PLR0913
         self,
         provider_node: dict[str, str] | None = None,
@@ -2865,7 +2868,7 @@ class Fusion:
             description (str | None, optional):
                 Specifies the purpose of the data movement.
             transport_type (str | None, optional):
-                Transport type  
+                Transport type
             frequency (str | None, optional):
                 Frequency of the data flow
             start_time (str | None, optional):
@@ -2932,9 +2935,9 @@ class Fusion:
         Args:
             mappings (list[AttributeTermMapping]): List of attribute-to-term mappings.
                 Each mapping should contain:
-                - attribute: DependencyAttribute object with entity details 
+                - attribute: DependencyAttribute object with entity details
                   (entity_type, entity_identifier, attribute_identifier, data_space)
-                - term: dict with term information  
+                - term: dict with term information
                 - is_kde: bool indicating if it's a KDE term
             return_resp_obj (bool): Whether to return the raw response object.
 
@@ -2958,10 +2961,8 @@ class Fusion:
             >>> fusion.link_attributes_to_terms([mapping])
         """
 
-        return Report.link_attributes_to_terms( 
-            mappings=mappings, client=self, return_resp_obj=return_resp_obj
-        )
-    
+        return Report.link_attributes_to_terms(mappings=mappings, client=self, return_resp_obj=return_resp_obj)
+
     def list_distribution_files(
         self,
         dataset: str,
@@ -2971,7 +2972,7 @@ class Fusion:
         output: bool = False,
         max_results: int = -1,
     ) -> pd.DataFrame:
-        """ List the available files for a specific dataset distribution.
+        """List the available files for a specific dataset distribution.
         Args:
             dataset (str): A dataset identifier.
             series (str): The dataset series identifier.
@@ -3000,7 +3001,6 @@ class Fusion:
 
         return files_df
 
-
     def list_dataflows(
         self,
         id_contains: str,
@@ -3014,14 +3014,14 @@ class Fusion:
         if resp.status_code == HTTPStatus.OK:
             list_df = pd.json_normalize(resp.json())
             if output:
-                pass  
+                pass
             return list_df
         else:
             resp.raise_for_status()
 
         # fallback empty frame if something unexpected happens
         return pd.DataFrame()
-    
+
     def dependency_attribute(
         self,
         entity_type: str,

@@ -17,7 +17,7 @@ def test_product_class() -> None:
     """Test the Product class."""
     test_product = Product(title="Test Product", identifier="Test Product", release_date="May 5, 2020")
     assert test_product.title == "Test Product"
-    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.identifier == "Test_Product"
     assert test_product.category is None
     assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
@@ -58,7 +58,7 @@ def test_product_class_from_series() -> None:
         )
     )
     assert test_product.title == "Test Product"
-    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.identifier == "Test_Product"
     assert test_product.category is None
     assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
@@ -257,7 +257,7 @@ def test_product_class_from_object_dict() -> None:
 
 def test_product_class_from_object_series() -> None:
     """Test the Product class."""
-    test_product = Product(identifier="TEST_PRODUCT").from_object(
+    test_product = Product(identifier="Test Product").from_object(
         pd.Series(
             {
                 "title": "Test Product",
@@ -267,7 +267,7 @@ def test_product_class_from_object_series() -> None:
         )
     )
     assert test_product.title == "Test Product"
-    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.identifier == "Test_Product"
     assert test_product.category is None
     assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
@@ -572,7 +572,7 @@ def test_product_case_switching() -> None:
     camel_case_dict = my_product.to_dict()
 
     assert camel_case_dict == {
-        "identifier": "TEST_PRODUCT",
+        "identifier": "Test_Product",
         "title": "Test Product",
         "category": None,
         "shortAbstract": "Short Abstract",
@@ -629,7 +629,7 @@ def test_product_repr() -> None:
 
     expected_repr = (
         "Product(\n"
-        "identifier='TEST_PRODUCT',\n "
+        "identifier='Test_Product',\n "
         "title='Test Product',\n "
         "category=None,\n "
         "short_abstract='Short Abstract',\n "

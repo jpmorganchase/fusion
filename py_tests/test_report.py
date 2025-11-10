@@ -112,9 +112,7 @@ def test_reports_wrapper_from_csv(tmp_path: Path, fusion_obj: Fusion) -> None:
     assert reports[0].owner_node["name"] == "App1"
     assert reports[0].publisher_node is not None
     assert reports[0].publisher_node["name"] == "Dash1"
-    assert (
-        reports[0].publisher_node["publisher_node_identifier"] == "pub-123"
-    )
+    assert reports[0].publisher_node["publisher_node_identifier"] == "pub-123"
 
 
 def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
@@ -141,9 +139,7 @@ def test_reports_wrapper_from_object_dicts(fusion_obj: Fusion) -> None:
     assert reports[0].owner_node is not None
     assert reports[0].owner_node["name"] == "AppID"
     assert reports[0].publisher_node is not None
-    assert (
-        reports[0].publisher_node["publisher_node_identifier"] == "pid-99"
-    )
+    assert reports[0].publisher_node["publisher_node_identifier"] == "pid-99"
 
 
 def test_report_update_fields_excludes_id_and_uses_path() -> None:
@@ -195,9 +191,7 @@ def test_report_update_fields_excludes_id_and_uses_path() -> None:
     assert client.session.last is not None
     assert "id" not in client.session.last
     assert client.session.last_url is not None
-    assert client.session.last_url.endswith(
-        "/api/corelineage-service/v1/reports/r-1"
-    )
+    assert client.session.last_url.endswith("/api/corelineage-service/v1/reports/r-1")
 
 
 def test_report_create_excludes_id_and_sets_id() -> None:
@@ -252,9 +246,7 @@ def test_report_create_excludes_id_and_sets_id() -> None:
     assert client.session.last is not None
     assert "id" not in client.session.last
     assert client.session.last_url is not None
-    assert client.session.last_url.endswith(
-        "/api/corelineage-service/v1/reports"
-    )
+    assert client.session.last_url.endswith("/api/corelineage-service/v1/reports")
 
 
 def test_report_update_excludes_id_in_body_and_uses_path() -> None:
@@ -306,6 +298,4 @@ def test_report_update_excludes_id_in_body_and_uses_path() -> None:
     assert client.session.last is not None
     assert "id" not in client.session.last
     assert client.session.last_url is not None
-    assert client.session.last_url.endswith(
-        "/api/corelineage-service/v1/reports/abc-999"
-    )
+    assert client.session.last_url.endswith("/api/corelineage-service/v1/reports/abc-999")

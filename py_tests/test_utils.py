@@ -509,20 +509,17 @@ def test_path_to_url() -> None:
 
     result = path_to_url("path/to/dataset__catalog__datasetseries.csv", is_download=True)
     assert result == (
-        "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv/"
-        "files/operationType/download?file=None"
+        "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv/files/operationType/download?file=None"
     )
 
     result = path_to_url("path/to/dataset__catalog__datasetseries.csv", is_raw=True, is_download=True)
     assert result == (
-        "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv/"
-        "files/operationType/download?file=None"
+        "catalog/datasets/dataset/datasetseries/datasetseries/distributions/csv/files/operationType/download?file=None"
     )
 
     result = path_to_url("path/to/dataset__catalog__datasetseries.pt", is_raw=True, is_download=True)
     assert result == (
-        "catalog/datasets/dataset/datasetseries/datasetseries/distributions/raw/"
-        "files/operationType/download?file=None"
+        "catalog/datasets/dataset/datasetseries/datasetseries/distributions/raw/files/operationType/download?file=None"
     )
 
 

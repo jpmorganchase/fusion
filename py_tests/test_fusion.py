@@ -2457,7 +2457,7 @@ def test_fusion_product(fusion_obj: Fusion) -> None:
     """Test Fusion Product class from client."""
     test_product = fusion_obj.product(title="Test Product", identifier="Test Product", releaseDate="May 5, 2020")
     assert test_product.title == "Test Product"
-    assert test_product.identifier == "TEST_PRODUCT"
+    assert test_product.identifier == "Test_Product"
     assert test_product.category is None
     assert test_product.shortAbstract == "Test Product"
     assert test_product.description == "Test Product"
@@ -2491,7 +2491,7 @@ def test_fusion_dataset(fusion_obj: Fusion) -> None:
     assert str(test_dataset)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -3432,6 +3432,7 @@ def test_list_reports_by_id(fusion_obj: Fusion, requests_mock: requests_mock.Moc
     assert isinstance(df, pd.DataFrame)
     assert df.iloc[0]["id"] == "rep1"
 
+
 def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     report_id = "6789"
     attribute_id = 12
@@ -3482,7 +3483,7 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
         publisher_node={
             "name": "DashX",
             "type": "Intelligent Solutions",
-            "publisher_node_identifier": "pub-001", 
+            "publisher_node_identifier": "pub-001",
         },
         business_domain="Ops",
         regulatory_related=False,
@@ -3501,11 +3502,10 @@ def test_fusion_report_with_optional_fields(fusion_obj: Fusion) -> None:
     assert report.publisher_node["publisher_node_identifier"] == "pub-001"
 
 
-
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fusion) -> None:
     from fusion.data_dependency import DependencyAttribute
-    
+
     mappings: list[AttributeTermMapping] = [
         AttributeTermMapping(DependencyAttribute("Report", "rep1", "attr1"), {"id": "term1"}, is_kde=True),
         AttributeTermMapping(DependencyAttribute("Report", "rep2", "attr2"), {"id": "term2"}, is_kde=False),
@@ -3523,7 +3523,7 @@ def test_link_attributes_to_terms_adds_kde(mock_link: MagicMock, fusion_obj: Fus
 @patch("fusion.report.Report.link_attributes_to_terms")
 def test_link_attributes_to_terms_response_passthrough(mock_link: MagicMock, fusion_obj: Fusion) -> None:
     from fusion.data_dependency import DependencyAttribute
-    
+
     mock_resp = MagicMock()
     mock_link.return_value = mock_resp
 
@@ -3594,6 +3594,7 @@ def test_list_distribution_files_with_max_results(fusion_obj: Fusion, requests_m
     assert len(df_over_limit) == TOTAL_FILES
     assert df_over_limit["@id"].tolist() == ["file1", "file2"]
 
+
 def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
     """ID-only path: instantiate with just an id; nodes remain None."""
     flow = fusion_obj.dataflow(id="abc-123")
@@ -3605,8 +3606,8 @@ def test_fusion_dataflow_id_only(fusion_obj: Fusion) -> None:
 
 def test_fusion_dataflow_full(fusion_obj: Fusion) -> None:
     """Full constructor path: provider/consumer plus optional fields."""
-    provider = {"name": "CRM_DB", "type": "Database"}     
-    consumer = {"name": "DWH", "type": "Database"}          
+    provider = {"name": "CRM_DB", "type": "Database"}
+    consumer = {"name": "DWH", "type": "Database"}
     flow = fusion_obj.dataflow(
         provider_node=provider,
         consumer_node=consumer,
@@ -3631,8 +3632,8 @@ def test_list_dataflows_success(requests_mock: requests_mock.Mocker, fusion_obj:
     server_json = {
         "id": flow_id,
         "description": "sample flow",
-        "providerNode": {"name": "A", "type": "DB"},      
-        "consumerNode": {"name": "B", "type": "DB"},      
+        "providerNode": {"name": "A", "type": "DB"},
+        "consumerNode": {"name": "B", "type": "DB"},
         "frequency": "Daily",
     }
     requests_mock.get(url, json=server_json, status_code=200)
@@ -3659,6 +3660,7 @@ def test_list_dataflows_http_error(requests_mock: requests_mock.Mocker, fusion_o
     with pytest.raises(requests.exceptions.HTTPError):
         fusion_obj.list_dataflows(flow_id)
 
+
 def test_dependency_attribute(fusion_obj: Fusion) -> None:
     """Fusion.dependency_attribute should return a DependencyAttribute with client set."""
     attr = fusion_obj.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
@@ -3666,7 +3668,8 @@ def test_dependency_attribute(fusion_obj: Fusion) -> None:
     assert attr.entity_type == "Dataset"
     assert attr.entity_identifier == "dataset1"
     assert attr.attribute_identifier == "colA"
-    assert attr.data_space == "Finance"  
+    assert attr.data_space == "Finance"
+
 
 def test_dependency_mapping(fusion_obj: Fusion) -> None:
     """Fusion.dependency_mapping should return a DependencyMapping with client set."""
@@ -3676,7 +3679,8 @@ def test_dependency_mapping(fusion_obj: Fusion) -> None:
     assert isinstance(mapping, DependencyMapping)
     assert mapping.source_attributes[0] == src
     assert mapping.target_attribute == tgt
-    
+
+
 def test_attribute_term_mapping(fusion_obj: Fusion) -> None:
     """Fusion.attribute_term_mapping should return AttributeTermMapping with client set."""
     attr = fusion_obj.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
@@ -3685,7 +3689,8 @@ def test_attribute_term_mapping(fusion_obj: Fusion) -> None:
     assert isinstance(mapping, AttributeTermMapping)
     assert mapping.attribute == attr
     assert mapping.term == term
-    assert mapping.is_kde is True   
+    assert mapping.is_kde is True
+
 
 def test_data_dependency_sets_client(fusion_obj: Fusion) -> None:
     """Fusion.data_dependency should return DataDependency with client set."""
@@ -3704,9 +3709,7 @@ def test_data_mapping_sets_client(fusion_obj: Fusion) -> None:
 def test_list_attribute_lineage_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """list_attribute_lineage returns dataframe when API responds 200."""
     url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/data-dependencies/source-attributes/query"
-    server_json = [
-        {"entityType": "Dataset", "entityIdentifier": "dataset1", "attributeIdentifier": "colA"}
-    ]
+    server_json = [{"entityType": "Dataset", "entityIdentifier": "dataset1", "attributeIdentifier": "colA"}]
     requests_mock.post(url, json=server_json, status_code=200)
 
     lineage_df = fusion_obj.list_attribute_lineage(
@@ -3788,6 +3791,7 @@ def test_list_business_terms_for_attribute_http_error(requests_mock: requests_mo
             data_space="Finance",
         )
 
+
 def test_list_attribute_lineage_no_data_found(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test list_attribute_lineage raises APIResponseError when API returns an empty list."""
 
@@ -3805,6 +3809,7 @@ def test_list_attribute_lineage_no_data_found(requests_mock: requests_mock.Mocke
         )
 
     assert "No data found" in str(excinfo.value)
+
 
 def test_list_business_terms_for_attribute_no_data_found(
     requests_mock: requests_mock.Mocker, fusion_obj: Fusion

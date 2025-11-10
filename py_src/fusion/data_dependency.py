@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from fusion import Fusion
 
 
-
 @dataclass
 class DependencyAttribute:
     """Represents an attribute participating in dependency relationships.
@@ -63,7 +62,7 @@ class DependencyAttribute:
             "attributeIdentifier": self.attribute_identifier,
         }
         if self.entity_type.lower() == "dataset" and self.data_space is not None:
-             result["dataSpace"] = self.data_space
+            result["dataSpace"] = self.data_space
         return result
 
 
@@ -152,6 +151,7 @@ class AttributeTermMapping:
             "term": self.term,
         }
 
+
 class DataDependency:
     """Manages attribute-to-attribute dependencies in Fusion.
 
@@ -213,10 +213,7 @@ class DataDependency:
         return res
 
     def link_attributes(
-        self,
-        mappings: list[DependencyMapping],
-        client: Fusion | None = None,
-        return_resp_obj: bool = False
+        self, mappings: list[DependencyMapping], client: Fusion | None = None, return_resp_obj: bool = False
     ) -> requests.Response | None:
         """Link source attributes to a target attribute.
 
@@ -249,10 +246,7 @@ class DataDependency:
         return resp if return_resp_obj else None
 
     def unlink_attributes(
-        self,
-        mappings: list[DependencyMapping],
-        client: Fusion | None = None,
-        return_resp_obj: bool = False
+        self, mappings: list[DependencyMapping], client: Fusion | None = None, return_resp_obj: bool = False
     ) -> requests.Response | None:
         """Unlink source attributes from a target attribute.
 
@@ -283,6 +277,7 @@ class DataDependency:
         resp = client.session.delete(url, json=payload)
         requests_raise_for_status(resp)
         return resp if return_resp_obj else None
+
 
 class DataMapping:
     """Manages attribute-to-term mappings in Fusion.
@@ -346,10 +341,7 @@ class DataMapping:
         return res
 
     def link_attribute_to_term(
-        self,
-        mappings: list[AttributeTermMapping],
-        client: Fusion | None = None,
-        return_resp_obj: bool = False
+        self, mappings: list[AttributeTermMapping], client: Fusion | None = None, return_resp_obj: bool = False
     ) -> requests.Response | None:
         """Link attributes to business terms.
 
@@ -382,10 +374,7 @@ class DataMapping:
         return resp if return_resp_obj else None
 
     def unlink_attribute_from_term(
-        self,
-        mappings: list[AttributeTermMapping],
-        client: Fusion | None = None,
-        return_resp_obj: bool = False
+        self, mappings: list[AttributeTermMapping], client: Fusion | None = None, return_resp_obj: bool = False
     ) -> requests.Response | None:
         """Unlink attributes from business terms.
 
@@ -418,10 +407,7 @@ class DataMapping:
         return resp if return_resp_obj else None
 
     def update_attribute_to_term_kde_status(
-        self,
-        mappings: list[AttributeTermMapping],
-        client: Fusion | None = None,
-        return_resp_obj: bool = False
+        self, mappings: list[AttributeTermMapping], client: Fusion | None = None, return_resp_obj: bool = False
     ) -> requests.Response | None:
         """Update KDE status for attribute-term mappings.
 
