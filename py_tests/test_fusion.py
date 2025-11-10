@@ -2541,13 +2541,13 @@ def test_fusion_attribute(fusion_obj: Fusion) -> None:
     assert str(test_attribute)
     assert repr(test_attribute)
     assert test_attribute.title == "Test Attribute"
-    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.identifier == "Test_Attribute"
     assert test_attribute.index == 0
     assert test_attribute.isDatasetKey
     assert test_attribute.dataType == Types.String
     assert test_attribute.description == "Test Attribute"
     assert test_attribute.source is None
-    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.sourceFieldId == "Test_Attribute"
     assert test_attribute.isInternalDatasetKey is None
     assert test_attribute.isExternallyVisible is True
     assert test_attribute.unit is None
@@ -2579,13 +2579,13 @@ def test_fusion_attributes(fusion_obj: Fusion) -> None:
     assert str(test_attributes)
     assert repr(test_attributes)
     assert test_attributes.attributes[0].title == "Test Attribute"
-    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].identifier == "Test_Attribute"
     assert test_attributes.attributes[0].index == 0
     assert test_attributes.attributes[0].isDatasetKey
     assert test_attributes.attributes[0].dataType == Types.String
     assert test_attributes.attributes[0].description == "Test Attribute"
     assert test_attributes.attributes[0].source is None
-    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].sourceFieldId == "Test_Attribute"
     assert test_attributes.attributes[0].isInternalDatasetKey is None
     assert test_attributes.attributes[0].isExternallyVisible is True
     assert test_attributes.attributes[0].unit is None

@@ -99,11 +99,11 @@ class Attribute(metaclass=CamelCaseMeta):
     def __post_init__(self: Attribute) -> None:
         """Format Attribute metadata fields after object initialization."""
         self.is_dataset_key = make_bool(self.is_dataset_key)
-        self.identifier = tidy_string(self.identifier).lower().replace(" ", "_")
+        self.identifier = tidy_string(self.identifier).replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description and self.description != "" else self.title
         self.source_field_id = (
-            tidy_string(self.source_field_id).lower().replace(" ", "_") if self.source_field_id else self.identifier
+            tidy_string(self.source_field_id).replace(" ", "_") if self.source_field_id else self.identifier
         )
         self.available_from = convert_date_format(self.available_from) if self.available_from else None
         self.deprecated_from = convert_date_format(self.deprecated_from) if self.deprecated_from else None
