@@ -92,7 +92,7 @@ class Product(metaclass=CamelCaseMeta):
 
     def __post_init__(self: Product) -> None:
         """Format Product metadata fields after object instantiation."""
-        self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
+        self.identifier = tidy_string(self.identifier).replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description != "" else self.title
         self.short_abstract = tidy_string(self.short_abstract) if self.short_abstract != "" else self.title

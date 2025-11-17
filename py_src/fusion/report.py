@@ -31,8 +31,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-
-@dataclass  
+@dataclass
 class Report(metaclass=CamelCaseMeta):
     """
     Fusion Report class for managing report metadata.
@@ -44,9 +43,9 @@ class Report(metaclass=CamelCaseMeta):
         category (str | None): Category of the report. Mandatory for report creation.
         sub_category (str | None): Sub-category of the report providing more specific categorization.
         Mandatory for report creation.
-        business_domain (str | None): Business domain for the report. 
+        business_domain (str | None): Business domain for the report.
         This field cannot be left blank if provided.
-        regulatory_related (bool | None): Whether the report is related to regulatory requirements. 
+        regulatory_related (bool | None): Whether the report is related to regulatory requirements.
         Mandatory for creation.
         owner_node (dict[str, str] | None): {"name","type"} of the owner node. Mandatory for creation.
         publisher_node (dict[str, Any] | None): {"name","type"} of the publisher node. Mandatory for creation.
@@ -145,29 +144,24 @@ class Report(metaclass=CamelCaseMeta):
         """Instantiate a Report from a dict."""
         mapped: dict[str, Any] = {camel_to_snake(k): v for k, v in data.items()}
 
-        
         for k, v in list(mapped.items()):
             if isinstance(v, str) and v.strip() == "":
                 mapped[k] = None
 
-        
         pub = mapped.get("publisher_node")
         if isinstance(pub, dict) and "publisherNodeIdentifier" in pub:
             pub_copy = dict(pub)
             pub_copy["publisher_node_identifier"] = pub_copy.pop("publisherNodeIdentifier")
             mapped["publisher_node"] = pub_copy
 
-        
         if "is_bcbs239_program" in mapped:
             mapped["is_bcbs239_program"] = make_bool(mapped["is_bcbs239_program"])
         if "regulatory_related" in mapped:
             mapped["regulatory_related"] = make_bool(mapped["regulatory_related"])
 
-     
         allowed = {f.name for f in fields(cls)}
         filtered = {k: v for k, v in mapped.items() if k in allowed}
 
-   
         report = cls.__new__(cls)
         for fdef in fields(cls):
             setattr(report, fdef.name, filtered.get(fdef.name, None))
@@ -419,14 +413,10 @@ class Report(metaclass=CamelCaseMeta):
             return_resp_obj (bool): Whether to return the raw response object.
         Returns:
             requests.Response | None: API response if return_resp_obj is True, otherwise None."""
-        
+
         data_mapping = DataMapping()
         data_mapping.client = client
-        return data_mapping.link_attribute_to_term(
-            mappings=mappings,
-            client=client,
-            return_resp_obj=return_resp_obj
-        )
+        return data_mapping.link_attribute_to_term(mappings=mappings, client=client, return_resp_obj=return_resp_obj)
 
 
 Report.COLUMN_MAPPING = {  # type: ignore[attr-defined]
@@ -455,7 +445,6 @@ Report.COLUMN_MAPPING = {  # type: ignore[attr-defined]
     "Country of Reporting Obligation": "country_of_reporting_obligation",
     "Primary Regulator": "primary_regulator",
 }
-
 
 
 class Reports:
@@ -493,7 +482,6 @@ class Reports:
             raise ValueError("A Fusion client object is required.")
         return res
 
-
     def from_csv(self, file_path: str) -> Reports:
         """Load Reports from a CSV file path.
 
@@ -513,14 +501,14 @@ class Reports:
             >>> df = pd.DataFrame([...])
             >>> reports = reports.from_dataframe(df)
         """
-        client = self._use_client(None)  
+        client = self._use_client(None)
         report_objs = Report.from_dataframe(df, client=client)
         self.reports = report_objs
-        self.client = client  
+        self.client = client
         return self
 
     def from_object(self, source: pd.DataFrame | list[dict[str, Any]] | str) -> Reports:
-        """Load Reports from DataFrame, list of dicts, .csv path, or JSON string 
+        """Load Reports from DataFrame, list of dicts, .csv path, or JSON string
 
         Examples:
             >>> reports = fusion.reports()
@@ -545,7 +533,6 @@ class Reports:
 
         raise TypeError("source must be a DataFrame, list of dicts, or string (.csv path or JSON)")
 
-
     def create_all(
         self,
         client: Fusion | None = None,
@@ -555,13 +542,10 @@ class Reports:
         client = self._use_client(client)
         if not return_resp_obj:
             for r in self.reports:
-                r.create(client=client) 
+                r.create(client=client)
             return None
 
         responses: list[requests.Response] = [
-            cast(requests.Response, r.create(client=client, return_resp_obj=True))
-            for r in self.reports
+            cast(requests.Response, r.create(client=client, return_resp_obj=True)) for r in self.reports
         ]
         return responses
-
-

@@ -25,13 +25,13 @@ def test_attribute_class() -> None:
     assert str(test_attribute)
     assert repr(test_attribute)
     assert test_attribute.title == "Test Attribute"
-    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.identifier == "Test_Attribute"
     assert test_attribute.index == 0
     assert test_attribute.isDatasetKey
     assert test_attribute.dataType == Types.String
     assert test_attribute.description == "Test Attribute"
     assert test_attribute.source is None
-    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.sourceFieldId == "Test_Attribute"
     assert test_attribute.isInternalDatasetKey is None
     assert test_attribute.isExternallyVisible is True
     assert test_attribute.unit is None
@@ -81,13 +81,13 @@ def test_attribute_class_from_series() -> None:
     assert str(test_attribute)
     assert repr(test_attribute)
     assert test_attribute.title == "Test Attribute"
-    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.identifier == "Test_Attribute"
     assert test_attribute.index == 0
     assert test_attribute.isDatasetKey is True
     assert test_attribute.dataType == Types.String
     assert test_attribute.description == "Test Attribute"
     assert test_attribute.source is None
-    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.sourceFieldId == "Test_Attribute"
     assert test_attribute.isInternalDatasetKey is None
     assert test_attribute.isExternallyVisible is True
     assert test_attribute.unit is None
@@ -115,13 +115,13 @@ def test_attribute_class_from_dict() -> None:
     assert str(test_attribute)
     assert repr(test_attribute)
     assert test_attribute.title == "Test Attribute"
-    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.identifier == "Test_Attribute"
     assert test_attribute.index == 0
     assert test_attribute.isDatasetKey
     assert test_attribute.dataType == Types.String
     assert test_attribute.description == "Test Attribute"
     assert test_attribute.source is None
-    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.sourceFieldId == "Test_Attribute"
     assert test_attribute.isInternalDatasetKey is None
     assert test_attribute.isExternallyVisible is True
     assert test_attribute.unit is None
@@ -145,17 +145,17 @@ def test_attribute_class_from_object_dict() -> None:
         "dataType": "string",
         "availableFrom": "May 5, 2020",
     }
-    test_attribute = Attribute(identifier="test_attribute", index=0).from_object(test_dict)
+    test_attribute = Attribute(identifier="Test_Attribute", index=0).from_object(test_dict)
     assert str(test_attribute)
     assert repr(test_attribute)
     assert test_attribute.title == "Test Attribute"
-    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.identifier == "Test_Attribute"
     assert test_attribute.index == 0
     assert test_attribute.isDatasetKey
     assert test_attribute.dataType == Types.String
     assert test_attribute.description == "Test Attribute"
     assert test_attribute.source is None
-    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.sourceFieldId == "Test_Attribute"
     assert test_attribute.isInternalDatasetKey is None
     assert test_attribute.isExternallyVisible is True
     assert test_attribute.unit is None
@@ -181,17 +181,17 @@ def test_attribute_class_from_object_series() -> None:
             "availableFrom": "May 5, 2020",
         }
     )
-    test_attribute = Attribute(identifier="test_attribute", index=0).from_object(test_series)
+    test_attribute = Attribute(identifier="Test_Attribute", index=0).from_object(test_series)
     assert str(test_attribute)
     assert repr(test_attribute)
     assert test_attribute.title == "Test Attribute"
-    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.identifier == "Test_Attribute"
     assert test_attribute.index == 0
     assert test_attribute.isDatasetKey is True
     assert test_attribute.dataType == Types.String
     assert test_attribute.description == "Test Attribute"
     assert test_attribute.source is None
-    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.sourceFieldId == "Test_Attribute"
     assert test_attribute.isInternalDatasetKey is None
     assert test_attribute.isExternallyVisible is True
     assert test_attribute.unit is None
@@ -217,13 +217,13 @@ def test_attribute_class_to_dict() -> None:
     )
     assert test_attribute.to_dict() == {
         "title": "Test Attribute",
-        "identifier": "test_attribute",
+        "identifier": "Test_Attribute",
         "index": 0,
         "isDatasetKey": True,
         "dataType": "String",
         "description": "Test Attribute",
         "source": None,
-        "sourceFieldId": "test_attribute",
+        "sourceFieldId": "Test_Attribute",
         "isInternalDatasetKey": None,
         "isExternallyVisible": True,
         "unit": None,
@@ -459,13 +459,13 @@ def test_attributes_class() -> None:
     assert str(test_attributes)
     assert repr(test_attributes)
     assert test_attributes.attributes[0].title == "Test Attribute"
-    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].identifier == "Test_Attribute"
     assert test_attributes.attributes[0].index == 0
     assert test_attributes.attributes[0].isDatasetKey
     assert test_attributes.attributes[0].dataType == Types.String
     assert test_attributes.attributes[0].description == "Test Attribute"
     assert test_attributes.attributes[0].source is None
-    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].sourceFieldId == "Test_Attribute"
     assert test_attributes.attributes[0].isInternalDatasetKey is None
     assert test_attributes.attributes[0].isExternallyVisible is True
     assert test_attributes.attributes[0].unit is None
@@ -511,13 +511,13 @@ def test_attributes_add_attribute() -> None:
     )
     test_attributes.add_attribute(test_attribute)
     assert test_attributes.attributes[0].title == "Test Attribute"
-    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].identifier == "Test_Attribute"
     assert test_attributes.attributes[0].index == 0
     assert test_attributes.attributes[0].isDatasetKey
     assert test_attributes.attributes[0].dataType == Types.String
     assert test_attributes.attributes[0].description == "Test Attribute"
     assert test_attributes.attributes[0].source is None
-    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].sourceFieldId == "Test_Attribute"
     assert test_attributes.attributes[0].isInternalDatasetKey is None
     assert test_attributes.attributes[0].isExternallyVisible is True
     assert test_attributes.attributes[0].unit is None
@@ -545,7 +545,7 @@ def test_attributes_remove_attributes() -> None:
             )
         ]
     )
-    test_attributes.remove_attribute("test_attribute")
+    test_attributes.remove_attribute("Test_Attribute")
     assert test_attributes.attributes == []
 
 
@@ -581,7 +581,7 @@ def test_attributes_get_attribute() -> None:
             )
         ]
     )
-    attr = test_attributes.get_attribute("test_attribute")
+    attr = test_attributes.get_attribute("Test_Attribute")
     assert attr is not None
     assert attr.title == "Test Attribute"
 
@@ -624,13 +624,13 @@ def test_attributes_to_dict() -> None:
         "attributes": [
             {
                 "title": "Test Attribute",
-                "identifier": "test_attribute",
+                "identifier": "Test_Attribute",
                 "index": 0,
                 "isDatasetKey": True,
                 "dataType": "String",
                 "description": "Test Attribute",
                 "source": None,
-                "sourceFieldId": "test_attribute",
+                "sourceFieldId": "Test_Attribute",
                 "isInternalDatasetKey": None,
                 "isExternallyVisible": True,
                 "unit": None,
@@ -667,13 +667,13 @@ def test_attributes_from_dict_list() -> None:
     }
     test_attributes = Attributes._from_dict_list(test_dict["attributes"])
     assert test_attributes.attributes[0].title == "Test Attribute"
-    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].identifier == "Test_Attribute"
     assert test_attributes.attributes[0].index == 0
     assert test_attributes.attributes[0].isDatasetKey
     assert test_attributes.attributes[0].dataType == Types.String
     assert test_attributes.attributes[0].description == "Test Attribute"
     assert test_attributes.attributes[0].source is None
-    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].sourceFieldId == "Test_Attribute"
     assert test_attributes.attributes[0].isInternalDatasetKey is None
     assert test_attributes.attributes[0].isExternallyVisible is True
     assert test_attributes.attributes[0].unit is None
@@ -701,13 +701,13 @@ def test_attributes_from_dataframe() -> None:
     )
     test_attributes = Attributes._from_dataframe(test_df)
     assert test_attributes.attributes[0].title == "Test Attribute"
-    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].identifier == "Test_Attribute"
     assert test_attributes.attributes[0].index == 0
     assert test_attributes.attributes[0].isDatasetKey
     assert test_attributes.attributes[0].dataType == Types.String
     assert test_attributes.attributes[0].description == "Test Attribute"
     assert test_attributes.attributes[0].source is None
-    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].sourceFieldId == "Test_Attribute"
     assert test_attributes.attributes[0].isInternalDatasetKey is None
     assert test_attributes.attributes[0].isExternallyVisible is True
     assert test_attributes.attributes[0].unit is None
@@ -737,13 +737,13 @@ def test_attributes_from_object_list_dict() -> None:
     }
     test_attributes = Attributes().from_object(test_dict["attributes"])
     assert test_attributes.attributes[0].title == "Test Attribute"
-    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].identifier == "Test_Attribute"
     assert test_attributes.attributes[0].index == 0
     assert test_attributes.attributes[0].isDatasetKey
     assert test_attributes.attributes[0].dataType == Types.String
     assert test_attributes.attributes[0].description == "Test Attribute"
     assert test_attributes.attributes[0].source is None
-    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].sourceFieldId == "Test_Attribute"
     assert test_attributes.attributes[0].isInternalDatasetKey is None
     assert test_attributes.attributes[0].isExternallyVisible is True
     assert test_attributes.attributes[0].unit is None
@@ -771,13 +771,13 @@ def test_attributes_from_object_list_attrs() -> None:
     ]
     test_attributes = Attributes().from_object(test_attributes_input)
     assert test_attributes.attributes[0].title == "Test Attribute"
-    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].identifier == "Test_Attribute"
     assert test_attributes.attributes[0].index == 0
     assert test_attributes.attributes[0].isDatasetKey
     assert test_attributes.attributes[0].dataType == Types.String
     assert test_attributes.attributes[0].description == "Test Attribute"
     assert test_attributes.attributes[0].source is None
-    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].sourceFieldId == "Test_Attribute"
     assert test_attributes.attributes[0].isInternalDatasetKey is None
     assert test_attributes.attributes[0].isExternallyVisible is True
     assert test_attributes.attributes[0].unit is None
@@ -812,13 +812,13 @@ def test_attributes_from_object_dataframe() -> None:
     )
     test_attributes = Attributes().from_object(test_df)
     assert test_attributes.attributes[0].title == "Test Attribute"
-    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].identifier == "Test_Attribute"
     assert test_attributes.attributes[0].index == 0
     assert test_attributes.attributes[0].isDatasetKey
     assert test_attributes.attributes[0].dataType == Types.String
     assert test_attributes.attributes[0].description == "Test Attribute"
     assert test_attributes.attributes[0].source is None
-    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].sourceFieldId == "Test_Attribute"
     assert test_attributes.attributes[0].isInternalDatasetKey is None
     assert test_attributes.attributes[0].isExternallyVisible is True
     assert test_attributes.attributes[0].unit is None
@@ -845,13 +845,13 @@ def test_from_object_attribute() -> None:
 
     test_attribute.from_object(test_attribute)
     assert test_attribute.title == "Test Attribute"
-    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.identifier == "Test_Attribute"
     assert test_attribute.index == 0
     assert test_attribute.isDatasetKey
     assert test_attribute.dataType == Types.String
     assert test_attribute.description == "Test Attribute"
     assert test_attribute.source is None
-    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.sourceFieldId == "Test_Attribute"
     assert test_attribute.isInternalDatasetKey is None
     assert test_attribute.isExternallyVisible is True
     assert test_attribute.unit is None
@@ -890,13 +890,13 @@ def test_attributes_to_dataframe() -> None:
     test_df = test_attributes.to_dataframe()
     assert test_df.shape == (1, 22)
     assert test_df["title"].iloc[0] == "Test Attribute"
-    assert test_df["identifier"].iloc[0] == "test_attribute"
+    assert test_df["identifier"].iloc[0] == "Test_Attribute"
     assert test_df["index"].iloc[0] == 0
     assert test_df["isDatasetKey"].iloc[0]
     assert test_df["dataType"].iloc[0] == "String"
     assert test_df["description"].iloc[0] == "Test Attribute"
     assert test_df["source"].iloc[0] is None
-    assert test_df["sourceFieldId"].iloc[0] == "test_attribute"
+    assert test_df["sourceFieldId"].iloc[0] == "Test_Attribute"
     assert test_df["isInternalDatasetKey"].iloc[0] is None
     assert test_df["isExternallyVisible"].iloc[0]
     assert test_df["unit"].iloc[0] is None
@@ -957,13 +957,13 @@ def test_attributes_from_catalog(requests_mock: requests_mock.Mocker, fusion_obj
 
     test_attributes = Attributes().from_catalog(client=fusion_obj, catalog=catalog, dataset=dataset)
     assert test_attributes.attributes[0].title == "Test Attribute"
-    assert test_attributes.attributes[0].identifier == "test_attribute"
+    assert test_attributes.attributes[0].identifier == "Test_Attribute"
     assert test_attributes.attributes[0].index == 0
     assert test_attributes.attributes[0].isDatasetKey
     assert test_attributes.attributes[0].dataType == Types.String
     assert test_attributes.attributes[0].description == "Test Attribute"
     assert test_attributes.attributes[0].source is None
-    assert test_attributes.attributes[0].sourceFieldId == "test_attribute"
+    assert test_attributes.attributes[0].sourceFieldId == "Test_Attribute"
     assert test_attributes.attributes[0].isInternalDatasetKey is None
     assert test_attributes.attributes[0].isExternallyVisible is True
     assert test_attributes.attributes[0].unit is None
@@ -1254,14 +1254,14 @@ def test_attribute_case_switching() -> None:
     my_attribute_dict = my_attribute.to_dict()
 
     assert my_attribute_dict == {
-        "identifier": "test_attribute",
+        "identifier": "Test_Attribute",
         "index": 0,
         "dataType": "String",
         "title": "Test Attribute",
         "description": "Test Attribute",
         "isDatasetKey": True,
         "source": None,
-        "sourceFieldId": "test_attribute",
+        "sourceFieldId": "Test_Attribute",
         "isInternalDatasetKey": True,
         "isExternallyVisible": False,
         "unit": None,
@@ -1278,7 +1278,7 @@ def test_attribute_case_switching() -> None:
         "isCriticalDataElement": None,
     }
 
-    attribute_from_camel_dict = Attribute("test_attribute", 0).from_object(my_attribute_dict)
+    attribute_from_camel_dict = Attribute("Test_Attribute", 0).from_object(my_attribute_dict)
 
     assert attribute_from_camel_dict == my_attribute
 
@@ -1305,13 +1305,13 @@ def test_attribute_getattr() -> None:
         available_from="May 5, 2020",
     )
     assert test_attribute.title == "Test Attribute"
-    assert test_attribute.identifier == "test_attribute"
+    assert test_attribute.identifier == "Test_Attribute"
     assert test_attribute.index == 0
     assert test_attribute.isDatasetKey is True
     assert test_attribute.dataType == Types.String
     assert test_attribute.description == "Test Attribute"
     assert test_attribute.source is None
-    assert test_attribute.sourceFieldId == "test_attribute"
+    assert test_attribute.sourceFieldId == "Test_Attribute"
     assert test_attribute.isInternalDatasetKey is None
     assert test_attribute.isExternallyVisible is True
     assert test_attribute.unit is None

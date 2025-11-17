@@ -43,10 +43,10 @@ class Dataflow(metaclass=CamelCaseMeta):
             Server-assigned identifier. Must be set for ``update()``, ``update_fields()``, and ``delete()``.
 
         transport_type (str | None, optional):
-            Transport type 
+            Transport type
 
         frequency (str | None, optional):
-            Frequency of the data flow 
+            Frequency of the data flow
 
         start_time (str | None, optional):
             Scheduled start time of the Dataflow.
@@ -85,12 +85,12 @@ class Dataflow(metaclass=CamelCaseMeta):
 
     def __post_init__(self) -> None:
         """Normalize key fields after initialization."""
-        self.description     = tidy_string(self.description)     if self.description     is not None else None
-        self.id              = tidy_string(self.id)              if self.id              is not None else None
-        self.transport_type  = tidy_string(self.transport_type)  if self.transport_type  is not None else None
-        self.frequency       = tidy_string(self.frequency)       if self.frequency       is not None else None
-        self.start_time      = tidy_string(self.start_time)      if self.start_time      is not None else None
-        self.end_time        = tidy_string(self.end_time)        if self.end_time        is not None else None
+        self.description = tidy_string(self.description) if self.description is not None else None
+        self.id = tidy_string(self.id) if self.id is not None else None
+        self.transport_type = tidy_string(self.transport_type) if self.transport_type is not None else None
+        self.frequency = tidy_string(self.frequency) if self.frequency is not None else None
+        self.start_time = tidy_string(self.start_time) if self.start_time is not None else None
+        self.end_time = tidy_string(self.end_time) if self.end_time is not None else None
         self.connection_type = tidy_string(self.connection_type) if self.connection_type is not None else None
 
         if isinstance(self.provider_node, dict):
@@ -124,7 +124,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             snake = camel_to_snake(name)
             self.__dict__[snake] = value
 
-
     @property
     def client(self) -> Fusion | None:
         """Return the client."""
@@ -152,7 +151,6 @@ class Dataflow(metaclass=CamelCaseMeta):
             raise ValueError("A Fusion client object is required.")
         return res
 
-
     @classmethod
     def _from_dict(cls: type[Dataflow], data: dict[str, Any]) -> Dataflow:
         """Instantiate a Dataflow object from a dictionary (private)."""
@@ -161,7 +159,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         filtered = {k: v for k, v in mapped.items() if k in keys}
         obj = cls(**filtered)
         return obj
-
 
     @classmethod
     def _from_series(cls: type[Dataflow], series: pd.Series) -> Dataflow:  # type: ignore[type-arg]
@@ -215,7 +212,6 @@ class Dataflow(metaclass=CamelCaseMeta):
         obj.client = self._client
         return obj
 
-
     def validate(self) -> None:
         """Validate that required fields exist."""
         required_fields = ["provider_node", "consumer_node"]
@@ -233,7 +229,6 @@ class Dataflow(metaclass=CamelCaseMeta):
                 raise ValueError(f"{attr} requires non-empty 'name' and 'type' for create().")
         if not self.connection_type:
             raise ValueError("connection_type is required for create().")
-
 
     def to_dict(
         self,
@@ -266,7 +261,6 @@ class Dataflow(metaclass=CamelCaseMeta):
                 continue
             out[snake_to_camel(k)] = v
         return out
-
 
     def create(
         self,
@@ -329,16 +323,15 @@ class Dataflow(metaclass=CamelCaseMeta):
         Examples:
             >>> from fusion import Fusion
             >>> fusion = Fusion()
-            >>> flow = fusion.dataflow(id="abc-123", description="hello") 
+            >>> flow = fusion.dataflow(id="abc-123", description="hello")
             >>> flow.update_fields()
         """
         client = self._use_client(client)
         if not self.id:
             raise ValueError("Dataflow ID is required on the object (set self.id before update_fields()).")
 
-
         payload = self.to_dict(
-            drop_none=True,  
+            drop_none=True,
             exclude={"id", "provider_node", "consumer_node"},
         )
 

@@ -160,6 +160,6 @@ def test_unlink_attribute_from_term(requests_mock: requests_mock.Mocker, fusion_
     requests_mock.delete(url, status_code=200)
 
     resp = data_map.unlink_attribute_from_term([mapping], return_resp_obj=True)
-    assert isinstance(resp, requests.Response)    
+    assert isinstance(resp, requests.Response)
     HTTP_STATUS_OK = 200
     assert resp.status_code == HTTP_STATUS_OK

@@ -24,7 +24,7 @@ def test_dataset_class() -> None:
     assert str(test_dataset)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -72,7 +72,7 @@ def test_dataset_class_application_id() -> None:
     assert str(test_dataset)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -121,7 +121,7 @@ def test_dataset_class_application_id_dict() -> None:
     assert str(test_dataset)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -182,7 +182,7 @@ def test_dataset_class_from_series() -> None:
     assert str(test_dataset)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -232,7 +232,7 @@ def test_dataset_class_from_dict() -> None:
     assert str(test_dataset)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -323,7 +323,7 @@ def test_dataset_class_from_object_dataset() -> None:
     assert str(dataset_obj)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -373,7 +373,7 @@ def test_dataset_class_from_object_dict() -> None:
     assert str(test_dataset)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -424,7 +424,7 @@ def test_dataset_class_from_object_dict_app_id_dict() -> None:
     assert str(test_dataset)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -476,7 +476,7 @@ def test_dataset_class_from_object_json() -> None:
     assert str(test_dataset)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -570,7 +570,7 @@ def test_dataset_class_from_object_series() -> None:
     assert str(test_dataset)
     assert repr(test_dataset)
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.description == "Test Dataset"
     assert test_dataset.frequency == "Once"
@@ -629,7 +629,7 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
                     "identifier": "my_catalog",
                 },
                 "title": "Test Dataset",
-                "identifier": "TEST_DATASET",
+                "identifier": "Test_Dataset",
                 "category": ["category"],
                 "shortAbstract": "short abstract",
                 "description": "description",
@@ -663,7 +663,7 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
                 "isConfidential": False,
                 "isHighlyConfidential": False,
                 "isActive": False,
-                "@id": "TEST_DATASET/",
+                "@id": "Test_Dataset/",
             },
         ],
     }
@@ -672,16 +672,16 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
     url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
     expected_data2 = {
         "resources": [
-            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
-            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
+            {"product": "TEST_PRODUCT", "dataset": "Test_Dataset"},
+            {"product": "TEST_PRODUCT2", "dataset": "Test_Dataset2"},
         ]
     }
     requests_mock.get(url2, json=expected_data2)
 
-    my_dataset = Dataset(identifier="TEST_DATASET").from_catalog(client=fusion_obj, catalog=catalog)
+    my_dataset = Dataset(identifier="Test_Dataset").from_catalog(client=fusion_obj, catalog=catalog)
     assert isinstance(my_dataset, Dataset)
     assert my_dataset.title == "Test Dataset"
-    assert my_dataset.identifier == "TEST_DATASET"
+    assert my_dataset.identifier == "Test_Dataset"
     assert my_dataset.category == ["category"]
     assert my_dataset.description == "description"
     assert my_dataset.frequency == "Once"
@@ -733,7 +733,7 @@ def test_dataset_class_from_catalog_client_implied(requests_mock: requests_mock.
                     "identifier": "my_catalog",
                 },
                 "title": "Test Dataset",
-                "identifier": "TEST_DATASET",
+                "identifier": "Test_Dataset",
                 "category": ["category"],
                 "shortAbstract": "short abstract",
                 "description": "description",
@@ -767,7 +767,7 @@ def test_dataset_class_from_catalog_client_implied(requests_mock: requests_mock.
                 "isConfidential": False,
                 "isHighlyConfidential": False,
                 "isActive": False,
-                "@id": "TEST_DATASET/",
+                "@id": "Test_Dataset/",
             },
         ],
     }
@@ -776,17 +776,17 @@ def test_dataset_class_from_catalog_client_implied(requests_mock: requests_mock.
     url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
     expected_data2 = {
         "resources": [
-            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
-            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
+            {"product": "TEST_PRODUCT", "dataset": "Test_Dataset"},
+            {"product": "TEST_PRODUCT2", "dataset": "Test_Dataset2"},
         ]
     }
     requests_mock.get(url2, json=expected_data2)
-    my_dataset_id = Dataset(identifier="TEST_DATASET")
+    my_dataset_id = Dataset(identifier="Test_Dataset")
     my_dataset_id.client = fusion_obj
     my_dataset = my_dataset_id.from_catalog(catalog=catalog)
     assert isinstance(my_dataset, Dataset)
     assert my_dataset.title == "Test Dataset"
-    assert my_dataset.identifier == "TEST_DATASET"
+    assert my_dataset.identifier == "Test_Dataset"
     assert my_dataset.category == ["category"]
     assert my_dataset.description == "description"
     assert my_dataset.frequency == "Once"
@@ -838,7 +838,7 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
                     "identifier": "my_catalog",
                 },
                 "title": "Test Dataset",
-                "identifier": "TEST_DATASET",
+                "identifier": "Test_Dataset",
                 "category": ["category"],
                 "shortAbstract": "short abstract",
                 "description": "description",
@@ -872,7 +872,7 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
                 "isConfidential": False,
                 "isHighlyConfidential": False,
                 "isActive": False,
-                "@id": "TEST_DATASET/",
+                "@id": "Test_Dataset/",
             },
         ],
     }
@@ -881,15 +881,15 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
     url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
     expected_data2 = {
         "resources": [
-            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
+            {"product": "TEST_PRODUCT2", "dataset": "Test_Dataset2"},
         ]
     }
     requests_mock.get(url2, json=expected_data2)
 
-    my_dataset = Dataset(identifier="TEST_DATASET").from_catalog(client=fusion_obj, catalog=catalog)
+    my_dataset = Dataset(identifier="Test_Dataset").from_catalog(client=fusion_obj, catalog=catalog)
     assert isinstance(my_dataset, Dataset)
     assert my_dataset.title == "Test Dataset"
-    assert my_dataset.identifier == "TEST_DATASET"
+    assert my_dataset.identifier == "Test_Dataset"
     assert my_dataset.category == ["category"]
     assert my_dataset.description == "description"
     assert my_dataset.frequency == "Once"
@@ -942,7 +942,7 @@ def test_dataset_class_from_catalog_empty_product_datasets(
                     "identifier": "my_catalog",
                 },
                 "title": "Test Dataset",
-                "identifier": "TEST_DATASET",
+                "identifier": "Test_Dataset",
                 "category": ["category"],
                 "shortAbstract": "short abstract",
                 "description": "description",
@@ -976,7 +976,7 @@ def test_dataset_class_from_catalog_empty_product_datasets(
                 "isConfidential": False,
                 "isHighlyConfidential": False,
                 "isActive": False,
-                "@id": "TEST_DATASET/",
+                "@id": "Test_Dataset/",
             },
         ],
     }
@@ -988,20 +988,20 @@ def test_dataset_class_from_catalog_empty_product_datasets(
     requests_mock.get(url2, json=empty_data)
 
     # This should work without raising an exception and product should be None
-    my_dataset = Dataset(identifier="TEST_DATASET").from_catalog(client=fusion_obj, catalog=catalog)
+    my_dataset = Dataset(identifier="Test_Dataset").from_catalog(client=fusion_obj, catalog=catalog)
     assert isinstance(my_dataset, Dataset)
     assert my_dataset.title == "Test Dataset"
-    assert my_dataset.identifier == "TEST_DATASET"
+    assert my_dataset.identifier == "Test_Dataset"
     assert my_dataset.product is None
 
 
 def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test create Dataset method."""
     catalog = "my_catalog"
-    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/TEST_DATASET"
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/Test_Dataset"
     expected_data = {
         "title": "Test Dataset",
-        "identifier": "TEST_DATASET",
+        "identifier": "Test_Dataset",
         "category": ["category"],
         "shortAbstract": "short abstract",
         "description": "description",
@@ -1040,7 +1040,7 @@ def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_ob
 
     dataset_dict = {
         "title": "Test Dataset",
-        "identifier": "TEST_DATASET",
+        "identifier": "Test_Dataset",
         "category": ["category"],
         "shortAbstract": "short abstract",
         "description": "description",
@@ -1085,11 +1085,11 @@ def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_ob
 def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test update Dataset method."""
     catalog = "my_catalog"
-    dataset = "TEST_DATASET"
+    dataset = "Test_Dataset"
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
     expected_data = {
         "title": "Test Dataset",
-        "identifier": "TEST_DATASET",
+        "identifier": "Test_Dataset",
         "category": ["category"],
         "shortAbstract": "short abstract",
         "description": "description",
@@ -1128,7 +1128,7 @@ def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
 
     dataset_dict = {
         "title": "Test Dataset",
-        "identifier": "TEST_DATASET",
+        "identifier": "Test_Dataset",
         "category": ["category"],
         "shortAbstract": "short abstract",
         "description": "description",
@@ -1173,7 +1173,7 @@ def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
 def test_delete_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test delete Dataset method."""
     catalog = "my_catalog"
-    dataset = "TEST_DATASET"
+    dataset = "Test_Dataset"
     url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
     requests_mock.delete(url)
 
@@ -1198,7 +1198,7 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
                     "identifier": "my_catalog",
                 },
                 "title": "Test Dataset",
-                "identifier": "TEST_DATASET",
+                "identifier": "Test_Dataset",
                 "category": ["category"],
                 "shortAbstract": "short abstract",
                 "description": "description",
@@ -1232,7 +1232,7 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
                 "isConfidential": False,
                 "isHighlyConfidential": False,
                 "isActive": False,
-                "@id": "TEST_DATASET/",
+                "@id": "Test_Dataset/",
             },
         ],
     }
@@ -1241,16 +1241,16 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
     url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
     expected_data2 = {
         "resources": [
-            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
-            {"product": "TEST_PRODUCT2", "dataset": "TEST_DATASET2"},
+            {"product": "TEST_PRODUCT", "dataset": "Test_Dataset"},
+            {"product": "TEST_PRODUCT2", "dataset": "Test_Dataset2"},
         ]
     }
     requests_mock.get(url2, json=expected_data2)
     catalog_new = "catalog_new"
-    url3 = f"{fusion_obj.root_url}catalogs/{catalog_new}/datasets/TEST_DATASET"
+    url3 = f"{fusion_obj.root_url}catalogs/{catalog_new}/datasets/Test_Dataset"
     expected_data3 = {
         "title": "Test Dataset",
-        "identifier": "TEST_DATASET",
+        "identifier": "Test_Dataset",
         "category": ["category"],
         "shortAbstract": "short abstract",
         "description": "description",
@@ -1286,7 +1286,7 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
         "isActive": False,
     }
     requests_mock.post(url3, json=expected_data3)
-    resp = Dataset(identifier="TEST_DATASET").copy(
+    resp = Dataset(identifier="Test_Dataset").copy(
         client=fusion_obj, catalog_from=catalog, catalog_to=catalog_new, return_resp_obj=True
     )
     status_code = 200
@@ -1297,7 +1297,7 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
 def test_dataset_case_switching() -> None:
     """Test dataset class case switching."""
     my_dataset = Dataset(
-        identifier="TEST_DATASET",
+        identifier="Test_Dataset",
         title="Test Dataset",
         category="Test",
         product="TEST_PRODUCT",
@@ -1325,7 +1325,7 @@ def test_dataset_case_switching() -> None:
     camel_case_dict = my_dataset.to_dict()
 
     assert camel_case_dict == {
-        "identifier": "TEST_DATASET",
+        "identifier": "Test_Dataset",
         "title": "Test Dataset",
         "category": ["Test"],
         "description": "Test Dataset",
@@ -1364,7 +1364,7 @@ def test_dataset_case_switching() -> None:
         "applicationId": None,
     }
 
-    dataset_from_camel_dict = Dataset("TEST_DATASET").from_object(camel_case_dict)
+    dataset_from_camel_dict = Dataset("Test_Dataset").from_object(camel_case_dict)
 
     assert dataset_from_camel_dict == my_dataset
 
@@ -1393,7 +1393,7 @@ def test_dataset_case_switching() -> None:
 def test_activate_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     """Test activate Dataset method."""
     catalog = "my_catalog"
-    dataset = "TEST_DATASET"
+    dataset = "Test_Dataset"
     url_get = f"{fusion_obj.root_url}catalogs/{catalog}/datasets"
     url_put = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
     url2 = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
@@ -1408,7 +1408,7 @@ def test_activate_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
                     "identifier": "my_catalog",
                 },
                 "title": "Test Dataset",
-                "identifier": "TEST_DATASET",
+                "identifier": "Test_Dataset",
                 "category": ["category"],
                 "shortAbstract": "short abstract",
                 "description": "description",
@@ -1442,14 +1442,14 @@ def test_activate_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
                 "isConfidential": False,
                 "isHighlyConfidential": False,
                 "isActive": False,
-                "@id": "TEST_DATASET/",
+                "@id": "Test_Dataset/",
             },
         ],
     }
 
     expected_data2 = {
         "resources": [
-            {"product": "TEST_PRODUCT", "dataset": "TEST_DATASET"},
+            {"product": "TEST_PRODUCT", "dataset": "Test_Dataset"},
         ]
     }
     expected_data_put = expected_data_get["resources"][0]
@@ -1475,7 +1475,7 @@ def test_add_to_product(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
     """Test add_to_product method."""
     catalog = "my_catalog"
     product = "TEST_PRODUCT"
-    dataset = "TEST_DATASET"
+    dataset = "Test_Dataset"
     url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets"
 
     expected_data = {
@@ -1508,7 +1508,7 @@ def test_dataset_getattr_existing_attribute() -> None:
     )
 
     assert test_dataset.title == "Test Dataset"
-    assert test_dataset.identifier == "TEST_DATASET"
+    assert test_dataset.identifier == "Test_Dataset"
     assert test_dataset.category == ["Test"]
     assert test_dataset.product == ["TEST_PRODUCT"]
 
@@ -1530,7 +1530,7 @@ def test_remove_from_product(requests_mock: requests_mock.Mocker, fusion_obj: Fu
     """Test remove_from_product method."""
     catalog = "my_catalog"
     product = "TEST_PRODUCT"
-    dataset = "TEST_DATASET"
+    dataset = "Test_Dataset"
     url = f"{fusion_obj.root_url}catalogs/{catalog}/productDatasets/{product}/{dataset}"
 
     requests_mock.delete(url)
