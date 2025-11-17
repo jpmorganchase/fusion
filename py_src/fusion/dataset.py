@@ -129,7 +129,7 @@ class Dataset(metaclass=CamelCaseMeta):
 
     def __post_init__(self: Dataset) -> None:
         """Format Dataset metadata fields after object initialization."""
-        self.identifier = tidy_string(self.identifier).upper().replace(" ", "_")
+        self.identifier = tidy_string(self.identifier).replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description != "" else self.title
         self.category = (
@@ -309,7 +309,7 @@ class Dataset(metaclass=CamelCaseMeta):
 
         if "tag" in data:
             data["tags"] = data.pop("tag")
-            
+
         data = {camel_to_snake(k): v for k, v in data.items()}
         data = {k: v for k, v in data.items() if k in keys}
         if "type" in data:

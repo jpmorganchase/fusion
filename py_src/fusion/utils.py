@@ -651,7 +651,8 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
 
 
 def get_session(
-    credentials: FusionCredentials, root_url: str,
+    credentials: FusionCredentials,
+    root_url: str,
     get_retries: int | Retry | None = None,
     headers: dict[str, str] | None = None,
 ) -> requests.Session:

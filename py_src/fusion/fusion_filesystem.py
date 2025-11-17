@@ -1,4 +1,5 @@
 """Fusion FileSystem."""
+
 from __future__ import annotations
 
 import asyncio
@@ -454,7 +455,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 break
             headers["x-jpmc-next-token"] = next_token
             kw["headers"] = headers
-        
+
         if is_json:
             return json.dumps(all_data, separators=(",", ":")).encode("utf-8")
         else:
@@ -730,9 +731,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 return r.headers
 
         try:
-            headers = sync(self.loop, get_headers)            
+            headers = sync(self.loop, get_headers)
             if not overwrite and lfs.exists(lpath):
-                 return True, lpath, None
+                return True, lpath, None
         except Exception as ex:  # noqa: BLE001
             headers = {}
             logger.info(f"Failed to get headers for {rpath}", exc_info=ex)
@@ -796,9 +797,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     @staticmethod
     def _update_kwargs(
-        kw: dict[str, Any],
-        headers: dict[str, str],
-        additional_headers: dict[str, str] | None
+        kw: dict[str, Any], headers: dict[str, str], additional_headers: dict[str, str] | None
     ) -> dict[str, Any]:
         if "File-Name" in headers:  # noqa: PLR0915
             kw.setdefault("headers", {})
@@ -895,7 +894,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         dt_created: str,
         chunk_size: int = 5 * 2**20,
         multipart: bool = False,
-        file_name: str | None = None
+        file_name: str | None = None,
     ) -> tuple[dict[str, str], list[dict[str, str]]]:
         headers = {
             "Content-Type": "application/octet-stream",

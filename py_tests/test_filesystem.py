@@ -491,12 +491,12 @@ def test_download(  # noqa: PLR0913
 
     # Act
     result = fs.download(
-    lfs=lfs,
-    rpath=rpath,
-    lpath=lpath,
-    chunk_size=chunk_size,
-    overwrite=overwrite,
-    preserve_original_name=preserve_original_name,
+        lfs=lfs,
+        rpath=rpath,
+        lpath=lpath,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        preserve_original_name=preserve_original_name,
     )
 
     # Assert
@@ -512,6 +512,7 @@ def test_download(  # noqa: PLR0913
             headers={"Content-Length": "100", "x-jpmc-file-name": "original_file.txt"},
             is_local_fs=False,
         )
+
 
 @patch.object(FusionHTTPFileSystem, "get", return_value=("mocked_return", "mocked_lpath", "mocked_extra"))
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)
