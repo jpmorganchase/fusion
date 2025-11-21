@@ -1,11 +1,16 @@
 """Test for embeddings_utils.py module."""
 
+import json
+
 import pytest
 
 from fusion.embeddings_utils import (
     _modify_post_haystack,
     _modify_post_response_langchain,
     _retrieve_index_name_from_bulk_body,
+    extract_index_name_from_url,
+    is_index_creation_request,
+    transform_index_creation_body,
 )
 
 
@@ -179,3 +184,136 @@ def test_modify_post_response_langchain_no_hits() -> None:
 
     # The function should skip the if-block and return raw_data unchanged
     assert result == raw_data
+
+
+# test constants for utility  function tests
+
+DEFAULT_SHARDS = 2
+DEFAULT_DIMENSION = 1536
+TEST_DIMENSION_768 = 768
+TEST_DIMENSION_512 = 512
+TEST_DIMENSION_384 = 384
+
+
+def test_extract_index_name_from_url() -> None:
+    """Test extract_index_name_from_url function"""
+    assert extract_index_name_from_url("/indexes/my_index") == "my_index"
+    assert extract_index_name_from_url("/indexes/my_index/documents") == "my_index"
+    assert extract_index_name_from_url("/dataspaces/common/datasets/kb/indexes/test_index") == "test_index"
+
+    assert extract_index_name_from_url("/some/other/path") is None
+    assert extract_index_name_from_url("/indexes/") is None
+
+
+def test_is_index_creation_request() -> None:
+    """Test is_index_creation_request function."""
+
+    body = b'{"settings": {}, "mappings": {}}'
+
+    assert (
+        is_index_creation_request("https://example.com/dataspaces/catalog/datasets/kb/indexes/test_index", "post", body)
+        is True
+    )
+
+    assert (
+        is_index_creation_request(
+            "https://example.com/dataspaces/catalog/datasets/kb/indexes/test_index/embeddings", "post", body
+        )
+        is False
+    )
+
+    assert (
+        is_index_creation_request(
+            "https://example.com/dataspaces/catalog/datasets/kb/indexes/test_index/search", "post", body
+        )
+        is False
+    )
+
+    assert (
+        is_index_creation_request("https://example.com/dataspaces/catalog/datasets/kb/indexes/test_index", "get", body)
+        is False
+    )
+
+    assert (
+        is_index_creation_request("https://example.com/dataspaces/catalog/datasets/kb/indexes/test_index", "post", None)
+        is False
+    )
+
+    assert (
+        is_index_creation_request("https://example.com/dataspaces/catalog/datasets/kb/some/other/path", "post", body)
+        is False
+    )
+
+
+def test_transform_index_creation_body() -> None:
+    """Test transform_index_creation_body function"""
+    opensearch_body = {
+        "settings": {
+            "index": {
+                "number_of_shards": 3,
+                "number_of_replicas": 1,
+            }
+        },
+        "mappings": {
+            "properties": {
+                "my_vector_field": {
+                    "type": "knn_vector",
+                    "dimension": TEST_DIMENSION_384,
+                    "method": {"name": "hnsw", "space_type": "l2"},
+                },
+                "text": {"type": "text", "analyzer": "standard"},
+            }
+        },
+    }
+
+    body_bytes = json.dumps(opensearch_body).encode("utf-8")
+    transformed_bytes = transform_index_creation_body(body_bytes)
+    transformed_body = json.loads(transformed_bytes.decode("utf-8"))
+
+    expected_body = {
+        "settings": {
+            "index": {
+                "number_of_shards": 3,
+                "number_of_replicas": 1,
+            }
+        },
+        "mappings": {
+            "properties": {
+                "my_vector_field": {
+                    "type": "knn_vector",
+                    "dimension": TEST_DIMENSION_384,
+                },
+                "text": {"type": "text", "analyzer": "standard"},
+            }
+        },
+    }
+
+    assert transformed_body == expected_body
+
+
+def test_transform_index_creation_body_no_method_param() -> None:
+    """Test transform_index_creation_body with no 'method' parameter"""
+
+    clean_body = {
+        "settings": {
+            "index": {
+                "number_of_shards": 3,
+                "number_of_replicas": 1,
+            }
+        },
+        "mappings": {
+            "properties": {
+                "my_vector_field": {
+                    "type": "knn_vector",
+                    "dimension": TEST_DIMENSION_384,
+                },
+                "text": {"type": "text", "analyzer": "standard"},
+            }
+        },
+    }
+
+    body_bytes = json.dumps(clean_body).encode("utf-8")
+    transformed_bytes = transform_index_creation_body(body_bytes)
+    transformed_body = json.loads(transformed_bytes.decode("utf-8"))
+
+    assert transformed_body == clean_body
