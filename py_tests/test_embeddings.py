@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import ssl
 from typing import Any, Literal
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -1533,3 +1534,87 @@ async def test_close_method(mock_session_class: AsyncMock) -> None:
 
     # Assert that the session is set to None
     assert conn.session is None
+
+
+HTTP_OK = 200
+
+
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_perform_request_cluster_info(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None: # noqa: ARG001
+    """Test cluster info endpoint handling."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()  # noqa: F841
+    conn = FusionEmbeddingsConnection(host="localhost", credentials="dummy.json")
+
+    status, header, response = conn.perform_request("GET", url="/")
+    assert status == HTTP_OK
+    response_data = json.loads(response)
+    assert "version" in response_data
+    assert response_data["version"]["number"] == "2.11.0"
+
+    status, header, response = conn.perform_request("GET", url="")
+    assert status == HTTP_OK
+    response_data = json.loads(response)
+    assert "version" in response_data
+
+
+@pytest.mark.asyncio
+@patch("fusion.embeddings.FusionCredentials.from_file")
+async def test_async_perform_request_cluster_info(mock_from_file: MagicMock) -> None:
+    """Test cluster info endpoint handling."""
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+
+    conn = FusionAsyncHttpConnection(host="localhost", credentials="dummy.json")
+
+    status, header, response = await conn.perform_request("GET", url="/")
+    assert status == HTTP_OK
+    response_data = json.loads(response)
+    assert "version" in response_data
+    assert response_data["version"]["number"] == "2.11.0"
+
+
+@pytest.mark.parametrize(
+    ("url", "expected_transformed"),
+    [
+        ("/test_index", True),
+        ("/test_index/embeddings", False),
+        ("/test_index/search", False),
+        ("some/other/path", False),
+    ],
+)
+@patch("fusion.embeddings.get_session")
+@patch("fusion.embeddings.FusionCredentials.from_file")
+def test_index_creation_detection(
+    mock_from_file: MagicMock, mock_get_session: MagicMock, url: str, expected_transformed: bool
+) -> None:
+    """test the index creation is correctly detected"""
+
+    mock_credentials = MagicMock(spec=FusionCredentials)
+    mock_from_file.return_value = mock_credentials
+    mock_session = MagicMock()
+    mock_response = MagicMock(status_code=HTTP_OK, content=b"OK")
+    mock_response.headers = {}
+    mock_response.request.path_url = "/test"
+    mock_session.send.return_value = mock_response
+    mock_session.prepare_request.return_value.url = "http://test.com"
+    mock_session.merge_environment_settings.return_value = {}
+    mock_get_session.return_value = mock_session
+
+    conn = FusionEmbeddingsConnection(
+        host="localhost", credentials="dummy.json", catalog="test_catalog", knowledge_base="test_kb"
+    )
+
+    opensearch_body: dict[str, Any] = {"settings": {}, "mappings": {}}
+    body_bytes = json.dumps(opensearch_body).encode("utf-8")
+
+    with patch("fusion.embeddings.transform_index_creation_body") as mock_transform:
+        mock_transform.return_value = body_bytes
+        conn.perform_request("POST", url=url, body=body_bytes)
+
+        if expected_transformed:
+            mock_transform.assert_called()
+        else:
+            mock_transform.assert_not_called()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -157,3 +158,86 @@ def _modify_post_haystack(knowledge_base: str | list[str] | None, body: bytes | 
             except json.JSONDecodeError as e:
                 logger.exception(f"An error occurred during modification of haystack POST body: {e}")
     return body
+
+
+def extract_index_name_from_url(url: str) -> str | None:
+    """Extract index name from url.
+
+
+    Args:
+        url (str): The URL to extract index name from.
+
+    Returns:
+        str | None: The extracted index name, or None if not found
+    """
+    index_name_match = re.search(r"/indexes/([^/]+)", url)
+    if index_name_match:
+        return index_name_match.group(1)
+    return None
+
+
+def is_index_creation_request(url: str, method: str, body: bytes | None) -> bool:
+    """Check if request is index creation request.
+
+    Args:
+        url (str): The request URL
+        method (str): http method
+        body (bytes | None): request body
+
+    Returns:
+        bool: True if request is index creation request
+    """
+
+    if not (body and method.lower() == "post" and "indexes/" in url):
+        return False
+
+    index_pos = url.find("indexes/")
+
+    if index_pos == -1:
+        return False
+
+    path_after_indexes = url[index_pos + len("indexes/") :]
+
+    path_segments = path_after_indexes.strip("/").split("/")
+
+    return len(path_segments) == 1 and path_segments[0] not in ["embeddings", "search", ""]
+
+
+def transform_index_creation_body(body: bytes) -> bytes:
+    """Transform index creation body by filtering out unsupported parameters.
+
+    This function performs minimal transformation - it only removes the 'method'
+    parameter from vector fields as the Fusion Embeddings Service does not support
+    this parameter currently. Everything else is preserved as the user specified.
+
+    Args:
+        body (bytes): _description_
+
+    Returns:
+        bytes: _description_
+    """
+    try:
+        body_dict = json.loads(body.decode("utf-8"))
+
+        if "mappings" in body_dict and "properties" in body_dict["mappings"]:
+            properties = body_dict["mappings"]["properties"]
+
+            for field_name, field_config in properties.items():
+                if isinstance(field_config, dict):
+                    field_type = field_config.get("type", "")
+
+                    if (
+                        any(vector_type in field_type.lower() for vector_type in ["vector", "knn"])
+                        and "method" in field_config
+                    ):
+                        logger.debug(f"Removing unsupported 'method' parameter from vector field '{field_name}'")
+                        field_config.pop("method")
+
+        logger.debug("Filtered unsupported parameters from index creation body")
+        logger.debug("Original: %s", json.dumps(json.loads(body.decode("utf-8")), indent=2))
+        logger.debug("Filtered:  %s", json.dumps(body_dict, indent=2))
+
+        return json.dumps(body_dict).encode("utf-8")
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        logger.warning("Failed to filter index creation body: %s", e)
+        return body

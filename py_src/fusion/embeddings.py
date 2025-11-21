@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import ssl
 import time
@@ -33,6 +34,8 @@ from fusion.embeddings_utils import (
     _modify_post_haystack,
     _modify_post_response_langchain,
     _retrieve_index_name_from_bulk_body,
+    is_index_creation_request,
+    transform_index_creation_body,
 )
 from fusion.utils import get_client, get_session
 
@@ -211,7 +214,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
 
         return url
 
-    def perform_request(  # noqa: PLR0913
+    def perform_request(  # noqa: PLR0913, PLR0915
         self,
         method: str,
         url: str,
@@ -228,6 +231,13 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         url = self._tidy_url(url)
         url = self._make_url_valid(url, body)
 
+        # handle  cluster info endpoint for OpenSearch client compatibility
+        if method.lower() == "get" and (url.endswith("/") or url == self.base_url.rstrip("/")):
+            # Return mock OpenSearch info response for client compatibility
+            mock_info_response = {"version": {"number": "2.11.0"}}
+            logger.warning("Returning mock OpenSearch info response for client compatibility")
+            return 200, {}, json.dumps(mock_info_response)
+
         # _refresh endpoint not supported
         if "_refresh" in url:
             return 200, {}, ""
@@ -240,6 +250,10 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             return 200, {}, ""
 
         headers = headers or {}
+
+        if is_index_creation_request(url, method, body):
+            logger.debug("Transforming index creation body to match API expectations")
+            body = transform_index_creation_body(body) if body else body
 
         body = _modify_post_haystack(self.knowledge_base, body, method)
 
@@ -537,7 +551,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
 
         return url
 
-    async def perform_request(  # noqa: PLR0912
+    async def perform_request(  # noqa: PLR0912, PLR0915
         self,
         method: str,
         url: str,
@@ -557,6 +571,13 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         url = self._tidy_url(url)
         url = self._make_url_valid(url, body)
 
+        # handle  cluster info endpoint for OpenSearch client compatibility
+        if method.lower() == "get" and (url.endswith("/") or url == self.base_url.rstrip("/")):
+            # Return mock OpenSearch info response for client compatibility
+            mock_info_response = {"version": {"number": "2.11.0"}}
+            logger.warning("Returning mock OpenSearch info response for client compatibility")
+            return 200, {}, json.dumps(mock_info_response)
+
         # _refresh endpoint not supported
         if "_refresh" in url:
             return 200, {}, ""
@@ -568,6 +589,11 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             and "query" not in body.decode("utf-8")
         ):
             return 200, {}, ""
+
+        if is_index_creation_request(url, method, body):
+            logger.debug("Transforming index creation body to match API expectations")
+
+            body = transform_index_creation_body(body) if body else body
 
         body = _modify_post_haystack(knowledge_base=self.knowledge_base, body=body, method=method)
         orig_body = body
