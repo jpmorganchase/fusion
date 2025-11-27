@@ -1,6 +1,7 @@
 """Fusion authentication module."""
 
 import logging
+import warnings
 from typing import Any, Optional, Union
 from urllib.parse import urlparse
 
@@ -141,6 +142,9 @@ class FusionOAuthAdapter(HTTPAdapter):
                 status_code=status_code,
             ) from e
         return response
+
+
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="fusion.authentication")
 
 
 class FusionAiohttpSession(aiohttp.ClientSession):
