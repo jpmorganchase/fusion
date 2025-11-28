@@ -47,7 +47,6 @@ def test_dataset_class() -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -95,7 +94,6 @@ def test_dataset_class_application_id() -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -144,7 +142,6 @@ def test_dataset_class_application_id_dict() -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -205,7 +202,6 @@ def test_dataset_class_from_series() -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -255,7 +251,6 @@ def test_dataset_class_from_dict() -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -298,7 +293,6 @@ def test_dataset_class_from_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -346,7 +340,6 @@ def test_dataset_class_from_object_dataset() -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -396,7 +389,6 @@ def test_dataset_class_from_object_dict() -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -447,7 +439,6 @@ def test_dataset_class_from_object_dict_app_id_dict() -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -499,7 +490,6 @@ def test_dataset_class_from_object_json() -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -542,7 +532,6 @@ def test_dataset_class_from_object_csv(mock_dataset_pd_read_csv: Generator[pd.Da
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -593,7 +582,6 @@ def test_dataset_class_from_object_series() -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -652,7 +640,6 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
                 "type": "Source",
                 "containerType": "Snapshot-Full",
                 "snowflake": "snowflake",
-                "complexity": "complexity",
                 "isImmutable": False,
                 "isMnpi": False,
                 "isPii": False,
@@ -704,7 +691,6 @@ def test_dataset_class_from_catalog(requests_mock: requests_mock.Mocker, fusion_
     assert my_dataset.type_ == "Source"
     assert my_dataset.container_type == "Snapshot-Full"
     assert my_dataset.snowflake == "snowflake"
-    assert my_dataset.complexity == "complexity"
     assert my_dataset.is_immutable is False
     assert my_dataset.is_mnpi is False
     assert my_dataset.is_pii is False
@@ -756,7 +742,6 @@ def test_dataset_class_from_catalog_client_implied(requests_mock: requests_mock.
                 "type": "Source",
                 "containerType": "Snapshot-Full",
                 "snowflake": "snowflake",
-                "complexity": "complexity",
                 "isImmutable": False,
                 "isMnpi": False,
                 "isPii": False,
@@ -809,7 +794,6 @@ def test_dataset_class_from_catalog_client_implied(requests_mock: requests_mock.
     assert my_dataset.type_ == "Source"
     assert my_dataset.container_type == "Snapshot-Full"
     assert my_dataset.snowflake == "snowflake"
-    assert my_dataset.complexity == "complexity"
     assert my_dataset.is_immutable is False
     assert my_dataset.is_mnpi is False
     assert my_dataset.is_pii is False
@@ -861,7 +845,6 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
                 "type": "Source",
                 "containerType": "Snapshot-Full",
                 "snowflake": "snowflake",
-                "complexity": "complexity",
                 "isImmutable": False,
                 "isMnpi": False,
                 "isPii": False,
@@ -912,7 +895,6 @@ def test_dataset_class_from_catalog_no_product(requests_mock: requests_mock.Mock
     assert my_dataset.type_ == "Source"
     assert my_dataset.container_type == "Snapshot-Full"
     assert my_dataset.snowflake == "snowflake"
-    assert my_dataset.complexity == "complexity"
     assert my_dataset.is_immutable is False
     assert my_dataset.is_mnpi is False
     assert my_dataset.is_pii is False
@@ -965,7 +947,6 @@ def test_dataset_class_from_catalog_empty_product_datasets(
                 "type": "Source",
                 "containerType": "Snapshot-Full",
                 "snowflake": "snowflake",
-                "complexity": "complexity",
                 "isImmutable": False,
                 "isMnpi": False,
                 "isPii": False,
@@ -1024,7 +1005,6 @@ def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_ob
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
@@ -1063,7 +1043,6 @@ def test_create_dataset_from_dict(requests_mock: requests_mock.Mocker, fusion_ob
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
@@ -1112,7 +1091,6 @@ def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
@@ -1151,7 +1129,6 @@ def test_update_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion)
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
@@ -1221,7 +1198,6 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
                 "type": "Source",
                 "containerType": "Snapshot-Full",
                 "snowflake": "snowflake",
-                "complexity": "complexity",
                 "isImmutable": False,
                 "isMnpi": False,
                 "isPii": False,
@@ -1273,7 +1249,6 @@ def test_copy_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
@@ -1349,7 +1324,6 @@ def test_dataset_case_switching() -> None:
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": None,
         "isImmutable": None,
         "isMnpi": None,
         "isPci": None,
@@ -1431,7 +1405,6 @@ def test_activate_dataset(requests_mock: requests_mock.Mocker, fusion_obj: Fusio
                 "type": "Source",
                 "containerType": "Snapshot-Full",
                 "snowflake": "snowflake",
-                "complexity": "complexity",
                 "isImmutable": False,
                 "isMnpi": False,
                 "isPii": False,

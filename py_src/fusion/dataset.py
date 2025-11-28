@@ -58,7 +58,6 @@ class Dataset(metaclass=CamelCaseMeta):
         type_ (str | None, optional): Dataset type. Defaults to "Source".
         container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
         snowflake (str | None, optional): Snowflake account connection. Defaults to None.
-        complexity (str | None, optional): Complexity. Defaults to None.
         is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
         is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
         is_pci (bool | None, optional): is_pci. Defaults to None.
@@ -101,7 +100,6 @@ class Dataset(metaclass=CamelCaseMeta):
     type_: str | None = "Source"
     container_type: str | None = "Snapshot-Full"
     snowflake: str | None = None
-    complexity: str | None = None
     is_immutable: bool | None = None
     is_mnpi: bool | None = None
     is_pci: bool | None = None
@@ -277,7 +275,6 @@ class Dataset(metaclass=CamelCaseMeta):
             created_date=series.get("createddate", None),
             modified_date=series.get("modifieddate", None),
             snowflake=series.get("snowflake", None),
-            complexity=series.get("complexity", None),
             owners=series.get("owners", None),
             application_id=series.get("applicationid", None),
             is_immutable=is_immutable,
