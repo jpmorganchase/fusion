@@ -1599,7 +1599,6 @@ def test_download_no_access(requests_mock: requests_mock.Mocker, fusion_obj: Fus
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
@@ -1660,7 +1659,6 @@ def test_download_format_not_available(requests_mock: requests_mock.Mocker, fusi
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
@@ -1783,7 +1781,6 @@ def test_download_multiple_format_error(requests_mock: requests_mock.Mocker, fus
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
@@ -2078,7 +2075,6 @@ def test_download_no_distributions_available(requests_mock: requests_mock.Mocker
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
@@ -2514,7 +2510,6 @@ def test_fusion_dataset(fusion_obj: Fusion) -> None:
     assert test_dataset.type_ == "Source"
     assert test_dataset.container_type == "Snapshot-Full"
     assert test_dataset.snowflake is None
-    assert test_dataset.complexity is None
     assert test_dataset.is_immutable is None
     assert test_dataset.is_mnpi is None
     assert test_dataset.is_pii is None
@@ -2683,7 +2678,6 @@ def test_fusion_create_dataset_dict(requests_mock: requests_mock.Mocker, fusion_
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
@@ -2722,7 +2716,6 @@ def test_fusion_create_dataset_dict(requests_mock: requests_mock.Mocker, fusion_
         "type": "Source",
         "containerType": "Snapshot-Full",
         "snowflake": "snowflake",
-        "complexity": "complexity",
         "isImmutable": False,
         "isMnpi": False,
         "isPii": False,
