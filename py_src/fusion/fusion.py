@@ -2316,7 +2316,6 @@ class Fusion:
         type_: str | None = "Source",
         container_type: str | None = "Snapshot-Full",
         snowflake: str | None = None,
-        complexity: str | None = None,
         is_immutable: bool | None = None,
         is_mnpi: bool | None = None,
         is_pci: bool | None = None,
@@ -2359,7 +2358,6 @@ class Fusion:
             type_ (str | None, optional): Dataset type. Defaults to "Source".
             container_type (str | None, optional): Container type. Defaults to "Snapshot-Full".
             snowflake (str | None, optional): Snowflake account connection. Defaults to None.
-            complexity (str | None, optional): Complexity. Defaults to None.
             is_immutable (bool | None, optional): Flag for immutable datasets. Defaults to None.
             is_mnpi (bool | None, optional): is_mnpi. Defaults to None.
             is_pci (bool | None, optional): is_pci. Defaults to None.
@@ -2410,7 +2408,6 @@ class Fusion:
             type_=type_,
             container_type=container_type,
             snowflake=snowflake,
-            complexity=complexity,
             is_immutable=is_immutable,
             is_mnpi=is_mnpi,
             is_pci=is_pci,
