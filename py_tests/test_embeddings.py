@@ -1541,7 +1541,7 @@ HTTP_OK = 200
 
 @patch("fusion.embeddings.get_session")
 @patch("fusion.embeddings.FusionCredentials.from_file")
-def test_perform_request_cluster_info(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None: # noqa: ARG001
+def test_perform_request_cluster_info(mock_from_file: MagicMock, mock_get_session: MagicMock) -> None:  # noqa: ARG001
     """Test cluster info endpoint handling."""
     mock_credentials = MagicMock(spec=FusionCredentials)
     mock_from_file.return_value = mock_credentials
