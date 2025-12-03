@@ -1,0 +1,284 @@
+# Performance Testing Configuration
+# ===================================
+# Configure test scenarios, thresholds, and parameters
+
+[general]
+# Default catalog for testing
+default_catalog = "common"
+
+# Test data directory
+test_data_dir = "./perf_test_data"
+
+# Output directory for reports
+report_dir = "./perf_reports"
+
+# Enable detailed logging
+verbose = true
+
+# Number of warmup iterations before actual measurement
+warmup_iterations = 2
+
+
+[sla_thresholds]
+# Success rate thresholds (percentage)
+metadata_success_rate = 99.0
+download_success_rate = 95.0
+upload_success_rate = 95.0
+lineage_success_rate = 99.0
+
+# Latency thresholds (milliseconds)
+metadata_p95_latency = 3000
+small_download_p95_latency = 10000
+large_download_p95_latency = 120000
+small_upload_p95_latency = 15000
+large_upload_p95_latency = 180000
+lineage_p95_latency = 5000
+
+# Throughput thresholds
+metadata_throughput = 10.0  # ops/sec
+small_download_throughput = 5.0  # MB/sec
+large_download_throughput = 10.0  # MB/sec
+small_upload_throughput = 3.0  # MB/sec
+large_upload_throughput = 5.0  # MB/sec
+
+
+[test_datasets]
+# Dataset IDs for testing (replace with actual values)
+small_dataset = "PERF_TEST_SMALL"
+medium_dataset = "PERF_TEST_MEDIUM"
+large_dataset = "PERF_TEST_LARGE"
+timeseries_dataset = "PERF_TEST_TIMESERIES"
+
+
+[file_sizes]
+# File size definitions (MB)
+small_file = 2
+medium_file = 50
+large_file = 500
+xlarge_file = 1024
+
+
+[concurrency]
+# Concurrency levels for different scenarios
+light_workers = 2
+medium_workers = 10
+heavy_workers = 20
+stress_workers = 50
+burst_workers = 100
+
+
+[scenarios.catalog_operations]
+list_catalogs_light_iterations = 5
+list_catalogs_concurrent_requests = 50
+catalog_resources_iterations = 10
+catalog_resources_concurrent = 30
+
+
+[scenarios.dataset_operations]
+list_datasets_light_max_results = 10
+list_datasets_medium_max_results = 100
+list_datasets_heavy_max_results = -1  # All results
+
+dataset_resources_iterations = 20
+dataset_resources_concurrent = 100
+
+list_attributes_iterations = 20
+list_attributes_concurrent = 50
+
+list_members_light_max = 10
+list_members_heavy_max = -1
+
+
+[scenarios.download_operations]
+# Download scenario parameters
+download_light_iterations = 5
+download_concurrent_users = 20
+download_parallel_configs = [1, 2, 4, 8, 16]
+
+# to_df parameters
+to_df_iterations = 5
+to_df_row_counts = [1000, 10000, 100000, 1000000]
+
+# to_bytes parameters
+to_bytes_iterations = 10
+to_bytes_concurrent = 30
+
+
+[scenarios.upload_operations]
+# Upload scenario parameters
+upload_light_iterations = 5
+upload_multipart_chunk_sizes = [5242880, 10485760, 20971520]  # 5MB, 10MB, 20MB
+upload_parallel_configs = [1, 2, 4, 8]
+
+# from_bytes parameters
+from_bytes_iterations = 10
+from_bytes_sizes = [1, 10, 50, 100]  # MB
+
+
+[scenarios.metadata_operations]
+list_products_iterations = 20
+list_products_concurrent = 75
+
+list_attributes_catalog_iterations = 15
+
+crud_single_iterations = 5
+crud_batch_sizes = [10, 50, 100]
+
+
+[scenarios.lineage_operations]
+dataset_lineage_iterations = 10
+attribute_lineage_count = 20
+lineage_concurrent = 50
+
+create_lineage_batch_sizes = [1, 5, 10, 50]
+
+
+[scenarios.stress_tests]
+# Sustained load test
+sustained_load_duration = 300  # seconds (5 minutes)
+sustained_load_delay = 0.5  # seconds between operations
+
+# Burst traffic test
+burst_concurrent_requests = 100
+burst_max_workers = 100
+
+# Long-running test
+long_test_duration = 3600  # 1 hour
+long_test_operations_per_minute = 60
+
+
+[scenarios.workflow_tests]
+# End-to-end workflow iterations
+simple_workflow_iterations = 3
+full_cycle_iterations = 2
+production_sim_datasets = 5
+
+
+[retry_policy]
+# Retry configuration for failed operations
+max_retries = 3
+retry_delay = 1.0  # seconds
+exponential_backoff = true
+backoff_multiplier = 2.0
+
+
+[timeouts]
+# Operation timeouts (seconds)
+default_timeout = 300
+download_timeout = 600
+upload_timeout = 600
+metadata_timeout = 60
+
+
+[reporting]
+# Report generation options
+generate_html_report = true
+generate_json_report = true
+generate_csv_report = true
+
+# Include in reports
+include_error_details = true
+include_latency_histogram = true
+include_throughput_charts = true
+
+# Report retention
+max_report_age_days = 30
+
+
+[alerting]
+# Alert on performance degradation
+enable_alerts = false
+alert_email = "performance-team@example.com"
+
+# Alert thresholds (percentage degradation from baseline)
+latency_degradation_threshold = 20.0
+throughput_degradation_threshold = 20.0
+success_rate_degradation_threshold = 5.0
+
+
+[baseline]
+# Baseline performance metrics for comparison
+# Update these after establishing stable performance
+
+[baseline.catalog_operations]
+list_catalogs_p95_ms = 2500
+catalog_resources_p95_ms = 2000
+
+[baseline.dataset_operations]
+list_datasets_p95_ms = 2500
+dataset_resources_p95_ms = 800
+list_attributes_p95_ms = 900
+list_members_p95_ms = 1500
+
+[baseline.download_operations]
+download_small_p95_ms = 8000
+download_large_p95_ms = 110000
+to_df_p95_ms = 7000
+to_bytes_p95_ms = 5000
+
+[baseline.upload_operations]
+upload_small_p95_ms = 12000
+upload_large_p95_ms = 160000
+from_bytes_p95_ms = 8000
+
+[baseline.lineage_operations]
+dataset_lineage_p95_ms = 2500
+attribute_lineage_p95_ms = 1800
+create_lineage_p95_ms = 2000
+
+
+[environment]
+# Environment-specific configurations
+
+[environment.dev]
+base_url = "https://fusion-dev.jpmorgan.com/api/v1/"
+concurrent_request_limit = 10
+enable_debug = true
+
+[environment.staging]
+base_url = "https://fusion-staging.jpmorgan.com/api/v1/"
+concurrent_request_limit = 50
+enable_debug = false
+
+[environment.production]
+base_url = "https://fusion.jpmorgan.com/api/v1/"
+concurrent_request_limit = 100
+enable_debug = false
+
+
+[test_data_generation]
+# Parameters for generating test data
+
+[test_data_generation.csv]
+row_counts = [1000, 10000, 100000, 1000000]
+column_counts = [10, 50, 100]
+
+[test_data_generation.parquet]
+row_counts = [10000, 100000, 1000000, 10000000]
+column_counts = [20, 100, 500]
+compression = "snappy"
+
+[test_data_generation.json]
+file_sizes_mb = [1, 10, 50, 100]
+nesting_depth = 3
+
+
+[profiling]
+# Enable profiling for specific operations
+enable_memory_profiling = false
+enable_cpu_profiling = false
+enable_network_profiling = true
+
+# Profile output directory
+profile_output_dir = "./profiles"
+
+
+[comparison]
+# Compare performance across versions
+enable_version_comparison = true
+baseline_version = "3.0.0"
+current_version = "3.0.2"
+
+# Regression detection
+fail_on_regression = false
+regression_threshold_pct = 15.0
