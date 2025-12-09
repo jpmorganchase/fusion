@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2025-12-09
+* The SDK now enforces checksum validation for all downloads: downloads will be blocked if a checksum is not present or if checksum validation fails.
+* Case conversion for data product, data set, and attribute identifiers has been removed; identifiers are now case-sensitive and will no longer be automatically converted to a specific case.
+
 ## [3.0.2] - 2025-10-24
 * Download bug fix for multi part file
 * User agent header fix
