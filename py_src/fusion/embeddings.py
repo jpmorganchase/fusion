@@ -138,10 +138,9 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         for key in list(self.session.headers):
             self.session.headers.pop(key)
 
-        # Mount http-adapter with custom connection-pool size. Default=10
+        # Mount https-adapter with custom connection-pool size. Default=10
         if pool_maxsize and isinstance(pool_maxsize, int):
             pool_adapter = requests.adapters.HTTPAdapter(pool_maxsize=pool_maxsize)
-            self.session.mount("http://", pool_adapter)
             self.session.mount("https://", pool_adapter)
 
         super().__init__(
