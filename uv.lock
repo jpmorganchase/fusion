@@ -3246,7 +3246,7 @@ wheels = [
 
 [[package]]
 name = "pyfusion"
-version = "4.0.1-dev0"
+version = "4.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
