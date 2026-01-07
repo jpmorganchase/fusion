@@ -93,6 +93,22 @@ RECOGNIZED_FORMATS = [
     "mkv",
     "gz",
     "xml",
+    "xltm",
+    "pptx",
+    "md",
+    "ipynb",
+    "css",
+    "jsonl",
+    "jsonld",
+    "arrow",
+    "m4a",
+    "pdb",
+    "sql",
+    "sqlite",
+    "tiff",
+    "zip",
+    "gtar",
+    "tar",
 ]
 
 re_str_1 = re.compile("(.)([A-Z][a-z]+)")
