@@ -1002,6 +1002,54 @@ class Fusion:
 
         n_par = cpu_count(n_par)
 
+        FILENAME_CLEAN_RE = re.compile(r"[^a-zA-Z0-9_\-]")  # same as Java [^a-zA-Z0-9_\\-]
+
+
+        def _clean_filename(path: str) -> str:
+                folder, base = os.path.split(path)
+                # apply regex on just the filename portion
+                new_base = FILENAME_CLEAN_RE.sub("_", base)  # replace bad chars with underscore
+                return os.path.join(folder, new_base)
+    
+        download_spec: list[dict[str, Any]]  = [
+            {
+                "lfs": self.fs,
+                "rpath": distribution_to_url(
+                    self.root_url,
+                    series[1],
+                    series[2],
+                    series[3],
+                    series[0],
+                    is_download=True,
+                    file_name=fname,
+                ),
+                "lpath": _clean_filename(
+                    distribution_to_filename(
+                        download_folders[i],
+                        series[1],
+                        series[2],
+                        series[3],
+                        series[0],
+                        partitioning=partitioning,
+                        file_name=fname,
+                    )
+                ),
+                "overwrite": force_download,
+                "preserve_original_name": preserve_original_name,
+            }
+            for i, series in enumerate(required_series)
+            for fname in (
+                [fid.rstrip("/") for fid in self.list_distribution_files(
+                    dataset=series[1],
+                    series=series[2],
+                    file_format=series[3],
+                    catalog=series[0],
+                )["@id"].tolist()]
+                if not file_name else
+                [file_name.rstrip("/")] if isinstance(file_name, str) else [f.rstrip("/") for f in file_name]
+            )
+        ]
+
         download_spec: list[dict[str, Any]] = [
             {
                 "lfs": self.fs,
