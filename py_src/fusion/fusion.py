@@ -6,6 +6,7 @@ import copy
 import datetime
 import json as js
 import logging
+import os
 import re
 import sys
 import warnings
@@ -1002,6 +1003,15 @@ class Fusion:
 
         n_par = cpu_count(n_par)
 
+        FILENAME_CLEAN_RE = re.compile(r"[^a-zA-Z0-9_\-]")  
+
+        def _clean_filename(path: str) -> str:
+            folder, base = os.path.split(path)
+            stem, ext = os.path.splitext(base)    # noqa: PTH122        
+            new_stem = FILENAME_CLEAN_RE.sub("_", stem) 
+            new_base = new_stem + ext                
+            return os.path.join(folder, new_base) # noqa: PTH118     
+
         download_spec: list[dict[str, Any]] = [
             {
                 "lfs": self.fs,
@@ -1014,14 +1024,16 @@ class Fusion:
                     is_download=True,
                     file_name=fname,
                 ),
-                "lpath": distribution_to_filename(
-                    download_folders[i],
-                    series[1],
-                    series[2],
-                    series[3],
-                    series[0],
-                    partitioning=partitioning,
-                    file_name=fname,
+                "lpath": _clean_filename(
+                    distribution_to_filename(
+                        download_folders[i],
+                        series[1],
+                        series[2],
+                        series[3],
+                        series[0],
+                        partitioning=partitioning,
+                        file_name=fname,
+                    )
                 ),
                 "overwrite": force_download,
                 "preserve_original_name": preserve_original_name,
