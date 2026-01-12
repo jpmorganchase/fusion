@@ -112,6 +112,8 @@ RECOGNIZED_FORMATS = [
     "tar",
 ]
 
+FILENAME_CLEAN_RE = re.compile(r"[^a-zA-Z0-9_\-]")
+
 re_str_1 = re.compile("(.)([A-Z][a-z]+)")
 re_str_2 = re.compile("([a-z0-9])([A-Z])")
 
@@ -568,6 +570,7 @@ def distribution_to_filename(
     sep = "/"
     if "\\" in root_folder:
         sep = "\\"
+    final_name = _clean_filename(final_name)
     return f"{root_folder}{sep}{final_name}"
 
 
@@ -762,6 +765,15 @@ def path_to_url(x: str, is_raw: bool = False, is_download: bool = False) -> str:
     catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
     ext = "raw" if is_raw and ext not in RECOGNIZED_FORMATS else ext
     return "/".join(distribution_to_url("", dataset, date, ext, catalog, is_download).split("/")[1:])
+
+
+def _clean_filename(filename: str) -> str:
+    path = Path(filename)
+    stem = path.stem
+    ext = path.suffix
+    new_stem = FILENAME_CLEAN_RE.sub("_", stem)
+    new_base = new_stem + ext
+    return new_base
 
 
 def upload_files(  # noqa: PLR0913
