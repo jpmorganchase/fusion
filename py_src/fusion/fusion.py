@@ -1007,10 +1007,10 @@ class Fusion:
 
         def _clean_filename(path: str) -> str:
             folder, base = os.path.split(path)
-            stem, ext = os.path.splitext(base)          
+            stem, ext = os.path.splitext(base)    # noqa: PTH122        
             new_stem = FILENAME_CLEAN_RE.sub("_", stem) 
-            new_base = new_stem + ext                   
-            return os.path.join(folder, new_base)   
+            new_base = new_stem + ext                
+            return os.path.join(folder, new_base) # noqa: PTH118     
 
         download_spec: list[dict[str, Any]] = [
             {
