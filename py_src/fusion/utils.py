@@ -38,6 +38,7 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
+from tqdm import tqdm
 from urllib3.util.retry import Retry
 
 from fusion.exceptions import APIResponseError
@@ -834,13 +835,12 @@ def upload_files(  # noqa: PLR0913
 
     res: list[tuple[bool, str, str | None] | None] = [None] * len(loop)
     if show_progress:
-        with Progress() as p:
-            task = p.add_task("Uploading", total=len(loop))
+        with tqdm(total=len(loop), desc="Uploading") as p:
             for i, (_, row) in enumerate(loop.iterrows()):
                 r = _upload(row["url"], row["path"], row.get("file_name", None))
                 res[i] = r
                 if r[0] is True:
-                    p.update(task, advance=1)
+                    p.update(1)
     else:
         res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
