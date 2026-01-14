@@ -775,6 +775,22 @@ def test_upload_public(
     assert res
 
 
+def test_upload_public_progress_uses_tqdm(
+    setup_fs: tuple[fsspec.AbstractFileSystem, fsspec.AbstractFileSystem], upload_rows: pd.DataFrame
+) -> None:
+    fs_fusion, fs_local = setup_fs
+
+    with patch("fusion.utils.tqdm") as tqdm_mock:
+        pbar = MagicMock()
+        tqdm_mock.return_value.__enter__.return_value = pbar
+
+        res = upload_files(fs_fusion, fs_local, upload_rows, show_progress=True)
+
+    assert res
+    tqdm_mock.assert_called_once_with(total=len(upload_rows), desc="Uploading")
+    assert pbar.update.call_count == len(upload_rows)
+
+
 def test_upload_public_parallel(
     setup_fs: tuple[fsspec.AbstractFileSystem, fsspec.AbstractFileSystem], upload_rows: pd.DataFrame
 ) -> None:
