@@ -25,7 +25,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
-import tqdm
+from tqdm import tqdm
 from dateutil import parser
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
@@ -834,13 +834,12 @@ def upload_files(  # noqa: PLR0913
             return (False, path, str(ex))
 
     res: list[tuple[bool, str, str | None] | None] = [None] * len(loop)
-    if show_progress: 
-            with tqdm(total=len(loop), desc="Uploading") as p:
-                for i, (_, row) in enumerate(loop.iterrows()):
-                    r = _upload(row["url"], row["path"], row.get("file_name", None))
-                    res[i] = r
-                    p.update(1)
-                    
+    if show_progress:
+        with tqdm(total=len(loop), desc="Uploading") as p:
+            for i, (_, row) in enumerate(loop.iterrows()):
+                r = _upload(row["url"], row["path"], row.get("file_name", None))
+                res[i] = r
+                p.update(1)
     else:
         res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
