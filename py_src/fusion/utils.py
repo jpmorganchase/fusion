@@ -19,15 +19,15 @@ from urllib.parse import urlparse, urlunparse
 
 import aiohttp
 import certifi
-from dateutil import parser
 import fsspec
 import joblib
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import requests
+from dateutil import parser
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
-import requests
 from requests import Session
 from rich.progress import (
     BarColumn,
