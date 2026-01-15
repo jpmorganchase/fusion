@@ -25,7 +25,6 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
-from tqdm import tqdm
 from dateutil import parser
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
@@ -39,6 +38,7 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
+from tqdm import tqdm
 from urllib3.util.retry import Retry
 
 from fusion.exceptions import APIResponseError
