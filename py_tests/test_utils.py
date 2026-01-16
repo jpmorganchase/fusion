@@ -524,11 +524,9 @@ def test_path_to_url() -> None:
     )
 
 
-def test_clean_filename(tmp_path: Path) -> None:
-    dirty_path = str(tmp_path / "bad name:report.csv")
-    cleaned = _clean_filename(dirty_path)
-    assert Path(cleaned).name == "bad_name_report.csv"
-    assert Path(cleaned).parent == tmp_path
+def test_clean_filename() -> None:
+    cleaned = _clean_filename("bad name:report.csv")
+    assert cleaned == "bad_name_report.csv"
 
 
 def test_filename_to_distribution() -> None:

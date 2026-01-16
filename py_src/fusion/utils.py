@@ -3,32 +3,31 @@
 from __future__ import annotations
 
 import contextlib
-
-from datetime import date, datetime
-from io import BytesIO
 import json as js
 import logging
 import multiprocessing as mp
 import os
-from pathlib import Path
 import re
 import ssl
-from typing import TYPE_CHECKING, Any, Union, cast
-from urllib.parse import urlparse, urlunparse
 import zipfile
 from contextlib import nullcontext
+from datetime import date, datetime
+from io import BytesIO
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Union, cast
+from urllib.parse import urlparse, urlunparse
 
 import aiohttp
 import certifi
-from dateutil import parser
 import fsspec
 import joblib
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import requests
+from dateutil import parser
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
-import requests
 from requests import Session
 from rich.progress import (
     BarColumn,
