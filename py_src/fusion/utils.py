@@ -6,6 +6,7 @@ import contextlib
 import json as js
 import logging
 import multiprocessing as mp
+import ntpath
 import os
 import re
 import ssl
@@ -19,15 +20,15 @@ from urllib.parse import urlparse, urlunparse
 
 import aiohttp
 import certifi
+from dateutil import parser
 import fsspec
 import joblib
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import requests
-from dateutil import parser
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
+import requests
 from requests import Session
 from rich.progress import (
     BarColumn,
@@ -110,6 +111,8 @@ RECOGNIZED_FORMATS = [
     "gtar",
     "tar",
 ]
+
+FILENAME_CLEAN_RE = re.compile(r"[^a-zA-Z0-9_\-]")
 
 re_str_1 = re.compile("(.)([A-Z][a-z]+)")
 re_str_2 = re.compile("([a-z0-9])([A-Z])")
@@ -567,7 +570,7 @@ def distribution_to_filename(
     sep = "/"
     if "\\" in root_folder:
         sep = "\\"
-    return f"{root_folder}{sep}{final_name}"
+    return _clean_filename(f"{root_folder}{sep}{final_name}")
 
 
 def _filename_to_distribution(file_name: str) -> tuple[str, str, str, str]:
@@ -761,6 +764,21 @@ def path_to_url(x: str, is_raw: bool = False, is_download: bool = False) -> str:
     catalog, dataset, date, ext = _filename_to_distribution(x.split("/")[-1])
     ext = "raw" if is_raw and ext not in RECOGNIZED_FORMATS else ext
     return "/".join(distribution_to_url("", dataset, date, ext, catalog, is_download).split("/")[1:])
+
+
+def _clean_filename(path: str) -> str:
+    if "\\" in path:
+        folder, base = ntpath.split(path)
+        stem, ext = ntpath.splitext(base)
+        new_stem = FILENAME_CLEAN_RE.sub("_", stem)
+        new_base = new_stem + ext
+        return ntpath.join(folder, new_base)
+
+    folder, base = os.path.split(path)
+    stem, ext = os.path.splitext(base)  # noqa: PTH122
+    new_stem = FILENAME_CLEAN_RE.sub("_", stem)
+    new_base = new_stem + ext
+    return os.path.join(folder, new_base)  # noqa: PTH118
 
 
 def upload_files(  # noqa: PLR0913

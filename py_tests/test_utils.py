@@ -20,6 +20,7 @@ from fusion.credentials import FusionCredentials
 from fusion.fusion import Fusion
 from fusion.utils import (
     PathLikeT,
+    _clean_filename,
     _filename_to_distribution,
     _merge_responses,
     convert_date_format,
@@ -521,6 +522,13 @@ def test_path_to_url() -> None:
     assert result == (
         "catalog/datasets/dataset/datasetseries/datasetseries/distributions/raw/files/operationType/download?file=None"
     )
+
+
+def test_clean_filename(tmp_path: Path) -> None:
+    dirty_path = str(tmp_path / "bad name:report.csv")
+    cleaned = _clean_filename(dirty_path)
+    assert Path(cleaned).name == "bad_name_report.csv"
+    assert Path(cleaned).parent == tmp_path
 
 
 def test_filename_to_distribution() -> None:
