@@ -2040,6 +2040,45 @@ def test_download_valid_dt_str_format_not_in_datasetseries(
         fusion_obj.download(dataset=dataset, dt_str=dt_str, dataset_format=file_format, catalog=catalog)
 
 
+def test_download_cleans_filename(
+    mocker: MockerFixture, requests_mock: requests_mock.Mocker, fusion_obj: Fusion, tmp_path: Path
+) -> None:
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    dt_str = "20200101"
+    file_format = "csv"
+
+    url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
+    requests_mock.get(url, json={"status": "Subscribed"})
+
+    mocker.patch.object(
+        fusion_obj,
+        "_resolve_distro_tuples",
+        return_value=[(catalog, dataset, dt_str, file_format)],
+    )
+    mocker.patch.object(fusion_obj, "_validate_format", return_value=file_format)
+
+    mock_fs = MagicMock()
+    mock_fs.download.return_value = (True, "unused", None)
+    mocker.patch.object(fusion_obj, "get_fusion_filesystem", return_value=mock_fs)
+
+    res = fusion_obj.download(
+        dataset=dataset,
+        dt_str=dt_str,
+        dataset_format=file_format,
+        catalog=catalog,
+        return_paths=True,
+        show_progress=False,
+        download_folder=str(tmp_path),
+        file_name="bad name:report",
+    )
+
+    assert res
+    lpath = mock_fs.download.call_args.kwargs["lpath"]
+    assert Path(lpath).name == "bad_name_report.csv"
+    assert Path(lpath).parent == tmp_path
+
+
 def test_download_no_distributions_available(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     catalog = "my_catalog"
     dataset = "TEST_DATASET"
