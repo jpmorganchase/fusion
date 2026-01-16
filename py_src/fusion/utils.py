@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextlib
-from contextlib import nullcontext
+
 from datetime import date, datetime
 from io import BytesIO
 import json as js
@@ -16,6 +16,7 @@ import ssl
 from typing import TYPE_CHECKING, Any, Union, cast
 from urllib.parse import urlparse, urlunparse
 import zipfile
+from contextlib import nullcontext
 
 import aiohttp
 import certifi
