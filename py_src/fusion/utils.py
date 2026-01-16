@@ -3,32 +3,31 @@
 from __future__ import annotations
 
 import contextlib
-import json as js
-import logging
-import multiprocessing as mp
-import ntpath
-import os
-import re
-import ssl
-import zipfile
 from contextlib import nullcontext
 from datetime import date, datetime
 from io import BytesIO
+import json as js
+import logging
+import multiprocessing as mp
+import os
 from pathlib import Path
+import re
+import ssl
 from typing import TYPE_CHECKING, Any, Union, cast
 from urllib.parse import urlparse, urlunparse
+import zipfile
 
 import aiohttp
 import certifi
+from dateutil import parser
 import fsspec
 import joblib
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import requests
-from dateutil import parser
 from pyarrow import csv, json, unify_schemas
 from pyarrow.parquet import filters_to_expression
+import requests
 from requests import Session
 from rich.progress import (
     BarColumn,
@@ -570,7 +569,8 @@ def distribution_to_filename(
     sep = "/"
     if "\\" in root_folder:
         sep = "\\"
-    return _clean_filename(f"{root_folder}{sep}{final_name}")
+    final_name = _clean_filename(final_name)
+    return f"{root_folder}{sep}{final_name}"
 
 
 def _filename_to_distribution(file_name: str) -> tuple[str, str, str, str]:
@@ -766,19 +766,13 @@ def path_to_url(x: str, is_raw: bool = False, is_download: bool = False) -> str:
     return "/".join(distribution_to_url("", dataset, date, ext, catalog, is_download).split("/")[1:])
 
 
-def _clean_filename(path: str) -> str:
-    if "\\" in path:
-        folder, base = ntpath.split(path)
-        stem, ext = ntpath.splitext(base)
-        new_stem = FILENAME_CLEAN_RE.sub("_", stem)
-        new_base = new_stem + ext
-        return ntpath.join(folder, new_base)
-
-    folder, base = os.path.split(path)
-    stem, ext = os.path.splitext(base)  # noqa: PTH122
+def _clean_filename(filename: str) -> str:
+    path = Path(filename)
+    stem = path.stem
+    ext = path.suffix
     new_stem = FILENAME_CLEAN_RE.sub("_", stem)
     new_base = new_stem + ext
-    return os.path.join(folder, new_base)  # noqa: PTH118
+    return new_base
 
 
 def upload_files(  # noqa: PLR0913
