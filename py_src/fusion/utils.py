@@ -839,7 +839,8 @@ def upload_files(  # noqa: PLR0913
             for i, (_, row) in enumerate(loop.iterrows()):
                 r = _upload(row["url"], row["path"], row.get("file_name", None))
                 res[i] = r
-                p.update(1)
+                if r[0] is True:
+                    p.update(1)
     else:
         res = [_upload(row["url"], row["path"], row.get("file_name", None)) for _, row in loop.iterrows()]
 
