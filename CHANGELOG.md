@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.2] - 2026-21-01
+* Added Progress bar for Uploads
+* Handled Series member names and dataset identifers saving while donwnloads - double colon fix
+* Added support for more file formats - XLTM, PPTX, MD, IPYNB, CSS, JSONL, JSONLD,ARROW, M4A, PDB, SQL, SQLITE,TIFF,ZIP,GTAR,TAR
+
+
 ## [4.0.1] - 2026-01-05
 * Fix http sonar bug.
 
