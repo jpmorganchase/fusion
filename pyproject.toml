@@ -25,7 +25,7 @@ requires-python = ">= 3.9"
 
 dependencies = [
     "requests >= 2",
-    "pandas >= 1.1",
+    "pandas == 2.3.3",
     "joblib >= 1.1",
     "tabulate >= 0.8",
     "pyarrow >= 11",
@@ -104,7 +104,7 @@ dev-dependencies = [
     "moto[s3]>=5.0.5",
     "mypy",
     "patchelf>=0.17.2.1; sys_platform=='linux'",
-    "pandas >= 1.1",
+    "pandas == 2.3.3",
     "pandas-stubs>1.1",
     "pip>=24.0",
     "polars",
