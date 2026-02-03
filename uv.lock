@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.9"
 resolution-markers = [
     "python_full_version < '3.10'",
@@ -2783,11 +2783,11 @@ wheels = [
 
 [[package]]
 name = "pip"
-version = "25.0"
+version = "26.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/47/3e/68beeeeb306ea20ffd30b3ed993f531d16cd884ec4f60c9b1e238f69f2af/pip-25.0.tar.gz", hash = "sha256:8e0a97f7b4c47ae4a494560da84775e9e2f671d415d8d828e052efefb206b30b", size = 1950328, upload-time = "2025-01-26T12:40:41.474Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/44/c2/65686a7783a7c27a329706207147e82f23c41221ee9ae33128fc331670a0/pip-26.0.tar.gz", hash = "sha256:3ce220a0a17915972fbf1ab451baae1521c4539e778b28127efa79b974aff0fa", size = 1812654, upload-time = "2026-01-31T01:40:54.361Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/8a/1ddf40be20103bcc605db840e9ade09c8e8c9f920a03e9cfe88eae97a058/pip-25.0-py3-none-any.whl", hash = "sha256:b6eb97a803356a52b2dd4bb73ba9e65b2ba16caa6bcb25a7497350a4e5859b65", size = 1841506, upload-time = "2025-01-26T12:40:39.243Z" },
+    { url = "https://files.pythonhosted.org/packages/69/00/5ac7aa77688ec4d34148b423d34dc0c9bc4febe0d872a9a1ad9860b2f6f1/pip-26.0-py3-none-any.whl", hash = "sha256:98436feffb9e31bc9339cf369fd55d3331b1580b6a6f1173bacacddcf9c34754", size = 1787564, upload-time = "2026-01-31T01:40:52.252Z" },
 ]
 
 [[package]]
@@ -3387,7 +3387,7 @@ requires-dist = [
     { name = "mkdocstrings-python", marker = "extra == 'doc'" },
     { name = "notebook", marker = "extra == 'doc'", specifier = ">=6.0,<7.0" },
     { name = "opensearch-py", marker = "extra == 'embeddings'", specifier = ">=2.8.0" },
-    { name = "pandas", specifier = ">=1.1" },
+    { name = "pandas", specifier = ">=1.1,<3" },
     { name = "polars", marker = "extra == 'polars'" },
     { name = "pyarrow", specifier = ">=11" },
     { name = "pyfusion", extras = ["doc", "aws", "gcs", "azr", "polars", "events", "embeddings"], marker = "extra == 'all'" },
@@ -3414,7 +3414,7 @@ dev = [
     { name = "moto", extras = ["s3"], specifier = ">=5.0.5" },
     { name = "mypy" },
     { name = "nox", extras = ["uv"], specifier = ">=2024.4.15" },
-    { name = "pandas", specifier = ">=1.1" },
+    { name = "pandas", specifier = ">=1.1,<3" },
     { name = "pandas-stubs", specifier = ">1.1" },
     { name = "patchelf", marker = "sys_platform == 'linux'", specifier = ">=0.17.2.1" },
     { name = "pip", specifier = ">=24.0" },
