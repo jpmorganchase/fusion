@@ -169,8 +169,11 @@ There are a few arguments available within the ``download()`` method that may be
     ```
     **What it does:**
     
-    - Returns the paths where the files were downloaded (when the download is successful)
+    - Returns one result tuple per requested file with the success flag, local path, and any error text
     - Provides a more detailed error message to help with debugging (when the download fails)
+    - Surfaces the full API response body when present
+    - Includes the ``x-jpmc-trace-id`` value in SDK error logs and exception messages when the API returns one
+    - Includes the detailed backend error text in download warnings, including the trace ID when present
 
     **Useful when:**
     
@@ -465,7 +468,4 @@ If your dataset has **many series members**, `fsync()` will synchronize **all av
     The `fsync()` module is ideal for bulk synchronization and for maintaining a local mirror of your Fusion datasets.
 
 Refer to the `fsync()` module [page](fsync.md) for more details.
-
-
-
 

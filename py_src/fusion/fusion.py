@@ -111,7 +111,7 @@ class Fusion:
         """
 
         response = session.get(url)
-        response.raise_for_status()
+        requests_raise_for_status(response)
 
         return BytesIO(response.content)
 
@@ -540,7 +540,7 @@ class Fusion:
                     pass
                 return rep_df
             else:
-                resp.raise_for_status()
+                requests_raise_for_status(resp)
         else:
             url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/list"
             resp = self.session.post(url)
@@ -553,7 +553,7 @@ class Fusion:
                     pass
                 return rep_df
             else:
-                resp.raise_for_status()
+                requests_raise_for_status(resp)
         return pd.DataFrame(columns=key_columns)
 
     def list_report_attributes(
@@ -584,7 +584,7 @@ class Fusion:
                 pass
             return rep_df
         else:
-            resp.raise_for_status()
+            requests_raise_for_status(resp)
         return pd.DataFrame(
             columns=[
                 "id",
@@ -1067,7 +1067,8 @@ class Fusion:
         if (len(res) > 0) and (not all(r[0] for r in res)):  # type: ignore
             for r in res:
                 if not r[0]:
-                    warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
+                    error_detail = f": {r[2]}" if r[2] else ""
+                    warnings.warn(f"The download of {r[1]} failed{error_detail}", stacklevel=2)
         return res if return_paths else None  # type: ignore
 
     def _validate_format(
@@ -1941,7 +1942,7 @@ class Fusion:
 
         resp = self.session.post(url, json=data)
 
-        resp.raise_for_status()
+        requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
 
@@ -3021,7 +3022,7 @@ class Fusion:
                 pass
             return list_df
         else:
-            resp.raise_for_status()
+            requests_raise_for_status(resp)
 
         # fallback empty frame if something unexpected happens
         return pd.DataFrame()
