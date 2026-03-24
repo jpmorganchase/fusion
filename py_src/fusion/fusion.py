@@ -1002,33 +1002,11 @@ class Fusion:
 
         n_par = cpu_count(n_par)
 
-        download_spec: list[dict[str, Any]] = [
-            {
-                "lfs": self.fs,
-                "rpath": distribution_to_url(
-                    self.root_url,
-                    series[1],
-                    series[2],
-                    series[3],
-                    series[0],
-                    is_download=True,
-                    file_name=fname,
-                ),
-                "lpath": distribution_to_filename(
-                    download_folders[i],
-                    series[1],
-                    series[2],
-                    series[3],
-                    series[0],
-                    partitioning=partitioning,
-                    file_name=fname,
-                ),
-                "overwrite": force_download,
-                "preserve_original_name": preserve_original_name,
-            }
-            for i, series in enumerate(required_series)
-            for fname in (
-                [
+        delivery_channel = dataset_resp.json().get("deliveryChannel", ["API"])
+        download_spec: list[dict[str, Any]] = []
+        for i, series in enumerate(required_series):
+            if not file_name:
+                distribution_files = [
                     fid.rstrip("/")
                     for fid in self.list_distribution_files(
                         dataset=series[1],
@@ -1037,12 +1015,38 @@ class Fusion:
                         catalog=series[0],
                     )["@id"].tolist()
                 ]
-                if not file_name
-                else [file_name.rstrip("/")]
-                if isinstance(file_name, str)
-                else [f.rstrip("/") for f in file_name]
+            elif isinstance(file_name, str):
+                distribution_files = [file_name.rstrip("/")]
+            else:
+                distribution_files = [f.rstrip("/") for f in file_name]
+
+            download_spec.extend(
+                {
+                    "lfs": self.fs,
+                    "rpath": distribution_to_url(
+                        self.root_url,
+                        series[1],
+                        series[2],
+                        series[3],
+                        series[0],
+                        is_download=True,
+                        file_name=fname,
+                    ),
+                    "lpath": distribution_to_filename(
+                        download_folders[i],
+                        series[1],
+                        series[2],
+                        series[3],
+                        series[0],
+                        partitioning=partitioning,
+                        file_name=fname,
+                    ),
+                    "overwrite": force_download,
+                    "preserve_original_name": preserve_original_name,
+                    "delivery_channel": delivery_channel,
+                }
+                for fname in distribution_files
             )
-        ]
 
         logger.log(
             VERBOSE_LVL,

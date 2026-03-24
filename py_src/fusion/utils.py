@@ -15,7 +15,7 @@ from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union, cast
-from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlsplit, urlunsplit, urlunparse
+from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlsplit, urlunparse, urlunsplit
 
 import aiohttp
 import certifi
@@ -620,7 +620,8 @@ def distribution_to_url(
 
     if datasetseries == "sample":
         return (
-            f"{root_url}catalogs/{encoded_catalog}/datasets/{encoded_dataset}/sample/distributions/{encoded_file_format}"
+            f"{root_url}catalogs/{encoded_catalog}/datasets/{encoded_dataset}/sample/distributions/"
+            f"{encoded_file_format}"
         )
 
     encoded_datasetseries = quote(datasetseries, safe="")
