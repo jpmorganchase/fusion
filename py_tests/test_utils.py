@@ -587,6 +587,26 @@ def test_distribution_to_url() -> None:
     assert distribution_to_url(root_url, dataset, datasetseries, file_format, catalog) == exp_res
 
 
+def test_distribution_to_url_encodes_series_member_and_query_params() -> None:
+    from fusion.utils import distribution_to_url
+
+    root_url = "https://api.fusion.jpmc.com/"
+    result = distribution_to_url(
+        root_url,
+        "my dataset",
+        "2020 04 04",
+        "csv",
+        "my catalog",
+        is_download=True,
+        file_name="my file=1",
+    )
+
+    assert (
+        result == "https://api.fusion.jpmc.com/catalogs/my%20catalog/datasets/my%20dataset/datasetseries/"
+        "2020%2004%2004/distributions/csv/files/operationType/download?file=my%20file%3D1"
+    )
+
+
 def test_distribution_to_filename() -> None:
     from fusion.utils import distribution_to_filename
 

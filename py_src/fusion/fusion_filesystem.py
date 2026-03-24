@@ -27,7 +27,7 @@ from fsspec.utils import nullcontext
 from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 
-from .utils import _merge_responses, cpu_count, get_client, get_default_fs, get_session
+from .utils import _merge_responses, append_query_params, cpu_count, get_client, get_default_fs, get_session
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
@@ -558,9 +558,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         Returns:
             None: None.
         """
+        range_url = append_query_params(url, {"downloadRange": f"bytes={start}-{end - 1}"})
 
         async def fetch() -> None:
-            async with session.get(url + f"&downloadRange=bytes={start}-{end - 1}", **self.kwargs) as response:
+            async with session.get(range_url, **self.kwargs) as response:
                 if response.status in [200, 206]:
                     chunk = await response.read()
                     output_file.seek(start)
@@ -745,9 +746,10 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         Returns:
             None: None.
         """
+        range_url = append_query_params(url, {"downloadRange": f"bytes={start}-{end - 1}"})
 
         async def fetch() -> None:
-            async with session.get(url + f"&downloadRange=bytes={start}-{end - 1}", **self.kwargs) as response:
+            async with session.get(range_url, **self.kwargs) as response:
                 if response.status in [200, 206]:
                     chunk = await response.read()
                     data_chunks[start] = chunk
@@ -1590,7 +1592,7 @@ class FusionFile(HTTPFile):  # type: ignore
         logger.debug(f"Fetch range for {self}: {start}-{end}")
         kwargs = self.kwargs.copy()
         headers = kwargs.pop("headers", {}).copy()
-        url = self.url + f"/operationType/download?downloadRange=bytes={start}-{end - 1}"
+        url = append_query_params(f"{self.url}/operationType/download", {"downloadRange": f"bytes={start}-{end - 1}"})
         logger.debug(str(url))
         r = await self.session.get(self.fs.encode_url(url), headers=headers, **kwargs)
         async with r:

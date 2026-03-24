@@ -17,6 +17,7 @@ from awscrt import checksums as aws_checksums
 from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 from fusion.fusion_filesystem import FusionFile, FusionHTTPFileSystem
+from fusion.utils import append_query_params
 
 
 @pytest.fixture
@@ -385,7 +386,10 @@ async def test_fetch_range_success(
     output_file.seek.assert_called_once_with(0)
     output_file.write.assert_called_once_with(b"some data")
     mock_response.raise_for_status.assert_not_called()
-    mock_session.get.assert_called_once_with(url + f"&downloadRange=bytes={start}-{end - 1}", **http_fs_instance.kwargs)
+    mock_session.get.assert_called_once_with(
+        append_query_params(url, {"downloadRange": f"bytes={start}-{end - 1}"}),
+        **http_fs_instance.kwargs,
+    )
 
 
 @pytest.mark.parametrize(
@@ -622,6 +626,27 @@ async def test__async_fetch_range_with_headers_success() -> None:
     assert mock_response.raise_for_status.called
 
 
+@pytest.mark.asyncio
+async def test_async_fetch_range_encodes_download_range(fusion_file: FusionFile) -> None:
+    mock_session = mock.AsyncMock()
+    mock_response = mock.AsyncMock()
+    mock_response.__aenter__.return_value = mock_response
+    mock_response.read.return_value = b"test-bytes"
+    mock_response.raise_for_status = mock.Mock()
+    mock_response.status = 206
+    mock_response.headers = {"Content-Length": "10"}
+    mock_session.get.return_value = mock_response
+
+    fusion_file.session = mock_session
+
+    result = await fusion_file.async_fetch_range(0, 10)
+
+    assert result == b"test-bytes"
+    mock_session.get.assert_awaited_once()
+    called_url = mock_session.get.await_args.args[0]
+    assert called_url == "http://test-url/file/operationType/download?downloadRange=bytes%3D0-9"
+
+
 class DummyResponse:
     def __init__(self, content: bytes, headers: dict[str, Any]) -> None:
         self.content = content
@@ -655,6 +680,7 @@ class DummyFS:
 def fusion_file() -> FusionFile:
     file = FusionFile.__new__(FusionFile)
     file.url = "http://test-url/file"
+    file.path = "http://test-url/file"
     file.fs = DummyFS()
     file.kwargs = {"headers": {"Authorization": "Bearer token"}}
     return file
