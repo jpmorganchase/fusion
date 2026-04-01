@@ -604,7 +604,7 @@ async def test__async_fetch_range_with_headers_success() -> None:
     # Arrange
     mock_session = mock.AsyncMock()
     mock_fs = mock.Mock()
-    mock_fs.encode_url.return_value = "http://test-url"
+    mock_fs.encode_url.return_value = "https://test-url"
     mock_response = mock.AsyncMock()
     mock_response.__aenter__.return_value = mock_response
     mock_response.raise_for_status.return_value = None
@@ -613,7 +613,10 @@ async def test__async_fetch_range_with_headers_success() -> None:
     mock_session.get.return_value = mock_response
 
     fusion_file = FusionFile(
-        url="http://test-url", session=mock_session, fs=mock_fs, kwargs={"headers": {"Authorization": "Bearer token"}}
+        url="https://test-url",
+        session=mock_session,
+        fs=mock_fs,
+        kwargs={"headers": {"Authorization": "Bearer token"}},
     )
 
     # Act
@@ -623,7 +626,7 @@ async def test__async_fetch_range_with_headers_success() -> None:
     assert out == b"test-bytes"
     assert headers == {"Content-Length": "10", "Range": "bytes=0-9"}
     mock_session.get.assert_awaited_once()
-    mock_fs.encode_url.assert_called_once_with("http://test-url")
+    mock_fs.encode_url.assert_called_once_with("https://test-url")
     assert mock_response.raise_for_status.called
 
 
@@ -645,7 +648,7 @@ async def test_async_fetch_range_encodes_download_range(fusion_file: FusionFile)
     assert result == b"test-bytes"
     mock_session.get.assert_awaited_once()
     called_url = mock_session.get.await_args.args[0]
-    assert called_url == "http://test-url/file/operationType/download?downloadRange=bytes%3D0-9"
+    assert called_url == "https://test-url/file/operationType/download?downloadRange=bytes%3D0-9"
 
 
 class DummyResponse:
@@ -680,8 +683,8 @@ class DummyFS:
 @pytest.fixture
 def fusion_file() -> FusionFile:
     file = FusionFile.__new__(FusionFile)
-    file.url = "http://test-url/file"
-    file.path = "http://test-url/file"
+    file.url = "https://test-url/file"
+    file.path = "https://test-url/file"
     file.fs = DummyFS()
     file.kwargs = {"headers": {"Authorization": "Bearer token"}}
     return file
@@ -993,7 +996,7 @@ class TestStreamWithChecksumValidation:
         mock_lfs.open.return_value.__enter__.return_value = mock_file
 
         success, path, error = fs_with_checksum.stream_single_file_with_checksum_validation(
-            "http://test.com/file", output_path, mock_lfs, expected_checksum, "SHA-256"
+            "https://test.com/file", output_path, mock_lfs, expected_checksum, "SHA-256"
         )
 
         assert success is True
@@ -1029,7 +1032,7 @@ class TestStreamWithChecksumValidation:
 
         # Call the method
         success, path, error = fs_with_checksum.stream_single_file_with_checksum_validation(
-            "http://test.com/file", output_path, mock_lfs, wrong_checksum, "SHA-256"
+            "https://test.com/file", output_path, mock_lfs, wrong_checksum, "SHA-256"
         )
 
         assert success is False
@@ -1053,7 +1056,7 @@ class TestStreamWithChecksumValidation:
         mock_lfs = MagicMock(spec=fsspec.AbstractFileSystem)
 
         success, path, error = fs_with_checksum.stream_single_file_with_checksum_validation(
-            "http://test.com/file", output_path, mock_lfs, "some_checksum", "SHA-256"
+            "https://test.com/file", output_path, mock_lfs, "some_checksum", "SHA-256"
         )
 
         assert success is False
@@ -1089,7 +1092,7 @@ class TestStreamWithChecksumValidation:
         mock_lfs = MagicMock(spec=fsspec.AbstractFileSystem)
 
         success, path, error = fs_with_checksum.stream_single_file_with_checksum_validation(
-            "http://test.com/file", output_path, mock_lfs, expected_checksum, "SHA-256"
+            "https://test.com/file", output_path, mock_lfs, expected_checksum, "SHA-256"
         )
 
         assert success is True
@@ -1125,13 +1128,13 @@ class TestStreamSingleFileWithChecksum:
         mock_lfs = MagicMock(spec=fsspec.AbstractFileSystem)
 
         mock_checksum_validation.return_value = (True, "/test/output.txt", None)
-        success, path, error = fs_with_checksum.stream_single_file("http://test.com/file", output_path, mock_lfs)
+        success, path, error = fs_with_checksum.stream_single_file("https://test.com/file", output_path, mock_lfs)
 
         assert success is True
         assert path == "/test/output.txt"
         assert error is None
         mock_checksum_validation.assert_called_once_with(
-            "http://test.com/file", output_path, mock_lfs, "abc123", "SHA-256", 5242880
+            "https://test.com/file", output_path, mock_lfs, "abc123", "SHA-256", 5242880
         )
 
     def test_stream_single_file_missing_checksum_headers(
@@ -1153,7 +1156,7 @@ class TestStreamSingleFileWithChecksum:
         mock_lfs = MagicMock(spec=fsspec.AbstractFileSystem)
 
         # Call the method
-        success, path, error = fs_with_checksum.stream_single_file("http://test.com/file", output_path, mock_lfs)
+        success, path, error = fs_with_checksum.stream_single_file("https://test.com/file", output_path, mock_lfs)
 
         # Assertions
         assert success is False
@@ -1190,7 +1193,7 @@ class TestStreamSingleFileWithChecksum:
         mock_lfs.exists.return_value = True
 
         success, path, error = fs_with_checksum.stream_single_file(
-            "http://test.com/file",
+            "https://test.com/file",
             output_path,
             mock_lfs,
             delivery_channel=["Glue"],
@@ -1224,7 +1227,7 @@ class TestStreamSingleFileWithChecksum:
         output_path = "/test/output.txt"
         mock_lfs = MagicMock(spec=fsspec.AbstractFileSystem)
 
-        success, path, error = fs_with_checksum.stream_single_file("http://test.com/file", output_path, mock_lfs)
+        success, path, error = fs_with_checksum.stream_single_file("https://test.com/file", output_path, mock_lfs)
 
         assert success is False
         assert path == "/test/output.txt"
@@ -1267,7 +1270,7 @@ class TestChecksumIntegration:
         mock_lfs = MagicMock(spec=fsspec.AbstractFileSystem)
 
         # Test with stream_single_file directly (which uses HEAD to get headers)
-        success, path, error = fs_with_checksum.stream_single_file("http://test.com/file", output_path, mock_lfs)
+        success, path, error = fs_with_checksum.stream_single_file("https://test.com/file", output_path, mock_lfs)
 
         assert success is False
         assert path == output_path
@@ -1279,6 +1282,7 @@ class TestChecksumIntegration:
         self,
         mock_sync: MagicMock,
         fs_with_checksum: FusionHTTPFileSystem,
+        tmp_path: Path,
     ) -> None:
         """Test Glue downloads bypass checksum validation when the API omits it."""
 
@@ -1294,9 +1298,10 @@ class TestChecksumIntegration:
             patch("fusion.fusion_filesystem.cpu_count", return_value=8),
             patch.object(fs_with_checksum, "stream_single_file", return_value=(True, "path", None)) as mock_stream,
         ):
+            output_path = str(tmp_path / "output.txt")
             result = fs_with_checksum.get(
-                "http://test.com/file",
-                "/tmp/output.txt",
+                "https://test.com/file",
+                output_path,
                 is_local_fs=True,
                 lfs=MagicMock(spec=fsspec.AbstractFileSystem),
                 delivery_channel=["Glue"],
