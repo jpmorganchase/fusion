@@ -1115,9 +1115,9 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 outer_hash = hashlib.md5(inner_hash).digest()  # NOSONAR(S4790) legacy API checksum
                 return base64.b64encode(outer_hash).decode("ascii")
             else:
-                return base64.b64encode(hashlib.md5(data).digest()).decode(
+                return base64.b64encode(hashlib.md5(data).digest()).decode(  # NOSONAR(S4790) legacy API checksum
                     "ascii"
-                )  # NOSONAR(S4790) legacy API checksum
+                )
 
         elif algorithm == "CRC64NVME":
             crc_value = aws_checksums.crc64nvme(data)
