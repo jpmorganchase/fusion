@@ -601,10 +601,40 @@ def test_distribution_to_url_encodes_series_member_and_query_params() -> None:
         file_name="my file=1",
     )
 
+    # we don't want to encode this url as this is done in the file system
+    assert (
+        result == "https://api.fusion.jpmc.com/catalogs/my catalog/datasets/my dataset/datasetseries/"
+        "2020 04 04/distributions/csv/files/operationType/download?file=my%20file%3D1"
+    )
+
+
+def test_distribution_to_url_leaves_path_segments_unchanged() -> None:
+    from fusion.utils import distribution_to_url
+
+    root_url = "https://api.fusion.jpmc.com/"
+    result = distribution_to_url(
+        root_url,
+        "my%20dataset",
+        "2020%2004%2004",
+        "csv",
+        "my%20catalog",
+    )
+
     assert (
         result == "https://api.fusion.jpmc.com/catalogs/my%20catalog/datasets/my%20dataset/datasetseries/"
-        "2020%2004%2004/distributions/csv/files/operationType/download?file=my%20file%3D1"
+        "2020%2004%2004/distributions/csv"
     )
+
+
+def test_append_query_params_does_not_double_encode_preencoded_values() -> None:
+    from fusion.utils import append_query_params
+
+    result = append_query_params(
+        "https://api.fusion.jpmc.com/catalogs/my%20catalog/datasets/my%20dataset",
+        {"file": "my%20file%3D1"},
+    )
+
+    assert result == "https://api.fusion.jpmc.com/catalogs/my%20catalog/datasets/my%20dataset?file=my%20file%3D1"
 
 
 def test_distribution_to_filename() -> None:
