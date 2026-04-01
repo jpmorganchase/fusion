@@ -1209,18 +1209,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         """
         lfs = kwargs.pop("lfs", None)
         delivery_channel = kwargs.pop("delivery_channel", None)
-
-        if isinstance(lpath, (str, Path)):
-            if lfs is None:
-                lfs = get_default_fs()
-            lpath_str = str(lpath)
-        elif hasattr(lpath, "path"):
-            lpath_str = lpath.path
-            if not hasattr(lpath, "close"):
-                lfs = get_default_fs()
-        else:
-            lfs = get_default_fs()
-            lpath_str = str(lpath)
+        lfs, lpath_str = self._resolve_get_local_path(lpath, lfs)
 
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
         n_threads = cpu_count(is_threading=True)
@@ -1235,74 +1224,109 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 block_size=chunk_size,
                 delivery_channel=delivery_channel,
             )
-        else:
-            try:
+        return self._get_local_file(
+            rpath=str(rpath),
+            lpath_str=lpath_str,
+            lfs=lfs,
+            chunk_size=chunk_size,
+            n_threads=n_threads,
+            delivery_channel=delivery_channel,
+        )
 
-                async def get_content_length_and_checksum() -> tuple[int | None, str | None, str | None]:
-                    session = await self.set_session()
-                    async with session.head(rpath, **self.kwargs) as r:
-                        await aiohttp_raise_for_status(r)
-                        file_size = int(r.headers.get("Content-Length", 0)) or None
-                        expected_checksum = r.headers.get("x-jpmc-checksum")
-                        checksum_algorithm = r.headers.get("x-jpmc-checksum-algorithm")
-                        return file_size, expected_checksum, checksum_algorithm
+    @staticmethod
+    def _resolve_get_local_path(
+        lpath: str | io.IOBase | fsspec.spec.AbstractBufferedFile | Path,
+        lfs: Any,
+    ) -> tuple[Any, str]:
+        if isinstance(lpath, (str, Path)):
+            if lfs is None:
+                lfs = get_default_fs()
+            return lfs, str(lpath)
 
-                file_size, expected_checksum, checksum_algorithm = sync(self.loop, get_content_length_and_checksum)
-                if file_size:
-                    if "operationType/download" not in str(rpath):
-                        rpath = str(rpath) + "/operationType/download"
+        if hasattr(lpath, "path"):
+            if not hasattr(lpath, "close"):
+                lfs = get_default_fs()
+            return lfs, lpath.path
 
-                    if not expected_checksum or not checksum_algorithm:
-                        headers = {
-                            "Content-Length": str(file_size),
-                            "x-jpmc-checksum": expected_checksum,
-                            "x-jpmc-checksum-algorithm": checksum_algorithm,
-                        }
-                        if self._should_skip_checksum_validation(headers, delivery_channel=delivery_channel):
-                            logger.log(
-                                VERBOSE_LVL,
-                                "Falling back to streamed download without checksum validation "
-                                "for Glue-delivered download because checksum headers are absent: %s",
-                                rpath,
-                            )
-                            return self.stream_single_file(
-                                str(rpath),
-                                lpath_str,
-                                lfs,
-                                block_size=chunk_size,
-                                delivery_channel=delivery_channel,
-                            )
-                        error_msg = "Checksum validation is required but missing checksum information."
-                        return False, lpath_str, error_msg
+        return get_default_fs(), str(lpath)
 
-                    return sync(
-                        self.loop,
-                        self._download_single_file_async_with_checksum,
-                        str(rpath),
-                        lpath_str,
-                        file_size,
-                        expected_checksum,
-                        checksum_algorithm,
-                        chunk_size,
-                        n_threads,
-                    )
-                else:
-                    return self.stream_single_file(
-                        str(rpath),
-                        lpath_str,
-                        lfs,
-                        block_size=chunk_size,
-                        delivery_channel=delivery_channel,
-                    )
-            except Exception as ex:  # noqa: BLE001
-                logger.info(f"Failed to get content length for multi-threaded download: {ex}")
+    def _get_local_file(
+        self,
+        rpath: str,
+        lpath_str: str,
+        lfs: Any,
+        chunk_size: int,
+        n_threads: int,
+        delivery_channel: str | list[str] | None = None,
+    ) -> Any:
+        try:
+
+            async def get_content_length_and_checksum() -> tuple[int | None, str | None, str | None]:
+                session = await self.set_session()
+                async with session.head(rpath, **self.kwargs) as r:
+                    await aiohttp_raise_for_status(r)
+                    file_size = int(r.headers.get("Content-Length", 0)) or None
+                    expected_checksum = r.headers.get("x-jpmc-checksum")
+                    checksum_algorithm = r.headers.get("x-jpmc-checksum-algorithm")
+                    return file_size, expected_checksum, checksum_algorithm
+
+            file_size, expected_checksum, checksum_algorithm = sync(self.loop, get_content_length_and_checksum)
+            if not file_size:
                 return self.stream_single_file(
-                    str(rpath),
+                    rpath,
                     lpath_str,
                     lfs,
                     block_size=chunk_size,
                     delivery_channel=delivery_channel,
                 )
+
+            download_rpath = rpath
+            if "operationType/download" not in download_rpath:
+                download_rpath = download_rpath + "/operationType/download"
+
+            if not expected_checksum or not checksum_algorithm:
+                headers = {
+                    "Content-Length": str(file_size),
+                    "x-jpmc-checksum": expected_checksum,
+                    "x-jpmc-checksum-algorithm": checksum_algorithm,
+                }
+                if self._should_skip_checksum_validation(headers, delivery_channel=delivery_channel):
+                    logger.log(
+                        VERBOSE_LVL,
+                        "Falling back to streamed download without checksum validation "
+                        "for Glue-delivered download because checksum headers are absent: %s",
+                        download_rpath,
+                    )
+                    return self.stream_single_file(
+                        download_rpath,
+                        lpath_str,
+                        lfs,
+                        block_size=chunk_size,
+                        delivery_channel=delivery_channel,
+                    )
+                error_msg = "Checksum validation is required but missing checksum information."
+                return False, lpath_str, error_msg
+
+            return sync(
+                self.loop,
+                self._download_single_file_async_with_checksum,
+                download_rpath,
+                lpath_str,
+                file_size,
+                expected_checksum,
+                checksum_algorithm,
+                chunk_size,
+                n_threads,
+            )
+        except Exception as ex:  # noqa: BLE001
+            logger.info(f"Failed to get content length for multi-threaded download: {ex}")
+            return self.stream_single_file(
+                rpath,
+                lpath_str,
+                lfs,
+                block_size=chunk_size,
+                delivery_channel=delivery_channel,
+            )
 
     @staticmethod
     def _update_kwargs(
