@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json as js
-from dataclasses import dataclass, field, fields
+from dataclasses import MISSING, dataclass, field, fields
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -221,7 +221,38 @@ class Product(metaclass=CamelCaseMeta):
         keys = [f.name for f in fields(cls)]
         data = {camel_to_snake(k): v for k, v in data.items()}
         data = {k: v for k, v in data.items() if k in keys}
-        return cls(**data)
+        field_map = {field_.name: field_ for field_ in fields(cls)}
+
+        def _value(name: str) -> Any:
+            if name in data:
+                return data[name]
+            field_ = field_map[name]
+            if field_.default_factory is not MISSING:
+                return field_.default_factory()
+            return field_.default
+
+        return cls(
+            identifier=data["identifier"],
+            title=_value("title"),
+            category=_value("category"),
+            short_abstract=_value("short_abstract"),
+            description=_value("description"),
+            is_active=_value("is_active"),
+            is_restricted=_value("is_restricted"),
+            maintainer=_value("maintainer"),
+            region=_value("region"),
+            publisher=_value("publisher"),
+            sub_category=_value("sub_category"),
+            tag=_value("tag"),
+            delivery_channel=_value("delivery_channel"),
+            theme=_value("theme"),
+            release_date=_value("release_date"),
+            language=_value("language"),
+            status=_value("status"),
+            image=_value("image"),
+            logo=_value("logo"),
+            dataset=_value("dataset"),
+        )
 
     @classmethod
     def _from_csv(cls: type[Product], file_path: str, identifier: str | None = None) -> Product:

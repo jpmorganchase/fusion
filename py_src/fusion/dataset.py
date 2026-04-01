@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json as js
-from dataclasses import dataclass, field, fields
+from dataclasses import MISSING, dataclass, field, fields
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -314,7 +314,55 @@ class Dataset(metaclass=CamelCaseMeta):
         data = {k: v for k, v in data.items() if k in keys}
         if "type" in data:
             data["type_"] = data.pop("type")
-        return cls(**data)
+        field_map = {field_.name: field_ for field_ in fields(cls)}
+
+        def _value(name: str) -> Any:
+            if name in data:
+                return data[name]
+            field_ = field_map[name]
+            if field_.default_factory is not MISSING:
+                return field_.default_factory()
+            return field_.default
+
+        return cls(
+            identifier=data["identifier"],
+            title=_value("title"),
+            category=_value("category"),
+            description=_value("description"),
+            frequency=_value("frequency"),
+            is_internal_only_dataset=_value("is_internal_only_dataset"),
+            is_third_party_data=_value("is_third_party_data"),
+            is_restricted=_value("is_restricted"),
+            is_raw_data=_value("is_raw_data"),
+            maintainer=_value("maintainer"),
+            source=_value("source"),
+            region=_value("region"),
+            publisher=_value("publisher"),
+            product=_value("product"),
+            sub_category=_value("sub_category"),
+            tags=_value("tags"),
+            created_date=_value("created_date"),
+            modified_date=_value("modified_date"),
+            delivery_channel=_value("delivery_channel"),
+            language=_value("language"),
+            status=_value("status"),
+            type_=_value("type_"),
+            container_type=_value("container_type"),
+            snowflake=_value("snowflake"),
+            complexity=_value("complexity"),
+            is_immutable=_value("is_immutable"),
+            is_mnpi=_value("is_mnpi"),
+            is_pci=_value("is_pci"),
+            is_pii=_value("is_pii"),
+            is_client=_value("is_client"),
+            is_public=_value("is_public"),
+            is_internal=_value("is_internal"),
+            is_confidential=_value("is_confidential"),
+            is_highly_confidential=_value("is_highly_confidential"),
+            is_active=_value("is_active"),
+            owners=_value("owners"),
+            application_id=_value("application_id"),
+        )
 
     @classmethod
     def _from_csv(cls: type[Dataset], file_path: str, identifier: str | None = None) -> Dataset:

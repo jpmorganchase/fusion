@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, fields
+from dataclasses import MISSING, dataclass, field, fields
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -260,7 +260,40 @@ class Attribute(metaclass=CamelCaseMeta):
         data = {k: (None if pd.isna(v) else v) for k, v in data.items() if k in keys}
         if "data_type" in data:
             data["data_type"] = Types[data["data_type"].strip().rsplit(".", maxsplit=1)[-1].title()]
-        return cls(**data)
+        field_map = {field_.name: field_ for field_ in fields(cls)}
+
+        def _value(name: str) -> Any:
+            if name in data:
+                return data[name]
+            field_ = field_map[name]
+            if field_.default_factory is not MISSING:
+                return field_.default_factory()
+            return field_.default
+
+        return cls(
+            identifier=data["identifier"],
+            index=data["index"],
+            data_type=_value("data_type"),
+            title=_value("title"),
+            description=_value("description"),
+            is_dataset_key=_value("is_dataset_key"),
+            source=_value("source"),
+            source_field_id=_value("source_field_id"),
+            is_internal_dataset_key=_value("is_internal_dataset_key"),
+            is_externally_visible=_value("is_externally_visible"),
+            unit=_value("unit"),
+            multiplier=_value("multiplier"),
+            is_propagation_eligible=_value("is_propagation_eligible"),
+            is_metric=_value("is_metric"),
+            available_from=_value("available_from"),
+            deprecated_from=_value("deprecated_from"),
+            term=_value("term"),
+            dataset=_value("dataset"),
+            attribute_type=_value("attribute_type"),
+            application_id=_value("application_id"),
+            publisher=_value("publisher"),
+            is_key_data_element=_value("is_key_data_element"),
+        )
 
     def from_object(
         self,

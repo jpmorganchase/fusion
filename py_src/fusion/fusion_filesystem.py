@@ -1103,19 +1103,21 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         elif algorithm == "SHA-1":
             if is_multipart:
-                inner_hash = hashlib.sha1(data).digest()
-                outer_hash = hashlib.sha1(inner_hash).digest()
+                inner_hash = hashlib.sha1(data).digest()  # NOSONAR(S4790) legacy API checksum
+                outer_hash = hashlib.sha1(inner_hash).digest()  # NOSONAR(S4790) legacy API checksum
                 return base64.b64encode(outer_hash).decode("ascii")
             else:
-                return base64.b64encode(hashlib.sha1(data).digest()).decode("ascii")
+                return base64.b64encode(hashlib.sha1(data).digest()).decode("ascii")  # NOSONAR(S4790) legacy checksum
 
         elif algorithm == "MD5":
             if is_multipart:
-                inner_hash = hashlib.md5(data).digest()
-                outer_hash = hashlib.md5(inner_hash).digest()
+                inner_hash = hashlib.md5(data).digest()  # NOSONAR(S4790) legacy API checksum
+                outer_hash = hashlib.md5(inner_hash).digest()  # NOSONAR(S4790) legacy API checksum
                 return base64.b64encode(outer_hash).decode("ascii")
             else:
-                return base64.b64encode(hashlib.md5(data).digest()).decode("ascii")
+                return base64.b64encode(hashlib.md5(data).digest()).decode(
+                    "ascii"
+                )  # NOSONAR(S4790) legacy API checksum
 
         elif algorithm == "CRC64NVME":
             crc_value = aws_checksums.crc64nvme(data)
@@ -1382,7 +1384,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 operation_id = await resp.json()
 
             operation_id = operation_id["operationId"]
-            resps = [resp async for resp in put_data()]
+            put_data_iterable: AsyncGenerator[dict[Any, Any], None] = put_data()
+            resps = [resp async for resp in put_data_iterable]
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
             kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
