@@ -658,13 +658,13 @@ class DummyResponse:
         self.status_code = 206
 
     def raise_for_status(self) -> None:
-        pass
+        return None  # Intentional no-op for the synchronous test double.
 
     def __enter__(self) -> "DummyResponse":
         return self
 
     def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
-        pass
+        return None  # Intentional no-op; the dummy context manager never suppresses errors.
 
 
 class DummySession:

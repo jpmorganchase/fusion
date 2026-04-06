@@ -969,6 +969,9 @@ def test_fusion_async_http_connection_ssl_context_warning(mock_from_file: MagicM
     """Test that a warning is raised when using ssl_context with other SSL-related kwargs."""
     mock_credentials = MagicMock(spec=FusionCredentials)
     mock_from_file.return_value = mock_credentials
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)  # NOSONAR(S4423) explicit test-only TLS client context
+    ssl_context.check_hostname = True
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
 
     with pytest.warns(UserWarning, match="When using `ssl_context`, all other SSL related kwargs are ignored"):
         FusionAsyncHttpConnection(
@@ -979,7 +982,7 @@ def test_fusion_async_http_connection_ssl_context_warning(mock_from_file: MagicM
             verify_certs=True,
             ssl_show_warn=False,
             ca_certs="path/to/ca_certs",
-            ssl_context=ssl.create_default_context(),
+            ssl_context=ssl_context,
             root_url="https://fusion.jpmorgan.com/api/v1/",
             credentials="config/client_credentials.json",
             catalog="common",

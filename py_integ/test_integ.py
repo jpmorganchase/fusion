@@ -109,7 +109,7 @@ def gen_generic_dl() -> None:
         print_res[test_nm] = params
 
 @pytest.mark.integration
-def test_generic_dl(client: Fusion) -> None:  # noqa: PLR0912, PLR0915
+def test_generic_dl(client: Fusion) -> None:  # noqa: PLR0912, PLR0915  # NOSONAR(S3776) test matrix orchestration
     for test_nm, params in download_hashes.items():
         res_params = params.client_dl_params.copy()
 

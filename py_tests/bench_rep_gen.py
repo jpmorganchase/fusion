@@ -19,7 +19,7 @@ def format_datetime(dt_str: str) -> str:
 
 
 @app.command()
-def py_bench(py_vers: Annotated[str, PyVerOpt]) -> None:
+def py_bench(py_vers: Annotated[str, PyVerOpt]) -> None:  # NOSONAR(S3776) benchmark report assembly
     py_vers_list = map(str.strip, py_vers.split(","))
 
     all_data = {}

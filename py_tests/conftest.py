@@ -15,6 +15,10 @@ from fusion.credentials import FusionCredentials
 from fusion.fusion import Fusion
 
 PathLike = Union[str, Path]
+EXAMPLE_RESOURCE = "JPMC:URI:RS-97834-Fusion-PROD"
+EXAMPLE_AUTH_URL = "https://authe.mysite.com/as/token.oauth2"
+EXAMPLE_HTTP_PROXY = "http://myproxy.com:8080"
+EXAMPLE_HTTPS_PROXY = "http://myproxy.com:8081"
 
 
 def pytest_addoption(parser: Any) -> None:
@@ -47,11 +51,11 @@ def example_creds_dict() -> dict[str, Any]:
     return {
         "client_id": "vf3tdjK0jdp7MdY3",
         "client_secret": "vswag2iet7Merdkdwe64YcI9gxbemjMsh5jgimrwpcghsqc2mnj4w4qQffrfhtKz0ba3u48tqJrbp1y",
-        "resource": "JPMC:URI:RS-97834-Fusion-PROD",
-        "auth_url": "https://authe.mysite.com/as/token.oauth2",
+        "resource": EXAMPLE_RESOURCE,
+        "auth_url": EXAMPLE_AUTH_URL,
         "proxies": {
-            "http": "http://myproxy.com:8080",
-            "https": "http://myproxy.com:8081",
+            "http": EXAMPLE_HTTP_PROXY,
+            "https": EXAMPLE_HTTPS_PROXY,
         },
     }
 
@@ -64,11 +68,11 @@ def example_creds_dict_from_env(monkeypatch: pytest.MonkeyPatch) -> dict[str, An
     monkeypatch.setenv("FUSION_CLIENT_SECRET", example_client_secret)
 
     return {
-        "resource": "JPMC:URI:RS-97834-Fusion-PROD",
-        "auth_url": "https://authe.mysite.com/as/token.oauth2",
+        "resource": EXAMPLE_RESOURCE,
+        "auth_url": EXAMPLE_AUTH_URL,
         "proxies": {
-            "http": "http://myproxy.com:8080",
-            "https": "http://myproxy.com:8081",
+            "http": EXAMPLE_HTTP_PROXY,
+            "https": EXAMPLE_HTTPS_PROXY,
         },
     }
 
@@ -78,10 +82,10 @@ def example_creds_dict_https_pxy() -> dict[str, Any]:
     return {
         "client_id": "vf3tdjK0jdp7MdY3",
         "client_secret": "vswag2iet7Merdkdwe64YcI9gxbemjMsh5jgimrwpcghsqc2mnj4w4qQffrfhtKz0ba3u48tqJrbp1y",
-        "resource": "JPMC:URI:RS-97834-Fusion-PROD",
-        "auth_url": "https://authe.mysite.com/as/token.oauth2",
+        "resource": EXAMPLE_RESOURCE,
+        "auth_url": EXAMPLE_AUTH_URL,
         "proxies": {
-            "https": "http://myproxy.com:8081",
+            "https": EXAMPLE_HTTPS_PROXY,
         },
     }
 
@@ -91,10 +95,10 @@ def example_creds_dict_https_pxy_e2e() -> dict[str, Any]:
     return {
         "client_id": "vf3tdjK0jdp7MdY3",
         "client_secret": "vswag2iet7Merdkdwe64YcI9gxbemjMsh5jgimrwpcghsqc2mnj4w4qQffrfhtKz0ba3u48tqJrbp1y",
-        "resource": "JPMC:URI:RS-97834-Fusion-PROD",
-        "auth_url": "https://authe.mysite.com/as/token.oauth2",
+        "resource": EXAMPLE_RESOURCE,
+        "auth_url": EXAMPLE_AUTH_URL,
         "proxies": {
-            "https": "http://myproxy.com:8081",
+            "https": EXAMPLE_HTTPS_PROXY,
         },
         "fusion_e2e": "fusion-e2e-token",
     }
@@ -133,16 +137,16 @@ def credentials_examples(request: pytest.FixtureRequest, tmp_path: Path) -> Path
 
 @pytest.fixture
 def good_json() -> str:
-    return """{
+    return f"""{{
         "client_id": "vf3tdjK0jdp7MdY3",
         "client_secret": "vswag2iet7Merdkdwe64YcI9gxbemjMsh5jgimrwpcghsqc2mnj4w4qQffrfhtKz0ba3u48tqJrbp1y",
-        "resource": "JPMC:URI:RS-97834-Fusion-PROD",
-        "auth_url": "https://authe.mysite.com/as/token.oauth2",
-        "proxies": {
-            "http": "http://myproxy.com:8080",
-            "https": "http://myproxy.com:8081"
-            }
-        }"""
+        "resource": "{EXAMPLE_RESOURCE}",
+        "auth_url": "{EXAMPLE_AUTH_URL}",
+        "proxies": {{
+            "http": "{EXAMPLE_HTTP_PROXY}",
+            "https": "{EXAMPLE_HTTPS_PROXY}"
+            }}
+        }}"""
 
 
 @pytest.fixture

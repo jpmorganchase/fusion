@@ -113,6 +113,8 @@ def test_res_plural(ref_int: int, pluraliser: str) -> None:
 def test_is_url() -> None:
     from fusion.authentication import _is_url
 
+    non_url_value: Any = 3.141
+
     assert _is_url("https://www.google.com")
     assert _is_url("http://www.google.com/some/path?qp1=1&qp2=2")
     assert not _is_url("www.google.com")
@@ -120,7 +122,7 @@ def test_is_url() -> None:
     assert not _is_url("google")
     assert not _is_url("googlecom")
     assert not _is_url("googlecom.")
-    assert not _is_url(3.141)  # type: ignore
+    assert not _is_url(non_url_value)  # NOSONAR(S5655) verifies non-string input is rejected
 
 
 def test_fusion_class(fusion_obj: Fusion) -> None:
