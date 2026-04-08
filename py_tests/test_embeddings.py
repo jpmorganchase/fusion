@@ -11,9 +11,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import aiohttp
 import pytest
 import requests
+from aiohttp import client_exceptions as aiohttp_exceptions
 from multidict import CIMultiDict
 from opensearchpy import ImproperlyConfigured, RequestError
-from opensearchpy._async._extra_imports import aiohttp_exceptions
 from opensearchpy.exceptions import ConnectionError as OpenSearchConnectionError
 from opensearchpy.exceptions import (
     ConnectionTimeout,
@@ -28,6 +28,11 @@ from fusion.embeddings import (
     PromptTemplateManager,
     format_index_body,
 )
+from fusion.utils import create_secure_ssl_context
+
+
+def _secure_test_ssl_context() -> ssl.SSLContext:
+    return create_secure_ssl_context()
 
 
 def test_format_index_body() -> None:
@@ -979,7 +984,7 @@ def test_fusion_async_http_connection_ssl_context_warning(mock_from_file: MagicM
             verify_certs=True,
             ssl_show_warn=False,
             ca_certs="path/to/ca_certs",
-            ssl_context=ssl.create_default_context(),
+            ssl_context=_secure_test_ssl_context(),
             root_url="https://fusion.jpmorgan.com/api/v1/",
             credentials="config/client_credentials.json",
             catalog="common",

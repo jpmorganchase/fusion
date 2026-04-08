@@ -11,9 +11,16 @@ jobs:
     name: SonarQube
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - uses: astral-sh/setup-uv@v4
+      - name: Set up Python 3.9
+        run: uv python install 3.9
+      - name: Install project (dev + extras)
+        run: uv sync --all-extras --dev
+      - name: Run tox tests with coverage
+        run: uv run tox -e test
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:

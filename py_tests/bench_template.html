@@ -157,10 +157,8 @@
             });
             results_table.clear();
 
-            ver_dropdown = document.getElementById('version-select');
-            ver_dropdown.innerHTML = Object.keys(all_data).map(key => `<option value="${key}">${key}</option>`).join('');
-
             const versionSelect = document.getElementById('version-select');
+            versionSelect.innerHTML = Object.keys(all_data).map(key => `<option value="${key}">${key}</option>`).join('');
             versionSelect.addEventListener('change', function () {
                 const selectedVersion = versionSelect.value;
                 const data = all_data[selectedVersion];

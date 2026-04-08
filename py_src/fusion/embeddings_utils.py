@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     import requests
 
 logger = logging.getLogger(__name__)
+INDEXES_PATH_SEGMENT = "indexes/"
 
 
 def _format_full_index_response(response: requests.Response) -> pd.DataFrame:
@@ -118,6 +119,35 @@ def _modify_post_response_langchain(raw_data: str | bytes | bytearray) -> str | 
     return raw_data
 
 
+def _log_haystack_post_decode_error(error: json.JSONDecodeError) -> None:
+    logger.exception("An error occurred during modification of haystack POST body: %s", error)
+
+
+def _transform_knn_query(knowledge_base: str | list[str] | None, query_dict: dict[str, Any]) -> dict[str, Any]:
+    query_body = query_dict.get("query", {})
+    bool_body = query_body.get("bool", {}) if isinstance(query_body, dict) else {}
+    knn_list = bool_body.get("must", {}) if isinstance(bool_body, dict) else {}
+    for knn in knn_list:
+        if "knn" in knn and "embedding" in knn["knn"]:
+            knn["knn"]["vector"] = knn["knn"].pop("embedding")
+
+    if isinstance(knowledge_base, list) and knn_list != {}:
+        query_dict["query"] = {"hybrid": {"queries": knn_list}}
+        query_dict["datasets"] = knowledge_base
+
+    return query_dict
+
+
+def _transform_bulk_embedding_body(body_str: str) -> bytes:
+    json_strings = body_str.strip().split("\n")
+    dict_list = [json.loads(json_string) for json_string in json_strings]
+    for dct in dict_list:
+        if "embedding" in dct:
+            dct["vector"] = dct.pop("embedding")
+    json_strings_mod = [json.dumps(dct, separators=(",", ":")) for dct in dict_list]
+    return "\n".join(json_strings_mod).encode("utf-8")
+
+
 def _modify_post_haystack(knowledge_base: str | list[str] | None, body: bytes | None, method: str) -> bytes | None:
     """Method to modify haystack POST body to match the embeddings API, which expects the embedding field to be
         named "vector".
@@ -129,35 +159,27 @@ def _modify_post_haystack(knowledge_base: str | list[str] | None, body: bytes | 
     Returns:
         bytes: Modified request body.
     """
-    if method.lower() == "post":
-        body_str = body.decode("utf-8") if body else ""
+    if method.lower() != "post":
+        return body
 
-        if "query" in body_str:
-            try:
-                query_dict = json.loads(body_str)
-                knn_list = query_dict.get("query", {}).get("bool", {}).get("must", {})
-                for knn in knn_list:
-                    if "knn" in knn and "embedding" in knn["knn"]:
-                        knn["knn"]["vector"] = knn["knn"].pop("embedding")
-                if isinstance(knowledge_base, list) and knn_list != {}:
-                    query_dict["query"] = {"hybrid": {"queries": knn_list}}
-                    query_dict["datasets"] = knowledge_base
-                body = json.dumps(query_dict, separators=(",", ":")).encode("utf-8")
-            except json.JSONDecodeError as e:
-                logger.exception(f"An error occurred during modification of haystack POST body: {e}")
-        elif body_str != "":
-            try:
-                json_strings = body_str.strip().split("\n")
-                dict_list = [json.loads(json_string) for json_string in json_strings]
-                for dct in dict_list:
-                    if "embedding" in dct:
-                        dct["vector"] = dct.pop("embedding")
-                json_strings_mod = [json.dumps(d, separators=(",", ":")) for d in dict_list]
-                joined_str = "\n".join(json_strings_mod)
-                body = joined_str.encode("utf-8")
-            except json.JSONDecodeError as e:
-                logger.exception(f"An error occurred during modification of haystack POST body: {e}")
-    return body
+    body_str = body.decode("utf-8") if body else ""
+    if not body_str:
+        return body
+
+    if "query" in body_str:
+        try:
+            query_dict = json.loads(body_str)
+        except json.JSONDecodeError as error:
+            _log_haystack_post_decode_error(error)
+            return body
+        transformed_query = _transform_knn_query(knowledge_base, query_dict)
+        return json.dumps(transformed_query, separators=(",", ":")).encode("utf-8")
+
+    try:
+        return _transform_bulk_embedding_body(body_str)
+    except json.JSONDecodeError as error:
+        _log_haystack_post_decode_error(error)
+        return body
 
 
 def extract_index_name_from_url(url: str) -> str | None:
@@ -188,15 +210,15 @@ def is_index_creation_request(url: str, method: str, body: bytes | None) -> bool
         bool: True if request is index creation request
     """
 
-    if not (body and method.lower() == "post" and "indexes/" in url):
+    if not (body and method.lower() == "post" and INDEXES_PATH_SEGMENT in url):
         return False
 
-    index_pos = url.find("indexes/")
+    index_pos = url.find(INDEXES_PATH_SEGMENT)
 
     if index_pos == -1:
         return False
 
-    path_after_indexes = url[index_pos + len("indexes/") :]
+    path_after_indexes = url[index_pos + len(INDEXES_PATH_SEGMENT) :]
 
     path_segments = path_after_indexes.strip("/").split("/")
 

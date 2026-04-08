@@ -118,6 +118,115 @@ re_str_1 = re.compile("(.)([A-Z][a-z]+)")
 re_str_2 = re.compile("([a-z0-9])([A-Z])")
 
 
+def create_secure_ssl_context(cafile: str | None = None) -> ssl.SSLContext:
+    """Create an SSL context with a minimum TLS version."""
+    context = ssl.create_default_context(cafile=cafile)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return context
+
+
+def _convert_arrow_table_to_dataframe(table: pa.Table, dataframe_type: str) -> pd.DataFrame | pa.Table:
+    if dataframe_type == "pandas":
+        return table.to_pandas()
+    if dataframe_type == "polars":
+        import polars as pl
+
+        return pl.from_arrow(table)
+    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+
+
+def _read_csv_with_arrow(
+    path: str,
+    columns: list[str] | None,
+    filters: PyArrowFilterT | None,
+    fs: fsspec.filesystem | None,
+    dataframe_type: str,
+) -> pd.DataFrame | pa.Table:
+    table = csv_to_table(path, fs, columns=columns, filters=filters)
+    return _convert_arrow_table_to_dataframe(table, dataframe_type)
+
+
+def _read_csv_with_reader(
+    file_obj: Any,
+    columns: list[str] | None,
+    dataframe_type: str,
+) -> pd.DataFrame | pa.Table:
+    if dataframe_type == "pandas":
+        return pd.read_csv(file_obj, usecols=columns, index_col=False)
+    if dataframe_type == "polars":
+        import polars as pl
+
+        return pl.read_csv(file_obj, columns=columns)
+    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+
+
+def _read_csv_with_python_engine(file_obj: Any, columns: list[str] | None, dataframe_type: str) -> pd.DataFrame:
+    if dataframe_type != "pandas":
+        raise ValueError(f"Unknown DataFrame type {dataframe_type}")
+    return pd.read_table(
+        file_obj,
+        usecols=columns,
+        index_col=False,
+        engine="python",
+        delimiter=None,
+    )
+
+
+def _open_csv_source(path: str, fs: fsspec.filesystem | None) -> Any:
+    return fs.open(path) if fs else nullcontext(path)
+
+
+def _read_csv_with_fallback_readers(
+    path: str,
+    columns: list[str] | None,
+    fs: fsspec.filesystem | None,
+    dataframe_type: str,
+) -> pd.DataFrame | pa.Table:
+    logger.log(
+        VERBOSE_LVL,
+        "Could not parse %s properly. Trying with pandas csv reader.",
+        path,
+        exc_info=True,
+    )
+    try:  # pragma: no cover
+        with _open_csv_source(path, fs) as file_obj:
+            return _read_csv_with_reader(file_obj, columns, dataframe_type)
+    except Exception as err:  # noqa: BLE001
+        logger.log(
+            VERBOSE_LVL,
+            "Could not parse %s properly. Trying with pandas csv reader pandas engine.",
+            path,
+            exc_info=True,
+        )
+        with _open_csv_source(path, fs) as file_obj:
+            result = _read_csv_with_python_engine(file_obj, columns, dataframe_type)  # pragma: no cover
+        if dataframe_type != "pandas":
+            raise ValueError(f"Unknown DataFrame type {dataframe_type}") from err
+        return result
+
+
+def _read_csv_from_path(
+    path: str,
+    columns: list[str] | None,
+    filters: PyArrowFilterT | None,
+    fs: fsspec.filesystem | None,
+    dataframe_type: str,
+) -> pd.DataFrame | pa.Table:
+    try:
+        try:
+            return _read_csv_with_arrow(path, columns, filters, fs, dataframe_type)
+        except Exception as err:
+            logger.log(
+                VERBOSE_LVL,
+                "Failed to read %s, with comma delimiter.",
+                path,
+                exc_info=True,
+            )
+            raise ValueError from err
+    except Exception:  # noqa: BLE001
+        return _read_csv_with_fallback_readers(path, columns, fs, dataframe_type)
+
+
 def get_default_fs() -> fsspec.filesystem:
     """Retrieve default filesystem.
 
@@ -303,8 +412,8 @@ def parquet_to_table(
     ).read(columns=columns)
 
 
-def read_csv(  # noqa: PLR0912
-    path: str | zipfile.ZipFile,
+def read_csv(
+    path: str | zipfile.ZipExtFile,
     columns: list[str] | None = None,
     filters: PyArrowFilterT | None = None,
     fs: fsspec.filesystem | None = None,
@@ -324,66 +433,8 @@ def read_csv(  # noqa: PLR0912
 
     """
     if isinstance(path, zipfile.ZipExtFile):
-        res = pd.read_csv(path, usecols=columns, index_col=False)
-    elif isinstance(path, str):
-        try:
-            try:
-                res = csv_to_table(path, fs, columns=columns, filters=filters)
-
-                if dataframe_type == "pandas":
-                    res = res.to_pandas()
-                elif dataframe_type == "polars":
-                    import polars as pl
-
-                    res = pl.from_arrow(res)
-                else:
-                    raise ValueError(f"Unknown DataFrame type {dataframe_type}")
-            except Exception as err:
-                logger.log(
-                    VERBOSE_LVL,
-                    "Failed to read %s, with comma delimiter.",
-                    path,
-                    exc_info=True,
-                )
-                raise ValueError from err
-
-        except Exception:  # noqa: BLE001
-            logger.log(
-                VERBOSE_LVL,
-                "Could not parse %s properly. Trying with pandas csv reader.",
-                path,
-                exc_info=True,
-            )
-            try:  # pragma: no cover
-                with fs.open(path) if fs else nullcontext(path) as f:
-                    if dataframe_type == "pandas":
-                        res = pd.read_csv(f, usecols=columns, index_col=False)
-                    elif dataframe_type == "polars":
-                        import polars as pl
-
-                        res = pl.read_csv(f, columns=columns)
-                    else:
-                        raise ValueError(f"Unknown DataFrame type {dataframe_type}")  # noqa: W0707
-
-            except Exception as err:  # noqa: BLE001
-                logger.log(
-                    VERBOSE_LVL,
-                    "Could not parse %s properly. Trying with pandas csv reader pandas engine.",
-                    path,
-                    exc_info=True,
-                )
-                with fs.open(path) if fs else nullcontext(path) as f:
-                    if dataframe_type == "pandas":
-                        res = pd.read_table(  # pragma: no cover
-                            f,
-                            usecols=columns,
-                            index_col=False,
-                            engine="python",
-                            delimiter=None,
-                        )
-                    else:
-                        raise ValueError(f"Unknown DataFrame type {dataframe_type}") from err
-    return res
+        return pd.read_csv(path, usecols=columns, index_col=False)
+    return _read_csv_from_path(path, columns, filters, fs, dataframe_type)
 
 
 def read_json(
@@ -662,7 +713,7 @@ async def get_client(credentials: FusionCredentials, **kwargs: Any) -> FusionAio
     else:
         timeout = aiohttp.ClientTimeout(total=60 * 60)  # default 60min timeout
 
-    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    ssl_context = create_secure_ssl_context(cafile=certifi.where())
     session = FusionAiohttpSession(
         trace_configs=[trace_config], trust_env=True, timeout=timeout, connector=aiohttp.TCPConnector(ssl=ssl_context)
     )

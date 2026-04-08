@@ -203,6 +203,48 @@ class Report(metaclass=CamelCaseMeta):
         return str(raw)
 
     @classmethod
+    def _build_node(
+        cls,
+        report_data: dict[str, Any],
+        name_key: str,
+        type_key: str,
+    ) -> dict[str, Any] | None:
+        name_val = cls._str_or_none(report_data.pop(name_key, None))
+        type_val = report_data.pop(type_key, None)
+        if name_val or type_val:
+            return {"name": name_val or "", "type": type_val or ""}
+        return None
+
+    @staticmethod
+    def _add_publisher_identifier(
+        report_data: dict[str, Any],
+        publisher_node: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        pub_ident = Report._str_or_none(report_data.pop("publisher_node_identifier", None))
+        if not pub_ident:
+            return publisher_node
+        if publisher_node is None:
+            return {"name": "", "type": "", "publisher_node_identifier": pub_ident}
+        publisher_node["publisher_node_identifier"] = pub_ident
+        return publisher_node
+
+    @staticmethod
+    def _normalize_bool_fields(report_data: dict[str, Any]) -> None:
+        for key in ("is_bcbs239_program", "mnpi_indicator", "regulatory_related"):
+            val = report_data.get(key)
+            if isinstance(val, str):
+                low = val.strip().lower()
+                if low == "yes":
+                    report_data[key] = True
+                elif low == "no":
+                    report_data[key] = False
+
+    @classmethod
+    def _filter_valid_fields(cls, report_data: dict[str, Any]) -> dict[str, Any]:
+        valid_fields = {field.name for field in fields(cls)}
+        return {key: value for key, value in report_data.items() if key in valid_fields}
+
+    @classmethod
     def from_dataframe(cls, data: pd.DataFrame, client: Fusion | None = None) -> list[Report]:
         """Create a list of Report objects from a DataFrame, applying permanent column mapping."""
         df_df = data.rename(columns=Report.COLUMN_MAPPING)  # type: ignore[attr-defined]
@@ -212,38 +254,14 @@ class Report(metaclass=CamelCaseMeta):
         reports: list[Report] = []
         for _, row in df_df.iterrows():
             report_data: dict[str, Any] = row.to_dict()
-
-            def build_node(d: dict[str, Any], name_key: str, type_key: str) -> dict[str, Any] | None:
-                name_val = Report._str_or_none(d.pop(name_key, None))
-                type_val = d.pop(type_key, None)
-                if name_val or type_val:
-                    return {"name": name_val or "", "type": type_val or ""}
-                return None
-
-            publisher_node = build_node(report_data, "publisher_node_name", "publisher_node_type")
-            owner_node = build_node(report_data, "owner_node_name", "owner_node_type")
-
-            pub_ident = Report._str_or_none(report_data.pop("publisher_node_identifier", None))
-            if pub_ident:
-                if publisher_node is None:
-                    publisher_node = {"name": "", "type": "", "publisher_node_identifier": pub_ident}
-                else:
-                    publisher_node["publisher_node_identifier"] = pub_ident
+            publisher_node = cls._build_node(report_data, "publisher_node_name", "publisher_node_type")
+            owner_node = cls._build_node(report_data, "owner_node_name", "owner_node_type")
+            publisher_node = cls._add_publisher_identifier(report_data, publisher_node)
 
             report_data["owner_node"] = owner_node
             report_data["publisher_node"] = publisher_node
-
-            for key in ("is_bcbs239_program", "mnpi_indicator", "regulatory_related"):
-                val = report_data.get(key)
-                if isinstance(val, str):
-                    low = val.strip().lower()
-                    if low == "yes":
-                        report_data[key] = True
-                    elif low == "no":
-                        report_data[key] = False
-
-            valid_fields = {f.name for f in fields(cls)}
-            report_data = {k: v for k, v in report_data.items() if k in valid_fields}
+            cls._normalize_bool_fields(report_data)
+            report_data = cls._filter_valid_fields(report_data)
 
             report_obj = cls(**report_data)
             report_obj.client = client

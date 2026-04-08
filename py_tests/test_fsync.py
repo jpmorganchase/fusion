@@ -14,9 +14,12 @@ import pytest
 from fusion.credentials import FusionCredentials
 from fusion.fs_sync import (
     _download,
+    _extend_datasets_from_products,
     _generate_sha256_token,
     _get_fusion_df,
     _get_local_state,
+    _handle_fsync_result,
+    _normalize_fsync_inputs,
     _synchronize,
     _upload,
     _url_to_path,
@@ -38,6 +41,67 @@ def test__url_to_path() -> None:
     path = _url_to_path(url)
     exp_res = f"{catalog}/my_dataset/{dt_str}//{dataset}__{catalog}__{dt_str}.csv"
     assert path == exp_res
+
+
+def test_normalize_fsync_inputs_and_extend_datasets_from_products() -> None:
+    products, datasets, catalog, local_path = _normalize_fsync_inputs(
+        ["prod-a"],
+        None,
+        None,
+        "download",
+        "/tmp/data",
+    )
+
+    assert products == ["prod-a"]
+    assert datasets == []
+    assert catalog == "common"
+    assert local_path == "/tmp/data/"
+
+    with pytest.raises(AssertionError, match="At least one list products or datasets should be non-empty"):
+        _normalize_fsync_inputs(None, None, None, "download", "")
+
+    with pytest.raises(AssertionError, match="direction must be either upload or download"):
+        _normalize_fsync_inputs(["prod-a"], None, None, "sync", "")
+
+    fs_fusion = MagicMock()
+    fs_fusion.cat.return_value = json.dumps({"resources": [{"identifier": "ds1"}, {"identifier": "ds2"}]}).encode()
+
+    assert _extend_datasets_from_products(fs_fusion, ["prod-a"], ["seed"], "common") == ["seed", "ds1", "ds2"]
+
+    fs_fusion.cat.return_value = json.dumps({"resources": []}).encode()
+    with pytest.raises(AssertionError, match="did not contain any datasets"):
+        _extend_datasets_from_products(fs_fusion, ["prod-a"], [], "common")
+
+
+def test_handle_fsync_result_updates_state_and_warns_on_failures() -> None:
+    local_state = pd.DataFrame([{"path": "old"}])
+    fusion_state = pd.DataFrame([{"path": "old"}])
+    local_state_temp = pd.DataFrame([{"path": "new"}])
+    fusion_state_temp = pd.DataFrame([{"path": "new"}])
+
+    updated_local, updated_fusion = _handle_fsync_result(
+        [(True, "a", None)],
+        "download",
+        local_state,
+        fusion_state,
+        local_state_temp,
+        fusion_state_temp,
+    )
+    assert updated_local.equals(local_state_temp)
+    assert updated_fusion.equals(fusion_state_temp)
+
+    with pytest.warns(UserWarning, match="Not all downloads were successfully completed"):
+        warned_local, warned_fusion = _handle_fsync_result(
+            [(False, "a", None)],
+            "download",
+            local_state,
+            fusion_state,
+            local_state_temp,
+            fusion_state_temp,
+        )
+
+    assert warned_local.equals(local_state)
+    assert warned_fusion.equals(fusion_state)
 
 
 @patch.object(FusionHTTPFileSystem, "set_session", new_callable=AsyncMock)

@@ -135,6 +135,33 @@ def test_attribute_class_from_dict() -> None:
     assert test_attribute.attributeType is None
 
 
+def test_attribute_class_from_dict_with_extended_fields() -> None:
+    """Test attribute class from dict with optional fields."""
+    test_attribute = Attribute._from_dict(
+        {
+            "title": "Test Attribute",
+            "identifier": "Test Attribute",
+            "index": 0,
+            "dataType": "string",
+            "sourceFieldId": "Original Field",
+            "isInternalDatasetKey": True,
+            "isExternallyVisible": False,
+            "deprecatedFrom": "May 5, 2021",
+            "applicationId": {"id": "123", "type": "Application"},
+            "publisher": "JPM",
+            "isKeyDataElement": True,
+        }
+    )
+
+    assert test_attribute.sourceFieldId == "Original_Field"
+    assert test_attribute.isInternalDatasetKey is True
+    assert test_attribute.isExternallyVisible is False
+    assert test_attribute.deprecatedFrom == "2021-05-05"
+    assert test_attribute.applicationId == {"id": "123", "type": "Application"}
+    assert test_attribute.publisher == "JPM"
+    assert test_attribute.isKeyDataElement is True
+
+
 def test_attribute_class_from_object_dict() -> None:
     """Test attribute class from object"""
     test_dict = {

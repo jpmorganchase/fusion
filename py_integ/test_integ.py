@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -90,7 +90,7 @@ def gen_generic_dl() -> None:
 
     print_res = {}
     for test_nm, params in download_hashes.items():
-        res_params = params.client_dl_params
+        res_params = cast(dict[str, Any], params.client_dl_params.copy())
 
         dt_str = ""
         if params.st_dt:
@@ -101,17 +101,18 @@ def gen_generic_dl() -> None:
             res_params["dt_str"] = dt_str
 
         if params.method == "download":
-            res = client.download(**res_params)
+            client.download(**res_params)
         elif params.method == "to_df":
-            res = client.to_df(**res_params)
-            params.res_shape = res.shape
+            res_df = client.to_df(**res_params)
+            params.res_shape = res_df.shape
 
         print_res[test_nm] = params
 
+
 @pytest.mark.integration
-def test_generic_dl(client: Fusion) -> None:  # noqa: PLR0912, PLR0915
+def test_generic_dl(client: Fusion) -> None:  # noqa: PLR0912, PLR0915  # NOSONAR(S3776)
     for test_nm, params in download_hashes.items():
-        res_params = params.client_dl_params.copy()
+        res_params = cast(dict[str, Any], params.client_dl_params.copy())
 
         dt_str = ""
         if params.st_dt:
@@ -120,63 +121,70 @@ def test_generic_dl(client: Fusion) -> None:  # noqa: PLR0912, PLR0915
             dt_str += params.end_dt
         if dt_str:
             res_params["dt_str"] = dt_str
-            
+
         if params.method == "download":
             try:
-                res = client.download(**res_params)
+                download_res = client.download(**res_params)
             except Exception as e:
                 error_msg = str(e)
-                if any(phrase in error_msg for phrase in [
-                    "400 Client Error", 
-                    "Failed to generate Fusion token headers",
-                    "Checksum validation is required but missing checksum information",
-                    "Checksum validation failed"
-                ]):
+                if any(
+                    phrase in error_msg
+                    for phrase in [
+                        "400 Client Error",
+                        "Failed to generate Fusion token headers",
+                        "Checksum validation is required but missing checksum information",
+                        "Checksum validation failed",
+                    ]
+                ):
                     pytest.skip(f"Skipping {test_nm} due to expected error: {error_msg}")
                 else:
                     raise e
-            
-            assert res is not None, f"Download returned None for {test_nm}"
-            assert len(res) > 0, f"Download returned empty results for {test_nm}"
-            
+
+            assert download_res is not None, f"Download returned None for {test_nm}"
+            assert len(download_res) > 0, f"Download returned empty results for {test_nm}"
+
             successful_downloads = 0
             total_size = 0
-            
-            for success, path, _error in res:
+
+            for success, path, _error in download_res:
                 if success:
                     file_path = Path(path)
                     assert file_path.exists(), f"Downloaded file does not exist: {path}"
                     file_size = file_path.stat().st_size
                     assert file_size > 0, f"Downloaded file is empty: {path}"
-                    
+
                     successful_downloads += 1
                     total_size += file_size
-            
+
             assert successful_downloads > 0, f"No successful downloads for {test_nm}"
             assert total_size > 0, f"No data downloaded for {test_nm}"
-            
-            
-            download_clean_up(res)
-            
+
+            download_clean_up(download_res)
+
         elif params.method == "to_df":
             try:
-                res = client.to_df(**res_params)
+                data_frame = client.to_df(**res_params)
             except Exception as e:
                 error_msg = str(e)
-                if any(phrase in error_msg for phrase in [
-                    "400 Client Error", 
-                    "Failed to generate Fusion token headers",
-                    "Checksum validation is required but missing checksum information",
-                    "Checksum validation failed"
-                ]):
+                if any(
+                    phrase in error_msg
+                    for phrase in [
+                        "400 Client Error",
+                        "Failed to generate Fusion token headers",
+                        "Checksum validation is required but missing checksum information",
+                        "Checksum validation failed",
+                    ]
+                ):
                     pytest.skip(f"Skipping {test_nm} due to expected error: {error_msg}")
                 else:
                     raise e
-                    
-            assert res.shape == params.res_shape
-            assert res["date"].iloc[0] == int(params.st_dt)
-            assert res["date"].iloc[-1] == int(params.end_dt)
-            
+
+            assert params.st_dt is not None
+            assert params.end_dt is not None
+            assert data_frame.shape == params.res_shape
+            assert data_frame["date"].iloc[0] == int(params.st_dt)
+            assert data_frame["date"].iloc[-1] == int(params.end_dt)
+
             downloads_path = Path("./downloads")
             if downloads_path.exists():
                 for p in downloads_path.iterdir():

@@ -10,11 +10,13 @@ import time
 import warnings
 from collections.abc import Collection, Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
+import aiohttp
 import requests
+import yarl
 from aiohttp import ClientTimeout
-from opensearchpy._async._extra_imports import aiohttp, aiohttp_exceptions, yarl
+from aiohttp import client_exceptions as aiohttp_exceptions
 from opensearchpy._async.compat import get_running_loop
 from opensearchpy._async.http_aiohttp import AIOHttpConnection
 from opensearchpy.compat import reraise_exceptions, string_types, urlencode
@@ -37,7 +39,7 @@ from fusion.embeddings_utils import (
     is_index_creation_request,
     transform_index_creation_body,
 )
-from fusion.utils import get_client, get_session
+from fusion.utils import create_secure_ssl_context, get_client, get_session
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Mapping
@@ -53,7 +55,142 @@ SSL_SHOW_WARN_DEFAULT = object()
 logger = logging.getLogger(__name__)
 
 
-class FusionEmbeddingsConnection(Connection):  # type: ignore
+def _load_credentials(credentials: FusionCredentials | str | None) -> FusionCredentials:
+    if isinstance(credentials, FusionCredentials):
+        return credentials
+    if isinstance(credentials, str):
+        return FusionCredentials.from_file(Path(credentials))
+    raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
+
+
+def _resolve_url_prefix(catalog: str, knowledge_base: str | list[str] | None) -> tuple[str, str]:
+    url_prefix = f"dataspaces/{catalog}/datasets/{knowledge_base}/indexes/"
+    multi_dataset_url_prefix = f"dataspaces/{catalog}/indexes/"
+    if isinstance(knowledge_base, list):
+        return multi_dataset_url_prefix, multi_dataset_url_prefix
+    return url_prefix, multi_dataset_url_prefix
+
+
+def _normalize_sync_http_auth(http_auth: Any) -> Any:
+    if http_auth is None:
+        return None
+    if isinstance(http_auth, (tuple, list)):
+        return tuple(http_auth)
+    if isinstance(http_auth, string_types):
+        if isinstance(http_auth, bytes):
+            return tuple(http_auth.decode("utf-8").split(":", 1))
+        return tuple(http_auth.split(":", 1))
+    return http_auth
+
+
+def _normalize_async_http_auth(http_auth: Any) -> Any:
+    if http_auth is None:
+        return None
+    if isinstance(http_auth, (tuple, list)):
+        return aiohttp.BasicAuth(login=http_auth[0], password=http_auth[1])
+    if isinstance(http_auth, string_types):
+        auth_string = http_auth.decode("utf-8") if isinstance(http_auth, bytes) else http_auth
+        login, password = auth_string.split(":", 1)
+        return aiohttp.BasicAuth(login=login, password=password)
+    return http_auth
+
+
+def _normalize_method(method: str) -> str:
+    return "POST" if method.lower() == "put" else method
+
+
+def _mock_info_response() -> tuple[int, dict[str, Any], str]:
+    logger.warning("Returning mock OpenSearch info response for client compatibility")
+    return 200, {}, json.dumps({"version": {"number": "2.11.0"}})
+
+
+def _is_root_info_request(method: str, url: str, base_url: str) -> bool:
+    return method.lower() == "get" and (url.endswith("/") or url == base_url.rstrip("/"))
+
+
+def _skip_unsupported_endpoint(url: str) -> tuple[int, dict[str, Any], str] | None:
+    if "_refresh" in url:
+        return 200, {}, ""
+    return None
+
+
+def _skip_multi_kb_write(
+    knowledge_base: str | list[str] | None,
+    method: str,
+    body: bytes | None,
+) -> tuple[int, dict[str, Any], str] | None:
+    if body and isinstance(knowledge_base, list) and method.lower() == "post" and "query" not in body.decode("utf-8"):
+        return 200, {}, ""
+    return None
+
+
+def _prepare_embeddings_request_body(
+    url: str,
+    method: str,
+    body: bytes | None,
+    knowledge_base: str | list[str] | None,
+) -> bytes | None:
+    if body and is_index_creation_request(url, method, body):
+        logger.debug("Transforming index creation body to match API expectations")
+        body = transform_index_creation_body(body)
+    return _modify_post_haystack(knowledge_base=knowledge_base, body=body, method=method)
+
+
+def _get_short_circuit_response(
+    base_url: str,
+    knowledge_base: str | list[str] | None,
+    method: str,
+    url: str,
+    body: bytes | None,
+) -> tuple[int, dict[str, Any], str] | None:
+    if _is_root_info_request(method, url, base_url):
+        return _mock_info_response()
+    return _skip_unsupported_endpoint(url) or _skip_multi_kb_write(knowledge_base, method, body)
+
+
+def _resolve_async_ssl_defaults(verify_certs: Any, ssl_show_warn: Any) -> tuple[bool, bool]:
+    resolved_verify_certs = True if verify_certs is VERIFY_CERTS_DEFAULT else verify_certs
+    resolved_ssl_show_warn = True if ssl_show_warn is SSL_SHOW_WARN_DEFAULT else ssl_show_warn
+    return resolved_verify_certs, resolved_ssl_show_warn
+
+
+def _warn_if_ssl_context_overrides(
+    ssl_context: Any,
+    verify_certs: Any,
+    ssl_show_warn: Any,
+    ca_certs: Any,
+    client_cert: Any,
+    client_key: Any,
+    ssl_version: Any,
+) -> None:
+    if ssl_context and (
+        (verify_certs is not VERIFY_CERTS_DEFAULT)
+        or (ssl_show_warn is not SSL_SHOW_WARN_DEFAULT)
+        or ca_certs
+        or client_cert
+        or client_key
+        or ssl_version
+    ):
+        warnings.warn("When using `ssl_context`, all other SSL related kwargs are ignored", stacklevel=2)
+
+
+def _load_verify_locations(ssl_context: ssl.SSLContext, ca_certs: str) -> None:
+    ca_path = Path(ca_certs)
+    if ca_path.is_file():
+        ssl_context.load_verify_locations(cafile=ca_certs)
+        return
+    if ca_path.is_dir():
+        ssl_context.load_verify_locations(capath=ca_certs)
+        return
+    raise ImproperlyConfigured("ca_certs parameter is not a path")
+
+
+def _validate_client_cert_path(path: Any, label: str) -> None:
+    if path and not Path(path).is_file():
+        raise ImproperlyConfigured(f"{label} is not a path to a file")
+
+
+class FusionEmbeddingsConnection(Connection):  # type: ignore[misc]
     """
     Class responsible for maintaining HTTP connection to the Fusion Embedding API using OpenSearch. This class is a
     customized version of the `RequestsHttpConnection` class from the `opensearchpy` library, tailored to work with an
@@ -124,12 +261,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         # Initialize Session so .headers works before calling super().__init__().
         fusion_root_url: str = kwargs.get("root_url", "https://fusion.jpmorgan.com/api/v1/")
         credentials: FusionCredentials | str | None = kwargs.get("credentials", "config/client_credentials.json")
-        if isinstance(credentials, FusionCredentials):
-            self.credentials = credentials
-        elif isinstance(credentials, str):
-            self.credentials = FusionCredentials.from_file(Path(credentials))
-        else:
-            raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
+        self.credentials = _load_credentials(credentials)
         self.catalog = kwargs.get("catalog", "common")
         self.knowledge_base = kwargs.get("knowledge_base")
 
@@ -153,18 +285,26 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
             **kwargs,
         )
 
+        self._configure_sync_connection(http_auth, verify_certs, ssl_show_warn, ca_certs, client_cert, client_key)
+        self.url_prefix, self.multi_dataset_url_prefix = _resolve_url_prefix(self.catalog, self.knowledge_base)
+
+        self.index_name: str | None = kwargs.get("index")
+
+    def _configure_sync_connection(
+        self,
+        http_auth: Any,
+        verify_certs: bool,
+        ssl_show_warn: bool,
+        ca_certs: Any,
+        client_cert: Any,
+        client_key: Any,
+    ) -> None:
         if not self.http_compress:
             # Need to set this to 'None' otherwise Requests adds its own.
             self.session.headers["accept-encoding"] = None  # type: ignore
 
+        http_auth = _normalize_sync_http_auth(http_auth)
         if http_auth is not None:
-            if isinstance(http_auth, (tuple, list)):
-                http_auth = tuple(http_auth)
-            elif isinstance(http_auth, string_types):
-                if isinstance(http_auth, bytes):
-                    http_auth = tuple(http_auth.decode("utf-8").split(":", 1))
-                else:
-                    http_auth = tuple(http_auth.split(":", 1))
             self.session.auth = http_auth
 
         self.session.verify = verify_certs
@@ -187,13 +327,6 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
 
         if self.use_ssl and not verify_certs and ssl_show_warn:
             warnings.warn(f"Connecting to {self.host} using SSL with verify_certs=False is insecure.", stacklevel=2)
-        self.url_prefix = f"dataspaces/{self.catalog}/datasets/{self.knowledge_base}/indexes/"
-        self.multi_dataset_url_prefix = f"dataspaces/{self.catalog}/indexes/"
-
-        if isinstance(self.knowledge_base, list):
-            self.url_prefix = self.multi_dataset_url_prefix
-
-        self.index_name: str | None = kwargs.get("index")
 
     def _tidy_url(self, url: str) -> str:
         return url.replace("%2F%7B", "/").replace("%7D%2F", "/").replace("%2F", "/")
@@ -213,68 +346,21 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
 
         return url
 
-    def perform_request(  # noqa: PLR0913, PLR0915
+    def _send_prepared_request(
         self,
         method: str,
         url: str,
-        params: Mapping[str, Any] | None = None,  # noqa: ARG002
-        body: bytes | None = None,
-        timeout: float | None = None,
-        allow_redirects: bool | None = True,
-        ignore: Collection[int] = (),
-        headers: Mapping[str, str] | None = None,
-    ) -> Any:
-        if method.lower() == "put":
-            method = "POST"
-
-        url = self._tidy_url(url)
-        url = self._make_url_valid(url, body)
-
-        # handle  cluster info endpoint for OpenSearch client compatibility
-        if method.lower() == "get" and (url.endswith("/") or url == self.base_url.rstrip("/")):
-            # Return mock OpenSearch info response for client compatibility
-            mock_info_response = {"version": {"number": "2.11.0"}}
-            logger.warning("Returning mock OpenSearch info response for client compatibility")
-            return 200, {}, json.dumps(mock_info_response)
-
-        # _refresh endpoint not supported
-        if "_refresh" in url:
-            return 200, {}, ""
-        if (
-            body
-            and isinstance(self.knowledge_base, list)
-            and method.lower() == "post"
-            and "query" not in body.decode("utf-8")
-        ):
-            return 200, {}, ""
-
-        headers = headers or {}
-
-        if is_index_creation_request(url, method, body):
-            logger.debug("Transforming index creation body to match API expectations")
-            body = transform_index_creation_body(body) if body else body
-
-        body = _modify_post_haystack(self.knowledge_base, body, method)
-
-        orig_body = body
-        if self.http_compress and body:
-            body = self._gzip_compress(body)
-            headers["content-encoding"] = "gzip"  # type: ignore
-
-        start = time.time()
-        request = requests.Request(method=method, headers=headers, url=url, data=body)
-        prepared_request = self.session.prepare_request(request)
-        settings = self.session.merge_environment_settings(prepared_request.url, {}, None, None, None)
-        send_kwargs: Any = {
-            "timeout": timeout or self.timeout,
-            "allow_redirects": allow_redirects,
-        }
-        send_kwargs.update(settings)
+        prepared_request: requests.PreparedRequest,
+        send_kwargs: dict[str, Any],
+        orig_body: bytes | None,
+        start: float,
+    ) -> tuple[requests.Response, float, str]:
         try:
             self.metrics.request_start()
             response = self.session.send(prepared_request, **send_kwargs)
             duration = time.time() - start
             raw_data = response.content.decode("utf-8", "surrogatepass")
+            return response, duration, raw_data
         except reraise_exceptions:
             raise
         except Exception as e:
@@ -294,11 +380,52 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         finally:
             self.metrics.request_end()
 
+    def perform_request(  # noqa: PLR0913, PLR0915
+        self,
+        method: str,
+        url: str,
+        params: Mapping[str, Any] | None = None,  # noqa: ARG002
+        body: bytes | None = None,
+        timeout: float | None = None,
+        allow_redirects: bool | None = True,
+        ignore: Collection[int] = (),
+        headers: Mapping[str, str] | None = None,
+    ) -> Any:
+        method = _normalize_method(method)
+
+        url = self._tidy_url(url)
+        url = self._make_url_valid(url, body)
+
+        skipped_response = _get_short_circuit_response(self.base_url, self.knowledge_base, method, url, body)
+        if skipped_response is not None:
+            return skipped_response
+
+        headers = dict(headers or {})
+        body = _prepare_embeddings_request_body(url, method, body, self.knowledge_base)
+
+        orig_body = body
+        if self.http_compress and body:
+            body = self._gzip_compress(body)
+            headers["content-encoding"] = "gzip"
+
+        start = time.time()
+        request = requests.Request(method=method, headers=headers, url=url, data=body)
+        prepared_request = self.session.prepare_request(request)
+        settings = self.session.merge_environment_settings(prepared_request.url, {}, None, None, None)
+        send_kwargs: Any = {
+            "timeout": timeout or self.timeout,
+            "allow_redirects": allow_redirects,
+        }
+        send_kwargs.update(settings)
+        response, duration, raw_data = self._send_prepared_request(
+            method, url, prepared_request, send_kwargs, orig_body, start
+        )
+
         # raise warnings if any from the 'Warnings' header.
         warnings_headers = (response.headers["warning"],) if "warning" in response.headers else ()
         self._raise_warnings(warnings_headers)
 
-        raw_data_modified = _modify_post_response_langchain(raw_data)
+        raw_data_modified = cast(str, _modify_post_response_langchain(raw_data))
 
         # raise errors based on http status codes, let the client handle those if needed
         if not (HTTP_OK <= response.status_code < HTTP_MULTIPLE_CHOICES) and response.status_code not in ignore:
@@ -344,7 +471,7 @@ class FusionEmbeddingsConnection(Connection):  # type: ignore
         self.session.close()
 
 
-class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
+class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore[misc]
     session: FusionAiohttpSession | None
 
     def __init__(  # noqa: PLR0912, PLR0913, PLR0915
@@ -420,12 +547,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         """
         fusion_root_url: str = kwargs.get("root_url", "https://fusion.jpmorgan.com/api/v1/")
         credentials: FusionCredentials | str | None = kwargs.get("credentials", "config/client_credentials.json")
-        if isinstance(credentials, FusionCredentials):
-            self.credentials = credentials
-        elif isinstance(credentials, str):
-            self.credentials = FusionCredentials.from_file(Path(credentials))
-        else:
-            raise ValueError("credentials must be a path to a credentials file or FusionCredentials object")
+        self.credentials = _load_credentials(credentials)
         self.catalog = kwargs.get("catalog", "common")
         self.knowledge_base: str | list[str] | None = kwargs.get("knowledge_base")
 
@@ -435,11 +557,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         if kwargs.get("url_prefix"):
             kwargs.pop("url_prefix")
 
-        self.url_prefix = f"dataspaces/{self.catalog}/datasets/{self.knowledge_base}/indexes/"
-        self.multi_dataset_url_prefix = f"dataspaces/{self.catalog}/indexes/"
-
-        if isinstance(self.knowledge_base, list):
-            self.url_prefix = self.multi_dataset_url_prefix
+        self.url_prefix, self.multi_dataset_url_prefix = _resolve_url_prefix(self.catalog, self.knowledge_base)
 
         self.headers: dict[Any, Any] = {}
 
@@ -456,68 +574,28 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             **kwargs,
         )
 
-        if http_auth is not None:
-            if isinstance(http_auth, (tuple, list)):
-                http_auth = aiohttp.BasicAuth(login=http_auth[0], password=http_auth[1])
-            elif isinstance(http_auth, string_types):
-                login, password = http_auth.split(":", 1)
-                http_auth = aiohttp.BasicAuth(login=login, password=password)
+        http_auth = _normalize_async_http_auth(http_auth)
 
-        # if providing an SSL context, raise error if any other SSL related flag is used
-        if ssl_context and (
-            (verify_certs is not VERIFY_CERTS_DEFAULT)
-            or (ssl_show_warn is not SSL_SHOW_WARN_DEFAULT)
-            or ca_certs
-            or client_cert
-            or client_key
-            or ssl_version
-        ):
-            warnings.warn("When using `ssl_context`, all other SSL related kwargs are ignored", stacklevel=2)
+        _warn_if_ssl_context_overrides(
+            ssl_context,
+            verify_certs,
+            ssl_show_warn,
+            ca_certs,
+            client_cert,
+            client_key,
+            ssl_version,
+        )
 
         self.ssl_assert_fingerprint = ssl_assert_fingerprint
-        if self.use_ssl and ssl_context is None:
-            ssl_context = ssl.create_default_context() if ssl_version is None else ssl.SSLContext(ssl_version)
-
-            # Convert all sentinel values to their actual default
-            # values if not using an SSLContext.
-            if verify_certs is VERIFY_CERTS_DEFAULT:
-                verify_certs = True
-            if ssl_show_warn is SSL_SHOW_WARN_DEFAULT:
-                ssl_show_warn = True
-
-            if verify_certs:
-                ssl_context.verify_mode = ssl.CERT_REQUIRED
-                ssl_context.check_hostname = True
-            else:
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-
-            ca_certs = self.default_ca_certs() if ca_certs is None else ca_certs
-            if verify_certs:
-                if not ca_certs:
-                    raise ImproperlyConfigured(
-                        "Root certificates are missing for certificate "
-                        "validation. Either pass them in using the ca_certs parameter or "
-                        "install certifi to use it automatically."
-                    )
-                if Path(ca_certs).is_file():
-                    ssl_context.load_verify_locations(cafile=ca_certs)
-                elif Path(ca_certs).is_dir():
-                    ssl_context.load_verify_locations(capath=ca_certs)
-                else:
-                    raise ImproperlyConfigured("ca_certs parameter is not a path")
-            elif ssl_show_warn:
-                warnings.warn(f"Connecting to {self.host} using SSL with verify_certs=False is insecure.", stacklevel=2)
-
-            # Use client_cert and client_key variables for SSL certificate configuration.
-            if client_cert and not Path(client_cert).is_file():
-                raise ImproperlyConfigured("client_cert is not a path to a file")
-            if client_key and not Path(client_key).is_file():
-                raise ImproperlyConfigured("client_key is not a path to a file")
-            if client_cert and client_key:
-                ssl_context.load_cert_chain(client_cert, client_key)
-            elif client_cert:
-                ssl_context.load_cert_chain(client_cert)
+        ssl_context = self._build_async_ssl_context(
+            ssl_context,
+            verify_certs,
+            ssl_show_warn,
+            ca_certs,
+            client_cert,
+            client_key,
+            ssl_version,
+        )
 
         self.headers.setdefault("connection", "keep-alive")
         self.loop = loop
@@ -531,6 +609,159 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         self._limit = maxsize
         self._http_auth = http_auth
         self._ssl_context = ssl_context
+
+    def _build_async_ssl_context(
+        self,
+        ssl_context: Any,
+        verify_certs: Any,
+        ssl_show_warn: Any,
+        ca_certs: Any,
+        client_cert: Any,
+        client_key: Any,
+        ssl_version: Any,
+    ) -> Any:
+        if not self.use_ssl or ssl_context is not None:
+            return ssl_context
+
+        ssl_context = (
+            create_secure_ssl_context()
+            if ssl_version is None
+            else ssl.SSLContext(ssl_version)  # NOSONAR (S4423): preserve caller-supplied protocol
+        )
+        verify_certs, ssl_show_warn = _resolve_async_ssl_defaults(verify_certs, ssl_show_warn)
+        self._configure_async_ssl_context(ssl_context, verify_certs, ssl_show_warn, ca_certs)
+        self._load_async_client_cert_chain(ssl_context, client_cert, client_key)
+        return ssl_context
+
+    def _configure_async_ssl_context(
+        self,
+        ssl_context: ssl.SSLContext,
+        verify_certs: bool,
+        ssl_show_warn: bool,
+        ca_certs: Any,
+    ) -> None:
+        if verify_certs:
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+            ssl_context.check_hostname = True
+        else:
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+        ca_certs = self.default_ca_certs() if ca_certs is None else ca_certs
+        if verify_certs:
+            if not ca_certs:
+                raise ImproperlyConfigured(
+                    "Root certificates are missing for certificate "
+                    "validation. Either pass them in using the ca_certs parameter or "
+                    "install certifi to use it automatically."
+                )
+            _load_verify_locations(ssl_context, ca_certs)
+        elif ssl_show_warn:
+            warnings.warn(f"Connecting to {self.host} using SSL with verify_certs=False is insecure.", stacklevel=2)
+
+    @staticmethod
+    def _load_async_client_cert_chain(
+        ssl_context: ssl.SSLContext,
+        client_cert: Any,
+        client_key: Any,
+    ) -> None:
+        _validate_client_cert_path(client_cert, "client_cert")
+        _validate_client_cert_path(client_key, "client_key")
+        if client_cert and client_key:
+            ssl_context.load_cert_chain(client_cert, client_key)
+        elif client_cert:
+            ssl_context.load_cert_chain(client_cert)
+
+    def _prepare_async_request(
+        self,
+        method: str,
+        url: str,
+        params: Mapping[str, Any] | None,
+        body: bytes | None,
+    ) -> tuple[str, str, bytes | None, bytes | None, str]:
+        method = _normalize_method(method)
+        url = self._tidy_url(url)
+        url = self._make_url_valid(url, body)
+        body = _prepare_embeddings_request_body(url, method, body, self.knowledge_base)
+        orig_body = body
+        query_string = urlencode(params) if params else ""
+        if query_string:
+            url = f"{url}?{query_string}"
+        return method, url, body, orig_body, query_string
+
+    def _build_async_request_headers(
+        self,
+        method: str,
+        url: str,
+        query_string: str,
+        body: bytes | None,
+        headers: Mapping[str, str] | None,
+    ) -> tuple[dict[str, Any], bytes | None, aiohttp.BasicAuth | None]:
+        req_headers = self.headers.copy()
+        if headers:
+            req_headers.update(headers)
+
+        if self.http_compress and body:
+            body = self._gzip_compress(body)
+            req_headers["content-encoding"] = "gzip"
+
+        auth = self._http_auth if isinstance(self._http_auth, aiohttp.BasicAuth) else None
+        if callable(self._http_auth):
+            req_headers = {
+                **req_headers,
+                **self._http_auth(method, url, query_string, body),
+            }
+        return req_headers, body, auth
+
+    def _raise_async_request_exception(
+        self,
+        method: str,
+        url: str,
+        orig_body: bytes | None,
+        start: float,
+        exception: Exception,
+    ) -> None:
+        self.log_request_fail(
+            method,
+            str(url),
+            url,
+            orig_body,
+            self.loop.time() - start,
+            exception=exception,
+        )
+        if isinstance(exception, aiohttp_exceptions.ServerFingerprintMismatch):
+            raise SSLError("N/A", str(exception), exception) from exception
+        if isinstance(exception, (asyncio.TimeoutError, aiohttp_exceptions.ServerTimeoutError)):
+            raise ConnectionTimeout("TIMEOUT", str(exception), exception) from exception
+        raise ConnectionError("N/A", str(exception), exception) from exception
+
+    def _handle_async_response(
+        self,
+        method: str,
+        url: str,
+        orig_body: bytes | None,
+        response: Any,
+        raw_data: str,
+        duration: float,
+        ignore: Collection[int],
+    ) -> None:
+        warning_headers = response.headers.getall("warning", ())
+        self._raise_warnings(warning_headers)
+
+        raw_data_modified = str(_modify_post_response_langchain(raw_data))
+        if not (HTTP_OK <= response.status < HTTP_MULTIPLE_CHOICES) and response.status not in ignore:
+            self.log_request_fail(
+                method,
+                str(url),
+                url,
+                orig_body,
+                duration,
+                status_code=response.status,
+                response=raw_data_modified,
+            )
+            self._raise_error(response.status, raw_data_modified)
+
+        self.log_request_success(method, str(url), url, orig_body, response.status, raw_data_modified, duration)
 
     def _tidy_url(self, url: str) -> str:
         return url.replace("%2F%7B", "/").replace("%7D%2F", "/").replace("%2F", "/")
@@ -556,7 +787,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         url: str,
         params: Mapping[str, Any] | None = None,
         body: bytes | None = None,
-        timeout: int | None = None,
+        timeout: float | None = None,
         ignore: Collection[int] = (),
         headers: Mapping[str, str] | None = None,
     ) -> Any:
@@ -564,71 +795,19 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
             await self._create_aiohttp_session()
         assert self.session is not None
 
-        if method.lower() == "put":
-            method = "POST"
+        method, url, body, orig_body, query_string = self._prepare_async_request(method, url, params, body)
 
-        url = self._tidy_url(url)
-        url = self._make_url_valid(url, body)
+        if _is_root_info_request(method, url, self.base_url):
+            return _mock_info_response()
+        skipped_response = _skip_unsupported_endpoint(url) or _skip_multi_kb_write(self.knowledge_base, method, body)
+        if skipped_response is not None:
+            return skipped_response
 
-        # handle  cluster info endpoint for OpenSearch client compatibility
-        if method.lower() == "get" and (url.endswith("/") or url == self.base_url.rstrip("/")):
-            # Return mock OpenSearch info response for client compatibility
-            mock_info_response = {"version": {"number": "2.11.0"}}
-            logger.warning("Returning mock OpenSearch info response for client compatibility")
-            return 200, {}, json.dumps(mock_info_response)
-
-        # _refresh endpoint not supported
-        if "_refresh" in url:
-            return 200, {}, ""
-
-        if (
-            body
-            and isinstance(self.knowledge_base, list)
-            and method.lower() == "post"
-            and "query" not in body.decode("utf-8")
-        ):
-            return 200, {}, ""
-
-        if is_index_creation_request(url, method, body):
-            logger.debug("Transforming index creation body to match API expectations")
-
-            body = transform_index_creation_body(body) if body else body
-
-        body = _modify_post_haystack(knowledge_base=self.knowledge_base, body=body, method=method)
-        orig_body = body
-        query_string = urlencode(params) if params else ""
-
-        # Top-tier tip-toeing happening here. Basically
-        # because Pip's old resolver is bad and wipes out
-        # strict pins in favor of non-strict pins of extras
-        # our [async] extra overrides aiohttp's pin of
-        # yarl. yarl released breaking changes, aiohttp pinned
-        # defensively afterwards, but our users don't get
-        # that nice pin that aiohttp set. :( So to play around
-        # this super-defensively we try to import yarl, if we can't
-        # then we pass a string into ClientSession.request() instead.
-        if query_string:
-            url = f"{url}?{query_string}"
-
-        timeout = aiohttp.ClientTimeout(total=timeout if timeout is not None else self.timeout)
-
-        req_headers = self.headers.copy()
-        if headers:
-            req_headers.update(headers)
-
-        if self.http_compress and body:
-            body = self._gzip_compress(body)
-            req_headers["content-encoding"] = "gzip"
-
-        auth = self._http_auth if isinstance(self._http_auth, aiohttp.BasicAuth) else None
-        if callable(self._http_auth):
-            req_headers = {
-                **req_headers,
-                **self._http_auth(method, url, query_string, body),
-            }
+        request_timeout = aiohttp.ClientTimeout(total=timeout if timeout is not None else self.timeout)
+        req_headers, body, auth = self._build_async_request_headers(method, url, query_string, body, headers)
 
         start = self.loop.time()
-        timeout_obj = ClientTimeout(total=timeout) if isinstance(timeout, int) else timeout
+        timeout_obj: ClientTimeout | None = ClientTimeout(total=timeout) if isinstance(timeout, (int, float)) else None
 
         try:
             async with self.session.request(
@@ -637,7 +816,7 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
                 data=body,
                 auth=auth,
                 headers=req_headers,
-                timeout=timeout_obj,
+                timeout=timeout_obj or request_timeout,
             ) as response:
                 raw_data = await response.text()
                 duration = self.loop.time() - start
@@ -646,41 +825,9 @@ class FusionAsyncHttpConnection(AIOHttpConnection):  # type: ignore
         except reraise_exceptions:
             raise
         except Exception as e:  # noqa: BLE001
-            self.log_request_fail(
-                method,
-                str(url),
-                url,
-                orig_body,
-                self.loop.time() - start,
-                exception=e,
-            )
-            if isinstance(e, aiohttp_exceptions.ServerFingerprintMismatch):
-                raise SSLError("N/A", str(e), e) from e
-            if isinstance(e, (asyncio.TimeoutError, aiohttp_exceptions.ServerTimeoutError)):
-                raise ConnectionTimeout("TIMEOUT", str(e), e) from e
-            raise ConnectionError("N/A", str(e), e) from e
+            self._raise_async_request_exception(method, url, orig_body, start, e)
 
-        # raise warnings if any from the 'Warnings' header.
-        warning_headers = response.headers.getall("warning", ())
-        self._raise_warnings(warning_headers)
-
-        raw_data_modified = str(_modify_post_response_langchain(raw_data))
-
-        # raise errors based on http status codes, let the client handle those if needed
-        if not (HTTP_OK <= response.status < HTTP_MULTIPLE_CHOICES) and response.status not in ignore:
-            self.log_request_fail(
-                method,
-                str(url),
-                url,
-                orig_body,
-                duration,
-                status_code=response.status,
-                response=raw_data_modified,
-            )
-            self._raise_error(response.status, raw_data_modified)
-
-        self.log_request_success(method, str(url), url, orig_body, response.status, raw_data_modified, duration)
-
+        self._handle_async_response(method, url, orig_body, response, raw_data, duration, ignore)
         return response.status, response.headers, raw_data
 
     async def close(self) -> Any:

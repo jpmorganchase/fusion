@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import fsspec
 import pytest
+import requests
 from requests.adapters import HTTPAdapter
 
 from fusion._legacy.authentication import (
@@ -16,6 +17,7 @@ from fusion._legacy.authentication import (
     try_get_client_secret,
 )
 from fusion.authentication import (
+    FusionAiohttpSession,
     FusionOAuthAdapter,
 )
 from fusion.credentials import FusionCredentials
@@ -264,3 +266,70 @@ def test_send_raises_api_response_error_on_connection_error() -> None:
     assert "Connection error while sending request" in str(exc_info.value)
     HTTP_STATUS_SERVICE_UNAVAILABLE = 503
     assert exc_info.value.status_code == HTTP_STATUS_SERVICE_UNAVAILABLE
+
+
+def test_fusion_oauth_adapter_uses_credentials_proxies_and_default_retry(credentials: FusionCredentials) -> None:
+    default_retry_total = 20
+    adapter = FusionOAuthAdapter(credentials=credentials)
+
+    assert adapter.proxies == credentials.proxies
+    assert adapter.auth_retries.total == default_retry_total
+    assert adapter.headers == {}
+
+
+def test_fusion_oauth_adapter_send_merges_auth_and_custom_headers() -> None:
+    request = Mock()
+    request.url = "https://example.com/catalogs/c1/datasets/d1"
+    request.headers = {}
+
+    mock_credentials = Mock(spec=FusionCredentials)
+    mock_credentials.proxies = {}
+    mock_credentials.get_fusion_token_headers.return_value = {"Authorization": "Bearer abc"}
+
+    adapter = FusionOAuthAdapter(credentials=mock_credentials, headers={"X-Test": "1"})
+
+    response = requests.Response()
+    response.status_code = 200
+    response._content = b"ok"
+
+    with patch.object(HTTPAdapter, "send", return_value=response) as mock_send:
+        result = adapter.send(request)
+
+    assert result is response
+    assert request.headers["Authorization"] == "Bearer abc"
+    assert request.headers["X-Test"] == "1"
+    mock_send.assert_called_once()
+
+
+def test_send_raises_api_response_error_when_header_generation_fails() -> None:
+    request = Mock()
+    request.url = "https://example.com/data"
+    request.headers = {}
+
+    mock_credentials = Mock(spec=FusionCredentials)
+    mock_credentials.proxies = {}
+    mock_credentials.get_fusion_token_headers.side_effect = RuntimeError("bad headers")
+
+    adapter = FusionOAuthAdapter(credentials=mock_credentials)
+
+    with pytest.raises(APIResponseError, match="Failed to generate Fusion token headers") as exc_info:
+        adapter.send(request)
+
+    internal_server_error = 500
+    assert exc_info.value.status_code == internal_server_error
+
+
+@pytest.mark.asyncio
+async def test_fusion_aiohttp_session_post_init_sets_state(credentials: FusionCredentials) -> None:
+    refresh_within_seconds = 9
+    session = FusionAiohttpSession()
+    try:
+        session.post_init(credentials=credentials, refresh_within_seconds=refresh_within_seconds)
+
+        assert session.credentials is credentials
+        assert session.refresh_within_seconds == refresh_within_seconds
+        assert session.number_token_refreshes == 0
+        assert session.fusion_token_dict == {}
+        assert session.fusion_token_expiry_dict == {}
+    finally:
+        await session.close()

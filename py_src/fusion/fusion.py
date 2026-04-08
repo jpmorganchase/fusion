@@ -74,6 +74,8 @@ if TYPE_CHECKING:
     from .types import PyArrowFilterT
 
 logger = logging.getLogger(__name__)
+ACCESS_RESTRICTED_MESSAGE = "Access Restricted"
+NO_DATA_FOUND_MESSAGE = "No data found"
 if not logger.handlers:
     logger.addHandler(logging.NullHandler())
 VERBOSE_LVL = 25
@@ -391,6 +393,97 @@ class Fusion:
 
         return filtered_df
 
+    def _get_exact_dataset_match(
+        self,
+        catalog: str,
+        contains: str | list[str] | None,
+        display_all_columns: bool,
+    ) -> pd.DataFrame | None:
+        if not (contains and isinstance(contains, str)):
+            return None
+
+        url = f"{self.root_url}catalogs/{catalog}/datasets/{contains}"
+        resp = self.session.get(url)
+        if resp.status_code != HTTPStatus.OK:
+            return None
+
+        resp_json = resp.json()
+        if display_all_columns:
+            return pd.json_normalize(resp_json)
+
+        cols = [
+            "identifier",
+            "title",
+            "containerType",
+            "region",
+            "category",
+            "coverageStartDate",
+            "coverageEndDate",
+            "description",
+            "status",
+            "type",
+        ]
+        data = {col: resp_json.get(col, None) for col in cols}
+        return pd.DataFrame([data])
+
+    @staticmethod
+    def _filter_datasets_by_contains(
+        ds_df: pd.DataFrame,
+        contains: str | list[str] | None,
+        id_contains: bool,
+    ) -> pd.DataFrame:
+        if not contains:
+            return ds_df
+
+        if isinstance(contains, list):
+            contains = "|".join(f"{s}" for s in contains)
+        if id_contains:
+            return ds_df[ds_df["identifier"].str.contains(contains, case=False)]
+        return ds_df[
+            ds_df["identifier"].str.contains(contains, case=False)
+            | ds_df["description"].str.contains(contains, case=False)
+        ]
+
+    def _filter_datasets_by_product(
+        self,
+        ds_df: pd.DataFrame,
+        product: str | list[str] | None,
+        catalog: str,
+    ) -> pd.DataFrame:
+        if not product:
+            return ds_df
+
+        url = f"{self.root_url}catalogs/{catalog}/productDatasets"
+        prd_df = Fusion._call_for_dataframe(url, self.session)
+        prd_df = (
+            prd_df[prd_df["product"] == product]
+            if isinstance(product, str)
+            else prd_df[prd_df["product"].isin(product)]
+        )
+        return ds_df[ds_df["identifier"].str.lower().isin(prd_df["dataset"].str.lower())].reset_index(drop=True)
+
+    @staticmethod
+    def _select_dataset_columns(ds_df: pd.DataFrame, display_all_columns: bool) -> pd.DataFrame:
+        ds_df["category"] = ds_df.category.str.join(", ")
+        ds_df["region"] = ds_df.region.str.join(", ")
+        if display_all_columns:
+            return ds_df
+
+        cols = [
+            "identifier",
+            "title",
+            "containerType",
+            "region",
+            "category",
+            "coverageStartDate",
+            "coverageEndDate",
+            "description",
+            "status",
+            "type",
+        ]
+        cols = [c for c in cols if c in ds_df.columns]
+        return ds_df[cols]
+
     def list_datasets(  # noqa: PLR0912, PLR0913
         self,
         contains: str | list[str] | None = None,
@@ -428,75 +521,19 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
 
-        # try for exact match
-        if contains and isinstance(contains, str):
-            url = f"{self.root_url}catalogs/{catalog}/datasets/{contains}"
-            resp = self.session.get(url)
-            status_success = 200
-            if resp.status_code == status_success:
-                resp_json = resp.json()
-                if not display_all_columns:
-                    cols = [
-                        "identifier",
-                        "title",
-                        "containerType",
-                        "region",
-                        "category",
-                        "coverageStartDate",
-                        "coverageEndDate",
-                        "description",
-                        "status",
-                        "type",
-                    ]
-                    data = {col: resp_json.get(col, None) for col in cols}
-                    return pd.DataFrame([data])
-                else:
-                    return pd.json_normalize(resp_json)
+        exact_match = self._get_exact_dataset_match(catalog, contains, display_all_columns)
+        if exact_match is not None:
+            return exact_match
 
         url = f"{self.root_url}catalogs/{catalog}/datasets"
         ds_df = Fusion._call_for_dataframe(url, self.session)
-
-        if contains:
-            if isinstance(contains, list):
-                contains = "|".join(f"{s}" for s in contains)
-            if id_contains:
-                ds_df = ds_df[ds_df["identifier"].str.contains(contains, case=False)]
-            else:
-                ds_df = ds_df[
-                    ds_df["identifier"].str.contains(contains, case=False)
-                    | ds_df["description"].str.contains(contains, case=False)
-                ]
-
-        if product:
-            url = f"{self.root_url}catalogs/{catalog}/productDatasets"
-            prd_df = Fusion._call_for_dataframe(url, self.session)
-            prd_df = (
-                prd_df[prd_df["product"] == product]
-                if isinstance(product, str)
-                else prd_df[prd_df["product"].isin(product)]
-            )
-            ds_df = ds_df[ds_df["identifier"].str.lower().isin(prd_df["dataset"].str.lower())].reset_index(drop=True)
+        ds_df = self._filter_datasets_by_contains(ds_df, contains, id_contains)
+        ds_df = self._filter_datasets_by_product(ds_df, product, catalog)
 
         if max_results > -1:
             ds_df = ds_df[0:max_results]
 
-        ds_df["category"] = ds_df.category.str.join(", ")
-        ds_df["region"] = ds_df.region.str.join(", ")
-        if not display_all_columns:
-            cols = [
-                "identifier",
-                "title",
-                "containerType",
-                "region",
-                "category",
-                "coverageStartDate",
-                "coverageEndDate",
-                "description",
-                "status",
-                "type",
-            ]
-            cols = [c for c in cols if c in ds_df.columns]
-            ds_df = ds_df[cols]
+        ds_df = self._select_dataset_columns(ds_df, display_all_columns)
 
         if status is not None:
             ds_df = ds_df[ds_df["status"] == status]
@@ -509,14 +546,9 @@ class Fusion:
 
         return ds_df
 
-    def list_reports(
-        self,
-        report_id: str | None = None,
-        output: bool = False,
-        display_all_columns: bool = False,
-    ) -> pd.DataFrame:
-        """Retrieve a single report or all reports from the Fusion system."""
-        key_columns = [
+    @staticmethod
+    def _report_key_columns() -> list[str]:
+        return [
             "id",
             "name",
             "alternateId",
@@ -529,32 +561,46 @@ class Fusion:
             "description",
         ]
 
-        if report_id:
-            url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
-            resp = self.session.get(url)
-            if resp.status_code == HTTPStatus.OK:
-                rep_df = pd.json_normalize(resp.json())
-                if not display_all_columns:
-                    rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
-                if output:
-                    pass
-                return rep_df
-            else:
-                resp.raise_for_status()
-        else:
-            url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/list"
-            resp = self.session.post(url)
-            if resp.status_code == HTTPStatus.OK:
-                data = resp.json()
-                rep_df = pd.json_normalize(data.get("content", data))
-                if not display_all_columns:
-                    rep_df = rep_df[[c for c in key_columns if c in rep_df.columns]]
-                if output:
-                    pass
-                return rep_df
-            else:
-                resp.raise_for_status()
-        return pd.DataFrame(columns=key_columns)
+    @staticmethod
+    def _select_report_columns(rep_df: pd.DataFrame, display_all_columns: bool, key_columns: list[str]) -> pd.DataFrame:
+        if display_all_columns:
+            return rep_df
+        return rep_df[[c for c in key_columns if c in rep_df.columns]]
+
+    def _get_report_by_id(self, report_id: str, display_all_columns: bool, key_columns: list[str]) -> pd.DataFrame:
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
+        resp = self.session.get(url)
+        if resp.status_code != HTTPStatus.OK:
+            resp.raise_for_status()
+        rep_df = pd.json_normalize(resp.json())
+        return self._select_report_columns(rep_df, display_all_columns, key_columns)
+
+    def _list_reports_df(self, display_all_columns: bool, key_columns: list[str]) -> pd.DataFrame:
+        url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/list"
+        resp = self.session.post(url)
+        if resp.status_code != HTTPStatus.OK:
+            resp.raise_for_status()
+        data = resp.json()
+        rep_df = pd.json_normalize(data.get("content", data))
+        return self._select_report_columns(rep_df, display_all_columns, key_columns)
+
+    def list_reports(
+        self,
+        report_id: str | None = None,
+        output: bool = False,
+        display_all_columns: bool = False,
+    ) -> pd.DataFrame:
+        """Retrieve a single report or all reports from the Fusion system."""
+        key_columns = self._report_key_columns()
+
+        rep_df = (
+            self._get_report_by_id(report_id, display_all_columns, key_columns)
+            if report_id
+            else self._list_reports_df(display_all_columns, key_columns)
+        )
+        if output:
+            pass
+        return rep_df
 
     def list_report_attributes(
         self,
@@ -856,6 +902,181 @@ class Fusion:
         assert isinstance(result, pd.DataFrame)
         return result
 
+    def _ensure_dataset_subscribed(self, dataset: str, catalog: str) -> None:
+        dataset_resp = self.session.get(f"{self.root_url}catalogs/{catalog}/datasets/{dataset}")
+        requests_raise_for_status(dataset_resp)
+        if dataset_resp.json().get("status") != "Subscribed":
+            raise APIResponseError(
+                ValueError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access."),
+                status_code=401,
+            )
+
+    @staticmethod
+    def _valid_download_date_range() -> re.Pattern[str]:
+        return re.compile(
+            r"^("
+            r"(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?"
+            r"(:(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?)"
+            r")$"
+        )
+
+    def _resolve_download_series(
+        self,
+        dataset: str,
+        dt_str: str,
+        dataset_format: str,
+        catalog: str,
+    ) -> list[tuple[str, str, str, str]]:
+        if self._valid_download_date_range().match(dt_str) or dt_str == "latest":
+            return self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
+
+        if dt_str == "sample":
+            dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
+
+        dataset_members_df = self.list_datasetmembers(dataset, catalog)
+        if dt_str not in dataset_members_df["identifier"].to_numpy():
+            raise APIResponseError(
+                ValueError(
+                    f"datasetseries '{dt_str}' not found for dataset '{dataset}' in catalog '{catalog}'"
+                    f"for the given date/date range ({dt_str})."
+                ),
+                status_code=404,
+            )
+        return [(catalog, dataset, dt_str, dataset_format)]
+
+    @staticmethod
+    def _validate_required_series(
+        required_series: list[tuple[str, str, str, str]],
+        dataset: str,
+        catalog: str,
+        dt_str: str,
+    ) -> None:
+        if required_series:
+            return
+        raise APIResponseError(
+            ValueError(
+                f"No data available for dataset {dataset} in catalog {catalog} "
+                f"for the given date/date range ({dt_str})."
+            ),
+            status_code=404,
+        )
+
+    @staticmethod
+    def _validate_download_dataset_format(dataset_format: str) -> None:
+        if dataset_format in RECOGNIZED_FORMATS + ["raw"]:
+            return
+        raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
+
+    def _resolve_download_folders(
+        self,
+        required_series: list[tuple[str, str, str, str]],
+        download_folder: str | None,
+        partitioning: str | None,
+    ) -> list[str]:
+        base_download_folder = download_folder or self.download_folder
+        download_folders = [base_download_folder] * len(required_series)
+
+        if partitioning == "hive":
+            members = [series[2].strip("/") for series in required_series]
+            download_folders = [
+                f"{download_folders[i]}/{series[0]}/{series[1]}/{members[i]}"
+                for i, series in enumerate(required_series)
+            ]
+
+        for folder in download_folders:
+            if not self.fs.exists(folder):
+                self.fs.mkdir(folder, create_parents=True)
+        return download_folders
+
+    def _resolve_distribution_file_names(
+        self,
+        series: tuple[str, str, str, str],
+        file_name: str | list[str] | None,
+    ) -> list[str]:
+        if not file_name:
+            return [
+                fid.rstrip("/")
+                for fid in self.list_distribution_files(
+                    dataset=series[1],
+                    series=series[2],
+                    file_format=series[3],
+                    catalog=series[0],
+                )["@id"].tolist()
+            ]
+        if isinstance(file_name, str):
+            return [file_name.rstrip("/")]
+        return [f.rstrip("/") for f in file_name]
+
+    def _build_download_spec(
+        self,
+        required_series: list[tuple[str, str, str, str]],
+        download_folders: list[str],
+        partitioning: str | None,
+        force_download: bool,
+        preserve_original_name: bool,
+        file_name: str | list[str] | None,
+    ) -> list[dict[str, Any]]:
+        download_spec: list[dict[str, Any]] = []
+        for i, series in enumerate(required_series):
+            download_spec.extend(
+                {
+                    "lfs": self.fs,
+                    "rpath": distribution_to_url(
+                        self.root_url,
+                        series[1],
+                        series[2],
+                        series[3],
+                        series[0],
+                        is_download=True,
+                        file_name=fname,
+                    ),
+                    "lpath": distribution_to_filename(
+                        download_folders[i],
+                        series[1],
+                        series[2],
+                        series[3],
+                        series[0],
+                        partitioning=partitioning,
+                        file_name=fname,
+                    ),
+                    "overwrite": force_download,
+                    "preserve_original_name": preserve_original_name,
+                }
+                for fname in self._resolve_distribution_file_names(series, file_name)
+            )
+        return download_spec
+
+    def _execute_downloads(
+        self,
+        download_spec: list[dict[str, Any]],
+        n_par: int | None,
+        show_progress: bool,
+    ) -> list[tuple[bool, str, str | None]]:
+        n_par = cpu_count(n_par)
+        logger.log(
+            VERBOSE_LVL,
+            f"Beginning {len(download_spec)} downloads in batches of {n_par}",
+        )
+        fusion_fs = self.get_fusion_filesystem()
+        if show_progress:
+            res: list[tuple[bool, str, str | None]] = [None] * len(download_spec)  # type: ignore[list-item]
+            with tqdm(total=len(download_spec), desc="Downloading") as p:
+                for i, spec in enumerate(download_spec):
+                    result = fusion_fs.download(**spec)
+                    res[i] = result
+                    if result[0] is True:
+                        p.update(1)
+            return res
+        return [fusion_fs.download(**spec) for spec in download_spec]
+
+    @staticmethod
+    def _warn_failed_downloads(res: list[tuple[bool, str, str | None]]) -> None:
+        if len(res) == 0 or all(r[0] for r in res):
+            return
+        for result in res:
+            if not result[0]:
+                warnings.warn(f"The download of {result[1]} was not successful", stacklevel=2)
+
     def download(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         dataset: str,
@@ -928,23 +1149,7 @@ class Fusion:
             file path, and error message (if any), or None if return_paths=False.
         """
         catalog = self._use_catalog(catalog)
-
-        # check access to the dataset
-        dataset_resp = self.session.get(f"{self.root_url}catalogs/{catalog}/datasets/{dataset}")
-        requests_raise_for_status(dataset_resp)
-
-        if dataset_resp.json().get("status") != "Subscribed":
-            raise APIResponseError(
-                ValueError(f"You are not subscribed to {dataset} in catalog {catalog}. Please request access."),
-                status_code=401,
-            )
-
-        valid_date_range = re.compile(
-            r"^("
-            r"(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?"
-            r"(:(\d{4}([- ]?\d{2}){2}|\d{8})([T ]\d{2}([- ]?\d{2}){1,2})?)"
-            r")$"
-        )
+        self._ensure_dataset_subscribed(dataset, catalog)
 
         # check that format is valid and if none, check if there is only one format available
         distributions_df = self.list_datasetmembers_distributions(dataset, catalog)
@@ -953,118 +1158,21 @@ class Fusion:
             raise FileFormatError(f"No distributions found for dataset '{dataset}' in catalog '{catalog}'.")
 
         dataset_format = self._validate_format(dataset, catalog, dataset_format)
-
-        if valid_date_range.match(dt_str) or dt_str == "latest":
-            required_series = self._resolve_distro_tuples(dataset, dt_str, dataset_format, catalog)
-        else:
-            # sample data is limited to csv
-            if dt_str == "sample":
-                dataset_format = self.list_distributions(dataset, dt_str, catalog)["identifier"].iloc[0]
-            # Check if dt_str exists as a series member
-            dataset_members_df = self.list_datasetmembers(dataset, catalog)
-            if dt_str not in dataset_members_df["identifier"].to_numpy():
-                raise APIResponseError(
-                    ValueError(
-                        f"datasetseries '{dt_str}' not found for dataset '{dataset}' in catalog '{catalog}'"
-                        f"for the given date/date range ({dt_str})."
-                    ),
-                    status_code=404,
-                )
-            required_series = [(catalog, dataset, dt_str, dataset_format)]  # type: ignore[list-item]
-
-        if not required_series:
-            raise APIResponseError(
-                ValueError(
-                    f"No data available for dataset {dataset} in catalog {catalog} "
-                    f"for the given date/date range ({dt_str})."
-                ),
-                status_code=404,
-            )
-
-        if dataset_format not in RECOGNIZED_FORMATS + ["raw"]:
-            raise FileFormatError(f"Dataset format {dataset_format} is not supported.")
-
-        if not download_folder:
-            download_folder = self.download_folder
-
-        download_folders = [download_folder] * len(required_series)
-
-        if partitioning == "hive":
-            members = [series[2].strip("/") for series in required_series]
-            download_folders = [
-                f"{download_folders[i]}/{series[0]}/{series[1]}/{members[i]}"
-                for i, series in enumerate(required_series)
-            ]
-
-        for d in download_folders:
-            if not self.fs.exists(d):
-                self.fs.mkdir(d, create_parents=True)
-
-        n_par = cpu_count(n_par)
-
-        download_spec: list[dict[str, Any]] = [
-            {
-                "lfs": self.fs,
-                "rpath": distribution_to_url(
-                    self.root_url,
-                    series[1],
-                    series[2],
-                    series[3],
-                    series[0],
-                    is_download=True,
-                    file_name=fname,
-                ),
-                "lpath": distribution_to_filename(
-                    download_folders[i],
-                    series[1],
-                    series[2],
-                    series[3],
-                    series[0],
-                    partitioning=partitioning,
-                    file_name=fname,
-                ),
-                "overwrite": force_download,
-                "preserve_original_name": preserve_original_name,
-            }
-            for i, series in enumerate(required_series)
-            for fname in (
-                [
-                    fid.rstrip("/")
-                    for fid in self.list_distribution_files(
-                        dataset=series[1],
-                        series=series[2],
-                        file_format=series[3],
-                        catalog=series[0],
-                    )["@id"].tolist()
-                ]
-                if not file_name
-                else [file_name.rstrip("/")]
-                if isinstance(file_name, str)
-                else [f.rstrip("/") for f in file_name]
-            )
-        ]
-
-        logger.log(
-            VERBOSE_LVL,
-            f"Beginning {len(download_spec)} downloads in batches of {n_par}",
+        required_series = self._resolve_download_series(dataset, dt_str, dataset_format, catalog)
+        self._validate_required_series(required_series, dataset, catalog, dt_str)
+        self._validate_download_dataset_format(dataset_format)
+        download_folders = self._resolve_download_folders(required_series, download_folder, partitioning)
+        download_spec = self._build_download_spec(
+            required_series,
+            download_folders,
+            partitioning,
+            force_download,
+            preserve_original_name,
+            file_name,
         )
-        res = [None] * len(download_spec)
-
-        if show_progress:
-            with tqdm(total=len(download_spec), desc="Downloading") as p:
-                for i, spec in enumerate(download_spec):
-                    r = self.get_fusion_filesystem().download(**spec)
-                    res[i] = r
-                    if r[0] is True:
-                        p.update(1)
-        else:
-            res = [self.get_fusion_filesystem().download(**spec) for spec in download_spec]
-
-        if (len(res) > 0) and (not all(r[0] for r in res)):  # type: ignore
-            for r in res:
-                if not r[0]:
-                    warnings.warn(f"The download of {r[1]} was not successful", stacklevel=2)
-        return res if return_paths else None  # type: ignore
+        res = self._execute_downloads(download_spec, n_par, show_progress)
+        self._warn_failed_downloads(res)
+        return res if return_paths else None
 
     def _validate_format(
         self,
@@ -1505,70 +1613,22 @@ class Fusion:
         if not self.fs.exists(path):
             raise RuntimeError("The provided path does not exist")
 
-        fs_fusion = self.get_fusion_filesystem()
-        if self.fs.info(path)["type"] == "directory":
-            validate_file_formats(self.fs, path)
-            if dt_str and dt_str != "latest":
-                logger.warning(
-                    "`dt_str` is not considered when uploading a directory. "
-                    "File names in the directory are used as series members instead."
-                )
-
-            file_path_lst = [f for f in self.fs.find(path) if self.fs.info(f)["type"] == "file"]
-
-            base_path = Path(path).resolve()
-            # Construct unique file names by flattening the relative path from the base directory.
-            # For example, if the base directory is 'data_folder' and a file is at 'data_folder/sub1/file.txt',
-            # the resulting name will be 'data_folder__sub1__file.txt'.
-            # This ensures that files in different subdirectories with the same base name do not conflict
-            # and helps preserve the folder structure in the filename.
-            file_name = [
-                base_path.name + "__" + "__".join(Path(f).resolve().relative_to(base_path).parts) for f in file_path_lst
-            ]
-
-            if catalog and dataset:
-                # Construct URL mappings using the constructed file names as the series member
-                local_url_eqiv = [file_name_to_url(fname, dataset, catalog, is_download=False) for fname in file_name]
-            else:
-                # No catalog/dataset: validate file names and infer raw
-                local_file_validation = validate_file_names(file_path_lst)
-                file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
-                file_name = [f.split("/")[-1] for f in file_path_lst]
-                is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
-                local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
-        else:
-            file_path_lst = [path]
-            if not catalog or not dataset:
-                local_file_validation = validate_file_names(file_path_lst)
-                file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
-                is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
-                local_url_eqiv = [path_to_url(i, r) for i, r in zip(file_path_lst, is_raw_lst)]
-                if preserve_original_name:
-                    raise ValueError("preserve_original_name can only be used when catalog and dataset are provided.")
-            else:
-                # Normalize the dt_str
-                date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
-                if dt_str == "latest":
-                    dt_str = pd.Timestamp("today").date().strftime("%Y%m%d")
-                elif date_identifier.match(dt_str):
-                    dt_str = pd.Timestamp(dt_str).date().strftime("%Y%m%d")
-
-                file_format = path.split(".")[-1]
-                file_name = [path.split("/")[-1]]
-                file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
-
-                local_url_eqiv = [
-                    "/".join(distribution_to_url("", dataset, dt_str, file_format, catalog, False).split("/")[1:])
-                ]
-
-        if self.fs.info(path)["type"] == "directory" or preserve_original_name:
-            data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv, file_name]).T
-            data_map_df.columns = pd.Index(["path", "url", "file_name"])
-        else:
-            data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
-            data_map_df.columns = pd.Index(["path", "url"])
+        file_path_lst, local_url_eqiv, file_names = self._resolve_upload_mappings(
+            path,
+            dataset,
+            dt_str,
+            catalog,
+            preserve_original_name,
+        )
+        data_map_df = self._build_upload_dataframe(
+            file_path_lst,
+            local_url_eqiv,
+            file_names,
+            self.fs.info(path)["type"] == "directory" or bool(preserve_original_name),
+        )
 
         n_par = cpu_count(n_par)
+        fs_fusion = self.get_fusion_filesystem()
         res = upload_files(
             fs_fusion,
             self.fs,
@@ -1581,11 +1641,7 @@ class Fusion:
             additional_headers=additional_headers,
         )
 
-        if not all(r[0] for r in res):
-            failed_res = [r for r in res if not r[0]]
-            msg = f"Not all uploads were successfully completed. The following failed:\n{failed_res}"
-            logger.warning(msg)
-            warnings.warn(msg, stacklevel=2)
+        self._warn_failed_uploads(res)
 
         return res if return_paths else None
 
@@ -1658,6 +1714,144 @@ class Fusion:
 
         return res if return_paths else None
 
+    def _resolve_upload_mappings(
+        self,
+        path: str,
+        dataset: str | None,
+        dt_str: str,
+        catalog: str,
+        preserve_original_name: bool | None,
+    ) -> tuple[list[str], list[str], list[str]]:
+        fs_fusion = self.get_fusion_filesystem()
+        if self.fs.info(path)["type"] == "directory":
+            return self._resolve_directory_upload_mappings(path, dataset, dt_str, catalog, fs_fusion)
+        return self._resolve_file_upload_mappings(path, dataset, dt_str, catalog, preserve_original_name, fs_fusion)
+
+    def _resolve_directory_upload_mappings(
+        self,
+        path: str,
+        dataset: str | None,
+        dt_str: str,
+        catalog: str,
+        fs_fusion: FusionHTTPFileSystem,
+    ) -> tuple[list[str], list[str], list[str]]:
+        validate_file_formats(self.fs, path)
+        if dt_str and dt_str != "latest":
+            logger.warning(
+                "`dt_str` is not considered when uploading a directory. "
+                "File names in the directory are used as series members instead."
+            )
+
+        file_path_lst = [f for f in self.fs.find(path) if self.fs.info(f)["type"] == "file"]
+        base_path = Path(path).resolve()
+        file_names = [
+            base_path.name + "__" + "__".join(Path(f).resolve().relative_to(base_path).parts) for f in file_path_lst
+        ]
+
+        if catalog and dataset:
+            local_url_eqiv = [file_name_to_url(fname, dataset, catalog, is_download=False) for fname in file_names]
+            return file_path_lst, local_url_eqiv, file_names
+
+        local_file_validation = validate_file_names(file_path_lst)
+        file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
+        file_names = [f.split("/")[-1] for f in file_path_lst]
+        is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
+        local_url_eqiv = [path_to_url(file_path, is_raw) for file_path, is_raw in zip(file_path_lst, is_raw_lst)]
+        return file_path_lst, local_url_eqiv, file_names
+
+    @staticmethod
+    def _normalize_upload_dt_str(dt_str: str) -> str:
+        date_identifier = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
+        if dt_str == "latest":
+            return pd.Timestamp("today").date().strftime("%Y%m%d")
+        if date_identifier.match(dt_str):
+            return pd.Timestamp(dt_str).date().strftime("%Y%m%d")
+        return dt_str
+
+    def _resolve_file_upload_mappings(
+        self,
+        path: str,
+        dataset: str | None,
+        dt_str: str,
+        catalog: str,
+        preserve_original_name: bool | None,
+        fs_fusion: FusionHTTPFileSystem,
+    ) -> tuple[list[str], list[str], list[str]]:
+        file_path_lst = [path]
+        if not catalog or not dataset:
+            local_file_validation = validate_file_names(file_path_lst)
+            file_path_lst = [f for flag, f in zip(local_file_validation, file_path_lst) if flag]
+            is_raw_lst = is_dataset_raw(file_path_lst, fs_fusion)
+            local_url_eqiv = [path_to_url(file_path, is_raw) for file_path, is_raw in zip(file_path_lst, is_raw_lst)]
+            if preserve_original_name:
+                raise ValueError("preserve_original_name can only be used when catalog and dataset are provided.")
+            return file_path_lst, local_url_eqiv, [f.split("/")[-1] for f in file_path_lst]
+
+        normalized_dt_str = self._normalize_upload_dt_str(dt_str)
+        file_format = path.split(".")[-1]
+        file_names = [path.split("/")[-1]]
+        file_format = "raw" if file_format not in RECOGNIZED_FORMATS else file_format
+        local_url_eqiv = [
+            "/".join(distribution_to_url("", dataset, normalized_dt_str, file_format, catalog, False).split("/")[1:])
+        ]
+        return file_path_lst, local_url_eqiv, file_names
+
+    @staticmethod
+    def _build_upload_dataframe(
+        file_path_lst: list[str],
+        local_url_eqiv: list[str],
+        file_names: list[str],
+        include_file_name: bool,
+    ) -> pd.DataFrame:
+        if include_file_name:
+            data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv, file_names]).T
+            data_map_df.columns = pd.Index(["path", "url", "file_name"])
+            return data_map_df
+
+        data_map_df = pd.DataFrame([file_path_lst, local_url_eqiv]).T
+        data_map_df.columns = pd.Index(["path", "url"])
+        return data_map_df
+
+    @staticmethod
+    def _warn_failed_uploads(res: list[tuple[bool, str, str | None]]) -> None:
+        if all(r[0] for r in res):
+            return
+        failed_res = [r for r in res if not r[0]]
+        msg = f"Not all uploads were successfully completed. The following failed:\n{failed_res}"
+        logger.warning(msg)
+        warnings.warn(msg, stacklevel=2)
+
+    @staticmethod
+    def _flatten_event_metadata(event: dict[str, Any]) -> dict[str, Any]:
+        original_meta_data = event.get("metaData", {})
+        if isinstance(original_meta_data, dict):
+            event.update(original_meta_data)
+        return event
+
+    def _append_background_event(self, event: dict[str, Any], collected_events: list[dict[str, Any]]) -> None:
+        collected_events.append(event)
+        if self.events is None:
+            self.events = pd.DataFrame()
+            return
+
+        self.events = pd.concat([self.events, pd.DataFrame(collected_events)], ignore_index=True)
+        self.events = self.events.drop_duplicates(subset=["id", "type", "timestamp"], ignore_index=True)
+
+    def _prepare_event_listener_kwargs(self, last_event_id: str | None) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {}
+        if last_event_id:
+            kwargs["headers"] = {"Last-Event-ID": last_event_id}
+        return kwargs
+
+    def _add_event_auth_and_proxy(self, kwargs: dict[str, Any]) -> None:
+        _ = self.catalog_resources()  # refresh token
+        headers = kwargs.setdefault("headers", {})
+        headers.update({"authorization": f"bearer {self.credentials.bearer_token}"})
+        if "http" in self.credentials.proxies:
+            kwargs["proxy"] = self.credentials.proxies["http"]
+        elif "https" in self.credentials.proxies:
+            kwargs["proxy"] = self.credentials.proxies["https"]
+
     def listen_to_events(
         self,
         last_event_id: str | None = None,
@@ -1685,9 +1879,7 @@ class Fusion:
 
         from .utils import get_client
 
-        kwargs: dict[str, Any] = {}
-        if last_event_id:
-            kwargs = {"headers": {"Last-Event-ID": last_event_id}}
+        kwargs = self._prepare_event_listener_kwargs(last_event_id)
 
         async def async_events() -> None:
             """Events sync function.
@@ -1702,42 +1894,48 @@ class Fusion:
                 session=session,
                 **kwargs,
             ) as messages:
-                lst = []
+                lst: list[dict[str, Any]] = []
                 try:
                     async for msg in messages:
-                        event = json.loads(msg.data)
-                        # Preserve the original metaData column
-                        original_meta_data = event.get("metaData", {})
-
-                        # Flatten the metaData dictionary into the event dictionary
-                        if isinstance(original_meta_data, dict):
-                            event.update(original_meta_data)
-                        lst.append(event)
-                        if self.events is None:
-                            self.events = pd.DataFrame()
-                        else:
-                            self.events = pd.concat([self.events, pd.DataFrame(lst)], ignore_index=True)
-                            self.events = self.events.drop_duplicates(
-                                subset=["id", "type", "timestamp"], ignore_index=True
-                            )
+                        event = self._flatten_event_metadata(json.loads(msg.data))
+                        self._append_background_event(event, lst)
                 except TimeoutError as ex:
                     raise ex from None
                 except BaseException:
                     raise
 
-        _ = self.catalog_resources()  # refresh token
-        if "headers" in kwargs:
-            kwargs["headers"].update({"authorization": f"bearer {self.credentials.bearer_token}"})
-        else:
-            kwargs["headers"] = {
-                "authorization": f"bearer {self.credentials.bearer_token}",
-            }
-        if "http" in self.credentials.proxies:
-            kwargs["proxy"] = self.credentials.proxies["http"]
-        elif "https" in self.credentials.proxies:
-            kwargs["proxy"] = self.credentials.proxies["https"]
+        self._add_event_auth_and_proxy(kwargs)
         th = threading.Thread(target=asyncio.run, args=(async_events(),), daemon=True)
         th.start()
+
+    def _collect_foreground_events(
+        self,
+        subscription_url: str,
+        last_event_id: str | None,
+    ) -> pd.DataFrame | None:
+        from sseclient import SSEClient
+
+        _ = self.catalog_resources()  # refresh token
+        interrupted = False
+        messages = SSEClient(
+            session=self.session,
+            url=subscription_url,
+            last_id=last_event_id,
+            headers={
+                "authorization": f"bearer {self.credentials.bearer_token}",
+            },
+        )
+        events: list[dict[str, Any]] = []
+        try:
+            for msg in messages:
+                event = self._flatten_event_metadata(js.loads(msg.data))
+                if event["type"] != "HeartBeatNotification":
+                    events.append(event)
+        except KeyboardInterrupt:
+            interrupted = True
+        except Exception as e:
+            raise e
+        return pd.DataFrame(events) if interrupted or events else None
 
     def get_events(
         self,
@@ -1762,40 +1960,61 @@ class Fusion:
         url = self.root_url if url is None else url
 
         if not in_background:
-            from sseclient import SSEClient
+            subscription_url = f"{url}catalogs/{catalog}/notifications/subscribe"
+            return self._collect_foreground_events(subscription_url, last_event_id)
+        return self.events
 
-            _ = self.catalog_resources()  # refresh token
-            interrupted = False
-            messages = SSEClient(
-                session=self.session,
-                url=f"{url}catalogs/{catalog}/notifications/subscribe",
-                last_id=last_event_id,
-                headers={
-                    "authorization": f"bearer {self.credentials.bearer_token}",
-                },
+    @staticmethod
+    def _build_dataset_title_lookup(datasets: list[dict[str, Any]]) -> dict[str, str]:
+        title_lookup: dict[str, str] = {}
+        for dataset in datasets:
+            title_lookup[dataset["identifier"]] = (
+                ACCESS_RESTRICTED_MESSAGE if dataset.get("status", None) == "Restricted" else dataset["title"]
             )
-            lst = []
-            try:
-                for msg in messages:
-                    event = js.loads(msg.data)
-                    # Preserve the original metaData column
-                    original_meta_data = event.get("metaData", {})
+        return title_lookup
 
-                    # Flatten the metaData dictionary into the event dictionary
-                    if isinstance(original_meta_data, dict):
-                        event.update(original_meta_data)
+    @staticmethod
+    def _build_lineage_entry(
+        relation_type: str,
+        catalog: str,
+        dataset_id: str,
+        title_lookup: dict[str, str],
+    ) -> tuple[str, str, str]:
+        return (
+            relation_type,
+            catalog,
+            title_lookup.get(dataset_id, ACCESS_RESTRICTED_MESSAGE),
+        )
 
-                    if event["type"] != "HeartBeatNotification":
-                        lst.append(event)
-            except KeyboardInterrupt:
-                interrupted = True
-            except Exception as e:
-                raise e
-            finally:
-                result = pd.DataFrame(lst) if interrupted or lst else None
-            return result
-        else:
-            return self.events
+    def _build_lineage_map(
+        self,
+        dataset_id: str,
+        relations_data: list[dict[str, Any]],
+        title_lookup: dict[str, str],
+    ) -> dict[str, tuple[str, str, str]]:
+        data_dict: dict[str, tuple[str, str, str]] = {}
+        for entry in relations_data:
+            source_dataset_id = entry["source"]["dataset"]
+            source_catalog = entry["source"]["catalog"]
+            destination_dataset_id = entry["destination"]["dataset"]
+            destination_catalog = entry["destination"]["catalog"]
+
+            if destination_dataset_id == dataset_id:
+                data_dict[source_dataset_id] = self._build_lineage_entry(
+                    "source",
+                    source_catalog,
+                    source_dataset_id,
+                    title_lookup,
+                )
+
+            if source_dataset_id == dataset_id:
+                data_dict[destination_dataset_id] = self._build_lineage_entry(
+                    "produced",
+                    destination_catalog,
+                    destination_dataset_id,
+                    title_lookup,
+                )
+        return data_dict
 
     def list_dataset_lineage(
         self,
@@ -1825,6 +2044,7 @@ class Fusion:
         url = f"{self.root_url}catalogs/{catalog}/datasets/{dataset_id}/lineage"
         data = handle_paginated_request(self.session, url)
         relations_data = data.get("relations", [])
+        title_lookup = self._build_dataset_title_lookup(data["datasets"])
 
         restricted_datasets = [
             dataset_metadata["identifier"]
@@ -1832,39 +2052,7 @@ class Fusion:
             if dataset_metadata.get("status", None) == "Restricted"
         ]
 
-        data_dict = {}
-
-        for entry in relations_data:
-            source_dataset_id = entry["source"]["dataset"]
-            source_catalog = entry["source"]["catalog"]
-            destination_dataset_id = entry["destination"]["dataset"]
-            destination_catalog = entry["destination"]["catalog"]
-
-            if destination_dataset_id == dataset_id:
-                for dataset in data["datasets"]:
-                    if dataset["identifier"] == source_dataset_id and dataset.get("status", None) != "Restricted":
-                        source_dataset_title = dataset["title"]
-                    elif dataset["identifier"] == source_dataset_id and dataset.get("status", None) == "Restricted":
-                        source_dataset_title = "Access Restricted"
-                data_dict[source_dataset_id] = (
-                    "source",
-                    source_catalog,
-                    source_dataset_title,
-                )
-
-            if source_dataset_id == dataset_id:
-                for dataset in data["datasets"]:
-                    if dataset["identifier"] == destination_dataset_id and dataset.get("status", None) != "Restricted":
-                        destination_dataset_title = dataset["title"]
-                    elif (
-                        dataset["identifier"] == destination_dataset_id and dataset.get("status", None) == "Restricted"
-                    ):
-                        destination_dataset_title = "Access Restricted"
-                data_dict[destination_dataset_id] = (
-                    "produced",
-                    destination_catalog,
-                    destination_dataset_title,
-                )
+        data_dict = self._build_lineage_map(dataset_id, relations_data, title_lookup)
 
         output_data = {
             "type": [v[0] for v in data_dict.values()],
@@ -1877,7 +2065,7 @@ class Fusion:
         lineage_df.loc[
             lineage_df["dataset_identifier"].isin(restricted_datasets),
             ["dataset_identifier", "catalog", "title"],
-        ] = "Access Restricted"
+        ] = ACCESS_RESTRICTED_MESSAGE
 
         if max_results > -1:
             lineage_df = lineage_df[0:max_results]
@@ -2135,11 +2323,11 @@ class Fusion:
         requests_raise_for_status(response)
 
         if not response.content:
-            raise APIResponseError(ValueError("No data found"))
+            raise APIResponseError(ValueError(NO_DATA_FOUND_MESSAGE))
 
         json_data = response.json()
         if not json_data:
-            raise APIResponseError(ValueError("No data found"))
+            raise APIResponseError(ValueError(NO_DATA_FOUND_MESSAGE))
 
         lineage_df = pd.json_normalize(response.json())
         if output:
@@ -2197,11 +2385,11 @@ class Fusion:
         requests_raise_for_status(response)
 
         if not response.content:
-            raise APIResponseError(ValueError("No data found"))
+            raise APIResponseError(ValueError(NO_DATA_FOUND_MESSAGE))
 
         json_data = response.json()
         if not json_data:
-            raise APIResponseError(ValueError("No data found"))
+            raise APIResponseError(ValueError(NO_DATA_FOUND_MESSAGE))
 
         term_df = pd.json_normalize(json_data)
         if output:

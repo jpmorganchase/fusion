@@ -12,7 +12,7 @@ import time
 from collections.abc import AsyncGenerator, Generator
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional, cast
 from urllib.parse import quote, urljoin
 
 import aiohttp
@@ -32,12 +32,28 @@ from .utils import _merge_responses, cpu_count, get_client, get_default_fs, get_
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator
 
-    import aiohttp
-
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
 DEFAULT_CHUNK_SIZE = 5 * 2**20
 MULTIPART_CHECKSUM_PARTS = 2
+APPLICATION_JSON_MIMETYPE = "application/json"
+APPLICATION_OCTET_STREAM_MIMETYPE = "application/octet-stream"
+UPLOAD_OPERATION_PATH = "/operationType/upload"
+SHA256_DIGEST_PREFIX = "SHA-256="
+HTTP_STATUS_EXCEPTIONS = (FileNotFoundError, requests.HTTPError, aiohttp.ClientResponseError)
+ISDIR_FALSE_EXCEPTIONS = HTTP_STATUS_EXCEPTIONS + (aiohttp.ClientError, OSError, RuntimeError, ValueError)
+
+
+def _build_sha256_digest(digest: bytes) -> str:
+    return SHA256_DIGEST_PREFIX + base64.b64encode(digest).decode()
+
+
+def _base64_crc(checksum: int, size: int) -> str:
+    return base64.b64encode(checksum.to_bytes(size, byteorder="big")).decode("ascii")
+
+
+def _base64_hash(data: bytes, algorithm: str) -> str:
+    return base64.b64encode(hashlib.new(algorithm, data).digest()).decode("ascii")
 
 
 class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
@@ -94,7 +110,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
     def _raise_not_found_for_status(self, response: Any, url: str) -> None:
         try:
             super()._raise_not_found_for_status(response, url)
-        except Exception as ex:
+        except HTTP_STATUS_EXCEPTIONS as ex:
             status_code = getattr(response, "status", None)
             message = f"Error when accessing {url}"
             raise APIResponseError(ex, message=message, status_code=status_code) from ex
@@ -112,7 +128,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     response.reason = real_reason
                 finally:
                     self._raise_not_found_for_status(response, url)
-        except Exception as ex:
+        except HTTP_STATUS_EXCEPTIONS as ex:
             status_code = getattr(response, "status", None)
             message = f"Error when accessing {url}"
             raise APIResponseError(ex, message=message, status_code=status_code) from ex
@@ -144,8 +160,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         try:
             ret: dict[str, str] = await self._info(path)
             return ret["type"] == "directory"
-        except BaseException:  # pragma: no cover
-            logger.exception(VERBOSE_LVL, f"Artificial error")
+        except ISDIR_FALSE_EXCEPTIONS:  # pragma: no cover
+            logger.log(VERBOSE_LVL, "Artificial error", exc_info=True)
             return False
 
     async def _changes(self, url: str) -> dict[Any, Any]:
@@ -167,102 +183,33 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         call_kwargs = {k: v for k, v in self.kwargs.items() if k != "headers"}
         headers = self.kwargs.get("headers", {}).copy() if "headers" in self.kwargs else {}
 
-        try:
-            while True:
-                if next_token:
-                    headers["x-jpmc-next-token"] = next_token
-                call_kwargs["headers"] = headers
-                async with session.get(url, **call_kwargs) as r:
-                    self._raise_not_found_for_status(r, url)
-                    try:
-                        out: dict[Any, Any] = await r.json()
-                    except BaseException:
-                        logger.exception(VERBOSE_LVL, f"{url} cannot be parsed to json")
-                        out = {}
-                    all_responses.append(out)
-                    next_token = r.headers.get("x-jpmc-next-token")
-                    if not next_token:
-                        break
-            return _merge_responses(all_responses)
-        except Exception as ex:
-            logger.log(VERBOSE_LVL, f"Artificial error, {ex}")
-            raise ex
+        while True:
+            if next_token:
+                headers["x-jpmc-next-token"] = next_token
+            call_kwargs["headers"] = headers
+            async with session.get(url, **call_kwargs) as r:
+                self._raise_not_found_for_status(r, url)
+                try:
+                    out: dict[Any, Any] = await r.json()
+                except (aiohttp.ContentTypeError, json.JSONDecodeError, UnicodeDecodeError):
+                    logger.log(VERBOSE_LVL, "%s cannot be parsed to json", url, exc_info=True)
+                    out = {}
+                all_responses.append(out)
+                next_token = r.headers.get("x-jpmc-next-token")
+                if not next_token:
+                    break
+        return _merge_responses(all_responses)
 
     async def _ls_real(self, url: str, detail: bool = False, **kwargs: Any) -> Any:
-        # ignoring URL-encoded arguments
         clean_url = url
-        if "http" not in url:
-            url = f"{self.client_kwargs['root_url']}catalogs/" + url
-        kw = self.kwargs.copy()
-        kw.update(kwargs)
-        kw.pop("keep_protocol", None)
+        url = self._normalize_ls_url(url)
+        kw = self._build_ls_kwargs(kwargs)
         session = await self.set_session()
-        is_file = False
-        size = None
-        url = url if url[-1] != "/" else url[:-1]
-        url_parts = url.split("/")
-
-        headers = kw.get("headers", {}).copy()
-        kw["headers"] = headers
-
-        if url_parts[-2] == "distributions":
-            async with session.head(url + "/operationType/download", **self.kwargs) as r:
-                self._raise_not_found_for_status(r, url)
-                out = [
-                    url.split("/")[6] + "-" + url.split("/")[8] + "-" + url.split("/")[10] + "." + url.split("/")[-1]
-                ]
-
-                size = int(r.headers["Content-Length"])
-                is_file = True
-        else:
-            async with session.get(url, **kw) as r:
-                self._raise_not_found_for_status(r, url)
-                out = await r.json()
-
-                next_token = self._extract_token_from_response(r)
-                if next_token:
-                    all_resources = out.get("resources", [])  # type: ignore
-
-                    while next_token:
-                        headers = kw.get("headers", {}).copy()
-                        headers["x-jpmc-next-token"] = next_token
-                        kw["headers"] = headers
-                        async with session.get(url, **kw) as r_inner:
-                            self._last_async_response = r_inner
-                            self._raise_not_found_for_status(r_inner, url)
-                            more_out = await r_inner.json()
-                            next_token = self._extract_token_from_response(r_inner)
-                            more_responses = more_out.get("resources", [])
-                            all_resources.extend(more_responses)
-
-                        if not next_token:
-                            break
-
-                    out["resources"] = all_resources  # type: ignore
-
-        if not is_file:
-            out = [urljoin(clean_url + "/", x["identifier"]) for x in out["resources"]]  # type: ignore
-
-        if detail:
-            if not is_file:
-                return [
-                    {
-                        "name": u,
-                        "size": None,
-                        "type": ("directory" if not (u.endswith(("csv", "parquet"))) else "file"),
-                    }
-                    for u in out
-                ]
-            else:
-                return [
-                    {
-                        "name": out[0],
-                        "size": size,
-                        "type": "file",
-                    }
-                ]
-        else:
-            return out
+        if self._is_distribution_url(url):
+            file_out, size = await self._ls_distribution(url, session)
+            return self._format_ls_output(clean_url, file_out, detail, is_file=True, size=size)
+        collection_out = await self._ls_collection(url, kw, session)
+        return self._format_ls_output(clean_url, collection_out, detail, is_file=False)
 
     def info(self, path: str, **kwargs: Any) -> Any:
         """Return info.
@@ -302,7 +249,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 target = path.split("/")[-1]
                 args = ["/".join(path.split("/")[:-1]) + f"/changes?datasets={quote(target)}"]
                 res["changes"] = await self._changes(*args)
-            if res["size"] is None and (res["mimetype"] == "application/json") and (res["type"] == "file"):
+            if res["size"] is None and (res["mimetype"] == APPLICATION_JSON_MIMETYPE) and (res["type"] == "file"):
                 res["size"] = 0
                 res.pop("mimetype", None)
                 res["type"] = "directory"
@@ -382,31 +329,33 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
     @staticmethod
     def _merge_all_data(all_data: dict[str, Any] | None, response_dict: dict[str, Any]) -> dict[str, Any]:
-        # Handles merging of paginated resources
         if all_data is None:
             return response_dict
-        elif isinstance(response_dict, dict):
-            resources = response_dict.get("resources", [])
-            if isinstance(all_data, dict) and "resources" in all_data:
-                all_data["resources"].extend(resources)
+        if isinstance(response_dict, dict):
+            return FusionHTTPFileSystem._merge_resource_list(all_data, response_dict.get("resources", []))
+        if isinstance(response_dict, list):
+            return FusionHTTPFileSystem._merge_resource_list(
+                all_data,
+                FusionHTTPFileSystem._flatten_resources(response_dict),
+            )
+        return FusionHTTPFileSystem._merge_resource_list(all_data, [response_dict])
+
+    @staticmethod
+    def _flatten_resources(response_list: list[Any]) -> list[Any]:
+        flat_resources = []
+        for item in response_list:
+            if isinstance(item, dict) and "resources" in item:
+                flat_resources.extend(item["resources"])
             else:
-                all_data = {"resources": resources}
-        elif isinstance(response_dict, list):
-            flat_resources = []
-            for item in response_dict:
-                if isinstance(item, dict) and "resources" in item:
-                    flat_resources.extend(item["resources"])
-                else:
-                    flat_resources.append(item)
-            if isinstance(all_data, dict) and "resources" in all_data:
-                all_data["resources"].extend(flat_resources)
-            else:
-                all_data = {"resources": flat_resources}
-        elif isinstance(all_data, dict) and "resources" in all_data:
-            all_data["resources"].append(response_dict)
-        else:
-            all_data = {"resources": [response_dict]}
-        return all_data
+                flat_resources.append(item)
+        return flat_resources
+
+    @staticmethod
+    def _merge_resource_list(all_data: dict[str, Any], resources: list[Any]) -> dict[str, Any]:
+        if "resources" in all_data:
+            all_data["resources"].extend(resources)
+            return all_data
+        return {"resources": resources}
 
     def cat(
         self,
@@ -845,110 +794,25 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             tuple: (success, path, error)
         """
 
-        def stream_and_validate() -> tuple[bool, str, str | None]:
-            """Stream data to memory, validate checksum, then write if valid."""
-            import io
-
-            try:
-                data_buffer = io.BytesIO()
-                session = self.sync_session
-                get_file_kwargs = self.kwargs.copy()
-                get_file_kwargs.pop("proxy", None)
-
-                with session.get(url, **get_file_kwargs) as r:
-                    r.raise_for_status()
-                    byte_cnt = 0
-
-                    for chunk in r.iter_content(block_size):
-                        if chunk:
-                            byte_cnt += len(chunk)
-                            data_buffer.write(chunk)
-
-                logger.log(
-                    VERBOSE_LVL,
-                    "Wrote %d bytes to %s",
-                    byte_cnt,
-                )
-
-                data_buffer.seek(0)
-                file_data = data_buffer.read()
-
-                base_checksum = expected_checksum
-                is_multipart = False
-
-                if "-" in expected_checksum:
-                    parts = expected_checksum.rsplit("-", 1)
-                    if len(parts) == MULTIPART_CHECKSUM_PARTS and parts[1].isdigit():
-                        base_checksum = parts[0]
-                        is_multipart = True
-
-                computed_checksum = self._compute_checksum_from_data(
-                    file_data, checksum_algorithm, is_multipart=is_multipart
-                )
-
-                if not computed_checksum:
-                    error_msg = f"Could not compute checksum using algorithm {checksum_algorithm}"
-                    logger.warning(error_msg)
-                    return False, output_path, error_msg
-
-                checksum_to_compare = base_checksum if is_multipart else expected_checksum
-                if computed_checksum != checksum_to_compare:
-                    error_msg = (
-                        "Checksum validation failed. File may be corrupted or incomplete. "
-                        "Please retry the download and if still failing contact the dataset owner."
-                    )
-                    logger.warning(error_msg)
-                    return False, output_path, error_msg
-
-                if not lfs.exists(Path(output_path).parent):
-                    lfs.mkdir(Path(output_path).parent, create_parents=True)
-
-                with lfs.open(output_path, "wb") as f:
-                    f.write(file_data)
-
-                logger.log(VERBOSE_LVL, f"Checksum validation successful, wrote to {output_path}")
-
-                return True, output_path, None
-
-            except Exception as ex:  # noqa: BLE001
-                return False, output_path, str(ex)
-
         retries = 5
         for attempt in range(retries):
             try:
-                success, path, error = stream_and_validate()
-                if success:
+                success, path, error = self._stream_and_validate_checksum(
+                    url,
+                    output_path,
+                    lfs,
+                    expected_checksum,
+                    checksum_algorithm,
+                    block_size,
+                )
+                if success or attempt == retries - 1:
                     return success, path, error
-
-                if attempt < retries - 1:
-                    wait_time = 2**attempt
-                    logger.log(
-                        VERBOSE_LVL,
-                        "Attempt %d failed, retrying in %d seconds...",
-                        attempt + 1,
-                        wait_time,
-                        exc_info=True,
-                    )
-                    time.sleep(wait_time)
-                else:
-                    return success, path, error
-
             except Exception as ex:  # noqa: BLE001, PERF203
-                if attempt < retries - 1:
-                    wait_time = 2**attempt
-                    logger.log(
-                        VERBOSE_LVL,
-                        "Attempt %d failed, retrying in %d seconds...",
-                        attempt + 1,
-                        wait_time,
-                        exc_info=True,
-                    )
-                    time.sleep(wait_time)
-                else:
+                if attempt == retries - 1:
                     error_msg = f"Failed after {retries} attempts: {ex}"
                     logger.log(VERBOSE_LVL, error_msg, exc_info=True)
                     return False, output_path, error_msg
-
+            self._sleep_before_retry(attempt)
         return False, output_path, "Unknown error occurred"
 
     def _compute_checksum_from_data(self, data: bytes, algorithm: str, is_multipart: bool = False) -> str:  # noqa: PLR0911, PLR0912
@@ -970,64 +834,21 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         Returns:
             Base64-encoded checksum string
         """
-        from awscrt import checksums as aws_checksums
-
-        if algorithm == "CRC32":
-            crc_value = aws_checksums.crc32(data)
-            crc_bytes = crc_value.to_bytes(4, byteorder="big")
-
-            if is_multipart:
-                composite_crc = aws_checksums.crc32(crc_bytes)
-                return base64.b64encode(composite_crc.to_bytes(4, byteorder="big")).decode("ascii")
-            else:
-                return base64.b64encode(crc_bytes).decode("ascii")
-
-        elif algorithm == "CRC32C":
-            crc_value = aws_checksums.crc32c(data)
-            crc_bytes = crc_value.to_bytes(4, byteorder="big")
-
-            if is_multipart:
-                composite_crc = aws_checksums.crc32c(crc_bytes)
-                return base64.b64encode(composite_crc.to_bytes(4, byteorder="big")).decode("ascii")
-            else:
-                return base64.b64encode(crc_bytes).decode("ascii")
-
-        elif algorithm == "SHA-256":
-            if is_multipart:
-                inner_hash = hashlib.sha256(data).digest()
-                outer_hash = hashlib.sha256(inner_hash).digest()
-                return base64.b64encode(outer_hash).decode("ascii")
-            else:
-                return base64.b64encode(hashlib.sha256(data).digest()).decode("ascii")
-
-        elif algorithm == "SHA-1":
-            if is_multipart:
-                inner_hash = hashlib.sha1(data).digest()
-                outer_hash = hashlib.sha1(inner_hash).digest()
-                return base64.b64encode(outer_hash).decode("ascii")
-            else:
-                return base64.b64encode(hashlib.sha1(data).digest()).decode("ascii")
-
-        elif algorithm == "MD5":
-            if is_multipart:
-                inner_hash = hashlib.md5(data).digest()
-                outer_hash = hashlib.md5(inner_hash).digest()
-                return base64.b64encode(outer_hash).decode("ascii")
-            else:
-                return base64.b64encode(hashlib.md5(data).digest()).decode("ascii")
-
-        elif algorithm == "CRC64NVME":
-            crc_value = aws_checksums.crc64nvme(data)
-            crc_bytes = crc_value.to_bytes(8, byteorder="big")
-
-            if is_multipart:
-                composite_crc = aws_checksums.crc64nvme(crc_bytes)
-                return base64.b64encode(composite_crc.to_bytes(8, byteorder="big")).decode("ascii")
-            else:
-                return base64.b64encode(crc_bytes).decode("ascii")
-
-        else:
-            raise ValueError(f"Unsupported checksum algorithm: {algorithm}")
+        crc_algorithms = {
+            "CRC32": ("crc32", 4),
+            "CRC32C": ("crc32c", 4),
+            "CRC64NVME": ("crc64nvme", 8),
+        }
+        if algorithm in crc_algorithms:
+            checksum_name, size = crc_algorithms[algorithm]
+            return self._compute_crc_checksum(data, checksum_name, size, is_multipart)
+        if algorithm == "SHA-256":
+            return self._compute_hash_checksum(data, "sha256", is_multipart)
+        if algorithm == "SHA-1":
+            return self._compute_hash_checksum(data, "sha1", is_multipart)  # NOSONAR(S4790) legacy API checksum
+        if algorithm == "MD5":
+            return self._compute_hash_checksum(data, "md5", is_multipart)  # NOSONAR(S4790) legacy API checksum
+        raise ValueError(f"Unsupported checksum algorithm: {algorithm}")
 
     def download(  # noqa: PLR0913
         self,
@@ -1105,63 +926,263 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
         lfs = kwargs.pop("lfs", None)
-
-        if isinstance(lpath, (str, Path)):
-            if lfs is None:
-                lfs = get_default_fs()
-            lpath_str = str(lpath)
-        elif hasattr(lpath, "path"):
-            lpath_str = lpath.path
-            if not hasattr(lpath, "close"):
-                lfs = get_default_fs()
-        else:
-            lfs = get_default_fs()
-            lpath_str = str(lpath)
-
+        lfs, lpath_str = self._resolve_local_target(lpath, lfs)
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
         n_threads = cpu_count(is_threading=True)
-
-        is_local_fs = kwargs.get("is_local_fs", False)
-
-        if n_threads == 1 or not is_local_fs:
+        if not self._can_parallel_download(n_threads, kwargs.get("is_local_fs", False)):
             return self.stream_single_file(str(rpath), lpath_str, lfs, block_size=chunk_size)
-        else:
-            try:
+        try:
+            return self._download_multi_threaded(str(rpath), lpath_str, lfs, chunk_size, n_threads)
+        except Exception as ex:  # noqa: BLE001
+            logger.info(f"Failed to get content length for multi-threaded download: {ex}")
+            return self.stream_single_file(str(rpath), lpath_str, lfs, block_size=chunk_size)
 
-                async def get_content_length_and_checksum() -> tuple[int | None, str | None, str | None]:
-                    session = await self.set_session()
-                    async with session.head(rpath, **self.kwargs) as r:
-                        r.raise_for_status()
-                        file_size = int(r.headers.get("Content-Length", 0)) or None
-                        expected_checksum = r.headers.get("x-jpmc-checksum")
-                        checksum_algorithm = r.headers.get("x-jpmc-checksum-algorithm")
-                        return file_size, expected_checksum, checksum_algorithm
+    def _normalize_ls_url(self, url: str) -> str:
+        if "http" not in url:
+            url = f"{self.client_kwargs['root_url']}catalogs/" + url
+        return url[:-1] if url.endswith("/") else url
 
-                file_size, expected_checksum, checksum_algorithm = sync(self.loop, get_content_length_and_checksum)
-                if file_size:
-                    if "operationType/download" not in str(rpath):
-                        rpath = str(rpath) + "/operationType/download"
+    def _build_ls_kwargs(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        kw = cast(dict[str, Any], self.kwargs.copy())
+        kw.update(kwargs)
+        kw.pop("keep_protocol", None)
+        headers = cast(dict[str, str], kw.get("headers", {})).copy()
+        kw["headers"] = headers
+        return kw
 
-                    if not expected_checksum or not checksum_algorithm:
-                        error_msg = "Checksum validation is required but missing checksum information."
-                        return False, lpath_str, error_msg
+    @staticmethod
+    def _is_distribution_url(url: str) -> bool:
+        url_parts = url.split("/")
+        return len(url_parts) > 1 and url_parts[-2] == "distributions"
 
-                    return sync(
-                        self.loop,
-                        self._download_single_file_async_with_checksum,
-                        str(rpath),
-                        lpath_str,
-                        file_size,
-                        expected_checksum,
-                        checksum_algorithm,
-                        chunk_size,
-                        n_threads,
-                    )
-                else:
-                    return self.stream_single_file(str(rpath), lpath_str, lfs, block_size=chunk_size)
-            except Exception as ex:  # noqa: BLE001
-                logger.info(f"Failed to get content length for multi-threaded download: {ex}")
-                return self.stream_single_file(str(rpath), lpath_str, lfs, block_size=chunk_size)
+    async def _ls_distribution(
+        self,
+        url: str,
+        session: aiohttp.ClientSession,
+    ) -> tuple[list[str], int]:
+        async with session.head(url + "/operationType/download", **self.kwargs) as response:
+            self._raise_not_found_for_status(response, url)
+            parts = url.split("/")
+            name = parts[6] + "-" + parts[8] + "-" + parts[10] + "." + parts[-1]
+            return [name], int(response.headers["Content-Length"])
+
+    async def _ls_collection(
+        self,
+        url: str,
+        kw: dict[str, Any],
+        session: aiohttp.ClientSession,
+    ) -> dict[str, Any]:
+        async with session.get(url, **kw) as response:
+            self._raise_not_found_for_status(response, url)
+            out = cast(dict[str, Any], await response.json())
+            resources = out.get("resources", [])
+            next_token = cast(Optional[str], self._extract_token_from_response(response))
+        if next_token:
+            out["resources"] = await self._fetch_paginated_resources(url, kw, session, resources, next_token)
+        return out
+
+    async def _fetch_paginated_resources(
+        self,
+        url: str,
+        kw: dict[str, Any],
+        session: aiohttp.ClientSession,
+        resources: list[Any],
+        next_token: str,
+    ) -> list[Any]:
+        all_resources = list(resources)
+        current_token = next_token
+        while current_token:
+            headers = kw.get("headers", {}).copy()
+            headers["x-jpmc-next-token"] = current_token
+            kw["headers"] = headers
+            async with session.get(url, **kw) as response:
+                self._last_async_response = response
+                self._raise_not_found_for_status(response, url)
+                more_out = await response.json()
+                all_resources.extend(more_out.get("resources", []))
+                current_token = self._extract_token_from_response(response)
+        return all_resources
+
+    def _format_ls_output(
+        self,
+        clean_url: str,
+        out: list[str] | dict[str, Any],
+        detail: bool,
+        *,
+        is_file: bool,
+        size: int | None = None,
+    ) -> Any:
+        if not is_file:
+            collection = cast(dict[str, Any], out)
+            resources = [urljoin(clean_url + "/", item["identifier"]) for item in collection["resources"]]
+            if not detail:
+                return resources
+            return [
+                {
+                    "name": resource,
+                    "size": None,
+                    "type": ("directory" if not resource.endswith(("csv", "parquet")) else "file"),
+                }
+                for resource in resources
+            ]
+        file_list = cast(list[str], out)
+        if not detail:
+            return file_list
+        return [{"name": file_list[0], "size": size, "type": "file"}]
+
+    def _stream_and_validate_checksum(
+        self,
+        url: str,
+        output_path: str,
+        lfs: fsspec.AbstractFileSystem,
+        expected_checksum: str,
+        checksum_algorithm: str,
+        block_size: int,
+    ) -> tuple[bool, str, str | None]:
+        try:
+            file_data = self._download_file_data(url, block_size)
+            validation_error = self._validate_checksum(file_data, expected_checksum, checksum_algorithm)
+            if validation_error is not None:
+                logger.warning(validation_error)
+                return False, output_path, validation_error
+            self._write_downloaded_file(lfs, output_path, file_data)
+            logger.log(VERBOSE_LVL, "Checksum validation successful, wrote to %s", output_path)
+            return True, output_path, None
+        except Exception as ex:  # noqa: BLE001
+            return False, output_path, str(ex)
+
+    def _download_file_data(self, url: str, block_size: int) -> bytes:
+        data_buffer = io.BytesIO()
+        session = self.sync_session
+        get_file_kwargs = self.kwargs.copy()
+        get_file_kwargs.pop("proxy", None)
+        with session.get(url, **get_file_kwargs) as response:
+            response.raise_for_status()
+            byte_cnt = 0
+            for chunk in response.iter_content(block_size):
+                if chunk:
+                    byte_cnt += len(chunk)
+                    data_buffer.write(chunk)
+        logger.log(VERBOSE_LVL, "Wrote %d bytes to %s", byte_cnt, url)
+        return data_buffer.getvalue()
+
+    def _validate_checksum(self, file_data: bytes, expected_checksum: str, checksum_algorithm: str) -> str | None:
+        checksum_to_compare, is_multipart = self._parse_checksum_expectation(expected_checksum)
+        computed_checksum = self._compute_checksum_from_data(file_data, checksum_algorithm, is_multipart=is_multipart)
+        if not computed_checksum:
+            return f"Could not compute checksum using algorithm {checksum_algorithm}"
+        if computed_checksum != checksum_to_compare:
+            return (
+                "Checksum validation failed. File may be corrupted or incomplete. "
+                "Please retry the download and if still failing contact the dataset owner."
+            )
+        return None
+
+    @staticmethod
+    def _parse_checksum_expectation(expected_checksum: str) -> tuple[str, bool]:
+        if "-" not in expected_checksum:
+            return expected_checksum, False
+        parts = expected_checksum.rsplit("-", 1)
+        if len(parts) == MULTIPART_CHECKSUM_PARTS and parts[1].isdigit():
+            return parts[0], True
+        return expected_checksum, False
+
+    @staticmethod
+    def _write_downloaded_file(lfs: fsspec.AbstractFileSystem, output_path: str, file_data: bytes) -> None:
+        parent = Path(output_path).parent
+        if not lfs.exists(parent):
+            lfs.mkdir(parent, create_parents=True)
+        with lfs.open(output_path, "wb") as file_obj:
+            file_obj.write(file_data)
+
+    @staticmethod
+    def _sleep_before_retry(attempt: int) -> None:
+        wait_time = 2**attempt
+        logger.log(
+            VERBOSE_LVL,
+            "Attempt %d failed, retrying in %d seconds...",
+            attempt + 1,
+            wait_time,
+            exc_info=True,
+        )
+        time.sleep(wait_time)
+
+    def _compute_crc_checksum(self, data: bytes, checksum_name: str, size: int, is_multipart: bool) -> str:
+        from awscrt import checksums as aws_checksums
+
+        checksum_fn = getattr(aws_checksums, checksum_name)
+        checksum = checksum_fn(data)
+        checksum_bytes = checksum.to_bytes(size, byteorder="big")
+        if is_multipart:
+            return _base64_crc(checksum_fn(checksum_bytes), size)
+        return base64.b64encode(checksum_bytes).decode("ascii")
+
+    @staticmethod
+    def _compute_hash_checksum(data: bytes, algorithm: str, is_multipart: bool) -> str:
+        digest = hashlib.new(algorithm, data).digest()
+        if is_multipart:
+            digest = hashlib.new(algorithm, digest).digest()
+        return base64.b64encode(digest).decode("ascii")
+
+    @staticmethod
+    def _can_parallel_download(n_threads: int, is_local_fs: bool) -> bool:
+        return n_threads > 1 and is_local_fs
+
+    @staticmethod
+    def _resolve_local_target(
+        lpath: str | io.IOBase | fsspec.spec.AbstractBufferedFile | Path,
+        lfs: fsspec.AbstractFileSystem | None,
+    ) -> tuple[fsspec.AbstractFileSystem, str]:
+        if isinstance(lpath, (str, Path)):
+            return lfs or get_default_fs(), str(lpath)
+        if hasattr(lpath, "path"):
+            return (lfs or get_default_fs()), lpath.path
+        return get_default_fs(), str(lpath)
+
+    def _download_multi_threaded(
+        self,
+        rpath: str,
+        lpath_str: str,
+        lfs: fsspec.AbstractFileSystem,
+        chunk_size: int,
+        n_threads: int,
+    ) -> tuple[bool, str, str | None]:
+        file_size, expected_checksum, checksum_algorithm = cast(
+            tuple[Optional[int], Optional[str], Optional[str]],
+            sync(self.loop, self._get_content_length_and_checksum, rpath),
+        )
+        if not file_size:
+            return self.stream_single_file(rpath, lpath_str, lfs, block_size=chunk_size)
+        download_path = rpath if "operationType/download" in rpath else rpath + "/operationType/download"
+        if not expected_checksum or not checksum_algorithm:
+            return False, lpath_str, "Checksum validation is required but missing checksum information."
+        download_result = cast(
+            tuple[bool, str, Optional[str]],
+            sync(
+                self.loop,
+                self._download_single_file_async_with_checksum,
+                download_path,
+                lpath_str,
+                file_size,
+                expected_checksum,
+                checksum_algorithm,
+                chunk_size,
+                n_threads,
+            ),
+        )
+        return download_result
+
+    async def _get_content_length_and_checksum(
+        self,
+        rpath: str | io.IOBase,
+    ) -> tuple[int | None, str | None, str | None]:
+        session = await self.set_session()
+        async with session.head(rpath, **self.kwargs) as response:
+            response.raise_for_status()
+            file_size = int(response.headers.get("Content-Length", 0)) or None
+            expected_checksum = response.headers.get("x-jpmc-checksum")
+            checksum_algorithm = response.headers.get("x-jpmc-checksum-algorithm")
+            return file_size, expected_checksum, checksum_algorithm
 
     @staticmethod
     def _update_kwargs(
@@ -1238,12 +1259,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             kw = self.kwargs.copy()
             kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
 
-            async with session.post(rpath + "/operationType/upload", **kw) as resp:
+            async with session.post(rpath + UPLOAD_OPERATION_PATH, **kw) as resp:
                 await self._async_raise_not_found_for_status(resp, rpath)
                 operation_id = await resp.json()
 
             operation_id = operation_id["operationId"]
-            resps = [resp async for resp in put_data()]
+            put_data_iterable: AsyncGenerator[dict[Any, Any], None] = put_data()
+            resps = [resp async for resp in put_data_iterable]
             kw = self.kwargs.copy()
             kw.update({"headers": headers})
             kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
@@ -1265,7 +1287,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         file_name: str | None = None,
     ) -> tuple[dict[str, str], list[dict[str, str]]]:
         headers = {
-            "Content-Type": "application/octet-stream",
+            "Content-Type": APPLICATION_OCTET_STREAM_MIMETYPE,
             "x-jpmc-distribution-created-date": dt_created,
             "x-jpmc-distribution-from-date": dt_from,
             "x-jpmc-distribution-to-date": dt_to,
@@ -1274,8 +1296,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         if file_name:
             headers["File-Name"] = file_name
 
-        headers["Content-Type"] = "application/json" if multipart else headers["Content-Type"]
-        headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
+        headers["Content-Type"] = APPLICATION_JSON_MIMETYPE if multipart else headers["Content-Type"]
+        headers_chunks = {"Content-Type": APPLICATION_OCTET_STREAM_MIMETYPE, "Digest": ""}
 
         headers_chunk_lst = []
         hash_sha256 = hashlib.sha256()
@@ -1286,14 +1308,14 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             hash_sha256_chunk.update(chunk)
             hash_sha256.update(hash_sha256_chunk.digest())
             headers_chunks = deepcopy(headers_chunks)
-            headers_chunks["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
+            headers_chunks["Digest"] = _build_sha256_digest(hash_sha256_chunk.digest())
             headers_chunk_lst.append(headers_chunks)
 
         file_local.seek(0)
         if multipart:
-            headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
+            headers["Digest"] = _build_sha256_digest(hash_sha256.digest())
         else:
-            headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
+            headers["Digest"] = _build_sha256_digest(hash_sha256_chunk.digest())
 
         return headers, headers_chunk_lst
 
@@ -1312,8 +1334,8 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
     ) -> None:
         async def _get_operation_id(kw: dict[str, str]) -> dict[str, Any]:
             session = await self.set_session()
-            async with session.post(rpath + "/operationType/upload", **kw) as r:
-                await self._async_raise_not_found_for_status(r, rpath + "/operationType/upload")
+            async with session.post(rpath + UPLOAD_OPERATION_PATH, **kw) as r:
+                await self._async_raise_not_found_for_status(r, rpath + UPLOAD_OPERATION_PATH)
                 res: dict[str, Any] = await r.json()
                 return res
 
@@ -1356,13 +1378,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
             chunk = f.read(chunk_size)
             i = 0
-            headers_chunks = {"Content-Type": "application/octet-stream", "Digest": ""}
+            headers_chunks = {"Content-Type": APPLICATION_OCTET_STREAM_MIMETYPE, "Digest": ""}
             while chunk:
                 hash_sha256_chunk = hashlib.sha256()
                 hash_sha256_chunk.update(chunk)
                 hash_sha256_lst[0].update(hash_sha256_chunk.digest())
                 headers_chunks = deepcopy(headers_chunks)
-                headers_chunks["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256_chunk.digest()).decode()
+                headers_chunks["Digest"] = _build_sha256_digest(hash_sha256_chunk.digest())
                 kw = self.kwargs.copy()
                 kw.update({"headers": headers_chunks})
                 kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)
@@ -1378,7 +1400,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         hash_sha256 = hashlib.sha256()
         hash_sha256_lst = [hash_sha256]
         headers = {
-            "Content-Type": "application/json",
+            "Content-Type": APPLICATION_JSON_MIMETYPE,
             "x-jpmc-distribution-created-date": dt_created,
             "x-jpmc-distribution-from-date": dt_from,
             "x-jpmc-distribution-to-date": dt_to,
@@ -1398,7 +1420,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         operation_id = sync(self.loop, _get_operation_id, kw_op)["operationId"]
         resps = list(put_data())
         hash_sha256 = hash_sha256_lst[0]
-        headers["Digest"] = "SHA-256=" + base64.b64encode(hash_sha256.digest()).decode()
+        headers["Digest"] = _build_sha256_digest(hash_sha256.digest())
         kw = self.kwargs.copy()
         kw.update({"headers": headers})
         kw = FusionHTTPFileSystem._update_kwargs(kw, headers, additional_headers)

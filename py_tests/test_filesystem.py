@@ -5,7 +5,7 @@ import json
 import logging
 import zlib
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, cast
 from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
@@ -16,7 +16,13 @@ from awscrt import checksums as aws_checksums
 
 from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
-from fusion.fusion_filesystem import FusionFile, FusionHTTPFileSystem
+from fusion.fusion_filesystem import (
+    FusionFile,
+    FusionHTTPFileSystem,
+    _base64_crc,
+    _base64_hash,
+    _build_sha256_digest,
+)
 
 
 @pytest.fixture
@@ -24,6 +30,157 @@ def http_fs_instance(credentials_examples: Path) -> FusionHTTPFileSystem:
     """Fixture to create a new instance for each test."""
     creds = FusionCredentials.from_file(credentials_examples)
     return FusionHTTPFileSystem(credentials=creds)
+
+
+def test_checksum_helper_functions() -> None:
+    digest = hashlib.sha256(b"hello").digest()
+
+    assert _build_sha256_digest(digest).startswith("SHA-256=")
+    assert _base64_hash(b"hello", "sha256") == base64.b64encode(digest).decode("ascii")
+    assert _base64_crc(258, 4) == base64.b64encode((258).to_bytes(4, byteorder="big")).decode("ascii")
+
+
+def test_merge_all_data_helpers() -> None:
+    paginated_response: list[Any] = [{"resources": [{"id": 3}]}, {"id": 4}]
+
+    merged_dict = FusionHTTPFileSystem._merge_all_data({"resources": [{"id": 1}]}, {"resources": [{"id": 2}]})
+    merged_list = FusionHTTPFileSystem._merge_all_data(
+        {"resources": [{"id": 1}]}, cast(dict[str, Any], paginated_response)
+    )
+    merged_single = FusionHTTPFileSystem._merge_all_data({"resources": [{"id": 1}]}, {"id": 5})
+
+    assert merged_dict["resources"][-1] == {"id": 2}
+    assert merged_list["resources"][-2:] == [{"id": 3}, {"id": 4}]
+    assert merged_single["resources"] == [{"id": 1}]
+
+
+def test_filesystem_static_helpers() -> None:
+    fs = object.__new__(FusionHTTPFileSystem)
+    fs.client_kwargs = {"root_url": "https://fusion.example/api/v1/"}
+    fs.kwargs = {"headers": {"Accept-Encoding": "identity"}, "keep_protocol": True}
+
+    assert fs._normalize_ls_url("catalog/dataset/") == "https://fusion.example/api/v1/catalogs/catalog/dataset"
+    assert (
+        fs._normalize_ls_url("https://data.example/distributions/file.csv")
+        == "https://data.example/distributions/file.csv"
+    )
+
+    kw = fs._build_ls_kwargs({"headers": {"X-Test": "1"}})
+    assert kw["headers"] == {"X-Test": "1"}
+    assert "keep_protocol" not in kw
+
+    assert FusionHTTPFileSystem._is_distribution_url("https://data.example/distributions/file.csv")
+    assert not FusionHTTPFileSystem._is_distribution_url("https://data.example/catalogs/c1")
+    assert FusionHTTPFileSystem._parse_checksum_expectation("abc-2") == ("abc", True)
+    assert FusionHTTPFileSystem._parse_checksum_expectation("abc-part") == ("abc-part", False)
+    assert FusionHTTPFileSystem._can_parallel_download(2, is_local_fs=True)
+    assert not FusionHTTPFileSystem._can_parallel_download(1, is_local_fs=True)
+
+
+def test_format_ls_output_and_resolve_local_target() -> None:
+    fs = object.__new__(FusionHTTPFileSystem)
+
+    collection_out = fs._format_ls_output(
+        "catalog/datasets/prices",
+        {"resources": [{"identifier": "folder"}, {"identifier": "file.csv"}]},
+        True,
+        is_file=False,
+    )
+    file_out = fs._format_ls_output(
+        "catalog/datasets/prices", ["prices-common-20240101.csv"], True, is_file=True, size=10
+    )
+
+    assert collection_out == [
+        {"name": "catalog/datasets/prices/folder", "size": None, "type": "directory"},
+        {"name": "catalog/datasets/prices/file.csv", "size": None, "type": "file"},
+    ]
+    assert file_out == [{"name": "prices-common-20240101.csv", "size": 10, "type": "file"}]
+
+    memory_fs = fsspec.filesystem("memory")
+    assert FusionHTTPFileSystem._resolve_local_target("/tmp/out.csv", None)[1] == "/tmp/out.csv"
+    assert FusionHTTPFileSystem._resolve_local_target(Path("/tmp/out.csv"), memory_fs)[0] is memory_fs
+
+    with io.BytesIO() as file_obj:
+        assert FusionHTTPFileSystem._resolve_local_target(file_obj, None)[1].startswith("<")
+
+
+def test_checksum_validation_and_download_helpers(http_fs_instance: FusionHTTPFileSystem, tmp_path: Path) -> None:
+    output_path = str(tmp_path / "downloads" / "file.csv")
+    file_data = b"payload"
+    expected_checksum = base64.b64encode(hashlib.sha256(file_data).digest()).decode("ascii")
+
+    assert http_fs_instance._validate_checksum(file_data, expected_checksum, "SHA-256") is None
+    assert http_fs_instance._validate_checksum(file_data, "wrong", "SHA-256")
+
+    local_fs = fsspec.filesystem("file")
+    local_path = str(tmp_path / "written" / "file.csv")
+    http_fs_instance._write_downloaded_file(local_fs, local_path, file_data)
+    assert Path(local_path).read_bytes() == file_data
+
+    with (
+        patch.object(http_fs_instance, "_download_file_data", return_value=file_data),
+        patch.object(http_fs_instance, "_write_downloaded_file") as mock_write,
+    ):
+        result = http_fs_instance._stream_and_validate_checksum(
+            "https://fusion.example/file",
+            output_path,
+            local_fs,
+            expected_checksum,
+            "SHA-256",
+            1024,
+        )
+
+    assert result == (True, output_path, None)
+    mock_write.assert_called_once()
+
+    with patch.object(http_fs_instance, "_download_file_data", return_value=file_data):
+        failed = http_fs_instance._stream_and_validate_checksum(
+            "https://fusion.example/file",
+            output_path,
+            local_fs,
+            "wrong",
+            "SHA-256",
+            1024,
+        )
+
+    assert failed[0] is False
+    assert "Checksum validation failed" in cast(str, failed[2])
+
+
+def test_download_multithreaded_helper_and_hash_helpers(http_fs_instance: FusionHTTPFileSystem) -> None:
+    sha_single = http_fs_instance._compute_hash_checksum(b"hello", "sha256", False)
+    sha_multi = http_fs_instance._compute_hash_checksum(b"hello", "sha256", True)
+    crc_single = http_fs_instance._compute_crc_checksum(b"hello", "crc32", 4, False)
+
+    assert sha_single == _base64_hash(b"hello", "sha256")
+    assert sha_multi != sha_single
+    assert crc_single == _base64_crc(aws_checksums.crc32(b"hello"), 4)
+
+    with patch("fusion.fusion_filesystem.sync", side_effect=[(10, "abc", "SHA-256"), (True, "/tmp/out", None)]):
+        result = http_fs_instance._download_multi_threaded(
+            "https://fusion.example/file",
+            "/tmp/out",
+            fsspec.filesystem("memory"),
+            1024,
+            2,
+        )
+
+    assert result == (True, "/tmp/out", None)
+
+    with (
+        patch("fusion.fusion_filesystem.sync", return_value=(None, None, None)),
+        patch.object(http_fs_instance, "stream_single_file", return_value=(True, "/tmp/fallback", None)) as mock_stream,
+    ):
+        fallback = http_fs_instance._download_multi_threaded(
+            "https://fusion.example/file",
+            "/tmp/fallback",
+            fsspec.filesystem("memory"),
+            1024,
+            2,
+        )
+
+    assert fallback == (True, "/tmp/fallback", None)
+    mock_stream.assert_called_once()
 
 
 def test_filesystem(
@@ -120,6 +277,16 @@ async def test_isdir_false(http_fs_instance: FusionHTTPFileSystem) -> None:
     http_fs_instance._decorate_url = AsyncMock(return_value="decorated_path_file")  # type: ignore
     http_fs_instance._info = AsyncMock(return_value={"type": "file"})  # type: ignore
     result = await http_fs_instance._isdir("path_file")
+    assert not result
+
+
+@pytest.mark.asyncio
+async def test_isdir_false_on_exception(http_fs_instance: FusionHTTPFileSystem) -> None:
+    http_fs_instance._decorate_url = MagicMock(return_value="decorated_path_error")  # type: ignore
+    http_fs_instance._info = AsyncMock(side_effect=RuntimeError("boom"))  # type: ignore
+
+    result = await http_fs_instance._isdir("path_error")
+
     assert not result
 
 
@@ -629,13 +796,15 @@ class DummyResponse:
         self.status_code = 206
 
     def raise_for_status(self) -> None:
-        pass
+        # Test double: callers exercise the success path, so no error is raised here.
+        return None
 
     def __enter__(self) -> "DummyResponse":
         return self
 
     def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
-        pass
+        # Test double: no cleanup is required when exiting the context manager.
+        return None
 
 
 class DummySession:
