@@ -158,11 +158,11 @@ def test_product_class_from_dict_uses_fresh_default_factory_lists() -> None:
     assert second_product.delivery_channel == ["API"]
 
 
-def test_product_region_none_is_preserved() -> None:
+def test_product_region_none_is_not_preserved() -> None:
     """Test Product preserves an explicitly provided None region."""
-    product = Product(identifier="TEST_PRODUCT", region=None)
+    product = Product(identifier="TEST_PRODUCT", region=None)  # type: ignore[arg-type]
 
-    assert product.region is None
+    assert product.region is not None
 
 
 def test_product_class_from_csv(mock_product_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001

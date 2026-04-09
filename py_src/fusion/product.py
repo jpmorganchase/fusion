@@ -59,7 +59,7 @@ class Product(metaclass=CamelCaseMeta):
         is_active (bool, optional): Boolean for Active status. Defaults to True.
         is_restricted (bool | None, optional): Flag for restricted products. Defaults to None.
         maintainer (str | list[str] | None, optional): Product maintainer. Defaults to None.
-        region (str | list[str] | None, optional): Product region. Defaults to None.
+        region (str | list[str]): Product region. Defaults to ["Global"].
         publisher (str | None, optional): Name of vendor that publishes the data. Defaults to None.
         sub_category (str | list[str] | None, optional): Product sub-category. Defaults to None.
         tag (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
@@ -83,7 +83,7 @@ class Product(metaclass=CamelCaseMeta):
     is_active: bool = True
     is_restricted: bool | None = None
     maintainer: str | list[str] | None = None
-    region: str | list[str] | None = field(default_factory=lambda: ["Global"])
+    region: str | list[str] = field(default_factory=lambda: ["Global"])
     publisher: str = "J.P. Morgan"
     sub_category: str | list[str] | None = None
     tag: str | list[str] | None = None
@@ -122,7 +122,7 @@ class Product(metaclass=CamelCaseMeta):
         self.is_active = make_bool(self.is_active) if not isinstance(self.is_active, bool) else self.is_active
         self.is_restricted = _coerce_optional_bool(self.is_restricted)
         self.maintainer = _coerce_list_field(self.maintainer)
-        self.region = _coerce_list_field(self.region)
+        self.region = _coerce_required_list_field(self.region)
         self.delivery_channel = _coerce_required_list_field(self.delivery_channel)
         self.release_date = convert_date_format(self.release_date) if self.release_date else None
 
