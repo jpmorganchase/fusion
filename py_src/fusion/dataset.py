@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json as js
-from dataclasses import dataclass, field, fields
+from dataclasses import MISSING, dataclass, field, fields
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -27,6 +27,25 @@ if TYPE_CHECKING:
     import requests
 
     from fusion import Fusion
+
+
+def _series_bool(series: pd.Series[Any], key: str) -> bool | None:
+    value = series.get(key, None)
+    return make_bool(value) if value is not None else value
+
+
+def _list_or_none(value: str | list[str] | None) -> list[str] | None:
+    if isinstance(value, list) or value is None:
+        return value
+    return make_list(value)
+
+
+def _normalise_application_id(
+    application_id: str | dict[str, str] | None,
+) -> str | dict[str, str] | None:
+    if isinstance(application_id, str):
+        return {"id": str(application_id), "type": "Application (SEAL)"}
+    return application_id
 
 
 @dataclass
@@ -132,23 +151,15 @@ class Dataset(metaclass=CamelCaseMeta):
         self.identifier = tidy_string(self.identifier).replace(" ", "_")
         self.title = tidy_string(self.title) if self.title != "" else self.identifier.replace("_", " ").title()
         self.description = tidy_string(self.description) if self.description != "" else self.title
-        self.category = (
-            self.category if isinstance(self.category, list) or self.category is None else make_list(self.category)
-        )
+        self.category = _list_or_none(self.category)
         self.delivery_channel = (
-            self.delivery_channel if isinstance(self.delivery_channel, list) else make_list(self.delivery_channel)
+            make_list(self.delivery_channel) if isinstance(self.delivery_channel, str) else self.delivery_channel
         )
-        self.source = self.source if isinstance(self.source, list) or self.source is None else make_list(self.source)
-        self.region = self.region if isinstance(self.region, list) or self.region is None else make_list(self.region)
-        self.product = (
-            self.product if isinstance(self.product, list) or self.product is None else make_list(self.product)
-        )
-        self.sub_category = (
-            self.sub_category
-            if isinstance(self.sub_category, list) or self.sub_category is None
-            else make_list(self.sub_category)
-        )
-        self.tags = self.tags if isinstance(self.tags, list) or self.tags is None else make_list(self.tags)
+        self.source = _list_or_none(self.source)
+        self.region = _list_or_none(self.region)
+        self.product = _list_or_none(self.product)
+        self.sub_category = _list_or_none(self.sub_category)
+        self.tags = _list_or_none(self.tags)
         self.is_internal_only_dataset = (
             self.is_internal_only_dataset
             if isinstance(self.is_internal_only_dataset, bool)
@@ -156,12 +167,8 @@ class Dataset(metaclass=CamelCaseMeta):
         )
         self.created_date = convert_date_format(self.created_date) if self.created_date else None
         self.modified_date = convert_date_format(self.modified_date) if self.modified_date else None
-        self.owners = self.owners if isinstance(self.owners, list) or self.owners is None else make_list(self.owners)
-        self.application_id = (
-            {"id": str(self.application_id), "type": "Application (SEAL)"}
-            if isinstance(self.application_id, str)
-            else self.application_id
-        )
+        self.owners = _list_or_none(self.owners)
+        self.application_id = _normalise_application_id(self.application_id)
 
     def __getattr__(self, name: str) -> Any:
         # Redirect attribute access to the snake_case version
@@ -223,32 +230,17 @@ class Dataset(metaclass=CamelCaseMeta):
         series = series.rename({"type_": "type"})
         series = series.rename({"productId": "product"})
 
-        is_internal_only_dataset = series.get("isinternalonlydataset", None)
-        is_internal_only_dataset = (
-            make_bool(is_internal_only_dataset) if is_internal_only_dataset is not None else is_internal_only_dataset
-        )
-        is_restricted = series.get("isrestricted", None)
-        is_restricted = make_bool(is_restricted) if is_restricted is not None else is_restricted
-        is_immutable = series.get("isimmutable", None)
-        is_immutable = make_bool(is_immutable) if is_immutable is not None else is_immutable
-        is_mnpi = series.get("ismnpi", None)
-        is_mnpi = make_bool(is_mnpi) if is_mnpi is not None else is_mnpi
-        is_pci = series.get("ispci", None)
-        is_pci = make_bool(is_pci) if is_pci is not None else is_pci
-        is_pii = series.get("ispii", None)
-        is_pii = make_bool(is_pii) if is_pii is not None else is_pii
-        is_client = series.get("isclient", None)
-        is_client = make_bool(is_client) if is_client is not None else is_client
-        is_public = series.get("ispublic", None)
-        is_public = make_bool(is_public) if is_public is not None else is_public
-        is_internal = series.get("isinternal", None)
-        is_internal = make_bool(is_internal) if is_internal is not None else is_internal
-        is_confidential = series.get("isconfidential", None)
-        is_confidential = make_bool(is_confidential) if is_confidential is not None else is_confidential
-        is_highly_confidential = series.get("ishighlyconfidential", None)
-        is_highly_confidential = (
-            make_bool(is_highly_confidential) if is_highly_confidential is not None else is_highly_confidential
-        )
+        is_internal_only_dataset = _series_bool(series, "isinternalonlydataset")
+        is_restricted = _series_bool(series, "isrestricted")
+        is_immutable = _series_bool(series, "isimmutable")
+        is_mnpi = _series_bool(series, "ismnpi")
+        is_pci = _series_bool(series, "ispci")
+        is_pii = _series_bool(series, "ispii")
+        is_client = _series_bool(series, "isclient")
+        is_public = _series_bool(series, "ispublic")
+        is_internal = _series_bool(series, "isinternal")
+        is_confidential = _series_bool(series, "isconfidential")
+        is_highly_confidential = _series_bool(series, "ishighlyconfidential")
         is_active = series.get("isactive", None)
         is_active = make_bool(is_active) if is_active is not None else is_active
 
@@ -314,7 +306,55 @@ class Dataset(metaclass=CamelCaseMeta):
         data = {k: v for k, v in data.items() if k in keys}
         if "type" in data:
             data["type_"] = data.pop("type")
-        return cls(**data)
+        field_map = {field_.name: field_ for field_ in fields(cls)}
+
+        def _value(name: str) -> Any:
+            if name in data:
+                return data[name]
+            field_ = field_map[name]
+            if field_.default_factory is not MISSING:
+                return field_.default_factory()
+            return field_.default
+
+        return cls(
+            identifier=data["identifier"],
+            title=_value("title"),
+            category=_value("category"),
+            description=_value("description"),
+            frequency=_value("frequency"),
+            is_internal_only_dataset=_value("is_internal_only_dataset"),
+            is_third_party_data=_value("is_third_party_data"),
+            is_restricted=_value("is_restricted"),
+            is_raw_data=_value("is_raw_data"),
+            maintainer=_value("maintainer"),
+            source=_value("source"),
+            region=_value("region"),
+            publisher=_value("publisher"),
+            product=_value("product"),
+            sub_category=_value("sub_category"),
+            tags=_value("tags"),
+            created_date=_value("created_date"),
+            modified_date=_value("modified_date"),
+            delivery_channel=_value("delivery_channel"),
+            language=_value("language"),
+            status=_value("status"),
+            type_=_value("type_"),
+            container_type=_value("container_type"),
+            snowflake=_value("snowflake"),
+            complexity=_value("complexity"),
+            is_immutable=_value("is_immutable"),
+            is_mnpi=_value("is_mnpi"),
+            is_pci=_value("is_pci"),
+            is_pii=_value("is_pii"),
+            is_client=_value("is_client"),
+            is_public=_value("is_public"),
+            is_internal=_value("is_internal"),
+            is_confidential=_value("is_confidential"),
+            is_highly_confidential=_value("is_highly_confidential"),
+            is_active=_value("is_active"),
+            owners=_value("owners"),
+            application_id=_value("application_id"),
+        )
 
     @classmethod
     def _from_csv(cls: type[Dataset], file_path: str, identifier: str | None = None) -> Dataset:

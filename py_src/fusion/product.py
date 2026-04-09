@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json as js
-from dataclasses import dataclass, field, fields
+from dataclasses import MISSING, dataclass, field, fields
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -28,6 +28,24 @@ if TYPE_CHECKING:
     from fusion import Fusion
 
 
+def _coerce_list_field(value: str | list[str] | None) -> list[str] | None:
+    if isinstance(value, list) or value is None:
+        return value
+    return make_list(value)
+
+
+def _coerce_required_list_field(value: str | list[str]) -> list[str]:
+    if isinstance(value, list):
+        return value
+    return make_list(value)
+
+
+def _coerce_optional_bool(value: bool | None) -> bool | None:
+    if isinstance(value, bool) or value is None:
+        return value
+    return make_bool(value)
+
+
 @dataclass
 class Product(metaclass=CamelCaseMeta):
     """Fusion Product class for managing product metadata in a Fusion catalog.
@@ -41,7 +59,7 @@ class Product(metaclass=CamelCaseMeta):
         is_active (bool, optional): Boolean for Active status. Defaults to True.
         is_restricted (bool | None, optional): Flag for restricted products. Defaults to None.
         maintainer (str | list[str] | None, optional): Product maintainer. Defaults to None.
-        region (str | list[str] | None, optional): Product region. Defaults to None.
+        region (str | list[str]): Product region. Defaults to ["Global"].
         publisher (str | None, optional): Name of vendor that publishes the data. Defaults to None.
         sub_category (str | list[str] | None, optional): Product sub-category. Defaults to None.
         tag (str | list[str] | None, optional): Tags used for search purposes. Defaults to None.
@@ -97,33 +115,15 @@ class Product(metaclass=CamelCaseMeta):
         self.description = tidy_string(self.description) if self.description != "" else self.title
         self.short_abstract = tidy_string(self.short_abstract) if self.short_abstract != "" else self.title
         self.description = tidy_string(self.description)
-        self.category = (
-            self.category if isinstance(self.category, list) or self.category is None else make_list(self.category)
-        )
-        self.tag = self.tag if isinstance(self.tag, list) or self.tag is None else make_list(self.tag)
-        self.dataset = (
-            self.dataset if isinstance(self.dataset, list) or self.dataset is None else make_list(self.dataset)
-        )
-        self.sub_category = (
-            self.sub_category
-            if isinstance(self.sub_category, list) or self.sub_category is None
-            else make_list(self.sub_category)
-        )
-        self.is_active = self.is_active if isinstance(self.is_active, bool) else make_bool(self.is_active)
-        self.is_restricted = (
-            self.is_restricted
-            if isinstance(self.is_restricted, bool) or self.is_restricted is None
-            else make_bool(self.is_restricted)
-        )
-        self.maintainer = (
-            self.maintainer
-            if isinstance(self.maintainer, list) or self.maintainer is None
-            else make_list(self.maintainer)
-        )
-        self.region = self.region if isinstance(self.region, list) or self.region is None else make_list(self.region)
-        self.delivery_channel = (
-            self.delivery_channel if isinstance(self.delivery_channel, list) else make_list(self.delivery_channel)
-        )
+        self.category = _coerce_list_field(self.category)
+        self.tag = _coerce_list_field(self.tag)
+        self.dataset = _coerce_list_field(self.dataset)
+        self.sub_category = _coerce_list_field(self.sub_category)
+        self.is_active = make_bool(self.is_active) if not isinstance(self.is_active, bool) else self.is_active
+        self.is_restricted = _coerce_optional_bool(self.is_restricted)
+        self.maintainer = _coerce_list_field(self.maintainer)
+        self.region = _coerce_required_list_field(self.region)
+        self.delivery_channel = _coerce_required_list_field(self.delivery_channel)
         self.release_date = convert_date_format(self.release_date) if self.release_date else None
 
     def __getattr__(self, name: str) -> Any:
@@ -221,7 +221,38 @@ class Product(metaclass=CamelCaseMeta):
         keys = [f.name for f in fields(cls)]
         data = {camel_to_snake(k): v for k, v in data.items()}
         data = {k: v for k, v in data.items() if k in keys}
-        return cls(**data)
+        field_map = {field_.name: field_ for field_ in fields(cls)}
+
+        def _value(name: str) -> Any:
+            if name in data:
+                return data[name]
+            field_ = field_map[name]
+            if field_.default_factory is not MISSING:
+                return field_.default_factory()
+            return field_.default
+
+        return cls(
+            identifier=data["identifier"],
+            title=_value("title"),
+            category=_value("category"),
+            short_abstract=_value("short_abstract"),
+            description=_value("description"),
+            is_active=_value("is_active"),
+            is_restricted=_value("is_restricted"),
+            maintainer=_value("maintainer"),
+            region=_value("region"),
+            publisher=_value("publisher"),
+            sub_category=_value("sub_category"),
+            tag=_value("tag"),
+            delivery_channel=_value("delivery_channel"),
+            theme=_value("theme"),
+            release_date=_value("release_date"),
+            language=_value("language"),
+            status=_value("status"),
+            image=_value("image"),
+            logo=_value("logo"),
+            dataset=_value("dataset"),
+        )
 
     @classmethod
     def _from_csv(cls: type[Product], file_path: str, identifier: str | None = None) -> Product:

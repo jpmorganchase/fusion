@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from fusion.credentials import AuthToken, FusionCredentials
+from fusion.credentials import AuthToken, FusionCredentials, _fusion_url_to_auth_url
 from fusion.exceptions import CredentialError
 
 
@@ -199,3 +199,207 @@ def test_from_file_invalid_json_raises_error(tmp_path: Path) -> None:
     bad.write_text('{"client_id": "x",')  # malformed
     with pytest.raises(CredentialError):
         FusionCredentials.from_file(bad)
+
+
+class TestFusionCredentialsCoverage:
+    def test_fusion_url_to_auth_url_for_distribution_path(self) -> None:
+        result = _fusion_url_to_auth_url("https://api.example.com/catalogs/cat-a/datasets/ds-b/distributions/csv")
+
+        assert result == (
+            "https://api.example.com/catalogs/cat-a/datasets/ds-b/authorize/token",
+            "cat-a",
+            "ds-b",
+        )
+
+    def test_fusion_url_to_auth_url_for_non_distribution_path_returns_none(self) -> None:
+        assert _fusion_url_to_auth_url("https://api.example.com/catalogs/cat-a/datasets/ds-b") is None
+
+    def test_fusion_url_to_auth_url_invalid_path_raises_error(self) -> None:
+        with pytest.raises(ValueError, match="'catalogs' segment not found or catalog name missing"):
+            _fusion_url_to_auth_url("https://api.example.com/datasets/ds-b/distributions/csv")
+
+    def test_from_file_password_grant(self, tmp_path: Path) -> None:
+        cfg_path = tmp_path / "password_creds.json"
+        cfg_path.write_text(
+            json.dumps(
+                {
+                    "grant_type": "password",
+                    "client_id": "cid",
+                    "username": "user",
+                    "password": "pass",
+                    "resource": "res",
+                    "auth_url": "https://auth",
+                }
+            )
+        )
+
+        creds = FusionCredentials.from_file(cfg_path)
+
+        assert creds.grant_type == "password"
+        assert creds.client_id == "cid"
+        assert creds.username == "user"
+        assert creds.password == "pass"
+
+    def test_from_file_bearer_grant(self, tmp_path: Path) -> None:
+        cfg_path = tmp_path / "bearer_creds.json"
+        cfg_path.write_text(
+            json.dumps(
+                {
+                    "grant_type": "bearer",
+                    "bearer_token": "token-123",
+                    "resource": "res",
+                    "auth_url": "https://auth",
+                }
+            )
+        )
+
+        creds = FusionCredentials.from_file(cfg_path)
+
+        assert creds.grant_type == "bearer"
+        assert creds.bearer_token is not None
+        assert creds.bearer_token.token == "token-123"
+
+    def test_from_file_invalid_grant_type_raises_error(self, tmp_path: Path) -> None:
+        cfg_path = tmp_path / "bad_grant.json"
+        cfg_path.write_text(json.dumps({"grant_type": "not-a-real-grant"}))
+
+        with pytest.raises(CredentialError, match="Unrecognized grant type"):
+            FusionCredentials.from_file(cfg_path)
+
+    def test_from_file_password_without_client_id_raises_error(self, tmp_path: Path) -> None:
+        cfg_path = tmp_path / "missing_client_id.json"
+        cfg_path.write_text(json.dumps({"grant_type": "password", "username": "user", "password": "pass"}))
+
+        with pytest.raises(CredentialError, match="Missing client ID"):
+            FusionCredentials.from_file(cfg_path)
+
+    def test_get_bearer_token_header_without_token_raises_error(self) -> None:
+        creds = FusionCredentials.from_client_id("id", "sec", "res", "https://auth", None, None)
+
+        with pytest.raises(ValueError, match="No bearer token set"):
+            creds.get_bearer_token_header()
+
+    def test_get_fusion_token_header_without_token_raises_error(self) -> None:
+        creds = FusionCredentials.from_client_id("id", "sec", "res", "https://auth", None, None)
+
+        with pytest.raises(ValueError, match="No fusion token for key 'missing'"):
+            creds.get_fusion_token_header("missing")
+
+    def test_session_or_new_applies_proxies_once(self) -> None:
+        creds = FusionCredentials.from_client_id(
+            "id", "sec", "res", "https://auth", {"https": "https://proxy.example"}, None
+        )
+
+        session = creds._session_or_new()
+
+        assert session.proxies["https"] == "https://proxy.example"
+        assert creds._session_or_new() is session
+
+    def test_build_refresh_payload_password_grant(self) -> None:
+        creds = FusionCredentials.from_user_id("user", "pass", "res", "https://auth", None, None)
+        creds.client_id = "cid"
+
+        payload = creds._build_refresh_payload()
+
+        assert payload == {
+            "grant_type": "password",
+            "client_id": "cid",
+            "username": "user",
+            "password": "pass",
+            "resource": "res",
+        }
+
+    def test_build_refresh_payload_jwt_assertion(self) -> None:
+        creds = FusionCredentials.from_client_id(
+            "cid",
+            "sec",
+            "res",
+            "https://auth",
+            None,
+            None,
+            kid="kid-1",
+            private_key="private-key",
+        )
+
+        with patch.object(creds, "_jwt_client_assertion", return_value="signed-jwt"):
+            payload = creds._build_refresh_payload()
+
+        assert payload == {
+            "grant_type": "client_credentials",
+            "client_id": "cid",
+            "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+            "client_assertion": "signed-jwt",
+            "resource": "res",
+        }
+
+    def test_build_refresh_payload_invalid_grant_raises_error(self) -> None:
+        creds = FusionCredentials.from_client_id("id", "sec", "res", "https://auth", None, None)
+        creds.grant_type = "invalid"
+
+        with pytest.raises(ValueError, match="Unrecognized grant type"):
+            creds._build_refresh_payload()
+
+    def test_build_base_headers_includes_optional_values(self) -> None:
+        creds = FusionCredentials.from_client_id(
+            "id", "sec", "res", "https://auth", None, "e2e", headers={"X-Test": "1"}
+        )
+        creds.put_bearer_token("abc", 60)
+
+        headers = creds._build_base_headers()
+
+        assert headers["Authorization"] == "Bearer abc"
+        assert headers["fusion-e2e"] == "e2e"
+        assert headers["X-Test"] == "1"
+
+    def test_build_base_headers_without_bearer_token_raises_error(self) -> None:
+        creds = FusionCredentials.from_client_id("id", "sec", "res", "https://auth", None, None)
+
+        with pytest.raises(ValueError, match="No bearer token set"):
+            creds._build_base_headers()
+
+    def test_refresh_bearer_token_bearer_grant_is_noop(self) -> None:
+        creds = FusionCredentials.from_bearer_token("res", "https://auth", "token-123", None, None, None)
+
+        creds.refresh_bearer_token()
+
+        assert creds.bearer_token is not None
+        assert creds.bearer_token.token == "token-123"
+
+    def test_refresh_bearer_token_http_error_raises_value_error(self) -> None:
+        creds = FusionCredentials.from_client_id("id", "sec", "res", "https://auth", None, None)
+        mock_sess = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 401
+        mock_resp.raise_for_status.side_effect = __import__("requests").HTTPError("bad request")
+        mock_sess.post.return_value = mock_resp
+
+        with (
+            patch("fusion.credentials.requests.Session", return_value=mock_sess),
+            pytest.raises(ValueError, match="Could not post request"),
+        ):
+            creds.refresh_bearer_token()
+
+    def test_refresh_bearer_token_invalid_json_raises_value_error(self) -> None:
+        creds = FusionCredentials.from_client_id("id", "sec", "res", "https://auth", None, None)
+        mock_sess = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.return_value = None
+        mock_resp.json.side_effect = ValueError("invalid json")
+        mock_sess.post.return_value = mock_resp
+
+        with (
+            patch("fusion.credentials.requests.Session", return_value=mock_sess),
+            pytest.raises(ValueError, match="Could not parse text to json"),
+        ):
+            creds.refresh_bearer_token()
+
+    def test_refresh_bearer_token_missing_access_token_raises_value_error(self) -> None:
+        creds = FusionCredentials.from_client_id("id", "sec", "res", "https://auth", None, None)
+        mock_sess = MagicMock()
+        mock_sess.post.return_value = _MockResp({"expires_in": 3600})
+
+        with (
+            patch("fusion.credentials.requests.Session", return_value=mock_sess),
+            pytest.raises(ValueError, match="Missing access_token in generate token response"),
+        ):
+            creds.refresh_bearer_token()

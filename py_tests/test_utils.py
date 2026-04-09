@@ -1,6 +1,7 @@
 import io
 import json as js
 import multiprocessing as mp
+import ssl
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
@@ -25,6 +26,7 @@ from fusion.utils import (
     _merge_responses,
     convert_date_format,
     cpu_count,
+    create_secure_ssl_context,
     csv_to_table,
     file_name_to_url,
     get_session,
@@ -111,6 +113,15 @@ def sample_parquet_paths_str(sample_parquet_paths: list[Path]) -> list[str]:
 
 def test_cpu_count() -> None:
     assert cpu_count() > 0
+
+
+def test_create_secure_ssl_context() -> None:
+    context = create_secure_ssl_context()
+
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    assert context.check_hostname is True
+    if hasattr(ssl, "TLSVersion"):
+        assert context.minimum_version >= ssl.TLSVersion.TLSv1_2
 
 
 def test_csv_to_table(sample_csv_path_str: str) -> None:

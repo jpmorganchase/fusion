@@ -4,7 +4,7 @@ import logging
 import re
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -120,7 +120,7 @@ def test_is_url() -> None:
     assert not _is_url("google")
     assert not _is_url("googlecom")
     assert not _is_url("googlecom.")
-    assert not _is_url(3.141)  # type: ignore
+    assert not _is_url(cast(Any, 3.141))
 
 
 def test_fusion_class(fusion_obj: Fusion) -> None:

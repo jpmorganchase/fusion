@@ -22,6 +22,28 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_NORMALIZED_DATAFLOW_FIELDS = (
+    "description",
+    "id",
+    "transport_type",
+    "frequency",
+    "start_time",
+    "end_time",
+    "connection_type",
+)
+
+
+def _normalize_node_fields(node: dict[str, str] | None) -> dict[str, str] | None:
+    if not isinstance(node, dict):
+        return node
+
+    normalized_node = dict(node)
+    for key in ("name", "type"):
+        value = normalized_node.get(key)
+        if isinstance(value, str):
+            normalized_node[key] = tidy_string(value)
+    return normalized_node
+
 
 @dataclass
 class Dataflow(metaclass=CamelCaseMeta):
@@ -85,25 +107,12 @@ class Dataflow(metaclass=CamelCaseMeta):
 
     def __post_init__(self) -> None:
         """Normalize key fields after initialization."""
-        self.description = tidy_string(self.description) if self.description is not None else None
-        self.id = tidy_string(self.id) if self.id is not None else None
-        self.transport_type = tidy_string(self.transport_type) if self.transport_type is not None else None
-        self.frequency = tidy_string(self.frequency) if self.frequency is not None else None
-        self.start_time = tidy_string(self.start_time) if self.start_time is not None else None
-        self.end_time = tidy_string(self.end_time) if self.end_time is not None else None
-        self.connection_type = tidy_string(self.connection_type) if self.connection_type is not None else None
+        for field_name in _NORMALIZED_DATAFLOW_FIELDS:
+            value = getattr(self, field_name)
+            setattr(self, field_name, tidy_string(value) if value is not None else None)
 
-        if isinstance(self.provider_node, dict):
-            if isinstance(self.provider_node.get("name"), str):
-                self.provider_node["name"] = tidy_string(self.provider_node["name"])
-            if isinstance(self.provider_node.get("type"), str):
-                self.provider_node["type"] = tidy_string(self.provider_node["type"])
-
-        if isinstance(self.consumer_node, dict):
-            if isinstance(self.consumer_node.get("name"), str):
-                self.consumer_node["name"] = tidy_string(self.consumer_node["name"])
-            if isinstance(self.consumer_node.get("type"), str):
-                self.consumer_node["type"] = tidy_string(self.consumer_node["type"])
+        self.provider_node = _normalize_node_fields(self.provider_node)
+        self.consumer_node = _normalize_node_fields(self.consumer_node)
 
         if self.datasets is None:
             self.datasets = []

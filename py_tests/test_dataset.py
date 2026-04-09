@@ -268,6 +268,42 @@ def test_dataset_class_from_dict() -> None:
     assert test_dataset.is_active is None
 
 
+def test_dataset_class_from_dict_with_aliases() -> None:
+    """Test Dataset._from_dict handles aliased camelCase keys."""
+    test_dataset = Dataset._from_dict(
+        {
+            "title": "Test Dataset",
+            "identifier": "Test Dataset",
+            "tag": ["tag1", "tag2"],
+            "type": "Source",
+            "applicationId": {"id": "123", "type": "Application"},
+            "owners": ["owner1", "owner2"],
+        }
+    )
+
+    assert test_dataset.tags == ["tag1", "tag2"]
+    assert test_dataset.type_ == "Source"
+    assert test_dataset.application_id == {"id": "123", "type": "Application"}
+    assert test_dataset.owners == ["owner1", "owner2"]
+
+
+def test_dataset_class_from_dict_uses_fresh_default_factory_list() -> None:
+    """Test Dataset._from_dict uses a fresh delivery_channel default list."""
+    first_dataset = Dataset._from_dict({"identifier": "first_dataset"})
+    second_dataset = Dataset._from_dict({"identifier": "second_dataset"})
+
+    assert isinstance(first_dataset.delivery_channel, list)
+    assert isinstance(second_dataset.delivery_channel, list)
+    assert first_dataset.delivery_channel == ["API"]
+    assert second_dataset.delivery_channel == ["API"]
+    assert first_dataset.delivery_channel is not second_dataset.delivery_channel
+
+    first_dataset.delivery_channel.append("SFTP")
+
+    assert first_dataset.delivery_channel == ["API", "SFTP"]
+    assert second_dataset.delivery_channel == ["API"]
+
+
 def test_dataset_class_from_csv(mock_dataset_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test Dataset class."""
     test_dataset = Dataset._from_csv("datasets.csv")

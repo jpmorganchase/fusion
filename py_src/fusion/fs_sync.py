@@ -36,6 +36,81 @@ def _url_to_path(x: str) -> str:
     return f"{x.split('/')[0]}/{x.split('/')[2]}/{x.split('/')[4]}/{file_name}"
 
 
+def _configure_fsync_logger(log_level: int, log_path: str) -> None:
+    logging.addLevelName(VERBOSE_LVL, "VERBOSE")
+    logger.setLevel(log_level)
+    if not logger.handlers:
+        logger.addHandler(logging.NullHandler())
+
+    formatter = logging.Formatter(
+        "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    if not any(type(handler) is logging.FileHandler for handler in logger.handlers):
+        file_handler = logging.FileHandler(filename=f"{log_path}/fusion_fsync.log")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    if not any(type(handler) is logging.StreamHandler for handler in logger.handlers):
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setFormatter(formatter)
+        logger.addHandler(stdout_handler)
+    if len(logger.handlers) > 1:
+        logger.handlers = [handler for handler in logger.handlers if type(handler) is not logging.NullHandler]
+
+
+def _normalize_fsync_inputs(
+    products: Optional[list[str]],
+    datasets: Optional[list[str]],
+    catalog: Optional[str],
+    direction: str,
+    local_path: str,
+) -> tuple[list[str], list[str], str, str]:
+    normalized_catalog = catalog if catalog else "common"
+    normalized_datasets = datasets if datasets else []
+    normalized_products = products if products else []
+    assert len(normalized_products) > 0 or len(normalized_datasets) > 0, (
+        "At least one list products or datasets should be non-empty."
+    )
+    assert direction in ["upload", "download"], "The direction must be either upload or download."
+    normalized_local_path = local_path if not local_path or local_path.endswith("/") else local_path + "/"
+    return normalized_products, normalized_datasets, normalized_catalog, normalized_local_path
+
+
+def _extend_datasets_from_products(
+    fs_fusion: fsspec.filesystem,
+    products: list[str],
+    datasets: list[str],
+    catalog: str,
+) -> list[str]:
+    expanded_datasets = list(datasets)
+    for product in products:
+        res = json.loads(fs_fusion.cat(f"{catalog}/products/{product}").decode())
+        expanded_datasets.extend(r["identifier"] for r in res["resources"])
+    assert len(expanded_datasets) > 0, "The supplied products did not contain any datasets."
+    return expanded_datasets
+
+
+def _handle_fsync_result(
+    res: list[tuple[bool, str, Optional[str]]],
+    direction: str,
+    local_state: pd.DataFrame,
+    fusion_state: pd.DataFrame,
+    local_state_temp: pd.DataFrame,
+    fusion_state_temp: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if len(res) == 0 or all(item[0] for item in res):
+        local_state = local_state_temp
+        fusion_state = fusion_state_temp
+    if not all(item[0] for item in res):
+        failed_res = [item for item in res if not item[0]]
+        msg = f"Not all {direction}s were successfully completed. The following failed:\n{failed_res}"
+        errs = [item for item in res if not item[2]]
+        logger.warning(msg)
+        logger.warning(errs)
+        warnings.warn(msg, stacklevel=2)
+    return local_state, fusion_state
+
+
 def _download(
     fs_fusion: fsspec.filesystem,
     fs_local: fsspec.filesystem,
@@ -272,48 +347,15 @@ def fsync(  # noqa: PLR0912, PLR0913, PLR0915
     Returns:
 
     """
-
-    logging.addLevelName(VERBOSE_LVL, "VERBOSE")
-    logger.setLevel(log_level)
-    if not logger.handlers:
-        logger.addHandler(logging.NullHandler())
-
-    formatter = logging.Formatter(
-        "%(asctime)s.%(msecs)03d %(name)s:%(levelname)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+    _configure_fsync_logger(log_level, log_path)
+    products, datasets, catalog, local_path = _normalize_fsync_inputs(
+        products,
+        datasets,
+        catalog,
+        direction,
+        local_path,
     )
-
-    if not any(type(h) is logging.FileHandler for h in logger.handlers):
-        file_handler = logging.FileHandler(filename="{}/{}".format(log_path, "fusion_fsync.log"))
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-    if not any(type(h) is logging.StreamHandler for h in logger.handlers):
-        stdout_handler = logging.StreamHandler(sys.stdout)
-        stdout_handler.setFormatter(formatter)
-        logger.addHandler(stdout_handler)
-
-    if len(logger.handlers) > 1:
-        logger.handlers = [h for h in logger.handlers if type(h) is not logging.NullHandler]
-
-    catalog = catalog if catalog else "common"
-    datasets = datasets if datasets else []
-    products = products if products else []
-
-    assert len(products) > 0 or len(datasets) > 0, "At least one list products or datasets should be non-empty."
-    assert direction in [
-        "upload",
-        "download",
-    ], "The direction must be either upload or download."
-
-    if len(local_path) > 0 and local_path[-1] != "/":
-        local_path += "/"
-
-    for product in products:
-        res = json.loads(fs_fusion.cat(f"{catalog}/products/{product}").decode())
-        datasets += [r["identifier"] for r in res["resources"]]
-
-    assert len(datasets) > 0, "The supplied products did not contain any datasets."
+    datasets = _extend_datasets_from_products(fs_fusion, products, datasets, catalog)
 
     local_state = pd.DataFrame()
     fusion_state = pd.DataFrame()
@@ -340,17 +382,14 @@ def fsync(  # noqa: PLR0912, PLR0913, PLR0915
                     show_progress,
                     local_path,
                 )
-                if len(res) == 0 or all(i[0] for i in res):
-                    local_state = local_state_temp
-                    fusion_state = fusion_state_temp
-
-                if not all(r[0] for r in res):
-                    failed_res = [r for r in res if not r[0]]
-                    msg = f"Not all {direction}s were successfully completed. The following failed:\n{failed_res}"
-                    errs = [r for r in res if not r[2]]
-                    logger.warning(msg)
-                    logger.warning(errs)
-                    warnings.warn(msg, stacklevel=2)
+                local_state, fusion_state = _handle_fsync_result(
+                    res,
+                    direction,
+                    local_state,
+                    fusion_state,
+                    local_state_temp,
+                    fusion_state_temp,
+                )
 
             else:
                 logger.info("All synced, sleeping")

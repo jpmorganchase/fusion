@@ -110,6 +110,61 @@ def test_product_class_from_dict() -> None:
     assert test_product.dataset is None
 
 
+def test_product_class_from_dict_with_optional_fields() -> None:
+    """Test Product._from_dict maps optional fields directly."""
+    test_product = Product._from_dict(
+        {
+            "title": "Test Product",
+            "identifier": "TEST_PRODUCT",
+            "shortAbstract": "Short Abstract",
+            "isRestricted": False,
+            "maintainer": ["Maintainer"],
+            "subCategory": ["Sub Category"],
+            "tag": ["Tag"],
+            "dataset": ["DATASET_1"],
+        }
+    )
+
+    assert test_product.shortAbstract == "Short Abstract"
+    assert test_product.isRestricted is False
+    assert test_product.maintainer == ["Maintainer"]
+    assert test_product.subCategory == ["Sub Category"]
+    assert test_product.tag == ["Tag"]
+    assert test_product.dataset == ["DATASET_1"]
+
+
+def test_product_class_from_dict_uses_fresh_default_factory_lists() -> None:
+    """Test Product._from_dict uses fresh list defaults for default_factory fields."""
+    first_product = Product._from_dict({"identifier": "FIRST_PRODUCT"})
+    second_product = Product._from_dict({"identifier": "SECOND_PRODUCT"})
+
+    assert isinstance(first_product.region, list)
+    assert isinstance(second_product.region, list)
+    assert isinstance(first_product.delivery_channel, list)
+    assert isinstance(second_product.delivery_channel, list)
+    assert first_product.region == ["Global"]
+    assert second_product.region == ["Global"]
+    assert first_product.region is not second_product.region
+    assert first_product.delivery_channel == ["API"]
+    assert second_product.delivery_channel == ["API"]
+    assert first_product.delivery_channel is not second_product.delivery_channel
+
+    first_product.region.append("EMEA")
+    first_product.delivery_channel.append("SFTP")
+
+    assert first_product.region == ["Global", "EMEA"]
+    assert second_product.region == ["Global"]
+    assert first_product.delivery_channel == ["API", "SFTP"]
+    assert second_product.delivery_channel == ["API"]
+
+
+def test_product_region_none_is_not_preserved() -> None:
+    """Test Product preserves an explicitly provided None region."""
+    product = Product(identifier="TEST_PRODUCT", region=None)  # type: ignore[arg-type]
+
+    assert product.region is not None
+
+
 def test_product_class_from_csv(mock_product_pd_read_csv: Generator[pd.DataFrame, Any, None]) -> None:  # noqa: ARG001
     """Test the Product class."""
     test_product = Product._from_csv("products.csv")

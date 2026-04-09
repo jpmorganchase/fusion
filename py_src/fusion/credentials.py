@@ -340,6 +340,76 @@ class FusionCredentials:
             self._session = s
         return self._session
 
+    def _jwt_client_assertion(self) -> str:
+        if self.private_key is None or self.kid is None:
+            raise ValueError("JWT client assertion requires both private_key and kid")
+        iat = int(datetime.now(dt.timezone.utc).timestamp())
+        exp = iat + 3600
+        claims = {
+            "iss": self.client_id or "",
+            "aud": self.auth_url or "",
+            "sub": self.client_id or "",
+            "iat": iat,
+            "exp": exp,
+            "jti": "id001",
+        }
+        assertion = jwt.encode(claims, self.private_key, algorithm="RS256", headers={"kid": self.kid})
+        return assertion if isinstance(assertion, str) else assertion.decode("utf-8")  # type: ignore[attr-defined]
+
+    def _build_refresh_payload(self) -> dict[str, str]:
+        payload: dict[str, str] = {"grant_type": self.grant_type}
+        if self.kid and self.private_key:
+            return {
+                "grant_type": self.grant_type,
+                "client_id": self.client_id or "",
+                "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+                "client_assertion": self._jwt_client_assertion(),
+                "resource": self.resource or "",
+            }
+        if self.grant_type == "client_credentials":
+            payload.update(
+                {
+                    "client_id": self.client_id or "",
+                    "client_secret": self.client_secret or "",
+                }
+            )
+            if self.resource:
+                payload["aud"] = self.resource
+            return payload
+        if self.grant_type == "password":
+            payload.update(
+                {
+                    "client_id": self.client_id or "",
+                    "username": self.username or "",
+                    "password": self.password or "",
+                }
+            )
+            if self.resource:
+                payload["resource"] = self.resource
+            return payload
+        raise ValueError("Unrecognized grant type")
+
+    @staticmethod
+    def _should_refresh_token(token: AuthToken | None) -> bool:
+        if token is None:
+            return True
+        remaining = token.expires_in_secs()
+        return remaining is not None and remaining <= 15 * 60
+
+    def _build_base_headers(self) -> dict[str, str]:
+        if not self.bearer_token:
+            raise ValueError("No bearer token set (Error Code: 400)")
+
+        headers: dict[str, str] = {
+            "User-Agent": f"fusion-python-sdk {VERSION}",
+            "Authorization": f"Bearer {self.bearer_token.token}",
+        }
+        if self.fusion_e2e:
+            headers["fusion-e2e"] = self.fusion_e2e
+        if self.headers:
+            headers.update(self.headers)
+        return headers
+
     def refresh_bearer_token(self) -> None:
         """
         Use OAuth2 to fetch a bearer access_token and cache it.
@@ -352,56 +422,10 @@ class FusionCredentials:
             return
 
         sess = self._session_or_new()
-        payload: dict[str, str] = {"grant_type": self.grant_type}
 
         # narrow Optional[str] to str for mypy/type-checking
         auth_url: str = self.auth_url or _DEFAULT_AUTH_URL
-
-        if self.kid and self.private_key:
-            # JWT-based client assertion
-            # Construct claims
-            iat = int(datetime.now(dt.timezone.utc).timestamp())
-            exp = iat + 3600
-            claims = {
-                "iss": self.client_id or "",
-                "aud": self.auth_url or "",
-                "sub": self.client_id or "",
-                "iat": iat,
-                "exp": exp,
-                "jti": "id001",
-            }
-            private_key_jwt = jwt.encode(claims, self.private_key, algorithm="RS256", headers={"kid": self.kid})
-            payload = {
-                "grant_type": self.grant_type,
-                "client_id": self.client_id or "",
-                "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-                "client_assertion": private_key_jwt
-                if isinstance(private_key_jwt, str)
-                else private_key_jwt.decode("utf-8"),  # type: ignore[attr-defined]
-                "resource": self.resource or "",
-            }
-        elif self.grant_type == "client_credentials":
-            payload.update(
-                {
-                    "client_id": self.client_id or "",
-                    "client_secret": self.client_secret or "",
-                }
-            )
-            if self.resource:
-                # Rust used 'aud' — many OAuth servers accept this.
-                payload["aud"] = self.resource
-        elif self.grant_type == "password":
-            payload.update(
-                {
-                    "client_id": self.client_id or "",
-                    "username": self.username or "",
-                    "password": self.password or "",
-                }
-            )
-            if self.resource:
-                payload["resource"] = self.resource
-        else:
-            raise ValueError("Unrecognized grant type")
+        payload = self._build_refresh_payload()
 
         resp = sess.post(auth_url, data=payload, headers={"User-Agent": f"fusion-python-sdk {VERSION}"})
         try:
@@ -428,27 +452,9 @@ class FusionCredentials:
         (catalog, dataset) pair and includes 'Fusion-Authorization'.
         """
         # Ensure we have a fresh-enough bearer token (simple policy: if missing or expiring <= 15m, refresh)
-        refresh_needed = False
-        if not self.bearer_token:
-            refresh_needed = True
-        else:
-            remains = self.bearer_token.expires_in_secs()
-            if remains is not None and remains <= 15 * 60:
-                refresh_needed = True
-        if refresh_needed:
+        if self._should_refresh_token(self.bearer_token):
             self.refresh_bearer_token()
-        if not self.bearer_token:
-            raise ValueError("No bearer token set (Error Code: 400)")
-
-        headers: dict[str, str] = {"User-Agent": f"fusion-python-sdk {VERSION}"}
-        if self.fusion_e2e:
-            headers["fusion-e2e"] = self.fusion_e2e
-
-        # Always include standard bearer
-        headers["Authorization"] = f"Bearer {self.bearer_token.token}"
-
-        if self.headers:
-            headers.update(self.headers)
+        headers = self._build_base_headers()
 
         info = _fusion_url_to_auth_url(url)
         if not info:
@@ -459,18 +465,16 @@ class FusionCredentials:
 
         # If we have a non-expiring or not-soon-expiring cached token, reuse it.
         tok = self.fusion_token.get(token_key)
-        if tok:
-            remain = tok.expires_in_secs()
-            if remain is None or remain > 15 * 60:
-                headers["Fusion-Authorization"] = f"Bearer {tok.token}"
-                return headers
+        if tok and not self._should_refresh_token(tok):
+            headers["Fusion-Authorization"] = f"Bearer {tok.token}"
+            return headers
 
         # Need (re)fetch Fusion token via GET to fusion_auth_url with Bearer
         sess = self._session_or_new()
         resp = sess.get(
             fusion_auth_url,
             headers={
-                "Authorization": f"Bearer {self.bearer_token.token}",
+                "Authorization": headers["Authorization"],
                 "User-Agent": f"fusion-python-sdk {VERSION}",
             },
         )
