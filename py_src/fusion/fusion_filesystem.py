@@ -27,7 +27,16 @@ from fsspec.utils import nullcontext
 from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 
-from .utils import _merge_responses, append_query_params, cpu_count, get_client, get_default_fs, get_session
+from .utils import (
+    _merge_responses,
+    aiohttp_raise_for_status,
+    append_query_params,
+    cpu_count,
+    get_client,
+    get_default_fs,
+    get_session,
+    requests_raise_for_status,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Generator, Mapping
@@ -126,12 +135,36 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         has_any_checksum_header = bool(expected_checksum or checksum_algorithm)
         return self._is_glue_delivery_channel(delivery_channel) and not has_any_checksum_header
 
+    @staticmethod
+    def _get_trace_id(headers: Mapping[str, Any] | None) -> str | None:
+        if headers is None or not hasattr(headers, "get"):
+            return None
+
+        trace_id = headers.get("x-jpmc-trace-id")
+        if isinstance(trace_id, str) and trace_id:
+            return trace_id
+
+        if not hasattr(headers, "items"):
+            return None
+
+        for key, value in headers.items():
+            if str(key).lower() == "x-jpmc-trace-id" and isinstance(value, str) and value:
+                return value
+
+        return None
+
     def _raise_not_found_for_status(self, response: Any, url: str) -> None:
         try:
             super()._raise_not_found_for_status(response, url)
-        except HTTP_STATUS_EXCEPTIONS as ex:
+        except APIResponseError:
+            raise
+        except Exception as ex:
             status_code = getattr(response, "status", None)
             message = f"Error when accessing {url}"
+            trace_id = self._get_trace_id(getattr(response, "headers", None))
+            if trace_id:
+                message = f"{message}. Trace ID: {trace_id}"
+                logging.getLogger("fusion.fusion").error("%s. Error: %s", message, ex)
             raise APIResponseError(ex, message=message, status_code=status_code) from ex
 
     async def _async_raise_not_found_for_status(self, response: Any, url: str) -> None:
@@ -147,9 +180,15 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     response.reason = real_reason
                 finally:
                     self._raise_not_found_for_status(response, url)
-        except HTTP_STATUS_EXCEPTIONS as ex:
+        except APIResponseError:
+            raise
+        except Exception as ex:
             status_code = getattr(response, "status", None)
             message = f"Error when accessing {url}"
+            trace_id = self._get_trace_id(getattr(response, "headers", None))
+            if trace_id:
+                message = f"{message}. Trace ID: {trace_id}"
+                logging.getLogger("fusion.fusion").error("%s. Error: %s", message, ex)
             raise APIResponseError(ex, message=message, status_code=status_code) from ex
 
     def _check_session_open(self) -> bool:
@@ -540,7 +579,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                         "Wrote %s - %s bytes to %s" % (start, end, output_file.path),  # noqa: UP031
                     )
                 else:
-                    response.raise_for_status()
+                    await aiohttp_raise_for_status(response)
 
         retries = 5
         for attempt in range(retries):
@@ -728,7 +767,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                         f"Fetched bytes {start}-{end} ({len(chunk)} bytes) to memory",
                     )
                 else:
-                    response.raise_for_status()
+                    await aiohttp_raise_for_status(response)
 
         retries = 5
         for attempt in range(retries):
@@ -778,7 +817,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         try:
             with session.head(url, **get_file_kwargs) as r:
-                r.raise_for_status()
+                requests_raise_for_status(r)
 
                 expected_checksum = r.headers.get("x-jpmc-checksum")
                 checksum_algorithm = r.headers.get("x-jpmc-checksum-algorithm")
@@ -816,7 +855,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 lfs.mkdir(Path(output_path).parent, create_parents=True)
 
             with session.get(url, **get_file_kwargs) as response:
-                response.raise_for_status()
+                requests_raise_for_status(response)
                 with lfs.open(output_path, "wb") as file_obj:
                     for chunk in response.iter_content(block_size):
                         if chunk:
@@ -939,7 +978,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         async def get_headers() -> Any:
             session = await self.set_session()
             async with session.head(rpath, **self.kwargs) as r:
-                r.raise_for_status()
+                await aiohttp_raise_for_status(r)
                 return r.headers
 
         try:
@@ -1136,7 +1175,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         get_file_kwargs = self.kwargs.copy()
         get_file_kwargs.pop("proxy", None)
         with session.get(url, **get_file_kwargs) as response:
-            response.raise_for_status()
+            requests_raise_for_status(response)
             byte_cnt = 0
             for chunk in response.iter_content(block_size):
                 if chunk:
@@ -1283,7 +1322,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
     ) -> tuple[int | None, str | None, str | None]:
         session = await self.set_session()
         async with session.head(rpath, **self.kwargs) as response:
-            response.raise_for_status()
+            await aiohttp_raise_for_status(response)
             file_size = int(response.headers.get("Content-Length", 0)) or None
             expected_checksum = response.headers.get("x-jpmc-checksum")
             checksum_algorithm = response.headers.get("x-jpmc-checksum-algorithm")
@@ -1724,7 +1763,7 @@ class FusionFile(HTTPFile):  # type: ignore
             if r.status == requests.codes.range_not_satisfiable:  # noqa: PLR2004
                 # range request outside file
                 return b""
-            r.raise_for_status()
+            await aiohttp_raise_for_status(r)
             if r.status == requests.codes.partial_content:  # noqa: PLR2004
                 # partial content, as expected
                 out: bytes = await r.read()
@@ -1754,7 +1793,7 @@ class FusionFile(HTTPFile):  # type: ignore
         headers["Range"] = f"bytes={start}-{end - 1}"
         r = await self.session.get(self.fs.encode_url(self.url), headers=headers, **kwargs)
         async with r:
-            r.raise_for_status()
+            await aiohttp_raise_for_status(r)
             out = await r.read()
             return out, r.headers
 
@@ -1763,6 +1802,6 @@ class FusionFile(HTTPFile):  # type: ignore
         headers = kwargs.pop("headers", {}).copy()
         headers["Range"] = f"bytes={start}-{end - 1}"
         with self.session.get(self.fs.encode_url(self.url), headers=headers, **kwargs) as r:
-            r.raise_for_status()
+            requests_raise_for_status(r)
             out = r.content
             return out, r.headers

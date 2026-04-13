@@ -113,7 +113,7 @@ class Fusion:
         """
 
         response = session.get(url)
-        response.raise_for_status()
+        requests_raise_for_status(response)
 
         return BytesIO(response.content)
 
@@ -571,7 +571,7 @@ class Fusion:
         url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
         resp = self.session.get(url)
         if resp.status_code != HTTPStatus.OK:
-            resp.raise_for_status()
+            requests_raise_for_status(resp)
         rep_df = pd.json_normalize(resp.json())
         return self._select_report_columns(rep_df, display_all_columns, key_columns)
 
@@ -579,7 +579,7 @@ class Fusion:
         url = f"{self._get_new_root_url()}/api/corelineage-service/v1/reports/list"
         resp = self.session.post(url)
         if resp.status_code != HTTPStatus.OK:
-            resp.raise_for_status()
+            requests_raise_for_status(resp)
         data = resp.json()
         rep_df = pd.json_normalize(data.get("content", data))
         return self._select_report_columns(rep_df, display_all_columns, key_columns)
@@ -630,7 +630,7 @@ class Fusion:
                 pass
             return rep_df
         else:
-            resp.raise_for_status()
+            requests_raise_for_status(resp)
         return pd.DataFrame(
             columns=[
                 "id",
@@ -1077,7 +1077,8 @@ class Fusion:
             return
         for result in res:
             if not result[0]:
-                warnings.warn(f"The download of {result[1]} was not successful", stacklevel=2)
+                error_detail = f": {result[2]}" if result[2] else ""
+                warnings.warn(f"The download of {result[1]} failed{error_detail}", stacklevel=2)
 
     def download(  # noqa: PLR0912, PLR0913, PLR0915
         self,
@@ -2131,7 +2132,7 @@ class Fusion:
 
         resp = self.session.post(url, json=data)
 
-        resp.raise_for_status()
+        requests_raise_for_status(resp)
 
         return resp if return_resp_obj else None
 
@@ -3211,7 +3212,7 @@ class Fusion:
                 pass
             return list_df
         else:
-            resp.raise_for_status()
+            requests_raise_for_status(resp)
 
         # fallback empty frame if something unexpected happens
         return pd.DataFrame()

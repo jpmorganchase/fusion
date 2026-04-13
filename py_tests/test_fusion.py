@@ -26,7 +26,7 @@ from fusion.data_dependency import (
 from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
-from fusion.utils import _normalise_dt_param, distribution_to_url
+from fusion.utils import _normalise_dt_param, distribution_to_url, requests_raise_for_status
 
 
 def test__get_canonical_root_url() -> None:
@@ -203,6 +203,83 @@ def test__call_for_bytes_object_fail(requests_mock: requests_mock.Mocker) -> Non
     session = requests.Session()
     with pytest.raises(requests.exceptions.HTTPError):
         Fusion._call_for_bytes_object(url, session)
+
+
+def test_requests_raise_for_status_logs_trace_id_and_uses_full_response_body(
+    requests_mock: requests_mock.Mocker,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    url = "https://fusion.jpmorgan.com/api/v1/a_given_resource"
+    session = requests.Session()
+    requests_mock.get(
+        url,
+        status_code=500,
+        json={"error": "backend failure", "code": "BACKEND_FAILURE"},
+        headers={"x-jpmc-trace-id": "trace-123"},
+    )
+
+    response = session.get(url)
+
+    with (
+        caplog.at_level(logging.ERROR, logger="fusion.fusion"),
+        pytest.raises(
+            requests.exceptions.HTTPError,
+            match=re.escape('{"error": "backend failure", "code": "BACKEND_FAILURE"}'),
+        ),
+    ):
+        requests_raise_for_status(response)
+
+    assert "trace-123" in caplog.text
+
+
+def test_download_return_paths_includes_detailed_error(
+    requests_mock: requests_mock.Mocker,
+    fusion_obj: Fusion,
+    mocker: MockerFixture,
+) -> None:
+    catalog = "my_catalog"
+    dataset = "TEST_DATASET"
+    datasetseries = "latest"
+    dataset_format = "csv"
+    dataset_url = f"{fusion_obj.root_url}catalogs/{catalog}/datasets/{dataset}"
+    requests_mock.get(
+        dataset_url,
+        json={"isRestricted": False, "status": "Subscribed", "deliveryChannel": ["API"]},
+    )
+
+    mocker.patch.object(
+        fusion_obj,
+        "_resolve_distro_tuples",
+        return_value=[(catalog, dataset, datasetseries, dataset_format)],
+    )
+    mocker.patch.object(
+        fusion_obj,
+        "list_distribution_files",
+        return_value=pd.DataFrame({"@id": ["file1"]}),
+    )
+    mocker.patch.object(
+        fusion_obj,
+        "list_datasetmembers_distributions",
+        return_value=pd.DataFrame({"format": [dataset_format]}),
+    )
+    mocker.patch.object(fusion_obj.fs, "exists", return_value=True)
+
+    detailed_error = '500 Internal Server Error\nTrace ID: trace-123\nResponse body: {"error":"backend failure"}'
+    mock_fs = MagicMock()
+    mock_fs.download.return_value = (False, "my_file.dat", detailed_error)
+    mocker.patch.object(fusion_obj, "get_fusion_filesystem", return_value=mock_fs)
+
+    with pytest.warns(UserWarning, match=re.escape(detailed_error)):
+        result = fusion_obj.download(
+            dataset=dataset,
+            dt_str=datasetseries,
+            dataset_format=dataset_format,
+            catalog=catalog,
+            return_paths=True,
+            show_progress=False,
+        )
+
+    assert result == [(False, "my_file.dat", detailed_error)]
 
 
 def test_list_catalogs_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
@@ -1537,15 +1614,25 @@ def test_download_main(mocker: MockerFixture, fusion_obj: Fusion) -> None:
     assert res
     assert len(res[0]) == len(dates)
 
-    mocker.patch("fusion.fusion.stream_single_file_new_session", return_value=(False, "my_file.dat", "Some Err"))
-    res = fusion_obj.download(
-        dataset=dataset,
-        dt_str=dt_str,
-        dataset_format=file_format,
-        catalog=catalog,
-        return_paths=True,
-        show_progress=False,
+    mocker.patch(
+        "fusion.fusion.stream_single_file_new_session",
+        return_value=(False, "my_file.dat", '500 Server Error Response body: {"error":"Some Err"} Trace ID: trace-123'),
     )
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            "The download of my_file.dat failed: "
+            '500 Server Error Response body: {"error":"Some Err"} Trace ID: trace-123'
+        ),
+    ):
+        res = fusion_obj.download(
+            dataset=dataset,
+            dt_str=dt_str,
+            dataset_format=file_format,
+            catalog=catalog,
+            return_paths=True,
+            show_progress=False,
+        )
     assert res
     assert len(res[0]) == len(dates)
     for r in res:
