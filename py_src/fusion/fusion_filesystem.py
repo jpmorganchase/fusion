@@ -30,7 +30,7 @@ from fusion.exceptions import APIResponseError
 from .utils import _merge_responses, append_query_params, cpu_count, get_client, get_default_fs, get_session
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Generator
+    from collections.abc import AsyncGenerator, Generator, Mapping
 
 logger = logging.getLogger(__name__)
 VERBOSE_LVL = 25
@@ -106,6 +106,25 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             token = response.headers[token_header]
             return token
         return None
+
+    @staticmethod
+    def _is_glue_delivery_channel(delivery_channel: str | list[str] | None = None) -> bool:
+        channels: list[str] = []
+        if isinstance(delivery_channel, str):
+            channels.append(delivery_channel)
+        elif isinstance(delivery_channel, list):
+            channels.extend(str(channel) for channel in delivery_channel)
+        return any(channel.strip().lower() == "glue" for channel in channels)
+
+    def _should_skip_checksum_validation(
+        self,
+        headers: Mapping[str, Any],
+        delivery_channel: str | list[str] | None = None,
+    ) -> bool:
+        expected_checksum = headers.get("x-jpmc-checksum")
+        checksum_algorithm = headers.get("x-jpmc-checksum-algorithm")
+        has_any_checksum_header = bool(expected_checksum or checksum_algorithm)
+        return self._is_glue_delivery_channel(delivery_channel) and not has_any_checksum_header
 
     def _raise_not_found_for_status(self, response: Any, url: str) -> None:
         try:
@@ -739,6 +758,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         output_path: str,
         lfs: fsspec.AbstractFileSystem,
         block_size: int = DEFAULT_CHUNK_SIZE,
+        delivery_channel: str | list[str] | None = None,
     ) -> tuple[bool, str, str | None]:
         """Function to stream a single file from the API to a file on disk.
 
@@ -767,8 +787,43 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                     return self.stream_single_file_with_checksum_validation(
                         url, output_path, lfs, expected_checksum, checksum_algorithm, block_size
                     )
-                else:
-                    raise ValueError("Checksum validation is required but missing checksum information.")
+                if self._should_skip_checksum_validation(r.headers, delivery_channel=delivery_channel):
+                    logger.log(
+                        VERBOSE_LVL,
+                        "Skipping checksum validation for Glue-delivered download "
+                        "because checksum headers are absent: %s",
+                        url,
+                    )
+                    return self._stream_single_file_without_checksum(url, output_path, lfs, block_size)
+                raise ValueError("Checksum validation is required but missing checksum information.")
+        except Exception as ex:  # noqa: BLE001
+            return False, output_path, str(ex)
+
+    def _stream_single_file_without_checksum(
+        self,
+        url: str,
+        output_path: str,
+        lfs: fsspec.AbstractFileSystem,
+        block_size: int = DEFAULT_CHUNK_SIZE,
+    ) -> tuple[bool, str, str | None]:
+        """Stream a single file to disk without checksum validation."""
+        session = self.sync_session
+        get_file_kwargs = self.kwargs.copy()
+        get_file_kwargs.pop("proxy", None)
+
+        try:
+            if not lfs.exists(Path(output_path).parent):
+                lfs.mkdir(Path(output_path).parent, create_parents=True)
+
+            with session.get(url, **get_file_kwargs) as response:
+                response.raise_for_status()
+                with lfs.open(output_path, "wb") as file_obj:
+                    for chunk in response.iter_content(block_size):
+                        if chunk:
+                            file_obj.write(chunk)
+
+            logger.log(VERBOSE_LVL, "Checksum validation skipped, wrote to %s", output_path)
+            return True, output_path, None
         except Exception as ex:  # noqa: BLE001
             return False, output_path, str(ex)
 
@@ -911,7 +966,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         return result
 
-    def get(  # disable: W0221
+    def get(  # noqa: PLR0912  # disable: W0221
         self,
         rpath: str | io.IOBase,
         lpath: str | io.IOBase | fsspec.spec.AbstractBufferedFile | Path,
@@ -930,16 +985,36 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
         """
         lfs = kwargs.pop("lfs", None)
+        delivery_channel = kwargs.pop("delivery_channel", None)
         lfs, lpath_str = self._resolve_local_target(lpath, lfs)
         rpath = self._decorate_url(rpath) if isinstance(rpath, str) else rpath
         n_threads = cpu_count(is_threading=True)
         if not self._can_parallel_download(n_threads, kwargs.get("is_local_fs", False)):
-            return self.stream_single_file(str(rpath), lpath_str, lfs, block_size=chunk_size)
+            return self.stream_single_file(
+                str(rpath),
+                lpath_str,
+                lfs,
+                block_size=chunk_size,
+                delivery_channel=delivery_channel,
+            )
         try:
-            return self._download_multi_threaded(str(rpath), lpath_str, lfs, chunk_size, n_threads)
+            return self._download_multi_threaded(
+                str(rpath),
+                lpath_str,
+                lfs,
+                chunk_size,
+                n_threads,
+                delivery_channel=delivery_channel,
+            )
         except Exception as ex:  # noqa: BLE001
             logger.info(f"Failed to get content length for multi-threaded download: {ex}")
-            return self.stream_single_file(str(rpath), lpath_str, lfs, block_size=chunk_size)
+            return self.stream_single_file(
+                str(rpath),
+                lpath_str,
+                lfs,
+                block_size=chunk_size,
+                delivery_channel=delivery_channel,
+            )
 
     def _normalize_ls_url(self, url: str) -> str:
         if "http" not in url:
@@ -1150,15 +1225,41 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         lfs: fsspec.AbstractFileSystem,
         chunk_size: int,
         n_threads: int,
+        delivery_channel: str | list[str] | None = None,
     ) -> tuple[bool, str, str | None]:
         file_size, expected_checksum, checksum_algorithm = cast(
             tuple[Optional[int], Optional[str], Optional[str]],
             sync(self.loop, self._get_content_length_and_checksum, rpath),
         )
         if not file_size:
-            return self.stream_single_file(rpath, lpath_str, lfs, block_size=chunk_size)
+            return self.stream_single_file(
+                rpath,
+                lpath_str,
+                lfs,
+                block_size=chunk_size,
+                delivery_channel=delivery_channel,
+            )
         download_path = rpath if "operationType/download" in rpath else rpath + "/operationType/download"
         if not expected_checksum or not checksum_algorithm:
+            headers = {
+                "Content-Length": str(file_size),
+                "x-jpmc-checksum": expected_checksum,
+                "x-jpmc-checksum-algorithm": checksum_algorithm,
+            }
+            if self._should_skip_checksum_validation(headers, delivery_channel=delivery_channel):
+                logger.log(
+                    VERBOSE_LVL,
+                    "Falling back to streamed download without checksum validation "
+                    "for Glue-delivered download because checksum headers are absent: %s",
+                    rpath,
+                )
+                return self.stream_single_file(
+                    rpath,
+                    lpath_str,
+                    lfs,
+                    block_size=chunk_size,
+                    delivery_channel=delivery_channel,
+                )
             return False, lpath_str, "Checksum validation is required but missing checksum information."
         download_result = cast(
             tuple[bool, str, Optional[str]],

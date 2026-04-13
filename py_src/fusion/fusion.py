@@ -1015,6 +1015,7 @@ class Fusion:
         force_download: bool,
         preserve_original_name: bool,
         file_name: str | list[str] | None,
+        delivery_channel: str | list[str] | None = None,
     ) -> list[dict[str, Any]]:
         download_spec: list[dict[str, Any]] = []
         for i, series in enumerate(required_series):
@@ -1041,6 +1042,7 @@ class Fusion:
                     ),
                     "overwrite": force_download,
                     "preserve_original_name": preserve_original_name,
+                    "delivery_channel": delivery_channel,
                 }
                 for fname in self._resolve_distribution_file_names(series, file_name)
             )
@@ -1150,6 +1152,9 @@ class Fusion:
         """
         catalog = self._use_catalog(catalog)
         self._ensure_dataset_subscribed(dataset, catalog)
+        dataset_resp = self.session.get(f"{self.root_url}catalogs/{catalog}/datasets/{dataset}")
+        requests_raise_for_status(dataset_resp)
+        delivery_channel = dataset_resp.json().get("deliveryChannel", ["API"])
 
         # check that format is valid and if none, check if there is only one format available
         distributions_df = self.list_datasetmembers_distributions(dataset, catalog)
@@ -1169,6 +1174,7 @@ class Fusion:
             force_download,
             preserve_original_name,
             file_name,
+            delivery_channel,
         )
         res = self._execute_downloads(download_spec, n_par, show_progress)
         self._warn_failed_downloads(res)

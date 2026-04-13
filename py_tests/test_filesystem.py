@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import io
@@ -1329,6 +1330,47 @@ class TestStreamSingleFileWithChecksum:
         assert error is not None
         assert "Checksum validation is required but missing checksum information" in error
 
+    def test_stream_single_file_missing_checksum_headers_glue(
+        self,
+        fs_with_checksum: FusionHTTPFileSystem,
+        tmp_path: Path,
+    ) -> None:
+        """Test Glue downloads skip checksum validation when headers are absent."""
+        mock_head_response = MagicMock()
+        mock_head_response.headers = {}
+        mock_head_response.raise_for_status = MagicMock()
+        mock_head_response.__enter__.return_value = mock_head_response
+        mock_head_response.__exit__.return_value = None
+
+        test_data = b"glue multipart without checksum"
+        mock_get_response = MagicMock()
+        mock_get_response.raise_for_status = MagicMock()
+        mock_get_response.iter_content = MagicMock(return_value=[test_data])
+        mock_get_response.__enter__.return_value = mock_get_response
+        mock_get_response.__exit__.return_value = None
+
+        mock_session = MagicMock()
+        mock_session.head.return_value = mock_head_response
+        mock_session.get.return_value = mock_get_response
+        fs_with_checksum.sync_session = mock_session
+
+        output_path = str(tmp_path / "output.txt")
+        mock_lfs = MagicMock(spec=fsspec.AbstractFileSystem)
+        mock_lfs.exists.return_value = True
+
+        success, path, error = fs_with_checksum.stream_single_file(
+            "http://test.com/file",
+            output_path,
+            mock_lfs,
+            delivery_channel=["Glue"],
+        )
+
+        assert success is True
+        assert path == output_path
+        assert error is None
+        mock_session.get.assert_called_once()
+        mock_lfs.open.assert_called_once_with(output_path, "wb")
+
     def test_stream_single_file_partial_checksum_headers(
         self,
         fs_with_checksum: FusionHTTPFileSystem,
@@ -1400,6 +1442,38 @@ class TestChecksumIntegration:
         assert path == output_path
         assert error is not None
         assert "Checksum validation is required but missing checksum information" in error
+
+    @patch("fsspec.implementations.http.sync")
+    def test_get_glue_missing_checksum_falls_back_to_streaming(
+        self,
+        mock_sync: MagicMock,
+        fs_with_checksum: FusionHTTPFileSystem,
+    ) -> None:
+        """Test Glue downloads bypass checksum validation when the API omits it."""
+
+        def sync_side_effect(_loop: Any, func: Any, *args: Any, **kwargs: Any) -> Any:
+            result = func(*args, **kwargs)
+            if asyncio.iscoroutine(result):
+                return asyncio.run(result)
+            return result
+
+        mock_sync.side_effect = sync_side_effect
+
+        with (
+            patch("fusion.fusion_filesystem.cpu_count", return_value=8),
+            patch.object(fs_with_checksum, "stream_single_file", return_value=(True, "path", None)) as mock_stream,
+        ):
+            result = fs_with_checksum.get(
+                "http://test.com/file",
+                "/tmp/output.txt",
+                is_local_fs=True,
+                lfs=MagicMock(spec=fsspec.AbstractFileSystem),
+                delivery_channel=["Glue"],
+            )
+
+        assert result == (True, "path", None)
+        mock_stream.assert_called_once()
+        assert mock_stream.call_args.kwargs["delivery_channel"] == ["Glue"]
 
     def test_checksum_algorithms_coverage(self, fs_with_checksum: FusionHTTPFileSystem) -> None:
         """Test all checksum algorithms for coverage."""
