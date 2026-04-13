@@ -15,7 +15,7 @@ from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union, cast
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import parse_qsl, quote, unquote, urlencode, urlparse, urlsplit, urlunsplit, urlunparse
 
 import aiohttp
 import certifi
@@ -667,12 +667,22 @@ def distribution_to_url(
 
     if datasetseries == "sample":
         return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/{file_format}"
+    base_url = (
+        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
+    )
+
     if is_download:
-        return (
-            f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-            f"{datasetseries}/distributions/{file_format}/files/operationType/download?file={file_name}"
-        )
-    return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
+        return append_query_params(f"{base_url}/files/operationType/download", {"file": file_name})
+    return base_url
+
+
+def append_query_params(url: str, params: dict[str, Any]) -> str:
+    """Append query parameters to a URL using percent-encoding."""
+    url_parts = urlsplit(url)
+    query_params = parse_qsl(url_parts.query, keep_blank_values=True)
+    query_params.extend((key, unquote(str(value))) for key, value in params.items())
+    encoded_query = urlencode(query_params, doseq=True, quote_via=quote)
+    return urlunsplit((url_parts.scheme, url_parts.netloc, url_parts.path, encoded_query, url_parts.fragment))
 
 
 def _get_canonical_root_url(any_url: str) -> str:
