@@ -1401,6 +1401,37 @@ class TestStreamSingleFileWithChecksum:
         assert "Checksum validation is required but missing checksum information" in error
 
 
+def test_stream_single_file_without_checksum_creates_parent_dir(
+    fs_with_checksum: FusionHTTPFileSystem,
+    tmp_path: Path,
+) -> None:
+    test_data = b"no checksum but valid data"
+    mock_response = MagicMock()
+    mock_response.iter_content.return_value = [test_data]
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = None
+
+    mock_session = MagicMock()
+    mock_session.get.return_value = mock_response
+    fs_with_checksum.sync_session = mock_session
+
+    output_path = str(tmp_path / "new" / "output.txt")
+    mock_lfs = MagicMock(spec=fsspec.AbstractFileSystem)
+    mock_lfs.exists.return_value = False
+
+    success, path, error = fs_with_checksum._stream_single_file_without_checksum(
+        "http://test.com/file",
+        output_path,
+        mock_lfs,
+    )
+
+    assert success is True
+    assert path == output_path
+    assert error is None
+    mock_lfs.mkdir.assert_called_once()
+    mock_lfs.open.assert_called_once_with(output_path, "wb")
+
+
 class TestChecksumIntegration:
     """Integration tests for the complete checksum validation flow."""
 
@@ -1474,6 +1505,22 @@ class TestChecksumIntegration:
         assert result == (True, "path", None)
         mock_stream.assert_called_once()
         assert mock_stream.call_args.kwargs["delivery_channel"] == ["Glue"]
+
+    def test_download_multi_threaded_missing_checksum_without_glue_fails(
+        self,
+        fs_with_checksum: FusionHTTPFileSystem,
+    ) -> None:
+        with patch("fusion.fusion_filesystem.sync", return_value=(1024, None, None)):
+            result = fs_with_checksum._download_multi_threaded(
+                "http://test.com/file",
+                "/tmp/output.txt",
+                MagicMock(spec=fsspec.AbstractFileSystem),
+                1024,
+                4,
+                delivery_channel=["API"],
+            )
+
+        assert result == (False, "/tmp/output.txt", "Checksum validation is required but missing checksum information.")
 
     def test_checksum_algorithms_coverage(self, fs_with_checksum: FusionHTTPFileSystem) -> None:
         """Test all checksum algorithms for coverage."""
@@ -1800,6 +1847,27 @@ class TestChecksumIntegration:
 
         with pytest.raises(Exception, match="Not found"):
             fs_with_checksum._raise_not_found_for_status(mock_response, "test://url")
+
+    def test_error_handling_methods_include_trace_id(
+        self,
+        fs_with_checksum: FusionHTTPFileSystem,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        mock_response = MagicMock()
+        mock_response.status = 500
+        mock_response.headers = {"X-JPMC-Trace-Id": "trace-123"}
+
+        with (
+            patch(
+                "fsspec.implementations.http.HTTPFileSystem._raise_not_found_for_status",
+                side_effect=RuntimeError("boom"),
+            ),
+            caplog.at_level(logging.ERROR, logger="fusion.fusion"),
+            pytest.raises(APIResponseError, match="Trace ID: trace-123"),
+        ):
+            fs_with_checksum._raise_not_found_for_status(mock_response, "test://url")
+
+        assert "trace-123" in caplog.text
 
     def test_update_kwargs_method(self, fs_with_checksum: FusionHTTPFileSystem) -> None:
         """Test the _update_kwargs method comprehensively."""

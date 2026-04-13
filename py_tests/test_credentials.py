@@ -403,3 +403,24 @@ class TestFusionCredentialsCoverage:
             pytest.raises(ValueError, match="Missing access_token in generate token response"),
         ):
             creds.refresh_bearer_token()
+
+    def test_get_fusion_token_headers_http_error_includes_trace_and_body(self) -> None:
+        creds = FusionCredentials.from_client_id("id", "sec", "res", "https://auth", None, None)
+        creds.put_bearer_token("bt", 3600)
+
+        mock_sess = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 500
+        mock_resp.text = '{"error":"backend failure"}'
+        mock_resp.headers = {"x-jpmc-trace-id": "trace-123"}
+        mock_resp.request = None
+        mock_resp.raise_for_status.side_effect = __import__("requests").HTTPError("backend failure")
+        mock_sess.get.return_value = mock_resp
+
+        with (
+            patch.object(creds, "_session_or_new", return_value=mock_sess),
+            pytest.raises(ValueError, match="trace-123") as exc_info,
+        ):
+            creds.get_fusion_token_headers("https://api.example.com/catalogs/cat-a/datasets/ds-b/distributions/csv")
+
+        assert '{"error":"backend failure"}' in str(exc_info.value)

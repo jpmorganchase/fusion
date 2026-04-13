@@ -282,6 +282,27 @@ def test_download_return_paths_includes_detailed_error(
     assert result == [(False, "my_file.dat", detailed_error)]
 
 
+def test_build_download_spec_includes_delivery_channel(fusion_obj: Fusion, mocker: MockerFixture) -> None:
+    mocker.patch.object(fusion_obj, "_resolve_distribution_file_names", return_value=["file.csv"])
+
+    spec = fusion_obj._build_download_spec(
+        [("catalog", "dataset", "latest", "csv")],
+        ["/tmp"],
+        partitioning=None,
+        force_download=False,
+        preserve_original_name=False,
+        file_name=None,
+        delivery_channel=["Glue"],
+    )
+
+    assert spec[0]["delivery_channel"] == ["Glue"]
+
+
+def test_warn_failed_downloads_without_error_detail() -> None:
+    with pytest.warns(UserWarning, match="The download of my_file.dat failed$"):
+        Fusion._warn_failed_downloads([(False, "my_file.dat", None)])
+
+
 def test_list_catalogs_success(requests_mock: requests_mock.Mocker, fusion_obj: Fusion) -> None:
     url = "https://fusion.jpmorgan.com/api/v1/catalogs/"
     expected_data = {"resources": [{"id": 1, "name": "Catalog 1"}, {"id": 2, "name": "Catalog 2"}]}
@@ -3520,6 +3541,31 @@ def test_list_reports_by_id(fusion_obj: Fusion, requests_mock: requests_mock.Moc
     assert df.iloc[0]["id"] == "rep1"
 
 
+def test_list_reports_by_id_error_includes_trace(
+    fusion_obj: Fusion,
+    requests_mock: requests_mock.Mocker,
+) -> None:
+    report_id = "rep1"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}"
+    requests_mock.get(url, status_code=500, json={"error": "backend failure"}, headers={"x-jpmc-trace-id": "trace-123"})
+
+    with pytest.raises(requests.exceptions.HTTPError, match="trace-123"):
+        fusion_obj.list_reports(report_id=report_id)
+
+
+def test_list_reports_all_error_includes_trace(
+    fusion_obj: Fusion,
+    requests_mock: requests_mock.Mocker,
+) -> None:
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/list"
+    requests_mock.post(
+        url, status_code=500, json={"error": "backend failure"}, headers={"x-jpmc-trace-id": "trace-123"}
+    )
+
+    with pytest.raises(requests.exceptions.HTTPError, match="trace-123"):
+        fusion_obj.list_reports()
+
+
 def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock.Mocker) -> None:
     report_id = "6789"
     attribute_id = 12
@@ -3541,6 +3587,18 @@ def test_list_report_attributes(fusion_obj: Fusion, requests_mock: requests_mock
     assert isinstance(df, pd.DataFrame)
     assert "id" in df.columns
     assert df.iloc[0]["id"] == attribute_id
+
+
+def test_list_report_attributes_error_includes_trace(
+    fusion_obj: Fusion,
+    requests_mock: requests_mock.Mocker,
+) -> None:
+    report_id = "6789"
+    url = f"{fusion_obj._get_new_root_url()}/api/corelineage-service/v1/reports/{report_id}/attributes"
+    requests_mock.get(url, status_code=500, json={"error": "backend failure"}, headers={"x-jpmc-trace-id": "trace-123"})
+
+    with pytest.raises(requests.exceptions.HTTPError, match="trace-123"):
+        fusion_obj.list_report_attributes(report_id=report_id)
 
 
 def test_fusion_report_required_only(fusion_obj: Fusion) -> None:

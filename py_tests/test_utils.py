@@ -5,9 +5,11 @@ import ssl
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import aiohttp
 import fsspec
 import joblib
 import pandas as pd
@@ -24,6 +26,7 @@ from fusion.utils import (
     _clean_filename,
     _filename_to_distribution,
     _merge_responses,
+    aiohttp_raise_for_status,
     convert_date_format,
     cpu_count,
     create_secure_ssl_context,
@@ -646,6 +649,39 @@ def test_append_query_params_does_not_double_encode_preencoded_values() -> None:
     )
 
     assert result == "https://api.fusion.jpmc.com/catalogs/my%20catalog/datasets/my%20dataset?file=my%20file%3D1"
+
+
+@pytest.mark.asyncio
+async def test_aiohttp_raise_for_status_uses_original_handler_for_non_int_status() -> None:
+    response = MagicMock()
+    response.status = None
+    response.raise_for_status = MagicMock()
+
+    await aiohttp_raise_for_status(response)
+
+    response.raise_for_status.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_aiohttp_raise_for_status_includes_trace_id_and_response_body(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    response = MagicMock()
+    response.status = 500
+    response.reason = "Internal Server Error"
+    response.text = AsyncMock(return_value='{"error":"backend failure"}')
+    response.headers = {"X-JPMC-Trace-Id": "trace-123"}
+    response.request_info = SimpleNamespace(real_url="https://fusion.example/download")
+    response.history = []
+
+    with (
+        caplog.at_level("ERROR", logger="fusion.fusion"),
+        pytest.raises(aiohttp.ClientResponseError, match="trace-123") as exc_info,
+    ):
+        await aiohttp_raise_for_status(response)
+
+    assert 'Response body: {"error":"backend failure"}' in str(exc_info.value)
+    assert "trace-123" in caplog.text
 
 
 def test_distribution_to_filename() -> None:
