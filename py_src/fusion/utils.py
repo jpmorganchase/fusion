@@ -12,10 +12,11 @@ import ssl
 import zipfile
 from contextlib import nullcontext
 from datetime import date, datetime
+from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union, cast
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import parse_qsl, quote, unquote, urlencode, urlparse, urlsplit, urlunparse, urlunsplit
 
 import aiohttp
 import certifi
@@ -53,7 +54,9 @@ if TYPE_CHECKING:
     from .types import PyArrowFilterT
 
 logger = logging.getLogger(__name__)
+sdk_logger = logging.getLogger("fusion.fusion")
 VERBOSE_LVL = 25
+TRACE_ID_HEADER = "x-jpmc-trace-id"
 DT_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
 DT_YYYYMMDDTHHMM_RE = re.compile(r"(\d{4})(\d{2})(\d{2})T(\d{4})$")
 DT_YYYY_MM_DD_RE = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
@@ -667,12 +670,22 @@ def distribution_to_url(
 
     if datasetseries == "sample":
         return f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/{file_format}"
+    base_url = (
+        f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
+    )
+
     if is_download:
-        return (
-            f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/"
-            f"{datasetseries}/distributions/{file_format}/files/operationType/download?file={file_name}"
-        )
-    return f"{root_url}catalogs/{catalog}/datasets/{dataset}/datasetseries/{datasetseries}/distributions/{file_format}"
+        return append_query_params(f"{base_url}/files/operationType/download", {"file": file_name})
+    return base_url
+
+
+def append_query_params(url: str, params: dict[str, Any]) -> str:
+    """Append query parameters to a URL using percent-encoding."""
+    url_parts = urlsplit(url)
+    query_params = parse_qsl(url_parts.query, keep_blank_values=True)
+    query_params.extend((key, unquote(str(value))) for key, value in params.items())
+    encoded_query = urlencode(query_params, doseq=True, quote_via=quote)
+    return urlunsplit((url_parts.scheme, url_parts.netloc, url_parts.path, encoded_query, url_parts.fragment))
 
 
 def _get_canonical_root_url(any_url: str) -> str:
@@ -1007,14 +1020,86 @@ def _is_json(data: str) -> bool:
     return True
 
 
+def _extract_trace_id(headers: Any) -> str | None:
+    """Extract the JPM trace ID from response headers."""
+    if headers is None or not hasattr(headers, "get"):
+        return None
+
+    trace_id = headers.get(TRACE_ID_HEADER)
+    if isinstance(trace_id, str) and trace_id:
+        return trace_id
+
+    if not hasattr(headers, "items"):
+        return None
+
+    for key, value in headers.items():
+        if str(key).lower() == TRACE_ID_HEADER and isinstance(value, str) and value:
+            return value
+
+    return None
+
+
+def _get_response_error_detail(text: str) -> str:
+    """Return the full response body when available."""
+    stripped_text = text.strip()
+    if not stripped_text:
+        return ""
+
+    return stripped_text
+
+
+def _format_http_error_message(base_message: str, error_detail: str, trace_id: str | None) -> str:
+    """Append response details and trace ID to an HTTP error message."""
+    lines = [base_message]
+    if trace_id:
+        lines.append(f"Trace ID: {trace_id}")
+    if error_detail:
+        lines.append(f"Response body: {error_detail}")
+    return "\n".join(lines)
+
+
+def _log_http_error(message: str, trace_id: str | None) -> None:
+    """Emit SDK error logs with trace context when present."""
+    if trace_id:
+        sdk_logger.error(message)
+
+
 def requests_raise_for_status(response: requests.Response) -> None:
-    """Send response text into raise for status."""
-    real_reason = ""
+    """Raise an HTTPError with API body and trace ID details when available."""
     try:
-        real_reason = response.text
-        response.reason = real_reason
-    finally:
         response.raise_for_status()
+    except requests.HTTPError as ex:
+        error_detail = _get_response_error_detail(response.text)
+        trace_id = _extract_trace_id(response.headers)
+        if error_detail:
+            response.reason = error_detail
+        message = _format_http_error_message(str(ex), error_detail, trace_id)
+        _log_http_error(message, trace_id)
+        raise requests.HTTPError(message, response=response, request=response.request) from ex
+
+
+async def aiohttp_raise_for_status(response: aiohttp.ClientResponse) -> None:
+    """Raise a detailed aiohttp error with API body and trace ID details when available."""
+    status = getattr(response, "status", None)
+    if not isinstance(status, int):
+        response.raise_for_status()
+        return
+
+    if status < HTTPStatus.BAD_REQUEST:
+        return
+
+    error_detail = _get_response_error_detail(await response.text())
+    trace_id = _extract_trace_id(response.headers)
+    base_message = f"{status}, message='{response.reason}', url='{response.request_info.real_url}'"
+    message = _format_http_error_message(base_message, error_detail, trace_id)
+    _log_http_error(message, trace_id)
+    raise aiohttp.ClientResponseError(
+        response.request_info,
+        tuple(response.history),
+        status=status,
+        message=message,
+        headers=response.headers,
+    )
 
 
 def validate_file_formats(fs_fusion: fsspec.AbstractFileSystem, path: str) -> None:
@@ -1079,7 +1164,7 @@ def handle_paginated_request(session: Session, url: str, headers: dict[str, str]
             current_headers["x-jpmc-next-token"] = next_token
 
         response = session.get(url, headers=current_headers)
-        response.raise_for_status()
+        requests_raise_for_status(response)
         response_data = response.json()
         all_responses.append(response_data)
 

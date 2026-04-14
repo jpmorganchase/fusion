@@ -5,9 +5,11 @@ import ssl
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import aiohttp
 import fsspec
 import joblib
 import pandas as pd
@@ -24,6 +26,7 @@ from fusion.utils import (
     _clean_filename,
     _filename_to_distribution,
     _merge_responses,
+    aiohttp_raise_for_status,
     convert_date_format,
     cpu_count,
     create_secure_ssl_context,
@@ -596,6 +599,89 @@ def test_distribution_to_url() -> None:
     exp_res = f"{root_url}catalogs/{catalog}/datasets/{dataset}/sample/distributions/csv"
     datasetseries = "sample"
     assert distribution_to_url(root_url, dataset, datasetseries, file_format, catalog) == exp_res
+
+
+def test_distribution_to_url_encodes_series_member_and_query_params() -> None:
+    from fusion.utils import distribution_to_url
+
+    root_url = "https://api.fusion.jpmc.com/"
+    result = distribution_to_url(
+        root_url,
+        "my dataset",
+        "2020 04 04",
+        "csv",
+        "my catalog",
+        is_download=True,
+        file_name="my file=1",
+    )
+
+    # we don't want to encode this url as this is done in the file system
+    assert (
+        result == "https://api.fusion.jpmc.com/catalogs/my catalog/datasets/my dataset/datasetseries/"
+        "2020 04 04/distributions/csv/files/operationType/download?file=my%20file%3D1"
+    )
+
+
+def test_distribution_to_url_leaves_path_segments_unchanged() -> None:
+    from fusion.utils import distribution_to_url
+
+    root_url = "https://api.fusion.jpmc.com/"
+    result = distribution_to_url(
+        root_url,
+        "my%20dataset",
+        "2020%2004%2004",
+        "csv",
+        "my%20catalog",
+    )
+
+    assert (
+        result == "https://api.fusion.jpmc.com/catalogs/my%20catalog/datasets/my%20dataset/datasetseries/"
+        "2020%2004%2004/distributions/csv"
+    )
+
+
+def test_append_query_params_does_not_double_encode_preencoded_values() -> None:
+    from fusion.utils import append_query_params
+
+    result = append_query_params(
+        "https://api.fusion.jpmc.com/catalogs/my%20catalog/datasets/my%20dataset",
+        {"file": "my%20file%3D1"},
+    )
+
+    assert result == "https://api.fusion.jpmc.com/catalogs/my%20catalog/datasets/my%20dataset?file=my%20file%3D1"
+
+
+@pytest.mark.asyncio
+async def test_aiohttp_raise_for_status_uses_original_handler_for_non_int_status() -> None:
+    response = MagicMock()
+    response.status = None
+    response.raise_for_status = MagicMock()
+
+    await aiohttp_raise_for_status(response)
+
+    response.raise_for_status.assert_called_once_with()
+
+
+@pytest.mark.asyncio
+async def test_aiohttp_raise_for_status_includes_trace_id_and_response_body(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    response = MagicMock()
+    response.status = 500
+    response.reason = "Internal Server Error"
+    response.text = AsyncMock(return_value='{"error":"backend failure"}')
+    response.headers = {"X-JPMC-Trace-Id": "trace-123"}
+    response.request_info = SimpleNamespace(real_url="https://fusion.example/download")
+    response.history = []
+
+    with (
+        caplog.at_level("ERROR", logger="fusion.fusion"),
+        pytest.raises(aiohttp.ClientResponseError, match="trace-123") as exc_info,
+    ):
+        await aiohttp_raise_for_status(response)
+
+    assert 'Response body: {"error":"backend failure"}' in str(exc_info.value)
+    assert "trace-123" in caplog.text
 
 
 def test_distribution_to_filename() -> None:

@@ -429,7 +429,9 @@ class FusionCredentials:
 
         resp = sess.post(auth_url, data=payload, headers={"User-Agent": f"fusion-python-sdk {VERSION}"})
         try:
-            resp.raise_for_status()
+            from .utils import requests_raise_for_status
+
+            requests_raise_for_status(resp)
         except requests.HTTPError as e:  # noqa: TRY003
             raise ValueError(f"Could not post request: {e} (Error Code: {resp.status_code})") from e
 
@@ -479,7 +481,9 @@ class FusionCredentials:
             },
         )
         try:
-            resp.raise_for_status()
+            from .utils import requests_raise_for_status
+
+            requests_raise_for_status(resp)
         except requests.HTTPError as e:  # noqa: TRY003
             raise ValueError(f"Error from endpoint: {e} (Error Code: {resp.status_code})") from e
 

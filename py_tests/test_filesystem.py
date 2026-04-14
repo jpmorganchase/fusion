@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import hashlib
 import io
@@ -23,6 +24,7 @@ from fusion.fusion_filesystem import (
     _base64_hash,
     _build_sha256_digest,
 )
+from fusion.utils import append_query_params
 
 
 @pytest.fixture
@@ -552,7 +554,10 @@ async def test_fetch_range_success(
     output_file.seek.assert_called_once_with(0)
     output_file.write.assert_called_once_with(b"some data")
     mock_response.raise_for_status.assert_not_called()
-    mock_session.get.assert_called_once_with(url + f"&downloadRange=bytes={start}-{end - 1}", **http_fs_instance.kwargs)
+    mock_session.get.assert_called_once_with(
+        append_query_params(url, {"downloadRange": f"bytes={start}-{end - 1}"}),
+        **http_fs_instance.kwargs,
+    )
 
 
 @pytest.mark.parametrize(
@@ -789,6 +794,27 @@ async def test__async_fetch_range_with_headers_success() -> None:
     assert mock_response.raise_for_status.called
 
 
+@pytest.mark.asyncio
+async def test_async_fetch_range_encodes_download_range(fusion_file: FusionFile) -> None:
+    mock_session = mock.AsyncMock()
+    mock_response = mock.AsyncMock()
+    mock_response.__aenter__.return_value = mock_response
+    mock_response.read.return_value = b"test-bytes"
+    mock_response.raise_for_status = mock.Mock()
+    mock_response.status = 206
+    mock_response.headers = {"Content-Length": "10"}
+    mock_session.get.return_value = mock_response
+
+    fusion_file.session = mock_session
+
+    result = await fusion_file.async_fetch_range(0, 10)
+
+    assert result == b"test-bytes"
+    mock_session.get.assert_awaited_once()
+    called_url = mock_session.get.await_args.args[0]
+    assert called_url == "http://test-url/file/operationType/download?downloadRange=bytes%3D0-9"
+
+
 class DummyResponse:
     def __init__(self, content: bytes, headers: dict[str, Any]) -> None:
         self.content = content
@@ -824,6 +850,7 @@ class DummyFS:
 def fusion_file() -> FusionFile:
     file = FusionFile.__new__(FusionFile)
     file.url = "http://test-url/file"
+    file.path = "http://test-url/file"
     file.fs = DummyFS()
     file.kwargs = {"headers": {"Authorization": "Bearer token"}}
     return file
@@ -1303,6 +1330,47 @@ class TestStreamSingleFileWithChecksum:
         assert error is not None
         assert "Checksum validation is required but missing checksum information" in error
 
+    def test_stream_single_file_missing_checksum_headers_glue(
+        self,
+        fs_with_checksum: FusionHTTPFileSystem,
+        tmp_path: Path,
+    ) -> None:
+        """Test Glue downloads skip checksum validation when headers are absent."""
+        mock_head_response = MagicMock()
+        mock_head_response.headers = {}
+        mock_head_response.raise_for_status = MagicMock()
+        mock_head_response.__enter__.return_value = mock_head_response
+        mock_head_response.__exit__.return_value = None
+
+        test_data = b"glue multipart without checksum"
+        mock_get_response = MagicMock()
+        mock_get_response.raise_for_status = MagicMock()
+        mock_get_response.iter_content = MagicMock(return_value=[test_data])
+        mock_get_response.__enter__.return_value = mock_get_response
+        mock_get_response.__exit__.return_value = None
+
+        mock_session = MagicMock()
+        mock_session.head.return_value = mock_head_response
+        mock_session.get.return_value = mock_get_response
+        fs_with_checksum.sync_session = mock_session
+
+        output_path = str(tmp_path / "output.txt")
+        mock_lfs = MagicMock(spec=fsspec.AbstractFileSystem)
+        mock_lfs.exists.return_value = True
+
+        success, path, error = fs_with_checksum.stream_single_file(
+            "http://test.com/file",
+            output_path,
+            mock_lfs,
+            delivery_channel=["Glue"],
+        )
+
+        assert success is True
+        assert path == output_path
+        assert error is None
+        mock_session.get.assert_called_once()
+        mock_lfs.open.assert_called_once_with(output_path, "wb")
+
     def test_stream_single_file_partial_checksum_headers(
         self,
         fs_with_checksum: FusionHTTPFileSystem,
@@ -1331,6 +1399,37 @@ class TestStreamSingleFileWithChecksum:
         assert path == "/test/output.txt"
         assert error is not None
         assert "Checksum validation is required but missing checksum information" in error
+
+
+def test_stream_single_file_without_checksum_creates_parent_dir(
+    fs_with_checksum: FusionHTTPFileSystem,
+    tmp_path: Path,
+) -> None:
+    test_data = b"no checksum but valid data"
+    mock_response = MagicMock()
+    mock_response.iter_content.return_value = [test_data]
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = None
+
+    mock_session = MagicMock()
+    mock_session.get.return_value = mock_response
+    fs_with_checksum.sync_session = mock_session
+
+    output_path = str(tmp_path / "new" / "output.txt")
+    mock_lfs = MagicMock(spec=fsspec.AbstractFileSystem)
+    mock_lfs.exists.return_value = False
+
+    success, path, error = fs_with_checksum._stream_single_file_without_checksum(
+        "http://test.com/file",
+        output_path,
+        mock_lfs,
+    )
+
+    assert success is True
+    assert path == output_path
+    assert error is None
+    mock_lfs.mkdir.assert_called_once()
+    mock_lfs.open.assert_called_once_with(output_path, "wb")
 
 
 class TestChecksumIntegration:
@@ -1374,6 +1473,54 @@ class TestChecksumIntegration:
         assert path == output_path
         assert error is not None
         assert "Checksum validation is required but missing checksum information" in error
+
+    @patch("fsspec.implementations.http.sync")
+    def test_get_glue_missing_checksum_falls_back_to_streaming(
+        self,
+        mock_sync: MagicMock,
+        fs_with_checksum: FusionHTTPFileSystem,
+    ) -> None:
+        """Test Glue downloads bypass checksum validation when the API omits it."""
+
+        def sync_side_effect(_loop: Any, func: Any, *args: Any, **kwargs: Any) -> Any:
+            result = func(*args, **kwargs)
+            if asyncio.iscoroutine(result):
+                return asyncio.run(result)
+            return result
+
+        mock_sync.side_effect = sync_side_effect
+
+        with (
+            patch("fusion.fusion_filesystem.cpu_count", return_value=8),
+            patch.object(fs_with_checksum, "stream_single_file", return_value=(True, "path", None)) as mock_stream,
+        ):
+            result = fs_with_checksum.get(
+                "http://test.com/file",
+                "/tmp/output.txt",
+                is_local_fs=True,
+                lfs=MagicMock(spec=fsspec.AbstractFileSystem),
+                delivery_channel=["Glue"],
+            )
+
+        assert result == (True, "path", None)
+        mock_stream.assert_called_once()
+        assert mock_stream.call_args.kwargs["delivery_channel"] == ["Glue"]
+
+    def test_download_multi_threaded_missing_checksum_without_glue_fails(
+        self,
+        fs_with_checksum: FusionHTTPFileSystem,
+    ) -> None:
+        with patch("fusion.fusion_filesystem.sync", return_value=(1024, None, None)):
+            result = fs_with_checksum._download_multi_threaded(
+                "http://test.com/file",
+                "/tmp/output.txt",
+                MagicMock(spec=fsspec.AbstractFileSystem),
+                1024,
+                4,
+                delivery_channel=["API"],
+            )
+
+        assert result == (False, "/tmp/output.txt", "Checksum validation is required but missing checksum information.")
 
     def test_checksum_algorithms_coverage(self, fs_with_checksum: FusionHTTPFileSystem) -> None:
         """Test all checksum algorithms for coverage."""
@@ -1700,6 +1847,27 @@ class TestChecksumIntegration:
 
         with pytest.raises(Exception, match="Not found"):
             fs_with_checksum._raise_not_found_for_status(mock_response, "test://url")
+
+    def test_error_handling_methods_include_trace_id(
+        self,
+        fs_with_checksum: FusionHTTPFileSystem,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        mock_response = MagicMock()
+        mock_response.status = 500
+        mock_response.headers = {"X-JPMC-Trace-Id": "trace-123"}
+
+        with (
+            patch(
+                "fsspec.implementations.http.HTTPFileSystem._raise_not_found_for_status",
+                side_effect=RuntimeError("boom"),
+            ),
+            caplog.at_level(logging.ERROR, logger="fusion.fusion"),
+            pytest.raises(APIResponseError, match="Trace ID: trace-123"),
+        ):
+            fs_with_checksum._raise_not_found_for_status(mock_response, "test://url")
+
+        assert "trace-123" in caplog.text
 
     def test_update_kwargs_method(self, fs_with_checksum: FusionHTTPFileSystem) -> None:
         """Test the _update_kwargs method comprehensively."""
