@@ -28,6 +28,7 @@ from fusion.credentials import FusionCredentials
 from fusion.exceptions import APIResponseError
 
 from .utils import (
+    _extract_trace_id,
     _merge_responses,
     aiohttp_raise_for_status,
     append_query_params,
@@ -135,24 +136,6 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         has_any_checksum_header = bool(expected_checksum or checksum_algorithm)
         return self._is_glue_delivery_channel(delivery_channel) and not has_any_checksum_header
 
-    @staticmethod
-    def _get_trace_id(headers: Mapping[str, Any] | None) -> str | None:
-        if headers is None or not hasattr(headers, "get"):
-            return None
-
-        trace_id = headers.get("x-jpmc-trace-id")
-        if isinstance(trace_id, str) and trace_id:
-            return trace_id
-
-        if not hasattr(headers, "items"):
-            return None
-
-        for key, value in headers.items():
-            if str(key).lower() == "x-jpmc-trace-id" and isinstance(value, str) and value:
-                return value
-
-        return None
-
     def _raise_not_found_for_status(self, response: Any, url: str) -> None:
         try:
             super()._raise_not_found_for_status(response, url)
@@ -161,7 +144,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         except Exception as ex:
             status_code = getattr(response, "status", None)
             message = f"Error when accessing {url}"
-            trace_id = self._get_trace_id(getattr(response, "headers", None))
+            trace_id = _extract_trace_id(getattr(response, "headers", None))
             if trace_id:
                 message = f"{message}. Trace ID: {trace_id}"
                 logging.getLogger("fusion.fusion").error("%s. Error: %s", message, ex)
@@ -185,7 +168,7 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
         except Exception as ex:
             status_code = getattr(response, "status", None)
             message = f"Error when accessing {url}"
-            trace_id = self._get_trace_id(getattr(response, "headers", None))
+            trace_id = _extract_trace_id(getattr(response, "headers", None))
             if trace_id:
                 message = f"{message}. Trace ID: {trace_id}"
                 logging.getLogger("fusion.fusion").error("%s. Error: %s", message, ex)
