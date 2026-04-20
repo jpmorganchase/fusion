@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.0.2] - 2026-22-01
+## [4.0.3] - 2026-04-20
+* Improve Sonar coverage and quality compliance
+* Add URL encoding for parameters
+* Handle missing Glue checksums
+* Improve SDK error details with trace IDs and response bodies
+
+## [4.0.2] - 2026-01-22
 * Added Progress bar for Uploads
 * Handled Series member names and dataset identifers saving while donwnloads - double colon fix
 * Added support for more file formats - XLTM, PPTX, MD, IPYNB, CSS, JSONL, JSONLD,ARROW, M4A, PDB, SQL, SQLITE,TIFF,ZIP,GTAR,TAR
