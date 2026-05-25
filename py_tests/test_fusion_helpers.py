@@ -349,17 +349,15 @@ def test_normalize_upload_dt_str_and_append_background_event(fusion_obj: Fusion)
         mock_timestamp.return_value.date.return_value.strftime.return_value = "20240103"
         assert Fusion._normalize_upload_dt_str("latest") == "20240103"
 
-    collected_events: list[dict[str, Any]] = []
     first_event = {"id": "e1", "type": "Update", "timestamp": "t1"}
     fusion_obj.events = None
-    fusion_obj._append_background_event(first_event, collected_events)
-    assert collected_events == [first_event]
+    fusion_obj._append_background_event(first_event)
     assert isinstance(fusion_obj.events, pd.DataFrame)
-    assert fusion_obj.events.empty
+    assert fusion_obj.events.to_dict(orient="records") == [first_event]
 
-    fusion_obj.events = pd.DataFrame([first_event])
-    fusion_obj._append_background_event({"id": "e1", "type": "Update", "timestamp": "t1"}, collected_events)
-    fusion_obj._append_background_event({"id": "e2", "type": "Create", "timestamp": "t2"}, collected_events)
+    # Duplicates (same id/type/timestamp) are de-duplicated; new events are appended.
+    fusion_obj._append_background_event({"id": "e1", "type": "Update", "timestamp": "t1"})
+    fusion_obj._append_background_event({"id": "e2", "type": "Create", "timestamp": "t2"})
 
     assert fusion_obj.events.to_dict(orient="records") == [
         {"id": "e1", "type": "Update", "timestamp": "t1"},

@@ -302,8 +302,8 @@ class Dataset(metaclass=CamelCaseMeta):
         if "tag" in data:
             data["tags"] = data.pop("tag")
 
-        data = {camel_to_snake(k): v for k, v in data.items()}
-        data = {k: v for k, v in data.items() if k in keys}
+        snake_data: dict[str, Any] = {camel_to_snake(k): v for k, v in data.items()}
+        data = {k: v for k, v in snake_data.items() if k in keys}
         if "type" in data:
             data["type_"] = data.pop("type")
         field_map = {field_.name: field_ for field_ in fields(cls)}
