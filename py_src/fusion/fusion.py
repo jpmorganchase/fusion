@@ -22,7 +22,6 @@ from tqdm import tqdm
 
 from fusion.attributes import Attribute, Attributes
 from fusion.credentials import FusionCredentials
-
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
@@ -59,7 +58,6 @@ if TYPE_CHECKING:
 
     import fsspec
     import requests
-    from opensearchpy import AsyncOpenSearch, OpenSearch
 
     from .types import PyArrowFilterT
 

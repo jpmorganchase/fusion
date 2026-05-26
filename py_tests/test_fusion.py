@@ -5,13 +5,12 @@ import re
 from io import BytesIO
 from pathlib import Path
 from typing import Any, cast
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
 import requests
 import requests_mock
-from opensearchpy import OpenSearch
 from pytest_mock import MockerFixture
 
 from fusion.attributes import Attribute
