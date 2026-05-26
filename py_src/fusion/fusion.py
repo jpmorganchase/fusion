@@ -22,21 +22,11 @@ from tqdm import tqdm
 
 from fusion.attributes import Attribute, Attributes
 from fusion.credentials import FusionCredentials
-from fusion.data_dependency import (
-    AttributeTermMapping,
-    DataDependency,
-    DataMapping,
-    DependencyAttribute,
-    DependencyMapping,
-)
-from fusion.dataflow import Dataflow
+
 from fusion.dataset import Dataset
 from fusion.fusion_types import Types
 from fusion.product import Product
-from fusion.report import Report, Reports
-from fusion.report_attributes import ReportAttribute, ReportAttributes
 
-from .embeddings_utils import _format_full_index_response, _format_summary_index_response
 from .exceptions import APIResponseError, CredentialError, FileFormatError
 from .fusion_filesystem import FusionHTTPFileSystem
 from .utils import (
@@ -2558,50 +2548,6 @@ class Fusion:
         attributes_obj.client = self
         return attributes_obj
 
-    def report_attribute(
-        self,
-        title: str | None = None,
-        id: int | None = None,  # noqa: A002
-        source_identifier: str | None = None,
-        description: str | None = None,
-        technical_data_type: str | None = None,
-        path: str | None = None,
-    ) -> ReportAttribute:
-        """Instantiate a ReportAttribute object with this client for metadata creation.
-
-        Args:
-            title (str | None, optional): The display title of the attribute.
-            id (int | None, optional): The unique identifier of the attribute.
-                id argument is not required for 'create' operation.
-            source_identifier (str | None, optional): A unique identifier or reference ID from the source system.
-            description (str | None, optional): A longer description of the attribute.
-            technical_data_type (str | None, optional): The technical data type (e.g., string, int, boolean).
-            path (str | None, optional): The hierarchical path or logical grouping for the attribute.
-
-        Returns:
-            ReportAttribute: A single ReportAttribute instance with the client context attached.
-
-        Example:
-            >>> fusion = Fusion()
-            >>> attr = fusion.report_attribute(
-            ...     title="Customer ID",
-            ...     source_identifier="cust_id_123",
-            ...     description="Unique customer identifier",
-            ...     technical_data_type="String",
-            ...     path="Customer.Details"
-            ... )
-        """
-        attribute_obj = ReportAttribute(
-            source_identifier=source_identifier,
-            title=title,
-            id=id,
-            description=description,
-            technical_data_type=technical_data_type,
-            path=path,
-        )
-        attribute_obj.client = self
-        return attribute_obj
-
     def delete_datasetmembers(
         self,
         dataset: str,
@@ -2672,55 +2618,6 @@ class Fusion:
         else:
             return _format_summary_index_response(response)
 
-    def get_fusion_vector_store_client(self, knowledge_base: str, catalog: str | None = None) -> OpenSearch:
-        """Returns Fusion Embeddings Search client.
-
-        Args:
-            knowledge_base (str): Knowledge base (dataset) identifier.
-            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-
-        Returns:
-            OpenSearch: Fusion Embeddings Search client.
-
-        """
-        from opensearchpy import OpenSearch
-
-        from fusion.embeddings import FusionEmbeddingsConnection
-
-        catalog = self._use_catalog(catalog)
-        return OpenSearch(
-            connection_class=FusionEmbeddingsConnection,
-            catalog=catalog,
-            knowledge_base=knowledge_base,
-            root_url=self.root_url,
-            credentials=self.credentials,
-        )
-
-    def get_async_fusion_vector_store_client(self, knowledge_base: str, catalog: str | None = None) -> AsyncOpenSearch:
-        """Returns Fusion Embeddings Search client.
-
-        Args:
-            knowledge_base (str): Knowledge base (dataset) identifier.
-            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-
-        Returns:
-            OpenSearch: Fusion Embeddings Search client.
-
-        """
-        from opensearchpy import AsyncOpenSearch
-
-        from fusion.embeddings import FusionAsyncHttpConnection
-
-        catalog = self._use_catalog(catalog)
-        return AsyncOpenSearch(
-            connection_class=FusionAsyncHttpConnection,
-            catalog=catalog,
-            knowledge_base=knowledge_base,
-            root_url=self.root_url,
-            credentials=self.credentials,
-        )
-
-
 
     def list_distribution_files(
         self,
@@ -2759,114 +2656,3 @@ class Fusion:
             pass
 
         return files_df
-
-
-    def dependency_attribute(
-        self,
-        entity_type: str,
-        entity_identifier: str,
-        attribute_identifier: str,
-        data_space: str | None = None,
-    ) -> DependencyAttribute:
-        """Instantiate a DependencyAttribute object with this client.
-
-        Args:
-            entity_type (str): The type of entity, e.g., "Dataset".
-            entity_identifier (str): Identifier of the entity.
-            attribute_identifier (str): Identifier of the attribute.
-            data_space (str | None, optional): Required if entity_type is "Dataset".
-
-        Returns:
-            DependencyAttribute: DependencyAttribute instance with the client context attached.
-
-        Example:
-            >>> fusion = Fusion()
-            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
-        """
-        return DependencyAttribute(
-            entity_type=entity_type,
-            entity_identifier=entity_identifier,
-            attribute_identifier=attribute_identifier,
-            data_space=data_space,
-        )
-
-    def dependency_mapping(
-        self,
-        source_attributes: list[DependencyAttribute],
-        target_attribute: DependencyAttribute,
-    ) -> DependencyMapping:
-        """Instantiate a DependencyMapping object with this client.
-
-        Args:
-            source_attributes (list[DependencyAttribute]): Source attributes.
-            target_attribute (DependencyAttribute): Target attribute.
-
-        Returns:
-            DependencyMapping: DependencyMapping instance with the client context attached.
-
-        Example:
-            >>> fusion = Fusion()
-            >>> src = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
-            >>> tgt = fusion.dependency_attribute("Dataset", "dataset2", "colB", "Finance")
-            >>> mapping = fusion.dependency_mapping([src], tgt)
-        """
-        return DependencyMapping(
-            source_attributes=source_attributes,
-            target_attribute=target_attribute,
-        )
-
-    def attribute_term_mapping(
-        self,
-        attribute: DependencyAttribute,
-        term: dict[str, str],
-        is_kde: bool | None = None,
-    ) -> AttributeTermMapping:
-        """Instantiate an AttributeTermMapping object with this client.
-
-        Args:
-            attribute (DependencyAttribute): Attribute object.
-            term (dict[str, str]): Term info (must include 'id').
-            is_kde (bool | None, optional): KDE flag, required for link/update operations.
-
-        Returns:
-            AttributeTermMapping: AttributeTermMapping instance with the client context attached.
-
-        Example:
-            >>> fusion = Fusion()
-            >>> attr = fusion.dependency_attribute("Dataset", "dataset1", "colA", "Finance")
-            >>> term = {"id": "term_123"}
-            >>> mapping = fusion.attribute_term_mapping(attr, term, is_kde=True)
-        """
-        return AttributeTermMapping(
-            attribute=attribute,
-            term=term,
-            is_kde=is_kde,
-        )
-
-    def data_dependency(self) -> DataDependency:
-        """Instantiate a DataDependency object with this client.
-
-        Returns:
-            DataDependency: DataDependency instance with the client context attached.
-
-        Example:
-            >>> fusion = Fusion()
-            >>> data_dep = fusion.data_dependency()
-        """
-        dep_obj = DataDependency()
-        dep_obj.client = self
-        return dep_obj
-
-    def data_mapping(self) -> DataMapping:
-        """Instantiate a DataMapping object with this client.
-
-        Returns:
-            DataMapping: DataMapping instance with the client context attached.
-
-        Example:
-            >>> fusion = Fusion()
-            >>> data_map = fusion.data_mapping()
-        """
-        map_obj = DataMapping()
-        map_obj.client = self
-        return map_obj
