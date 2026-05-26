@@ -2592,32 +2592,6 @@ class Fusion:
             responses.append(resp)
         return responses if return_resp_obj else None
 
-    def list_indexes(
-        self,
-        knowledge_base: str,
-        catalog: str | None = None,
-        show_details: bool | None = False,
-    ) -> pd.DataFrame:
-        """List the indexes in a knowledge base.
-
-        Args:
-            knowledge_base (str): Knowledge base (dataset) identifier.
-            catalog (str | None, optional): A catalog identifier. Defaults to 'common'.
-            show_details (bool | None, optional): If True then show detailed information. Defaults to False.
-
-        Returns:
-            pd.DataFrame: a dataframe with a column for each index.
-
-        """
-        catalog = self._use_catalog(catalog)
-        url = f"{self.root_url}dataspaces/{catalog}/datasets/{knowledge_base}/indexes/"
-        response = self.session.get(url)
-        requests_raise_for_status(response)
-        if show_details:
-            return _format_full_index_response(response)
-        else:
-            return _format_summary_index_response(response)
-
 
     def list_distribution_files(
         self,
