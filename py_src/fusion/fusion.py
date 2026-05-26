@@ -1835,13 +1835,11 @@ class Fusion:
             event.update(original_meta_data)
         return event
 
-    def _append_background_event(self, event: dict[str, Any], collected_events: list[dict[str, Any]]) -> None:
-        collected_events.append(event)
+    def _append_background_event(self, event: dict[str, Any]) -> None:
         if self.events is None:
             self.events = pd.DataFrame()
-            return
 
-        self.events = pd.concat([self.events, pd.DataFrame(collected_events)], ignore_index=True)
+        self.events = pd.concat([self.events, pd.DataFrame([event])], ignore_index=True)
         self.events = self.events.drop_duplicates(subset=["id", "type", "timestamp"], ignore_index=True)
 
     def _prepare_event_listener_kwargs(self, last_event_id: str | None) -> dict[str, Any]:
@@ -1901,11 +1899,10 @@ class Fusion:
                 session=session,
                 **kwargs,
             ) as messages:
-                lst: list[dict[str, Any]] = []
                 try:
                     async for msg in messages:
                         event = self._flatten_event_metadata(json.loads(msg.data))
-                        self._append_background_event(event, lst)
+                        self._append_background_event(event)
                 except TimeoutError as ex:
                     raise ex from None
                 except BaseException:
@@ -1969,7 +1966,10 @@ class Fusion:
         if not in_background:
             subscription_url = f"{url}catalogs/{catalog}/notifications/subscribe"
             return self._collect_foreground_events(subscription_url, last_event_id)
-        return self.events
+
+        buffered = self.events
+        self.events = None
+        return buffered
 
     @staticmethod
     def _build_dataset_title_lookup(datasets: list[dict[str, Any]]) -> dict[str, str]:
