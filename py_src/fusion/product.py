@@ -219,8 +219,8 @@ class Product(metaclass=CamelCaseMeta):
 
         """
         keys = [f.name for f in fields(cls)]
-        data = {camel_to_snake(k): v for k, v in data.items()}
-        data = {k: v for k, v in data.items() if k in keys}
+        snake_data: dict[str, Any] = {camel_to_snake(k): v for k, v in data.items()}
+        data = {k: v for k, v in snake_data.items() if k in keys}
         field_map = {field_.name: field_ for field_ in fields(cls)}
 
         def _value(name: str) -> Any:
