@@ -556,24 +556,6 @@ class Fusion:
         return rep_df[[c for c in key_columns if c in rep_df.columns]]
 
 
-    def list_reports(
-        self,
-        report_id: str | None = None,
-        output: bool = False,
-        display_all_columns: bool = False,
-    ) -> pd.DataFrame:
-        """Retrieve a single report or all reports from the Fusion system."""
-        key_columns = self._report_key_columns()
-
-        rep_df = (
-            self._get_report_by_id(report_id, display_all_columns, key_columns)
-            if report_id
-            else self._list_reports_df(display_all_columns, key_columns)
-        )
-        if output:
-            pass
-        return rep_df
-
     def dataset_resources(self, dataset: str, catalog: str | None = None, output: bool = False) -> pd.DataFrame:
         """List the resources available for a dataset, currently this will always be a datasetseries.
 
