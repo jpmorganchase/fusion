@@ -16,13 +16,6 @@ from pytest_mock import MockerFixture
 
 from fusion.attributes import Attribute
 from fusion.credentials import FusionCredentials
-from fusion.data_dependency import (
-    AttributeTermMapping,
-    DataDependency,
-    DataMapping,
-    DependencyAttribute,
-    DependencyMapping,
-)
 from fusion.exceptions import APIResponseError, FileFormatError
 from fusion.fusion import Fusion, logger
 from fusion.fusion_types import Types
