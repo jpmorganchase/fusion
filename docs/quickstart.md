@@ -136,11 +136,8 @@ Available methods:
 | delete_datasetmembers                | Delete dataset members.                                                                                      |
 | download                             | Downloads the requested distributions of a dataset to disk.                                                  |
 | from_bytes                           | Uploads data from an object in memory.                                                                       |
-| get_async_fusion_vector_store_client | Returns Fusion Embeddings Search client.                                                                     |
 | get_events                           | Run server sent event listener and print out the new events. Keyboard terminate to stop.                     |
 | get_fusion_filesystem                | Retrieve Fusion file system instance.                                                                        |
-| get_fusion_vector_store_client       | Returns Fusion Embeddings Search client.                                                                     |
-| input_dataflow                       | Instantiate an Input Dataflow object with this client for metadata creation.                                 |
 | list_catalogs                        | Lists the catalogs available to the API account.                                                             |
 | list_dataset_attributes              | Returns the list of attributes that are in the dataset.                                                      |
 | list_dataset_lineage                 | List the upstream and downstream lineage of the dataset.                                                     |
@@ -148,14 +145,11 @@ Available methods:
 | list_datasetmembers_distributions    | List the distributions of dataset members.                                                                   |
 | list_datasets                        | Get the datasets contained in a catalog.                                                                     |
 | list_distributions                   | List the available distributions (downloadable instances of the dataset with a format type).                 |
-| list_indexes                         | List the indexes in a knowledge base.                                                                        |
 | list_product_dataset_mapping         | get the product to dataset linking contained in  a catalog. A product is a grouping of datasets.             |
 | list_products                        | Get the products contained in a catalog. A product is a grouping of datasets.                                |
 | list_registered_attributes           | Returns the list of attributes in a catalog.                                                                 |
 | listen_to_events                     | Run server sent event listener in the background. Retrieve results by running get_events.                    |
-| output_dataflow                      | Instantiate an Output Dataflow object with this client for metadata creation.                                |
 | product                              | Instantiate a Product object with this client for metadata creation.                                         |
-| report                               | Instantiate Report object with this client for metadata creation for managing regulatory reporting metadata. |
 | to_bytes                             | Returns an instance of dataset (the distribution) as a bytes object.                                         |
 | to_df                                | Gets distributions for a specified date or date range and returns the data as a dataframe.                   |
 | to_table                             | Gets distributions for a specified date or date range and returns the data as an arrow table.                |

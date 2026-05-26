@@ -46,55 +46,6 @@ def test_get_exact_dataset_match_returns_none_without_string_or_on_non_200(fusio
         assert fusion_obj._get_exact_dataset_match("common", "prices", display_all_columns=False) is None
 
 
-def test_get_exact_dataset_match_and_report_helpers_cover_success_paths(fusion_obj: Fusion) -> None:
-    dataset_response = MagicMock(status_code=200)
-    dataset_response.json.return_value = {
-        "identifier": "prices",
-        "title": "Prices",
-        "containerType": "Snapshot",
-        "region": ["US"],
-        "category": ["Market"],
-        "description": "Dataset",
-        "status": "Available",
-        "type": "Source",
-        "extra": "kept-when-expanded",
-    }
-    with patch.object(fusion_obj.session, "get", return_value=dataset_response):
-        match_df = fusion_obj._get_exact_dataset_match("common", "prices", display_all_columns=True)
-
-    assert match_df is not None
-    assert match_df.to_dict(orient="records") == [dataset_response.json.return_value]
-
-    report_response = MagicMock(status_code=200)
-    report_response.json.return_value = {"id": "r1", "name": "Report", "description": "Desc", "ignored": "x"}
-    with patch.object(fusion_obj.session, "get", return_value=report_response):
-        report_df = fusion_obj._get_report_by_id("r1", False, Fusion._report_key_columns())
-
-    assert report_df.to_dict(orient="records") == [{"id": "r1", "name": "Report", "description": "Desc"}]
-
-    list_response = MagicMock(status_code=200)
-    list_response.json.return_value = {"content": [{"id": "r2", "name": "Listed", "description": "Desc"}]}
-    with patch.object(fusion_obj.session, "post", return_value=list_response):
-        list_df = fusion_obj._list_reports_df(False, Fusion._report_key_columns())
-
-    assert list_df.to_dict(orient="records") == [{"id": "r2", "name": "Listed", "description": "Desc"}]
-
-
-def test_report_helpers_raise_and_select_columns(fusion_obj: Fusion) -> None:
-    rep_df = pd.DataFrame([{"id": "r1", "name": "Report", "other": "ignored"}])
-
-    assert Fusion._select_report_columns(rep_df, True, Fusion._report_key_columns()).equals(rep_df)
-    assert Fusion._report_key_columns()[0] == "id"
-
-    response = MagicMock(status_code=500)
-    response.raise_for_status.side_effect = RuntimeError("boom")
-    with (
-        patch.object(fusion_obj.session, "get", return_value=response),
-        pytest.raises(RuntimeError, match="boom"),
-    ):
-        fusion_obj._get_report_by_id("broken", False, Fusion._report_key_columns())
-
-
 def test_fusion_dataset_filter_helpers() -> None:
     ds_df = pd.DataFrame(
         {
