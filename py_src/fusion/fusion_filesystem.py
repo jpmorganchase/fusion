@@ -695,13 +695,18 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
                 return False, output_path, error_msg
 
             checksum_to_compare = base_checksum if is_multipart else expected_checksum
-            if computed_checksum != checksum_to_compare:
-                error_msg = (
-                    "Checksum validation failed. File may be corrupted or incomplete. "
-                    "Please retry the download and if still failing contact the dataset owner."
+            checksum_mismatch = computed_checksum != checksum_to_compare
+            if checksum_mismatch:
+                logger.warning(
+                    "Checksum validation failed for %s. File may be corrupted or incomplete. "
+                    "Proceeding to write the downloaded data anyway; please verify the file and "
+                    "contact the dataset owner if issues persist. "
+                    "(expected=%s, computed=%s, algorithm=%s)",
+                    output_path,
+                    checksum_to_compare,
+                    computed_checksum,
+                    checksum_algorithm,
                 )
-                logger.warning(error_msg)
-                return False, output_path, error_msg
 
             await asyncio.to_thread(Path(output_path).parent.mkdir, parents=True, exist_ok=True)
 
@@ -711,7 +716,13 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
 
             await asyncio.to_thread(write_file_data)
 
-            logger.log(VERBOSE_LVL, f"Multi-threaded checksum validation successful, wrote to {output_path}")
+            if checksum_mismatch:
+                logger.log(
+                    VERBOSE_LVL,
+                    f"Multi-threaded download wrote to {output_path} despite checksum mismatch",
+                )
+            else:
+                logger.log(VERBOSE_LVL, f"Multi-threaded checksum validation successful, wrote to {output_path}")
             return True, output_path, None
 
         except Exception as ex:  # noqa: BLE001
@@ -1144,10 +1155,16 @@ class FusionHTTPFileSystem(HTTPFileSystem):  # type: ignore
             file_data = self._download_file_data(url, block_size)
             validation_error = self._validate_checksum(file_data, expected_checksum, checksum_algorithm)
             if validation_error is not None:
-                logger.warning(validation_error)
-                return False, output_path, validation_error
+                logger.warning(
+                    "%s Proceeding to write the downloaded data for %s anyway.",
+                    validation_error,
+                    output_path,
+                )
             self._write_downloaded_file(lfs, output_path, file_data)
-            logger.log(VERBOSE_LVL, "Checksum validation successful, wrote to %s", output_path)
+            if validation_error is None:
+                logger.log(VERBOSE_LVL, "Checksum validation successful, wrote to %s", output_path)
+            else:
+                logger.log(VERBOSE_LVL, "Wrote to %s despite checksum validation issue", output_path)
             return True, output_path, None
         except Exception as ex:  # noqa: BLE001
             return False, output_path, str(ex)

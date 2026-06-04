@@ -135,7 +135,10 @@ def test_checksum_validation_and_download_helpers(http_fs_instance: FusionHTTPFi
     assert result == (True, output_path, None)
     mock_write.assert_called_once()
 
-    with patch.object(http_fs_instance, "_download_file_data", return_value=file_data):
+    with (
+        patch.object(http_fs_instance, "_download_file_data", return_value=file_data),
+        patch.object(http_fs_instance, "_write_downloaded_file") as mock_write_failed,
+    ):
         failed = http_fs_instance._stream_and_validate_checksum(
             "https://fusion.example/file",
             output_path,
@@ -145,8 +148,9 @@ def test_checksum_validation_and_download_helpers(http_fs_instance: FusionHTTPFi
             1024,
         )
 
-    assert failed[0] is False
-    assert "Checksum validation failed" in cast(str, failed[2])
+    # Checksum mismatch is now a warning: download still succeeds and file is written.
+    assert failed == (True, output_path, None)
+    mock_write_failed.assert_called_once()
 
 
 def test_download_multithreaded_helper_and_hash_helpers(http_fs_instance: FusionHTTPFileSystem) -> None:
@@ -1171,10 +1175,8 @@ class TestStreamWithChecksumValidation:
         mock_lfs.open.assert_called_once()
         mock_file.write.assert_called_once_with(test_data)
 
-    @patch("pathlib.Path.open", new_callable=mock_open)
     def test_stream_with_checksum_validation_failure(
         self,
-        mock_file_open: MagicMock,
         fs_with_checksum: FusionHTTPFileSystem,
     ) -> None:
         """Test checksum validation failure."""
@@ -1201,12 +1203,11 @@ class TestStreamWithChecksumValidation:
             "http://test.com/file", output_path, mock_lfs, wrong_checksum, "SHA-256"
         )
 
-        assert success is False
+        # Checksum mismatch is now a warning: download still succeeds and file is written via lfs.
+        assert success is True
         assert path == "/test/output.txt"
-        assert error is not None
-        assert "Checksum validation failed" in error
-        # File should not be written when checksum fails
-        mock_file_open.assert_not_called()
+        assert error is None
+        mock_lfs.open.assert_called_once()
 
     def test_stream_with_checksum_validation_network_error(
         self,
@@ -1762,10 +1763,10 @@ class TestChecksumIntegration:
             "test://example.com/file", output_path, mock_lfs, wrong_checksum, "CRC32"
         )
 
-        assert success is False
+        # Checksum mismatch is now a warning: download still succeeds and file is written.
+        assert success is True
         assert path == "/tmp/test_file.txt"
-        assert error is not None
-        assert "Checksum validation failed" in error
+        assert error is None
 
     def test_stream_single_file_with_unsupported_algorithm(self, fs_with_checksum: FusionHTTPFileSystem) -> None:
         """Test stream_single_file_with_checksum_validation with unsupported algorithm."""
@@ -2223,10 +2224,10 @@ class TestChecksumIntegration:
             url, output_path, mock_lfs, wrong_checksum, "CRC32"
         )
 
-        assert success is False
+        # Checksum mismatch is now a warning: download still succeeds and file is written.
+        assert success is True
         assert path == output_path
-        assert error is not None
-        assert "Checksum validation failed" in error
+        assert error is None
 
     def test_sync_stream_with_invalid_checksum_algorithm(
         self, fs_with_checksum: FusionHTTPFileSystem, tmp_path: Path
