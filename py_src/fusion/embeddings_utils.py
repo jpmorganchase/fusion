@@ -28,7 +28,7 @@ def _format_full_index_response(response: requests.Response) -> pd.DataFrame:
     df_resp = pd.json_normalize(response.json())
     df2 = df_resp.transpose()
     df2.index = df2.index.map(str)
-    df2.columns = pd.Index(df2.loc["settings.index.provided_name"])
+    df2.columns = pd.Index(df2.loc["settings.index.provided_name"])  # type: ignore[assignment, arg-type]
     df2 = df2.rename(columns=lambda x: x.split("index-")[-1])
     df2.columns.names = ["index_name"]
     df2.loc["settings.index.creation_date"] = pd.to_datetime(df2.loc["settings.index.creation_date"], unit="ms")

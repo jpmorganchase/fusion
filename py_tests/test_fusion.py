@@ -3217,7 +3217,7 @@ def test_list_indexes_full(requests_mock: requests_mock.Mocker, fusion_obj: Fusi
     df_resp = pd.json_normalize(expected_data)
     df2 = df_resp.transpose()
     df2.index = df2.index.map(str)
-    df2.columns = pd.Index(df2.loc["settings.index.provided_name"])
+    df2.columns = pd.Index(df2.loc["settings.index.provided_name"])  # type: ignore[assignment, arg-type]
     df2 = df2.rename(columns=lambda x: x.split("index-")[-1])
     df2.columns.names = ["index_name"]
     df2.loc["settings.index.creation_date"] = pd.to_datetime(df2.loc["settings.index.creation_date"], unit="ms")
