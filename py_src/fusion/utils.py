@@ -329,7 +329,7 @@ def csv_to_table(
     """
     filters = filters_to_expression(filters) if filters else filters
     with fs.open(path) if fs else nullcontext(path) as f:
-        tbl = csv.read_csv(f)
+        tbl = csv.read_csv(f)  # type: ignore[attr-defined]
         if filters is not None:
             tbl = tbl.filter(filters)
         if columns is not None:
@@ -356,7 +356,7 @@ def json_to_table(
     """
     filters = filters_to_expression(filters) if filters else filters
     with fs.open(path) if fs else nullcontext(path) as f:
-        tbl = json.read_json(f)
+        tbl = json.read_json(f)  # type: ignore[attr-defined]
         if filters is not None:
             tbl = tbl.filter(filters)
         if columns is not None:
