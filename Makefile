@@ -10,3 +10,4 @@ gha-dev:
 
 gha-dev-cancel:
 	gh run list --branch $(BRANCH_NAME) --workflow=$(WORKFLOW_FILE) --limit 1 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run cancel {}
+
