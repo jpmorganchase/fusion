@@ -615,10 +615,9 @@ def test_distribution_to_url_encodes_series_member_and_query_params() -> None:
         file_name="my file=1",
     )
 
-    # we don't want to encode this url as this is done in the file system
     assert (
         result == "https://api.fusion.jpmc.com/catalogs/my catalog/datasets/my dataset/datasetseries/"
-        "2020 04 04/distributions/csv/files/operationType/download?file=my%20file%3D1"
+        "2020 04 04/distributions/csv/files/operationType/download?file=my%20file=1"
     )
 
 
@@ -640,7 +639,7 @@ def test_distribution_to_url_leaves_path_segments_unchanged() -> None:
     )
 
 
-def test_append_query_params_does_not_double_encode_preencoded_values() -> None:
+def test_append_query_params_encodes_values_as_raw() -> None:
     from fusion.utils import append_query_params
 
     result = append_query_params(
@@ -648,7 +647,44 @@ def test_append_query_params_does_not_double_encode_preencoded_values() -> None:
         {"file": "my%20file%3D1"},
     )
 
-    assert result == "https://api.fusion.jpmc.com/catalogs/my%20catalog/datasets/my%20dataset?file=my%20file%3D1"
+    assert result == (
+        "https://api.fusion.jpmc.com/catalogs/my%20catalog/datasets/my%20dataset?file=my%2520file%253D1"
+    )
+
+
+def test_append_query_params_distinguishes_plus_from_encoded_plus() -> None:
+    from fusion.utils import append_query_params
+
+    literal_plus = append_query_params("https://api/x", {"file": "a+b.csv"})
+    literal_percent = append_query_params("https://api/x", {"file": "a%2Bb.csv"})
+
+    assert literal_plus == "https://api/x?file=a%2Bb.csv"
+    assert literal_percent == "https://api/x?file=a%252Bb.csv"
+    assert literal_plus != literal_percent
+
+
+def test_append_query_params_preserves_equals_in_download_range() -> None:
+    from fusion.utils import append_query_params
+
+    result = append_query_params("https://api/x", {"downloadRange": "bytes=0-9"})
+
+    assert result == "https://api/x?downloadRange=bytes=0-9"
+
+
+def test_append_query_params_encodes_query_separators_in_values() -> None:
+    from fusion.utils import append_query_params
+
+    result = append_query_params("https://api/x", {"file": "a&b.csv"})
+
+    assert result == "https://api/x?file=a%26b.csv"
+
+
+def test_append_query_params_preserves_existing_query_params() -> None:
+    from fusion.utils import append_query_params
+
+    result = append_query_params("https://api/x?a=1&b=2", {"file": "c d.csv"})
+
+    assert result == "https://api/x?a=1&b=2&file=c%20d.csv"
 
 
 @pytest.mark.asyncio
