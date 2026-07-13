@@ -816,7 +816,7 @@ async def test_async_fetch_range_encodes_download_range(fusion_file: FusionFile)
     assert result == b"test-bytes"
     mock_session.get.assert_awaited_once()
     called_url = mock_session.get.await_args.args[0]
-    assert called_url == "http://test-url/file/operationType/download?downloadRange=bytes%3D0-9"
+    assert called_url == "http://test-url/file/operationType/download?downloadRange=bytes=0-9"
 
 
 class DummyResponse:

@@ -16,7 +16,7 @@ from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union, cast
-from urllib.parse import parse_qsl, quote, unquote, urlencode, urlparse, urlsplit, urlunparse, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlsplit, urlunparse, urlunsplit
 
 import aiohttp
 import certifi
@@ -680,11 +680,11 @@ def distribution_to_url(
 
 
 def append_query_params(url: str, params: dict[str, Any]) -> str:
-    """Append query parameters to a URL using percent-encoding."""
+    """Append query parameters to a URL, percent-encoding the raw values."""
     url_parts = urlsplit(url)
     query_params = parse_qsl(url_parts.query, keep_blank_values=True)
-    query_params.extend((key, unquote(str(value))) for key, value in params.items())
-    encoded_query = urlencode(query_params, doseq=True, quote_via=quote)
+    query_params.extend((key, str(value)) for key, value in params.items())
+    encoded_query = urlencode(query_params, doseq=True, quote_via=quote, safe="=")
     return urlunsplit((url_parts.scheme, url_parts.netloc, url_parts.path, encoded_query, url_parts.fragment))
 
 
