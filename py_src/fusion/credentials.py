@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -210,9 +211,9 @@ class FusionCredentials:
             with found.open(encoding="utf-8") as fh:
                 cfg = json.load(fh)
         except json.JSONDecodeError as e:  # noqa: TRY003
-            with found.open(encoding="utf-8") as fh:
-                contents = fh.read()
-            raise CredentialError(ValueError(f"Invalid JSON: {e}\nContents:\n{contents}\nError Code: 400")) from e
+            raise CredentialError(
+                ValueError(f"Invalid JSON in {found} at line {e.lineno} column {e.colno}. Error Code: 400")
+            ) from e
 
         grant_type = cfg.get("grant_type", _DEFAULT_GRANT_TYPE)
         client_id = cfg.get("client_id") or os.environ.get("FUSION_CLIENT_ID")
@@ -351,7 +352,7 @@ class FusionCredentials:
             "sub": self.client_id or "",
             "iat": iat,
             "exp": exp,
-            "jti": "id001",
+            "jti": uuid.uuid4().hex,
         }
         assertion = jwt.encode(claims, self.private_key, algorithm="RS256", headers={"kid": self.kid})
         return assertion if isinstance(assertion, str) else assertion.decode("utf-8")  # type: ignore[attr-defined]
